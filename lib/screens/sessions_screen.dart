@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../utils/session_validator.dart';
-import '../theme/opencode_theme.dart';
+import '../theme/spacenotes_theme.dart';
 import '../blocs/session_list/session_list_bloc.dart';
 import '../blocs/session_list/session_list_event.dart';
 import '../blocs/session_list/session_list_state.dart';
@@ -33,7 +33,7 @@ class _SessionsScreenState extends State<SessionsScreen> {
           if (state is SessionListLoading) {
             return const Center(
               child: CircularProgressIndicator(
-                color: OpenCodeTheme.primary,
+                color: SpaceNotesTheme.primary,
               ),
             );
           }
@@ -46,13 +46,13 @@ class _SessionsScreenState extends State<SessionsScreen> {
                   Icon(
                     Icons.error_outline,
                     size: 64,
-                    color: OpenCodeTheme.text.withValues(alpha: 0.6),
+                    color: SpaceNotesTheme.text.withValues(alpha: 0.6),
                   ),
                   const SizedBox(height: 16),
                   Text(
                     'Failed to load sessions',
                     style: TextStyle(
-                      color: OpenCodeTheme.text.withValues(alpha: 0.8),
+                      color: SpaceNotesTheme.text.withValues(alpha: 0.8),
                       fontSize: 18,
                       fontWeight: FontWeight.w500,
                     ),
@@ -61,7 +61,7 @@ class _SessionsScreenState extends State<SessionsScreen> {
                   Text(
                     state.message,
                     style: TextStyle(
-                      color: OpenCodeTheme.text.withValues(alpha: 0.6),
+                      color: SpaceNotesTheme.text.withValues(alpha: 0.6),
                       fontSize: 14,
                     ),
                     textAlign: TextAlign.center,
@@ -72,8 +72,8 @@ class _SessionsScreenState extends State<SessionsScreen> {
                       context.read<SessionListBloc>().add(LoadSessions());
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: OpenCodeTheme.primary,
-                      foregroundColor: OpenCodeTheme.background,
+                      backgroundColor: SpaceNotesTheme.primary,
+                      foregroundColor: SpaceNotesTheme.background,
                     ),
                     child: const Text('Retry'),
                   ),
@@ -91,13 +91,13 @@ class _SessionsScreenState extends State<SessionsScreen> {
                     Icon(
                       Icons.chat_bubble_outline,
                       size: 64,
-                      color: OpenCodeTheme.text.withValues(alpha: 0.6),
+                      color: SpaceNotesTheme.text.withValues(alpha: 0.6),
                     ),
                     const SizedBox(height: 16),
                     Text(
                       'No sessions yet',
                       style: TextStyle(
-                        color: OpenCodeTheme.text.withValues(alpha: 0.8),
+                        color: SpaceNotesTheme.text.withValues(alpha: 0.8),
                         fontSize: 18,
                         fontWeight: FontWeight.w500,
                       ),
@@ -106,7 +106,7 @@ class _SessionsScreenState extends State<SessionsScreen> {
                     Text(
                       'Start a new conversation to create your first session',
                       style: TextStyle(
-                        color: OpenCodeTheme.text.withValues(alpha: 0.6),
+                        color: SpaceNotesTheme.text.withValues(alpha: 0.6),
                         fontSize: 14,
                       ),
                       textAlign: TextAlign.center,
@@ -187,21 +187,21 @@ class _SessionsScreenState extends State<SessionsScreen> {
         context: context,
         builder: (BuildContext context) {
           return AlertDialog(
-            backgroundColor: OpenCodeTheme.surface,
+            backgroundColor: SpaceNotesTheme.surface,
             title: const Text(
               'Cannot Delete Active Session',
-              style: TextStyle(color: OpenCodeTheme.text),
+              style: TextStyle(color: SpaceNotesTheme.text),
             ),
             content: const Text(
               'You cannot delete the currently active session. Please switch to another session first or go to the chat screen to start a new session.',
-              style: TextStyle(color: OpenCodeTheme.textSecondary),
+              style: TextStyle(color: SpaceNotesTheme.textSecondary),
             ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(),
                 child: const Text(
                   'OK',
-                  style: TextStyle(color: OpenCodeTheme.primary),
+                  style: TextStyle(color: SpaceNotesTheme.primary),
                 ),
               ),
             ],
@@ -216,21 +216,21 @@ class _SessionsScreenState extends State<SessionsScreen> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          backgroundColor: OpenCodeTheme.surface,
+          backgroundColor: SpaceNotesTheme.surface,
           title: const Text(
             'Delete Session',
-            style: TextStyle(color: OpenCodeTheme.text),
+            style: TextStyle(color: SpaceNotesTheme.text),
           ),
           content: Text(
             'Are you sure you want to delete this session? This action cannot be undone.',
-            style: TextStyle(color: OpenCodeTheme.text.withValues(alpha: 0.8)),
+            style: TextStyle(color: SpaceNotesTheme.text.withValues(alpha: 0.8)),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
               child: Text(
                 'Cancel',
-                style: TextStyle(color: OpenCodeTheme.text.withValues(alpha: 0.6)),
+                style: TextStyle(color: SpaceNotesTheme.text.withValues(alpha: 0.6)),
               ),
             ),
             TextButton(
@@ -260,28 +260,28 @@ class _SessionsScreenState extends State<SessionsScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: OpenCodeTheme.surface,
+        backgroundColor: SpaceNotesTheme.surface,
         title: const Text(
           'Delete All Sessions',
-          style: TextStyle(color: OpenCodeTheme.text),
+          style: TextStyle(color: SpaceNotesTheme.text),
         ),
         content: const Text(
           'This will permanently delete all sessions and cannot be undone. Are you sure?',
-          style: TextStyle(color: OpenCodeTheme.textSecondary),
+          style: TextStyle(color: SpaceNotesTheme.textSecondary),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
             child: const Text(
               'Cancel',
-              style: TextStyle(color: OpenCodeTheme.textSecondary),
+              style: TextStyle(color: SpaceNotesTheme.textSecondary),
             ),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
             child: const Text(
               'Delete All',
-              style: TextStyle(color: OpenCodeTheme.error),
+              style: TextStyle(color: SpaceNotesTheme.error),
             ),
           ),
         ],
@@ -301,7 +301,7 @@ class _SessionsScreenState extends State<SessionsScreen> {
         scaffoldMessenger.showSnackBar(
           SnackBar(
             content: Text(message),
-            backgroundColor: OpenCodeTheme.warning,
+            backgroundColor: SpaceNotesTheme.warning,
           ),
         );
       }
@@ -310,7 +310,7 @@ class _SessionsScreenState extends State<SessionsScreen> {
         scaffoldMessenger.showSnackBar(
           SnackBar(
             content: Text('Failed to delete all sessions: $e'),
-            backgroundColor: OpenCodeTheme.error,
+            backgroundColor: SpaceNotesTheme.error,
           ),
         );
       }
@@ -337,14 +337,14 @@ class SessionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      color: isCurrentSession ? OpenCodeTheme.primary.withValues(alpha: 0.1) : OpenCodeTheme.surface,
+      color: isCurrentSession ? SpaceNotesTheme.primary.withValues(alpha: 0.1) : SpaceNotesTheme.surface,
       elevation: isCurrentSession ? 4 : 1,
       margin: const EdgeInsets.only(bottom: 12),
       child: Container(
         decoration: isCurrentSession 
           ? BoxDecoration(
               border: Border.all(
-                color: OpenCodeTheme.primary.withValues(alpha: 0.3),
+                color: SpaceNotesTheme.primary.withValues(alpha: 0.3),
                 width: 1,
               ),
               borderRadius: BorderRadius.circular(8),
@@ -369,7 +369,7 @@ class SessionCard extends StatelessWidget {
                                 ? 'Session ${session.id}'
                                 : session.description,
                             style: TextStyle(
-                              color: OpenCodeTheme.text,
+                              color: SpaceNotesTheme.text,
                               fontSize: 16,
                               fontWeight: isCurrentSession ? FontWeight.w600 : FontWeight.w500,
                             ),
@@ -385,13 +385,13 @@ class SessionCard extends StatelessWidget {
                         Icon(
                           Icons.access_time,
                           size: 14,
-                          color: OpenCodeTheme.text.withValues(alpha: 0.6),
+                          color: SpaceNotesTheme.text.withValues(alpha: 0.6),
                         ),
                         const SizedBox(width: 4),
                         Text(
                           _formatDateTime(session.lastUpdated),
                           style: TextStyle(
-                            color: OpenCodeTheme.text.withValues(alpha: 0.6),
+                            color: SpaceNotesTheme.text.withValues(alpha: 0.6),
                             fontSize: 12,
                           ),
                         ),
@@ -402,7 +402,7 @@ class SessionCard extends StatelessWidget {
                             height: 12,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
-                              color: OpenCodeTheme.primary.withValues(alpha: 0.6),
+                              color: SpaceNotesTheme.primary.withValues(alpha: 0.6),
                             ),
                           ),
                         ],

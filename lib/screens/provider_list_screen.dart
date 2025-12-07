@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../utils/session_validator.dart';
-import '../theme/opencode_theme.dart';
+import '../theme/spacenotes_theme.dart';
 import '../models/provider.dart' as provider_models;
 import '../services/opencode_client.dart';
 import '../blocs/config/config_cubit.dart';
@@ -81,7 +81,7 @@ class _ProviderListScreenState extends State<ProviderListScreen> {
         scaffoldMessenger.showSnackBar(
           SnackBar(
             content: Text('Failed to update provider: $e'),
-            backgroundColor: OpenCodeTheme.error,
+            backgroundColor: SpaceNotesTheme.error,
           ),
         );
       }
@@ -91,7 +91,7 @@ class _ProviderListScreenState extends State<ProviderListScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: OpenCodeTheme.background,
+      backgroundColor: SpaceNotesTheme.background,
       body: _buildBody(),
     );
   }
@@ -102,11 +102,11 @@ class _ProviderListScreenState extends State<ProviderListScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            CircularProgressIndicator(color: OpenCodeTheme.primary),
+            CircularProgressIndicator(color: SpaceNotesTheme.primary),
             SizedBox(height: 16),
             Text(
               'Loading providers...',
-              style: TextStyle(color: OpenCodeTheme.textSecondary),
+              style: TextStyle(color: SpaceNotesTheme.textSecondary),
             ),
           ],
         ),
@@ -121,13 +121,13 @@ class _ProviderListScreenState extends State<ProviderListScreen> {
             Icon(
               Icons.error_outline,
               size: 64,
-              color: OpenCodeTheme.text.withValues(alpha: 0.6),
+              color: SpaceNotesTheme.text.withValues(alpha: 0.6),
             ),
             const SizedBox(height: 16),
             Text(
               'Failed to load providers',
               style: TextStyle(
-                color: OpenCodeTheme.text.withValues(alpha: 0.8),
+                color: SpaceNotesTheme.text.withValues(alpha: 0.8),
                 fontSize: 18,
                 fontWeight: FontWeight.w500,
               ),
@@ -136,7 +136,7 @@ class _ProviderListScreenState extends State<ProviderListScreen> {
             Text(
               _error!,
               style: TextStyle(
-                color: OpenCodeTheme.text.withValues(alpha: 0.6),
+                color: SpaceNotesTheme.text.withValues(alpha: 0.6),
                 fontSize: 14,
               ),
               textAlign: TextAlign.center,
@@ -145,8 +145,8 @@ class _ProviderListScreenState extends State<ProviderListScreen> {
             ElevatedButton(
               onPressed: () => SessionValidator.navigateToChat(context),
               style: ElevatedButton.styleFrom(
-                backgroundColor: OpenCodeTheme.primary,
-                foregroundColor: OpenCodeTheme.background,
+                backgroundColor: SpaceNotesTheme.primary,
+                foregroundColor: SpaceNotesTheme.background,
               ),
               child: const Text('Go Back'),
             ),
@@ -163,13 +163,13 @@ class _ProviderListScreenState extends State<ProviderListScreen> {
             Icon(
               Icons.cloud_off,
               size: 64,
-              color: OpenCodeTheme.text.withValues(alpha: 0.6),
+              color: SpaceNotesTheme.text.withValues(alpha: 0.6),
             ),
             const SizedBox(height: 16),
             Text(
               'No providers available',
               style: TextStyle(
-                color: OpenCodeTheme.text.withValues(alpha: 0.8),
+                color: SpaceNotesTheme.text.withValues(alpha: 0.8),
                 fontSize: 18,
                 fontWeight: FontWeight.w500,
               ),
@@ -199,7 +199,7 @@ class _ProviderListScreenState extends State<ProviderListScreen> {
           child: Text(
             provider.name,
             style: const TextStyle(
-              color: OpenCodeTheme.text,
+              color: SpaceNotesTheme.text,
               fontSize: 18,
               fontWeight: FontWeight.w600,
             ),
@@ -218,7 +218,7 @@ class _ProviderListScreenState extends State<ProviderListScreen> {
     final isSelected = _currentProviderID == provider.id && _currentModelID == model.id;
     
     return Card(
-      color: isSelected ? OpenCodeTheme.primary.withValues(alpha: 0.1) : OpenCodeTheme.surface,
+      color: isSelected ? SpaceNotesTheme.primary.withValues(alpha: 0.1) : SpaceNotesTheme.surface,
       margin: const EdgeInsets.only(bottom: 8),
       child: InkWell(
         onTap: () => _selectProvider(provider.id, model.id),
@@ -234,7 +234,7 @@ class _ProviderListScreenState extends State<ProviderListScreen> {
                     Text(
                       model.name,
                       style: TextStyle(
-                        color: isSelected ? OpenCodeTheme.primary : OpenCodeTheme.text,
+                        color: isSelected ? SpaceNotesTheme.primary : SpaceNotesTheme.text,
                         fontSize: 16,
                         fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
                       ),
@@ -244,7 +244,7 @@ class _ProviderListScreenState extends State<ProviderListScreen> {
                       Text(
                         model.description!,
                         style: TextStyle(
-                          color: OpenCodeTheme.text.withValues(alpha: 0.6),
+                          color: SpaceNotesTheme.text.withValues(alpha: 0.6),
                           fontSize: 12,
                         ),
                       ),
@@ -256,7 +256,7 @@ class _ProviderListScreenState extends State<ProviderListScreen> {
                 const SizedBox(width: 12),
                 const Icon(
                   Icons.check_circle,
-                  color: OpenCodeTheme.primary,
+                  color: SpaceNotesTheme.primary,
                   size: 20,
                 ),
               ],

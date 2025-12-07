@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../theme/opencode_theme.dart';
+import '../theme/spacenotes_theme.dart';
 import 'terminal_input_field.dart';
 import 'terminal_button.dart';
 
@@ -35,9 +35,9 @@ class TerminalDialog extends StatelessWidget {
           maxWidth: 500,
         ),
         decoration: BoxDecoration(
-          color: OpenCodeTheme.background,
+          color: SpaceNotesTheme.background,
           border: Border.all(
-            color: OpenCodeTheme.primary.withValues(alpha: 0.3),
+            color: SpaceNotesTheme.primary.withValues(alpha: 0.3),
             width: 1,
           ),
         ),
@@ -50,7 +50,7 @@ class TerminalDialog extends StatelessWidget {
               decoration: const BoxDecoration(
                 border: Border(
                   bottom: BorderSide(
-                    color: OpenCodeTheme.primary,
+                    color: SpaceNotesTheme.primary,
                     width: 1,
                   ),
                 ),
@@ -63,7 +63,7 @@ class TerminalDialog extends StatelessWidget {
                       style: const TextStyle(
                         fontFamily: 'FiraCode',
                         fontSize: 16,
-                        color: OpenCodeTheme.text,
+                        color: SpaceNotesTheme.text,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
@@ -73,7 +73,7 @@ class TerminalDialog extends StatelessWidget {
                       onTap: () => Navigator.of(context).pop(),
                       child: const Icon(
                         Icons.close,
-                        color: OpenCodeTheme.textSecondary,
+                        color: SpaceNotesTheme.textSecondary,
                         size: 18,
                       ),
                     ),
@@ -100,7 +100,7 @@ class TerminalDialog extends StatelessWidget {
                 decoration: const BoxDecoration(
                   border: Border(
                     top: BorderSide(
-                      color: OpenCodeTheme.primary,
+                      color: SpaceNotesTheme.primary,
                       width: 1,
                     ),
                   ),
@@ -231,7 +231,7 @@ class _TerminalInputDialogState extends State<TerminalInputDialog> {
               style: TextStyle(
                 fontFamily: 'FiraCode',
                 fontSize: 14,
-                color: OpenCodeTheme.primary,
+                color: SpaceNotesTheme.primary,
                 fontWeight: FontWeight.w500,
               ),
             ),

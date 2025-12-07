@@ -100,30 +100,30 @@ class OpenCodeMessage extends Equatable {
 
   /// Factory constructor specifically for OpenCode API responses
   factory OpenCodeMessage.fromApiResponse(Map<String, dynamic> json) {
-    // Extract the message info - it's directly in the response
-    final messageId = json['id'] as String? ?? DateTime.now().millisecondsSinceEpoch.toString();
-    
-    final sessionId = json['sessionID'] as String? ?? 
-                      json['sessionId'] as String? ?? 
+    // Handle both direct message format and nested info format
+    final info = json['info'] as Map<String, dynamic>?;
+    final timeData = info?['time'] as Map<String, dynamic>? ?? json['time'] as Map<String, dynamic>?;
+
+    // Extract ID from various possible locations
+    final messageId = info?['id'] as String? ??
+                      json['id'] as String? ??
+                      DateTime.now().millisecondsSinceEpoch.toString();
+
+    // Extract session ID
+    final sessionId = info?['sessionID'] as String? ??
+                      json['sessionID'] as String? ??
+                      json['sessionId'] as String? ??
                       json['session_id'] as String? ?? '';
-    
-    
-    // Check if session ID might be in nested data
-    if (json.containsKey('parts') && json['parts'] is List) {
-      final parts = json['parts'] as List;
-      // Check if session ID might be in nested part data
-      if (parts.isNotEmpty && parts[0] is Map<String, dynamic>) {
-        // Part data available for potential session ID extraction
-      }
-    }
-    
-    final role = json['role'] as String? ?? 'assistant';
-    
-    // Handle time - it's nested in the response
-    final timeData = json['time'] as Map<String, dynamic>?;
+
+    // Extract role
+    final role = info?['role'] as String? ??
+                 json['role'] as String? ??
+                 'assistant';
+
+    // Handle timestamps
     DateTime createdTime = DateTime.now();
     DateTime? completedTime;
-    
+
     if (timeData != null) {
       try {
         if (timeData['created'] != null) {

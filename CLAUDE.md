@@ -1,16 +1,90 @@
 # NEVER TRY TO RUN THE APP AFTER MAKING CHANGES, USER ALWAYS HAS THE APP RUNNING IN ANOTHER TERMINAL
 
+## User Commands
+
+### "Look at my notes"
+When the user says "look at my notes", use the spacenotes-mcp server to search or list notes from their vault.
+
+```
+mcp__spacenotes-mcp__list_notes_in_folder or mcp__spacenotes-mcp__get_note
+```
+
+### "Look at note updates"
+When the user says "look at note updates", use spacenotes-mcp to get the note titled "spacetime flutter client updates". This note contains a list of issues and features that need to be implemented or fixed.
+
+```
+mcp__spacenotes-mcp__get_note with path: "Development/spacetime flutter client updates.md"
+```
+
+### Editing "obsidian flutter client updates" Note
+Anytime you update or edit `Development/spacetime flutter client updates.md`, the future tasks should always remain at the top and be clear bullet points. Don't make the user scroll to see what's next. Don't write any giant updates into it or anything that's too verbose.
 
 ## Current Server Configuration
-- Obsidian server: `http://192.168.1.161:22360`
-- Current interface: MCP SSE (for Claude integration)
-- REST API plugin: Local REST API (installed and configured)
+- SpacetimeDB: `100.84.184.121:3003` (Tailscale IP)
+- **SpacetimeDB Module Source**: `/Users/mikaelwills/Productivity/Development/Rust/spacenotes/spacetime-module/src/lib.rs`
+- **SpacetimeDB Database Name**: `spacenotes`
+- **SpacetimeDB Dart SDK**: `/Users/mikaelwills/Productivity/Development/Dart/spacetimedb_dart_sdk`
 
-### REST API Configuration
+### Regenerating SpacetimeDB Bindings
+
+When the SpacetimeDB schema changes (e.g., after UUID migration), regenerate the Dart bindings:
+
+```bash
+# ALWAYS use the local Rust module path (no authentication required)
+dart run spacetimedb_dart_sdk:generate \
+  --project-path /Users/mikaelwills/Productivity/Development/Rust/spacenotes/spacetime-module \
+  --output lib/generated
+```
+
+**Why local module path?**
+- No authentication required (network method requires tokens)
+- Always up-to-date with latest schema changes
+- Builds the module and extracts schema directly
+
+**Do NOT use:** `--server` flag unless you have valid authentication tokens configured.
+
+### Manually Checking SpacetimeDB
+
+When the user says "manually check the spacetimedb", use direct SQL queries via the SpacetimeDB CLI.
+
+**Basic Query Syntax:**
+```bash
+spacetime sql spacenotes "<SQL_QUERY>" --server http://100.84.184.121:3003
+```
+
+**Common Queries:**
+
+```bash
+# List all notes with path and name
+spacetime sql spacenotes "SELECT path, name FROM note" --server http://100.84.184.121:3003
+
+# Check notes in a specific folder (use grep since LIKE is not supported)
+spacetime sql spacenotes "SELECT path, name FROM note" --server http://100.84.184.121:3003 | grep "Folder Name"
+
+# Get a specific note by ID
+spacetime sql spacenotes "SELECT * FROM note WHERE id = '<uuid>'" --server http://100.84.184.121:3003
+
+# Count total notes
+spacetime sql spacenotes "SELECT COUNT(*) FROM note" --server http://100.84.184.121:3003
+```
+
+**Important Notes:**
+- SpacetimeDB SQL does NOT support `LIKE` operator - use `grep` for filtering instead
+- Always use `grep` after the SQL query to filter by folder names or patterns
+- The `--server` flag is required to specify which SpacetimeDB instance to query
+- Queries run against the `spacenotes` database name
+
+**Example: Checking Notes in a Folder**
+```bash
+# Query all notes and filter for "Ending Everything Band" folder
+spacetime sql spacenotes "SELECT path, name FROM note" --server http://100.84.184.121:3003 | grep "Ending Everything Band"
+```
+
+### OLD Obsidian REST API Configuration
 - **HTTPS Port**: 27124
 - **HTTP Port**: 27123 (insecure, enabled for development)
 - **API Key**: `d8c56f738e76182b8963ff34ca9dd4c4a76b40e00da2371cda90a26a551c4b8b`
-- **Base URL**: `http://192.168.1.161:27123` (via Tailscale)
+- **Base URL**: `http://100.84.184.121:27123` (via Tailscale)
 - **Authentication**: `Authorization: Bearer <api-key>` header
 - **Status**: ✅ **WORKING** - API tested and functional
 
@@ -79,22 +153,22 @@
 ```bash
 # List all notes
 curl -H "Authorization: Bearer d8c56f738e76182b8963ff34ca9dd4c4a76b40e00da2371cda90a26a551c4b8b" \
-  "http://192.168.1.161:27123/vault/"
+  "http://100.84.184.121:27123/vault/"
 
 # Get specific note
 curl -H "Authorization: Bearer d8c56f738e76182b8963ff34ca9dd4c4a76b40e00da2371cda90a26a551c4b8b" \
-  "http://192.168.1.161:27123/vault/Welcome.md"
+  "http://100.84.184.121:27123/vault/Welcome.md"
 
 # Create new note
 curl -X POST \
   -H "Authorization: Bearer d8c56f738e76182b8963ff34ca9dd4c4a76b40e00da2371cda90a26a551c4b8b" \
   -H "Content-Type: text/markdown" \
   -d "# My New Note\n\nContent here" \
-  "http://192.168.1.161:27123/vault/my-note.md"
+  "http://100.84.184.121:27123/vault/my-note.md"
 
 # Get available commands
 curl -H "Authorization: Bearer d8c56f738e76182b8963ff34ca9dd4c4a76b40e00da2371cda90a26a551c4b8b" \
-  "http://192.168.1.161:27123/commands/"
+  "http://100.84.184.121:27123/commands/"
 ```
 
 ### Data Models
@@ -117,70 +191,19 @@ curl -H "Authorization: Bearer d8c56f738e76182b8963ff34ca9dd4c4a76b40e00da2371cd
 }
 ```
 
-# Flutter Widget Structure Guidelines
+# File Naming Architecture
 
-## MANDATORY STRUCTURE ORDER
-ALL Flutter widgets MUST follow this exact order:
+## **FILE NAME IS NOT DERIVED FROM THE TOP OF THE CONTENT AT ALL**
 
-1. **CONSTRUCTOR** - Widget constructor and state variables
-2. **INIT** - `initState()` and `dispose()` lifecycle methods
-3. **BUILD** - The main `build()` method
-4. **WIDGET FUNCTIONS** - All `Widget _buildXXX()` helper methods
-5. **HELPER FUNCTIONS** - All other utility methods and event handlers
+- File names and content are completely separate concerns
+- Renaming is an explicit user action, not automatic
+- Content changes only trigger `updateNoteContent` reducer
+- Path changes only triggered by explicit rename operations through UI
 
-## Example Structure
-```dart
-class MyWidget extends StatefulWidget {
-  // 1. CONSTRUCTOR
-  const MyWidget({super.key});
-
-  @override
-  State<MyWidget> createState() => _MyWidgetState();
-}
-
-class _MyWidgetState extends State<MyWidget> {
-  // State variables here
-
-  // 2. INIT
-  @override
-  void initState() {
-    super.initState();
-  }
-
-  @override
-  void dispose() {
-    super.dispose();
-  }
-
-  // 3. BUILD
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        _buildHeader(),
-        _buildContent(),
-      ],
-    );
-  }
-
-  // 4. WIDGET FUNCTIONS
-  Widget _buildHeader() {
-    return Container(/* header */);
-  }
-
-  Widget _buildContent() {
-    return Container(/* content */);
-  }
-
-  // 5. HELPER FUNCTIONS
-  void _onTap() {
-    // event handler
-  }
-
-  String _formatData() {
-    // utility method
-  }
-}
-```
-
-**NEVER deviate from this order!**
+### UI Implementation
+- File name displayed in NavBar when on NoteScreen (similar to folder name display)
+- Rename option available in ellipses menu (⋮)
+- Rename triggers dialog/prompt for new name
+- Calls `repo.renameNote(noteId, newPath)` directly
+---
+- When marking future tasks as complete just remove them

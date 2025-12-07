@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../utils/session_validator.dart';
-import '../theme/opencode_theme.dart';
+import '../theme/spacenotes_theme.dart';
 import '../blocs/connection/connection_bloc.dart';
 import '../blocs/connection/connection_state.dart' as connection_states;
 import '../blocs/connection/connection_event.dart';
@@ -82,7 +82,7 @@ class _HomeScreenState extends State<HomeScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Failed to save IP: $e'),
-            backgroundColor: OpenCodeTheme.error,
+            backgroundColor: SpaceNotesTheme.error,
           ),
         );
       }
@@ -168,11 +168,11 @@ class _HomeScreenState extends State<HomeScreen> {
           decoration: const BoxDecoration(
             border: Border(
               left: BorderSide(
-                color: OpenCodeTheme.primary,
+                color: SpaceNotesTheme.primary,
                 width: 2,
               ),
               right: BorderSide(
-                color: OpenCodeTheme.primary,
+                color: SpaceNotesTheme.primary,
                 width: 2,
               ),
             ),
@@ -186,7 +186,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 style: TextStyle(
                   fontFamily: 'FiraCode',
                   fontSize: 14,
-                  color: OpenCodeTheme.primary,
+                  color: SpaceNotesTheme.primary,
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -197,7 +197,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   style: const TextStyle(
                     fontFamily: 'FiraCode',
                     fontSize: 14,
-                    color: OpenCodeTheme.text,
+                    color: SpaceNotesTheme.text,
                     height: 1.4,
                   ),
                   decoration: const InputDecoration(
@@ -212,7 +212,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     filled: false,
                     hintText: '0.0.0.0',
                     hintStyle: TextStyle(
-                      color: OpenCodeTheme.textSecondary,
+                      color: SpaceNotesTheme.textSecondary,
                     ),
                   ),
                   maxLines: 1,
@@ -234,10 +234,10 @@ class _HomeScreenState extends State<HomeScreen> {
             onPressed: _isConnecting ? null : _connectToIP,
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF1A1A1A),
-              foregroundColor: OpenCodeTheme.primary,
+              foregroundColor: SpaceNotesTheme.primary,
               elevation: 0,
               side: const BorderSide(
-                color: OpenCodeTheme.primary,
+                color: SpaceNotesTheme.primary,
                 width: 1,
               ),
               shape: RoundedRectangleBorder(
@@ -251,7 +251,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
                       valueColor: AlwaysStoppedAnimation<Color>(
-                        OpenCodeTheme.primary,
+                        SpaceNotesTheme.primary,
                       ),
                     ),
                   )
@@ -267,7 +267,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return Text(
       _getStatusText(connectionState, chatState),
       style: const TextStyle(
-        color: OpenCodeTheme.textSecondary,
+        color: SpaceNotesTheme.textSecondary,
         fontSize: 14,
       ),
     );

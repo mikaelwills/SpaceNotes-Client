@@ -1,17 +1,20 @@
 import 'package:equatable/equatable.dart';
 
-class Folder extends Equatable {
+/// API models for Obsidian REST API (path-based, not UUID-based)
+/// These are separate from SpacetimeDB generated models
+
+class ApiFolder extends Equatable {
   final String path;
   final String name;
   final int depth;
 
-  const Folder({
+  const ApiFolder({
     required this.path,
     required this.name,
     required this.depth,
   });
 
-  factory Folder.fromPath(String path) {
+  factory ApiFolder.fromPath(String path) {
     // Calculate depth from path
     final cleanPath = path.endsWith('/') ? path.substring(0, path.length - 1) : path;
     final depth = cleanPath.isEmpty ? 0 : cleanPath.split('/').length - 1;
@@ -19,7 +22,7 @@ class Folder extends Equatable {
     // Extract folder name
     final name = cleanPath.split('/').last;
 
-    return Folder(
+    return ApiFolder(
       path: path,
       name: name,
       depth: depth,
@@ -29,12 +32,12 @@ class Folder extends Equatable {
   @override
   List<Object?> get props => [path, name, depth];
 
-  Folder copyWith({
+  ApiFolder copyWith({
     String? path,
     String? name,
     int? depth,
   }) {
-    return Folder(
+    return ApiFolder(
       path: path ?? this.path,
       name: name ?? this.name,
       depth: depth ?? this.depth,
@@ -42,7 +45,7 @@ class Folder extends Equatable {
   }
 }
 
-class Note extends Equatable {
+class ApiNote extends Equatable {
   final String path;
   final String name;
   final String content;
@@ -53,7 +56,7 @@ class Note extends Equatable {
   final DateTime createdTime;
   final DateTime modifiedTime;
 
-  const Note({
+  const ApiNote({
     required this.path,
     required this.name,
     required this.content,
@@ -65,9 +68,9 @@ class Note extends Equatable {
     required this.modifiedTime,
   });
 
-  factory Note.fromJson(Map<String, dynamic> json) {
+  factory ApiNote.fromJson(Map<String, dynamic> json) {
     final path = json['path'] ?? '';
-    return Note(
+    return ApiNote(
       path: path,
       name: _extractNoteName(path),
       content: json['content'] ?? '',
@@ -80,8 +83,8 @@ class Note extends Equatable {
     );
   }
 
-  factory Note.fromPath(String path) {
-    return Note(
+  factory ApiNote.fromPath(String path) {
+    return ApiNote(
       path: path,
       name: _extractNoteName(path),
       content: '',
@@ -140,7 +143,7 @@ class Note extends Equatable {
 
   String get basename => path.split('/').last;
 
-  Note copyWith({
+  ApiNote copyWith({
     String? path,
     String? name,
     String? content,
@@ -151,7 +154,7 @@ class Note extends Equatable {
     DateTime? createdTime,
     DateTime? modifiedTime,
   }) {
-    return Note(
+    return ApiNote(
       path: path ?? this.path,
       name: name ?? this.name,
       content: content ?? this.content,
@@ -165,11 +168,11 @@ class Note extends Equatable {
   }
 }
 
-class NotesData extends Equatable {
-  final List<Folder> folders;
-  final List<Note> notes;
+class ApiNotesData extends Equatable {
+  final List<ApiFolder> folders;
+  final List<ApiNote> notes;
 
-  const NotesData({
+  const ApiNotesData({
     required this.folders,
     required this.notes,
   });
@@ -177,11 +180,11 @@ class NotesData extends Equatable {
   @override
   List<Object?> get props => [folders, notes];
 
-  NotesData copyWith({
-    List<Folder>? folders,
-    List<Note>? notes,
+  ApiNotesData copyWith({
+    List<ApiFolder>? folders,
+    List<ApiNote>? notes,
   }) {
-    return NotesData(
+    return ApiNotesData(
       folders: folders ?? this.folders,
       notes: notes ?? this.notes,
     );

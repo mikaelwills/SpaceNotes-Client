@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../theme/opencode_theme.dart';
+import '../theme/spacenotes_theme.dart';
 import '../models/opencode_instance.dart';
 
 enum TerminalIPInputMode {
@@ -74,11 +74,11 @@ class TerminalIPInput extends StatelessWidget {
       decoration: const BoxDecoration(
         border: Border(
           left: BorderSide(
-            color: OpenCodeTheme.primary,
+            color: SpaceNotesTheme.primary,
             width: 2,
           ),
           right: BorderSide(
-            color: OpenCodeTheme.primary,
+            color: SpaceNotesTheme.primary,
             width: 2,
           ),
         ),
@@ -92,7 +92,7 @@ class TerminalIPInput extends StatelessWidget {
             style: TextStyle(
               fontFamily: 'FiraCode',
               fontSize: 14,
-              color: OpenCodeTheme.primary,
+              color: SpaceNotesTheme.primary,
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -128,7 +128,7 @@ class TerminalIPInput extends StatelessWidget {
           style: const TextStyle(
             fontFamily: 'FiraCode',
             fontSize: 14,
-            color: OpenCodeTheme.text,
+            color: SpaceNotesTheme.text,
             fontWeight: FontWeight.w500,
             height: 1.2,
           ),
@@ -140,7 +140,7 @@ class TerminalIPInput extends StatelessWidget {
           style: TextStyle(
             fontFamily: 'FiraCode',
             fontSize: 12,
-            color: OpenCodeTheme.text.withValues(alpha: 0.7),
+            color: SpaceNotesTheme.text.withValues(alpha: 0.7),
             height: 1.2,
           ),
           maxLines: 1,
@@ -160,7 +160,7 @@ class TerminalIPInput extends StatelessWidget {
             style: const TextStyle(
               fontFamily: 'FiraCode',
               fontSize: 14,
-              color: OpenCodeTheme.text,
+              color: SpaceNotesTheme.text,
               height: 1.4,
             ),
             decoration: InputDecoration(
@@ -175,7 +175,7 @@ class TerminalIPInput extends StatelessWidget {
               filled: false,
               hintText: ipHint,
               hintStyle: const TextStyle(
-                color: OpenCodeTheme.textSecondary,
+                color: SpaceNotesTheme.textSecondary,
               ),
             ),
             maxLines: 1,
@@ -190,7 +190,7 @@ class TerminalIPInput extends StatelessWidget {
             style: TextStyle(
               fontFamily: 'FiraCode',
               fontSize: 14,
-              color: OpenCodeTheme.text,
+              color: SpaceNotesTheme.text,
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -202,7 +202,7 @@ class TerminalIPInput extends StatelessWidget {
             style: const TextStyle(
               fontFamily: 'FiraCode',
               fontSize: 14,
-              color: OpenCodeTheme.text,
+              color: SpaceNotesTheme.text,
               height: 1.4,
             ),
             decoration: InputDecoration(
@@ -217,7 +217,7 @@ class TerminalIPInput extends StatelessWidget {
               filled: false,
               hintText: portHint,
               hintStyle: const TextStyle(
-                color: OpenCodeTheme.textSecondary,
+                color: SpaceNotesTheme.textSecondary,
               ),
             ),
             maxLines: 1,
@@ -234,15 +234,15 @@ class TerminalIPInput extends StatelessWidget {
       width: 56,
       height: 56,
       decoration: BoxDecoration(
-        color: OpenCodeTheme.background,
+        color: SpaceNotesTheme.background,
         border: Border.all(
-          color: OpenCodeTheme.primary.withValues(alpha: 0.35),
+          color: SpaceNotesTheme.primary.withValues(alpha: 0.35),
           width: 1,
         ),
         borderRadius: BorderRadius.circular(4),
         boxShadow: [
           BoxShadow(
-            color: OpenCodeTheme.primary.withValues(alpha: 0.1),
+            color: SpaceNotesTheme.primary.withValues(alpha: 0.1),
             blurRadius: 4,
             spreadRadius: 0,
           ),
@@ -253,8 +253,8 @@ class TerminalIPInput extends StatelessWidget {
         child: InkWell(
           onTap: isConnecting ? null : onConnect,
           borderRadius: BorderRadius.circular(4),
-          splashColor: OpenCodeTheme.primary.withValues(alpha: 0.1),
-          highlightColor: OpenCodeTheme.primary.withValues(alpha: 0.05),
+          splashColor: SpaceNotesTheme.primary.withValues(alpha: 0.1),
+          highlightColor: SpaceNotesTheme.primary.withValues(alpha: 0.05),
           child: Center(
             child: isConnecting
                 ? const SizedBox(
@@ -263,14 +263,14 @@ class TerminalIPInput extends StatelessWidget {
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
                       valueColor: AlwaysStoppedAnimation<Color>(
-                        OpenCodeTheme.primary,
+                        SpaceNotesTheme.primary,
                       ),
                     ),
                   )
                 : const Icon(
                     Icons.link,
                     size: 18,
-                    color: OpenCodeTheme.primary,
+                    color: SpaceNotesTheme.primary,
                   ),
           ),
         ),
@@ -283,15 +283,15 @@ class TerminalIPInput extends StatelessWidget {
       width: 56,
       height: 56,
       decoration: BoxDecoration(
-        color: OpenCodeTheme.background,
+        color: SpaceNotesTheme.background,
         border: Border.all(
-          color: OpenCodeTheme.text.withValues(alpha: 0.35),
+          color: SpaceNotesTheme.text.withValues(alpha: 0.35),
           width: 1,
         ),
         borderRadius: BorderRadius.circular(4),
         boxShadow: [
           BoxShadow(
-            color: OpenCodeTheme.text.withValues(alpha: 0.1),
+            color: SpaceNotesTheme.text.withValues(alpha: 0.1),
             blurRadius: 4,
             spreadRadius: 0,
           ),
@@ -302,13 +302,13 @@ class TerminalIPInput extends StatelessWidget {
         child: InkWell(
           onTap: onEdit,
           borderRadius: BorderRadius.circular(4),
-          splashColor: OpenCodeTheme.text.withValues(alpha: 0.1),
-          highlightColor: OpenCodeTheme.text.withValues(alpha: 0.05),
+          splashColor: SpaceNotesTheme.text.withValues(alpha: 0.1),
+          highlightColor: SpaceNotesTheme.text.withValues(alpha: 0.05),
           child: Center(
             child: Icon(
               Icons.edit_outlined,
               size: 18,
-              color: OpenCodeTheme.text.withValues(alpha: 0.7),
+              color: SpaceNotesTheme.text.withValues(alpha: 0.7),
             ),
           ),
         ),

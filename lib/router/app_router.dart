@@ -5,12 +5,16 @@ import '../screens/chat_screen.dart';
 import '../screens/sessions_screen.dart';
 import '../screens/settings_screen.dart';
 import '../screens/provider_list_screen.dart';
-import '../screens/notes_list_screen.dart';
+import '../screens/top_folder_screen.dart';
 import '../screens/note_screen.dart';
 import '../widgets/main_scaffold.dart';
 
+// Global RouteObserver for detecting navigation back to screens
+final RouteObserver<ModalRoute<void>> routeObserver = RouteObserver<ModalRoute<void>>();
+
 final GoRouter appRouter = GoRouter(
-  initialLocation: '/connect',
+  initialLocation: '/notes',
+  observers: [routeObserver],
   routes: [
     ShellRoute(
       builder: (context, state, child) => MainScaffold(child: child),
@@ -60,14 +64,43 @@ final GoRouter appRouter = GoRouter(
           name: 'notes',
           pageBuilder: (context, state) => _buildFadeTransitionPage(
             key: state.pageKey,
-            child: const NotesListScreen(),
+            child: const TopFolderListScreen(folderPath: ''), // Root level
           ),
+        ),
+        GoRoute(
+          path: '/notes/folder/:folderPath(.*)',
+          name: 'folder-contents',
+          pageBuilder: (context, state) {
+            final encodedFolderPath = state.pathParameters['folderPath']!;
+            // Decode each segment separately to handle paths with slashes
+            final segments = encodedFolderPath.split('/');
+            final decodedSegments = segments.map((segment) {
+              try {
+                return Uri.decodeComponent(segment);
+              } catch (e) {
+                return segment;
+              }
+            }).toList();
+            final folderPath = decodedSegments.join('/');
+            return _buildFadeTransitionPage(
+              key: state.pageKey,
+              child: TopFolderListScreen(folderPath: folderPath),
+            );
+          },
         ),
         GoRoute(
           path: '/notes/:path',
           name: 'note',
           pageBuilder: (context, state) {
-            final path = state.pathParameters['path']!;
+            final encodedPath = state.pathParameters['path']!;
+            // Try to decode, but if it fails (already decoded or invalid), use as-is
+            String path;
+            try {
+              path = Uri.decodeComponent(encodedPath);
+            } catch (e) {
+              print('⚠️ URI decode failed for: $encodedPath, using as-is');
+              path = encodedPath;
+            }
             final isNewNote = state.uri.queryParameters['new'] == 'true';
             return _buildFadeTransitionPage(
               key: state.pageKey,

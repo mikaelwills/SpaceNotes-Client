@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import '../theme/opencode_theme.dart';
+import '../theme/spacenotes_theme.dart';
 import '../utils/session_validator.dart';
 
 class ModeToggleButton extends StatelessWidget {
@@ -27,7 +27,7 @@ class ModeToggleButton extends StatelessWidget {
         tooltip: isInNotes ? 'Switch to Chat' : 'Switch to Notes',
         icon: Icon(
           isInNotes ? Icons.chat_outlined : Icons.description_outlined,
-          color: OpenCodeTheme.primary,
+          color: SpaceNotesTheme.primary,
         ),
       ),
     );

@@ -1,0 +1,66 @@
+{
+  "info": {
+    "id": "msg_ae0f65a30001rDtRUxjTOGYVUS",
+    "sessionID": "ses_51f0a865bffe017zxdaUB6I31j",
+    "role": "assistant",
+    "time": {
+      "created": 1764710832688,
+      "completed": 1764710835810
+    },
+    "parentID": "msg_ae0f65a19001Omb3xNJt0rOTa1",
+    "modelID": "claude-sonnet-4-20250514",
+    "providerID": "anthropic",
+    "mode": "build",
+    "path": {
+      "cwd": "/volume1/homes/mikael",
+      "root": "/"
+    },
+    "cost": 0,
+    "tokens": {
+      "input": 3,
+      "output": 41,
+      "reasoning": 0,
+      "cache": {
+        "read": 18515,
+        "write": 543
+      }
+    },
+    "finish": "stop"
+  },
+  "parts": [
+    {
+      "id": "prt_ae0f66294001KzvvGNyE7D0T9s",
+      "sessionID": "ses_51f0a865bffe017zxdaUB6I31j",
+      "messageID": "msg_ae0f65a30001rDtRUxjTOGYVUS",
+      "type": "step-start"
+    },
+    {
+      "id": "prt_ae0f6629b001KGaWjlkDFZfY9J",
+      "sessionID": "ses_51f0a865bffe017zxdaUB6I31j",
+      "messageID": "msg_ae0f65a30001rDtRUxjTOGYVUS",
+      "type": "text",
+      "text": "Flutter is Google's open-source UI toolkit that allows developers to build natively compiled applications for mobile, web, and desktop from a single codebase using the Dart programming language.",
+      "time": {
+        "start": 1764710835642,
+        "end": 1764710835642
+      }
+    },
+    {
+      "id": "prt_ae0f6665f0010K459o8cc0ZNHY",
+      "sessionID": "ses_51f0a865bffe017zxdaUB6I31j",
+      "messageID": "msg_ae0f65a30001rDtRUxjTOGYVUS",
+      "type": "step-finish",
+      "reason": "stop",
+      "cost": 0,
+      "tokens": {
+        "input": 3,
+        "output": 41,
+        "reasoning": 0,
+        "cache": {
+          "read": 18515,
+          "write": 543
+        }
+      }
+    }
+  ]
+}

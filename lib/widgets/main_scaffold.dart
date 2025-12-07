@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../theme/opencode_theme.dart';
+import '../theme/spacenotes_theme.dart';
 import 'nav_bar.dart';
 
 class MainScaffold extends StatelessWidget {
@@ -14,7 +14,7 @@ class MainScaffold extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: OpenCodeTheme.background,
+      backgroundColor: SpaceNotesTheme.background,
       body: Column(
         children: [
           const NavBar(),

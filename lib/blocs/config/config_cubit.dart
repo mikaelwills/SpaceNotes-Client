@@ -5,6 +5,7 @@ import 'config_state.dart';
 class ConfigCubit extends Cubit<ConfigState> {
   static const String _defaultServerIp = '0.0.0.0';
   static const int _defaultPort = 4096;
+  static const String _defaultAgentName = 'personal-assistant';
 
   ConfigCubit() : super(ConfigLoading());
 
@@ -18,6 +19,7 @@ class ConfigCubit extends Cubit<ConfigState> {
       final port = prefs.getInt('server_port') ?? _defaultPort;
       final selectedProviderID = prefs.getString('selected_provider_id');
       final selectedModelID = prefs.getString('selected_model_id');
+      final defaultAgent = prefs.getString('default_agent') ?? _defaultAgentName;
       final baseUrl = 'http://$savedIP:$port';
 
       emit(ConfigLoaded(
@@ -26,6 +28,7 @@ class ConfigCubit extends Cubit<ConfigState> {
         port: port,
         selectedProviderID: selectedProviderID,
         selectedModelID: selectedModelID,
+        defaultAgent: defaultAgent,
       ));
     } catch (e) {
       emit(ConfigError('Failed to initialize config: ${e.toString()}'));
@@ -109,6 +112,29 @@ class ConfigCubit extends Cubit<ConfigState> {
     }
   }
 
+  /// Update the default agent
+  Future<void> updateDefaultAgent(String? agent) async {
+    try {
+      final currentState = state;
+      if (currentState is! ConfigLoaded) {
+        emit(const ConfigError(
+            'Cannot update agent when config is not loaded'));
+        return;
+      }
+
+      final prefs = await SharedPreferences.getInstance();
+      if (agent != null && agent.isNotEmpty) {
+        await prefs.setString('default_agent', agent);
+      } else {
+        await prefs.remove('default_agent');
+      }
+
+      emit(currentState.copyWith(defaultAgent: agent));
+    } catch (e) {
+      emit(ConfigError('Failed to update agent: ${e.toString()}'));
+    }
+  }
+
   /// Get current base URL (for backward compatibility)
   String get baseUrl {
     final currentState = state;
@@ -136,6 +162,14 @@ class ConfigCubit extends Cubit<ConfigState> {
     return _defaultPort;
   }
 
+  /// Get default agent
+  String? get defaultAgent {
+    final currentState = state;
+    if (currentState is ConfigLoaded) {
+      return currentState.defaultAgent;
+    }
+    return null;
+  }
 
   // Static endpoints (unchanged)
   static const String sseEndpoint = '/event';

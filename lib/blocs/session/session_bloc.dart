@@ -2,18 +2,21 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../services/opencode_client.dart';
 import '../../models/session.dart';
+import '../config/config_cubit.dart';
+import '../config/config_state.dart';
 
 import 'session_event.dart';
 import 'session_state.dart';
 
 class SessionBloc extends Bloc<SessionEvent, SessionState> {
   final OpenCodeClient openCodeClient;
+  final ConfigCubit? configCubit;
   Session? _currentSession;
   bool _isCreatingSession = false; // Guard to prevent concurrent session creation
-  
+
   static const String _currentSessionKey = 'current_session_id';
 
-  SessionBloc({required this.openCodeClient}) : super(SessionInitial()) {
+  SessionBloc({required this.openCodeClient, this.configCubit}) : super(SessionInitial()) {
     on<CreateSession>(_onCreateSession);
     on<SendMessage>(_onSendMessage);
     on<CancelSessionOperation>(_onCancelSessionOperation);
@@ -38,7 +41,7 @@ class SessionBloc extends Bloc<SessionEvent, SessionState> {
     emit(SessionLoading());
 
     try {
-      final session = await openCodeClient.createSession();
+      final session = await openCodeClient.createSession(agent: event.agent);
 
       _currentSession = session;
       await _persistCurrentSessionId(session.id);
@@ -81,8 +84,17 @@ class SessionBloc extends Bloc<SessionEvent, SessionState> {
 
     emit(MessageSending(_currentSession!));
 
+    // Use provided agent or fall back to default from config
+    String? effectiveAgent = event.agent;
+    if (effectiveAgent == null && configCubit != null) {
+      final configState = configCubit!.state;
+      if (configState is ConfigLoaded) {
+        effectiveAgent = configState.defaultAgent;
+      }
+    }
+
     try {
-      await openCodeClient.sendMessage(event.sessionId, event.message);
+      await openCodeClient.sendMessage(event.sessionId, event.message, agent: effectiveAgent);
 
       // Update session to active state
       final updatedSession = _currentSession!.copyWith(
@@ -209,8 +221,8 @@ class SessionBloc extends Bloc<SessionEvent, SessionState> {
 
   /// Send message directly without using events - for MessageQueueService
   /// Returns Future that completes on success or throws on error
-  Future<void> sendMessageDirect(String sessionId, String message) async {
-    
+  Future<void> sendMessageDirect(String sessionId, String message, {String? agent}) async {
+
     // Same validation logic as _onSendMessage
     if (sessionId.trim().isEmpty) {
       throw Exception('Invalid session ID');
@@ -230,8 +242,17 @@ class SessionBloc extends Bloc<SessionEvent, SessionState> {
           'Session ID mismatch: expected ${_currentSession!.id}, got $sessionId');
     }
 
+    // Use provided agent or fall back to default from config
+    String? effectiveAgent = agent;
+    if (effectiveAgent == null && configCubit != null) {
+      final configState = configCubit!.state;
+      if (configState is ConfigLoaded) {
+        effectiveAgent = configState.defaultAgent;
+      }
+    }
+
     try {
-      await openCodeClient.sendMessage(sessionId, message);
+      await openCodeClient.sendMessage(sessionId, message, agent: effectiveAgent);
 
       // Update session to active state (same as event handler)
       final updatedSession = _currentSession!.copyWith(
@@ -278,7 +299,14 @@ class SessionBloc extends Bloc<SessionEvent, SessionState> {
   /// Safely creates a session only if one isn't already being created
   void _safelyCreateSession() {
     if (!_isCreatingSession) {
-      add(CreateSession());
+      String? defaultAgent;
+      if (configCubit != null) {
+        final configState = configCubit!.state;
+        if (configState is ConfigLoaded) {
+          defaultAgent = configState.defaultAgent;
+        }
+      }
+      add(CreateSession(agent: defaultAgent));
     }
   }
 }

@@ -13,6 +13,7 @@ class ConfigLoaded extends ConfigState {
   final int port;
   final String? selectedProviderID;
   final String? selectedModelID;
+  final String? defaultAgent;
 
   const ConfigLoaded({
     required this.baseUrl,
@@ -20,10 +21,11 @@ class ConfigLoaded extends ConfigState {
     required this.port,
     this.selectedProviderID,
     this.selectedModelID,
+    this.defaultAgent,
   });
 
   @override
-  List<Object?> get props => [baseUrl, serverIp, port, selectedProviderID, selectedModelID];
+  List<Object?> get props => [baseUrl, serverIp, port, selectedProviderID, selectedModelID, defaultAgent];
 
   ConfigLoaded copyWith({
     String? baseUrl,
@@ -31,6 +33,7 @@ class ConfigLoaded extends ConfigState {
     int? port,
     String? selectedProviderID,
     String? selectedModelID,
+    String? defaultAgent,
   }) {
     return ConfigLoaded(
       baseUrl: baseUrl ?? this.baseUrl,
@@ -38,6 +41,7 @@ class ConfigLoaded extends ConfigState {
       port: port ?? this.port,
       selectedProviderID: selectedProviderID ?? this.selectedProviderID,
       selectedModelID: selectedModelID ?? this.selectedModelID,
+      defaultAgent: defaultAgent ?? this.defaultAgent,
     );
   }
 }

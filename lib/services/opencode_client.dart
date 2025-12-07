@@ -4,6 +4,8 @@ import '../config/opencode_config.dart';
 import '../models/session.dart';
 import '../models/opencode_message.dart';
 import '../models/provider.dart';
+import '../models/permission_request.dart';
+import '../models/session_status.dart';
 
 class OpenCodeClient {
   final http.Client _client = http.Client();
@@ -81,7 +83,7 @@ class OpenCodeClient {
       final response = await _client.get(
         uri,
         headers: {'Accept': 'application/json'},
-      );
+      ).timeout(const Duration(seconds: 5));
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> data = json.decode(response.body);
@@ -128,7 +130,7 @@ class OpenCodeClient {
       final response = await _client.get(
         uri,
         headers: {'Accept': 'application/json'},
-      );
+      ).timeout(const Duration(seconds: 5));
 
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
@@ -142,16 +144,20 @@ class OpenCodeClient {
     }
   }
 
-  Future<Session> createSession() async {
+  Future<Session> createSession({String? agent}) async {
     try {
       final uri = Uri.parse('${OpenCodeConfig.baseUrl}/session');
-      final requestBody = json.encode({});
+      final Map<String, dynamic> body = {};
+      if (agent != null) {
+        body['agent'] = agent;
+      }
+      final requestBody = json.encode(body);
 
       final response = await _client.post(
         uri,
         headers: {'Content-Type': 'application/json'},
         body: requestBody,
-      );
+      ).timeout(const Duration(seconds: 5));
 
       if (response.statusCode == 201 || response.statusCode == 200) {
         final sessionData = json.decode(response.body);
@@ -165,22 +171,45 @@ class OpenCodeClient {
     }
   }
 
-  Future<OpenCodeMessage> sendMessage(String sessionId, String message) async {
+  Future<void> switchAgent(String sessionId, String agent) async {
+    try {
+      final uri = Uri.parse('${OpenCodeConfig.baseUrl}/session/$sessionId/agent');
+      final response = await _client.post(
+        uri,
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({'agent': agent}),
+      ).timeout(const Duration(seconds: 5));
+
+      if (response.statusCode != 200 && response.statusCode != 204) {
+        throw Exception('Failed to switch agent: ${response.statusCode}');
+      }
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<OpenCodeMessage> sendMessage(String sessionId, String message, {String? agent}) async {
     try {
       final uri = Uri.parse('${OpenCodeConfig.baseUrl}/session/$sessionId/message');
-      final requestBody = json.encode({
-        'providerID': _providerID,
-        'modelID': _modelID,
+      final Map<String, dynamic> body = {
+        'model': {
+          'providerID': _providerID,
+          'modelID': _modelID,
+        },
         'parts': [
           {'type': 'text', 'text': message}
         ]
-      });
+      };
+      if (agent != null && agent.isNotEmpty) {
+        body['agent'] = agent;
+      }
+      final requestBody = json.encode(body);
 
       final response = await _client.post(
         uri,
         headers: {'Content-Type': 'application/json'},
         body: requestBody,
-      );
+      ).timeout(const Duration(seconds: 30));
 
       if (response.statusCode == 200) {
         final messageData = json.decode(response.body);
@@ -207,7 +236,7 @@ class OpenCodeClient {
       final response = await _client.post(
         uri,
         headers: {'Content-Type': 'application/json'},
-      );
+      ).timeout(const Duration(seconds: 5));
 
       if (response.statusCode == 200) {
         // Success - no logging needed
@@ -226,12 +255,68 @@ class OpenCodeClient {
       final response = await _client.delete(
         uri,
         headers: {'Content-Type': 'application/json'},
-      );
+      ).timeout(const Duration(seconds: 5));
 
       if (response.statusCode == 200 || response.statusCode == 204) {
         // Success - no logging needed
       } else {
         throw Exception('Failed to delete session: ${response.statusCode}');
+      }
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Respond to a permission request
+  ///
+  /// [sessionId] - The session ID
+  /// [permissionId] - The permission request ID
+  /// [response] - The user's response (once/always/reject)
+  Future<void> respondToPermission(
+    String sessionId,
+    String permissionId,
+    PermissionResponse response,
+  ) async {
+    try {
+      final uri = Uri.parse(
+        '${OpenCodeConfig.baseUrl}/session/$sessionId/permissions/$permissionId',
+      );
+
+      final requestBody = json.encode({
+        'response': response.value,
+      });
+
+      final httpResponse = await _client.post(
+        uri,
+        headers: {'Content-Type': 'application/json'},
+        body: requestBody,
+      ).timeout(const Duration(seconds: 5));
+
+      if (httpResponse.statusCode != 200 && httpResponse.statusCode != 204) {
+        throw Exception('Failed to respond to permission: ${httpResponse.statusCode}');
+      }
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Get session status
+  ///
+  /// Returns the current status of the session (idle/busy/retry)
+  Future<SessionStatus> getSessionStatus(String sessionId) async {
+    try {
+      final uri = Uri.parse('${OpenCodeConfig.baseUrl}/session/status');
+
+      final response = await _client.get(
+        uri,
+        headers: {'Content-Type': 'application/json'},
+      ).timeout(const Duration(seconds: 5));
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body) as Map<String, dynamic>;
+        return SessionStatus.fromJson(data);
+      } else {
+        throw Exception('Failed to get session status: ${response.statusCode}');
       }
     } catch (e) {
       rethrow;
@@ -251,7 +336,7 @@ class OpenCodeClient {
         uri,
         headers: {'Content-Type': 'application/json'},
         body: requestBody,
-      );
+      ).timeout(const Duration(seconds: 30));
 
       if (response.statusCode == 200) {
         try {
@@ -304,7 +389,7 @@ class OpenCodeClient {
   Future<String> _tryGetSummary(String sessionId) async {
     try {
       final uri = Uri.parse('${OpenCodeConfig.baseUrl}/session/$sessionId/summary');
-      final response = await _client.get(uri, headers: {'Accept': 'application/json'});
+      final response = await _client.get(uri, headers: {'Accept': 'application/json'}).timeout(const Duration(seconds: 5));
       
       if (response.statusCode == 200) {
         final responseData = json.decode(response.body);
@@ -343,7 +428,7 @@ class OpenCodeClient {
           uri,
           headers: {'Content-Type': 'application/json'},
           body: json.encode(body),
-        );
+        ).timeout(const Duration(seconds: 5));
 
         if (response.statusCode == 200) {
           final responseData = json.decode(response.body);
@@ -364,7 +449,7 @@ class OpenCodeClient {
       final response = await _client.get(
         uri,
         headers: {'Accept': 'application/json'},
-      );
+      ).timeout(const Duration(seconds: 5));
 
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
@@ -384,7 +469,7 @@ class OpenCodeClient {
       final response = await _client.get(
         uri,
         headers: {'Accept': 'application/json'},
-      );
+      ).timeout(const Duration(seconds: 5));
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> data = json.decode(response.body);
@@ -401,6 +486,31 @@ class OpenCodeClient {
   void setProvider(String providerID, String modelID) {
     _providerID = providerID;
     _modelID = modelID;
+  }
+
+  /// Get available agents from OpenCode
+  Future<List<String>> getAgents() async {
+    try {
+      final uri = Uri.parse('${OpenCodeConfig.baseUrl}/agents');
+      final response = await _client.get(
+        uri,
+        headers: {'Accept': 'application/json'},
+      ).timeout(const Duration(seconds: 5));
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = json.decode(response.body);
+        // Agents may be returned as objects with 'id' or 'name', or as strings
+        return data.map((agent) {
+          if (agent is String) return agent;
+          if (agent is Map) return agent['id']?.toString() ?? agent['name']?.toString() ?? '';
+          return '';
+        }).where((name) => name.isNotEmpty).toList();
+      } else {
+        return [];
+      }
+    } catch (e) {
+      return [];
+    }
   }
 
   void dispose() {

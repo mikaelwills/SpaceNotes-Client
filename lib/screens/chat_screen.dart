@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import '../theme/opencode_theme.dart';
+import '../theme/spacenotes_theme.dart';
 import '../blocs/chat/chat_bloc.dart';
 import '../blocs/chat/chat_event.dart';
 import '../blocs/chat/chat_state.dart';
@@ -12,6 +12,8 @@ import '../widgets/prompt_field.dart';
 import '../widgets/connection_status_row.dart';
 import '../widgets/mode_toggle_button.dart';
 import '../models/opencode_message.dart';
+import '../dialogs/permission_dialog.dart';
+import '../models/permission_request.dart';
 
 class ChatScreen extends StatefulWidget {
   const ChatScreen({
@@ -39,6 +41,15 @@ class _ChatScreenState extends State<ChatScreen> {
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final chatBloc = context.read<ChatBloc>();
+      final sessionBloc = context.read<SessionBloc>();
+
+      // If there's a session but chat isn't ready, load messages
+      if (sessionBloc.state is SessionLoaded &&
+          chatBloc.state is! ChatReady &&
+          chatBloc.state is! ChatSendingMessage) {
+        chatBloc.add(LoadMessagesForCurrentSession());
+      }
+
       final lastMessage = chatBloc.state is ChatReady
           ? (chatBloc.state as ChatReady).messages.isNotEmpty
               ? (chatBloc.state as ChatReady).messages.last
@@ -59,7 +70,7 @@ class _ChatScreenState extends State<ChatScreen> {
   Widget build(BuildContext context) {
     return BlocListener<SessionBloc, SessionState>(
       listener: (context, state) {
-        if (state is SessionError || state is SessionNotFound) {
+        if (state is SessionError || state is SessionNotFound || state is SessionInitial) {
           context.go('/connect');
         }
       },
@@ -86,12 +97,37 @@ class _ChatScreenState extends State<ChatScreen> {
           if (state is ChatReady || state is ChatSendingMessage) {
             return _buildMessagesList(state);
           }
+          if (state is ChatPermissionRequired) {
+            return _buildMessagesListWithPermission(state);
+          }
           if (state is ChatError) {
             return _buildErrorState(state);
           }
           return _buildConnectingState();
         },
       ),
+    );
+  }
+
+  Widget _buildMessagesListWithPermission(ChatPermissionRequired state) {
+    // Show permission dialog immediately
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _showPermissionDialog(state.permission);
+    });
+
+    // Show messages list underneath (dialog will overlay)
+    return ListView.builder(
+      key: const ValueKey('message-list'),
+      controller: _scrollController,
+      padding: const EdgeInsets.all(16),
+      itemCount: state.messages.length,
+      itemBuilder: (context, index) {
+        final message = state.messages[index];
+        return TerminalMessage(
+          message: message,
+          isStreaming: false,
+        );
+      },
     );
   }
 
@@ -105,7 +141,7 @@ class _ChatScreenState extends State<ChatScreen> {
       return const Center(
         child: Text(
           'Type a message to get started',
-          style: OpenCodeTextStyles.terminal,
+          style: SpaceNotesTextStyles.terminal,
         ),
       );
     }
@@ -136,13 +172,13 @@ class _ChatScreenState extends State<ChatScreen> {
           const Icon(
             Icons.error_outline,
             size: 48,
-            color: OpenCodeTheme.error,
+            color: SpaceNotesTheme.error,
           ),
           const SizedBox(height: 16),
           Text(
             state.error,
             style: const TextStyle(
-              color: OpenCodeTheme.error,
+              color: SpaceNotesTheme.error,
               fontSize: 14,
             ),
             textAlign: TextAlign.center,
@@ -163,7 +199,7 @@ class _ChatScreenState extends State<ChatScreen> {
     return const Center(
       child: Text(
         'Connecting to chat...',
-        style: TextStyle(color: OpenCodeTheme.textSecondary),
+        style: TextStyle(color: SpaceNotesTheme.textSecondary),
       ),
     );
   }
@@ -297,6 +333,24 @@ class _ChatScreenState extends State<ChatScreen> {
           _scrollController.jumpTo(targetOffset);
         }
       });
+    }
+  }
+
+  Future<void> _showPermissionDialog(PermissionRequest permission) async {
+    final response = await PermissionDialog.show(context, permission);
+
+    if (response != null && mounted) {
+      // Send response to ChatBloc
+      context.read<ChatBloc>().add(RespondToPermission(
+            permissionId: permission.id,
+            response: response,
+          ));
+    } else if (mounted) {
+      // User dismissed dialog without choosing - treat as reject
+      context.read<ChatBloc>().add(RespondToPermission(
+            permissionId: permission.id,
+            response: PermissionResponse.reject,
+          ));
     }
   }
 }
