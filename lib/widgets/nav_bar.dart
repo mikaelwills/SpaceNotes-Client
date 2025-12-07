@@ -98,7 +98,7 @@ class NavBar extends ConsumerWidget {
               ],
 
               // Chat screen specific navigation (hide on sessions page)
-              if (ref.watch(isAiChatModeProvider) && currentLocation != '/sessions') ...[
+              if (currentLocation.startsWith('/notes/chat') && currentLocation != '/sessions') ...[
                 GestureDetector(
                   onTap: () => context.go("/sessions"),
                   child: const Icon(Icons.list_outlined,
@@ -113,10 +113,10 @@ class NavBar extends ConsumerWidget {
                 const Spacer(),
               ],
 
-              // Spacer for other screens (not folder, not note, not in AI chat mode)
+              // Spacer for other screens (not folder, not note, not in chat)
               if (!currentLocation.startsWith('/notes/folder/') &&
                   !isOnNote &&
-                  !ref.watch(isAiChatModeProvider))
+                  !currentLocation.startsWith('/notes/chat'))
                 const Spacer(),
 
               // Show ellipsis menu on note screen, settings elsewhere

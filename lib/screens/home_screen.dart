@@ -47,11 +47,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   /// Determine the current view type based on route
   HomeViewType _getCurrentViewType() {
-    final notePath = ref.watch(currentNotePathProvider);
-    final isAiChatMode = ref.watch(isAiChatModeProvider);
+    final location = GoRouterState.of(context).uri.toString();
 
-    if (isAiChatMode) return HomeViewType.chat;
-    if (notePath != null) return HomeViewType.note;
+    if (location.startsWith('/notes/chat')) return HomeViewType.chat;
+    if (location.startsWith('/notes/note/')) return HomeViewType.note;
     return HomeViewType.folders;
   }
 
@@ -76,7 +75,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   Widget _buildBottomInputArea() {
     final viewType = _getCurrentViewType();
-    final isAiChatMode = ref.watch(isAiChatModeProvider);
+    final isChat = viewType == HomeViewType.chat;
     final folderPath = ref.watch(currentFolderPathProvider);
     final notePath = ref.watch(currentNotePathProvider);
 
@@ -147,9 +146,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         child: NotesSearchBar(
                           controller: _searchController,
                           height: 48,
-                          hintText:
-                              isAiChatMode ? 'Ask AI...' : 'Search notes...',
-                          onChanged: isAiChatMode ? (_) {} : _onSearchChanged,
+                          hintText: isChat ? 'Ask AI...' : 'Search notes...',
+                          onChanged: isChat ? (_) {} : _onSearchChanged,
                           onFocusChanged: (focused) {
                             setState(() => _isSearchFocused = focused);
                           },
@@ -159,7 +157,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     ),
                     const SizedBox(width: 12),
                     // Right side buttons
-                    if (isAiChatMode) ...[
+                    if (isChat) ...[
                       if (isWorking)
                         _buildCircularButton(
                           onPressed: () => context
@@ -295,7 +293,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   // Navigation helpers
   void _exitAiChatMode() {
-    ref.read(isAiChatModeProvider.notifier).state = false;
+    context.go('/notes');
   }
 
   void _navigateToParentFolder(String currentPath) {
@@ -342,8 +340,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final message = _searchController.text.trim();
     if (message.isEmpty) return;
 
-    ref.read(isAiChatModeProvider.notifier).state = true;
     context.read<ChatBloc>().add(SendChatMessage(message));
+    context.go('/notes/chat');
 
     _searchController.clear();
     ref.read(folderSearchQueryProvider.notifier).state = '';

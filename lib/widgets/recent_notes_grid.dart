@@ -82,8 +82,9 @@ class RecentNotesGrid extends ConsumerWidget {
   Widget _buildRecentNoteCard(BuildContext context, Note note) {
     return GestureDetector(
       onTap: () {
-        final encodedPath = Uri.encodeComponent(note.path);
-        context.go('/notes/$encodedPath');
+        final encodedPath =
+            note.path.split('/').map(Uri.encodeComponent).join('/');
+        context.go('/notes/note/$encodedPath');
       },
       child: Container(
         width: double.infinity,

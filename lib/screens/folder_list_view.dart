@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../theme/spacenotes_theme.dart';
@@ -9,14 +8,10 @@ import '../generated/note.dart';
 import '../widgets/folder_list_item.dart';
 import '../widgets/note_list_item.dart';
 import '../widgets/recent_notes_grid.dart';
-import '../widgets/connection_status_row.dart';
-import '../widgets/terminal_message.dart';
 import '../dialogs/notes_list_dialogs.dart';
-import '../blocs/chat/chat_bloc.dart';
-import '../blocs/chat/chat_state.dart';
 import 'home_screen.dart';
 
-/// FolderListView displays folder contents and handles AI chat display
+/// FolderListView displays folder contents
 /// The bottom input area is provided by the parent HomeScreen shell
 class FolderListView extends ConsumerStatefulWidget {
   final String folderPath;
@@ -31,9 +26,6 @@ class FolderListView extends ConsumerStatefulWidget {
 }
 
 class _FolderListViewState extends ConsumerState<FolderListView> {
-  final ScrollController _chatScrollController = ScrollController();
-  bool _showScrollToBottom = false;
-
   @override
   void initState() {
     super.initState();
@@ -56,124 +48,9 @@ class _FolderListViewState extends ConsumerState<FolderListView> {
   }
 
   @override
-  void dispose() {
-    _chatScrollController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
     final isRootLevel = widget.folderPath.isEmpty;
-    final isAiChatMode = ref.watch(isAiChatModeProvider);
-
-    if (isAiChatMode) {
-      return Column(
-        children: [
-          const ConnectionStatusRow(),
-          Expanded(child: _buildChatMessagesArea()),
-        ],
-      );
-    }
-
     return _buildFoldersList(showRecentNotes: isRootLevel);
-  }
-
-  Widget _buildChatMessagesArea() {
-    return BlocConsumer<ChatBloc, ChatState>(
-      listener: (context, state) {
-        if (state is ChatReady || state is ChatSendingMessage) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (_chatScrollController.hasClients) {
-              _chatScrollController.animateTo(
-                _chatScrollController.position.maxScrollExtent,
-                duration: const Duration(milliseconds: 200),
-                curve: Curves.easeOut,
-              );
-            }
-          });
-        }
-      },
-      builder: (context, state) {
-        final messages = state is ChatReady
-            ? state.messages
-            : state is ChatSendingMessage
-                ? state.messages
-                : <dynamic>[];
-        final isStreaming = state is ChatReady ? state.isStreaming : false;
-
-        if (messages.isEmpty) {
-          return const Center(
-            child: Text(
-              'Ask me anything...',
-              style: SpaceNotesTextStyles.terminal,
-            ),
-          );
-        }
-
-        return Stack(
-          children: [
-            NotificationListener<ScrollNotification>(
-              onNotification: (notification) {
-                if (notification is ScrollUpdateNotification) {
-                  final isNearBottom = _chatScrollController.position.pixels >=
-                      _chatScrollController.position.maxScrollExtent - 100;
-                  if (_showScrollToBottom == isNearBottom) {
-                    setState(() => _showScrollToBottom = !isNearBottom);
-                  }
-                }
-                return false;
-              },
-              child: ListView.builder(
-                controller: _chatScrollController,
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
-                itemCount: messages.length,
-                itemBuilder: (context, index) {
-                  final message = messages[index];
-                  final isLastMessage = index == messages.length - 1;
-                  final isStreamingMessage = isStreaming && isLastMessage;
-
-                  return TerminalMessage(
-                    message: message,
-                    isStreaming: isStreamingMessage,
-                  );
-                },
-              ),
-            ),
-            if (_showScrollToBottom) _buildScrollToBottomButton(),
-          ],
-        );
-      },
-    );
-  }
-
-  Widget _buildScrollToBottomButton() {
-    return Positioned(
-      bottom: 100,
-      right: 16,
-      child: Container(
-        width: 48,
-        height: 48,
-        decoration: const BoxDecoration(
-          color: SpaceNotesTheme.inputSurface,
-          shape: BoxShape.circle,
-        ),
-        child: IconButton(
-          onPressed: () {
-            _chatScrollController.animateTo(
-              _chatScrollController.position.maxScrollExtent,
-              duration: const Duration(milliseconds: 200),
-              curve: Curves.easeOut,
-            );
-          },
-          tooltip: 'Scroll to bottom',
-          icon: const Icon(
-            Icons.arrow_downward,
-            size: 24,
-            color: SpaceNotesTheme.primary,
-          ),
-        ),
-      ),
-    );
   }
 
   Widget _buildFoldersList({bool showRecentNotes = false}) {
