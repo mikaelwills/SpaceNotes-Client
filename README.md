@@ -1,6 +1,10 @@
 # SpaceNotes Client
 
-A Flutter client for **SpaceNotes** - a real-time notes application powered by [SpacetimeDB](https://spacetimedb.com).
+**Real-time note sync without the cloud.**
+
+No subscriptions. No cloud storage. No vendor lock-in. Just your notes, synced instantly across all your devices via your own server.
+
+This is the Flutter client for [SpaceNotes](https://github.com/mikaelwills/spacenotes).
 
 ## Features
 
@@ -8,16 +12,9 @@ A Flutter client for **SpaceNotes** - a real-time notes application powered by [
 - **Folder Organization**: Hierarchical folder structure for organizing notes
 - **Markdown Support**: Write and render notes in Markdown
 - **Cross-Platform**: iOS, Android, macOS, Windows, and Linux
-- **AI Chat Integration**: Built-in OpenCode chat interface for AI assistance
-- **Offline-First**: Local caching with automatic sync when reconnected
+- **AI Integration**: Built-in OpenCode chat interface for AI assistance
 
-## Prerequisites
-
-- **Flutter SDK**: 3.5.4+
-- **SpacetimeDB Server**: Running instance with the SpaceNotes module
-- **SpacetimeDB Dart SDK**: Local path dependency (see pubspec.yaml)
-
-## Installation
+## Setup
 
 ```bash
 git clone https://github.com/mikaelwills/SpaceNotes-Client.git
@@ -28,35 +25,30 @@ flutter run
 
 ## Configuration
 
-Configure your SpacetimeDB server connection in the app settings:
-- Server IP address
-- Port (default: 3003)
-- Database name: `spacenotes`
+Configure connections in Settings:
+
+**SpaceNotes Server** (SpacetimeDB)
+- IP address and port (default: 3003)
+
+**OpenCode Server** (optional)
+- IP address and port (default: 4096)
 
 ## Architecture
 
 - **BLoC + Riverpod**: State management
-- **SpacetimeDB**: Real-time database backend
+- **SpacetimeDB**: Real-time database
 - **Go Router**: Navigation
-
-### Project Structure
 
 ```
 lib/
 ├── blocs/           # BLoC state management
-├── generated/       # SpacetimeDB generated bindings
-├── models/          # Data models
+├── generated/       # SpacetimeDB bindings
 ├── providers/       # Riverpod providers
-├── repositories/    # Data access layer
+├── repositories/    # Data access
 ├── screens/         # UI screens
 ├── services/        # Network services
-└── widgets/         # Reusable components
+└── widgets/         # UI components
 ```
-
-## Related Projects
-
-- [SpaceNotes Module](https://github.com/mikaelwills/spacenotes) - SpacetimeDB Rust module
-- [SpacetimeDB Dart SDK](https://github.com/clockworklabs/spacetimedb) - Dart client SDK
 
 ## License
 
