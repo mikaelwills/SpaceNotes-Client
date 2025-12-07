@@ -7,6 +7,7 @@ import '../screens/provider_list_screen.dart';
 import '../screens/home_screen.dart';
 import '../screens/folder_list_view.dart';
 import '../screens/note_screen.dart';
+import '../screens/chat_view.dart';
 import '../widgets/main_scaffold.dart';
 
 // Global RouteObserver for detecting navigation back to screens
@@ -62,6 +63,14 @@ final GoRouter appRouter = GoRouter(
               pageBuilder: (context, state) => _buildFadeTransitionPage(
                 key: state.pageKey,
                 child: const FolderListView(folderPath: ''),
+              ),
+            ),
+            GoRoute(
+              path: '/notes/chat',
+              name: 'chat',
+              pageBuilder: (context, state) => _buildFadeTransitionPage(
+                key: state.pageKey,
+                child: const ChatView(),
               ),
             ),
             GoRoute(
