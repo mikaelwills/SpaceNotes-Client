@@ -4,7 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart' hide Provider;
 import '../theme/spacenotes_theme.dart';
 import '../blocs/config/config_cubit.dart';
 import '../blocs/config/config_state.dart';
+import '../blocs/connection/connection_bloc.dart';
+import '../blocs/connection/connection_event.dart';
 import '../providers/notes_providers.dart';
+import '../providers/connection_providers.dart';
 import '../widgets/terminal_ip_input.dart';
 
 /// Settings screen for configuring SpaceNotes and OpenCode connections.
@@ -95,6 +98,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     try {
       final configCubit = context.read<ConfigCubit>();
       await configCubit.updateServer(ip, port: port);
+
+      if (mounted) {
+        context.read<ConnectionBloc>().add(ResetConnection());
+      }
     } catch (e) {
       debugPrint('Failed to save OpenCode config: $e');
     } finally {
@@ -120,6 +127,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   Widget _buildSpaceNotesSection() {
+    final isConnected = ref.watch(spacetimeConnectedProvider);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -147,6 +156,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ipHint: 'IP Address',
           portHint: '3003',
           isConnecting: _isSpaceNotesConnecting,
+          isConnected: isConnected,
           onConnect: _saveSpaceNotesConfig,
         ),
       ],
@@ -154,58 +164,39 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   Widget _buildOpenCodeSection() {
-    return BlocBuilder<ConfigCubit, ConfigState>(
-      builder: (context, configState) {
-        final isConnected = configState is ConfigLoaded &&
-            configState.serverIp != '0.0.0.0' &&
-            configState.serverIp.isNotEmpty;
+    final isConnected = ref.watch(openCodeConnectionProvider).valueOrNull ?? false;
 
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                const Text(
-                  'OpenCode Server',
-                  style: TextStyle(
-                    fontFamily: 'FiraCode',
-                    fontSize: 16,
-                    color: SpaceNotesTheme.text,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                if (isConnected)
-                  Container(
-                    width: 8,
-                    height: 8,
-                    decoration: const BoxDecoration(
-                      color: SpaceNotesTheme.success,
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'AI assistant connection',
-              style: TextStyle(
-                fontSize: 12,
-                color: SpaceNotesTheme.text.withValues(alpha: 0.6),
-              ),
-            ),
-            const SizedBox(height: 16),
-            TerminalIPInput(
-              ipController: _openCodeIpController,
-              portController: _openCodePortController,
-              ipHint: 'IP Address',
-              portHint: '4096',
-              isConnecting: _isOpenCodeConnecting,
-              onConnect: _saveOpenCodeConfig,
-            ),
-          ],
-        );
-      },
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'OpenCode Server',
+          style: TextStyle(
+            fontFamily: 'FiraCode',
+            fontSize: 16,
+            color: SpaceNotesTheme.text,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'AI assistant connection',
+          style: TextStyle(
+            fontSize: 12,
+            color: SpaceNotesTheme.text.withValues(alpha: 0.6),
+          ),
+        ),
+        const SizedBox(height: 16),
+        TerminalIPInput(
+          ipController: _openCodeIpController,
+          portController: _openCodePortController,
+          ipHint: 'IP Address',
+          portHint: '4096',
+          isConnecting: _isOpenCodeConnecting,
+          isConnected: isConnected,
+          onConnect: _saveOpenCodeConfig,
+        ),
+      ],
     );
   }
 }

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../theme/spacenotes_theme.dart';
 
-/// Terminal-styled input for IP address and port with a connect button.
 class TerminalIPInput extends StatelessWidget {
   final TextEditingController ipController;
   final TextEditingController portController;
@@ -9,6 +8,7 @@ class TerminalIPInput extends StatelessWidget {
   final String ipHint;
   final String portHint;
   final bool isConnecting;
+  final bool isConnected;
   final double? maxWidth;
 
   const TerminalIPInput({
@@ -19,8 +19,12 @@ class TerminalIPInput extends StatelessWidget {
     this.ipHint = 'IP Address',
     this.portHint = 'Port',
     this.isConnecting = false,
+    this.isConnected = false,
     this.maxWidth,
   });
+
+  Color get _accentColor => isConnected ? SpaceNotesTheme.primary : SpaceNotesTheme.textSecondary;
+  Color get _textColor => isConnected ? SpaceNotesTheme.text : SpaceNotesTheme.textSecondary;
 
   @override
   Widget build(BuildContext context) {
@@ -39,14 +43,14 @@ class TerminalIPInput extends StatelessWidget {
   Widget _buildTerminalInput() {
     return Container(
       height: 52,
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         border: Border(
           left: BorderSide(
-            color: SpaceNotesTheme.primary,
+            color: _accentColor,
             width: 2,
           ),
           right: BorderSide(
-            color: SpaceNotesTheme.primary,
+            color: _accentColor,
             width: 2,
           ),
         ),
@@ -55,12 +59,12 @@ class TerminalIPInput extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          const Text(
+          Text(
             '❯',
             style: TextStyle(
               fontFamily: 'FiraCode',
               fontSize: 14,
-              color: SpaceNotesTheme.primary,
+              color: _accentColor,
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -78,10 +82,10 @@ class TerminalIPInput extends StatelessWidget {
           flex: 3,
           child: TextField(
             controller: ipController,
-            style: const TextStyle(
+            style: TextStyle(
               fontFamily: 'FiraCode',
               fontSize: 14,
-              color: SpaceNotesTheme.text,
+              color: _textColor,
               height: 1.4,
             ),
             decoration: InputDecoration(
@@ -104,14 +108,14 @@ class TerminalIPInput extends StatelessWidget {
             textInputAction: TextInputAction.next,
           ),
         ),
-        const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 8.0),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8.0),
           child: Text(
             ':',
             style: TextStyle(
               fontFamily: 'FiraCode',
               fontSize: 14,
-              color: SpaceNotesTheme.text,
+              color: _textColor,
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -120,10 +124,10 @@ class TerminalIPInput extends StatelessWidget {
           flex: 1,
           child: TextField(
             controller: portController,
-            style: const TextStyle(
+            style: TextStyle(
               fontFamily: 'FiraCode',
               fontSize: 14,
-              color: SpaceNotesTheme.text,
+              color: _textColor,
               height: 1.4,
             ),
             decoration: InputDecoration(
@@ -158,13 +162,13 @@ class TerminalIPInput extends StatelessWidget {
       decoration: BoxDecoration(
         color: SpaceNotesTheme.background,
         border: Border.all(
-          color: SpaceNotesTheme.primary.withValues(alpha: 0.35),
+          color: _accentColor.withValues(alpha: 0.35),
           width: 1,
         ),
         borderRadius: BorderRadius.circular(4),
         boxShadow: [
           BoxShadow(
-            color: SpaceNotesTheme.primary.withValues(alpha: 0.1),
+            color: _accentColor.withValues(alpha: 0.1),
             blurRadius: 4,
             spreadRadius: 0,
           ),
@@ -175,24 +179,22 @@ class TerminalIPInput extends StatelessWidget {
         child: InkWell(
           onTap: isConnecting ? null : onConnect,
           borderRadius: BorderRadius.circular(4),
-          splashColor: SpaceNotesTheme.primary.withValues(alpha: 0.1),
-          highlightColor: SpaceNotesTheme.primary.withValues(alpha: 0.05),
+          splashColor: _accentColor.withValues(alpha: 0.1),
+          highlightColor: _accentColor.withValues(alpha: 0.05),
           child: Center(
             child: isConnecting
-                ? const SizedBox(
+                ? SizedBox(
                     width: 16,
                     height: 16,
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        SpaceNotesTheme.primary,
-                      ),
+                      valueColor: AlwaysStoppedAnimation<Color>(_accentColor),
                     ),
                   )
-                : const Icon(
+                : Icon(
                     Icons.link,
                     size: 18,
-                    color: SpaceNotesTheme.primary,
+                    color: _accentColor,
                   ),
           ),
         ),

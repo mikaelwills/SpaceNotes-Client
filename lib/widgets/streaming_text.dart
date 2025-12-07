@@ -33,7 +33,6 @@ class _StreamingTextState extends State<StreamingText> {
   @override
   void initState() {
     super.initState();
-    // Sanitize the full text once at initialization
     _sanitizedFullText = _safeTextSanitize(widget.text, preserveMarkdown: widget.useMarkdown);
     
     if (widget.isStreaming) {
@@ -48,16 +47,13 @@ class _StreamingTextState extends State<StreamingText> {
     super.didUpdateWidget(oldWidget);
 
     if (widget.text != oldWidget.text) {
-      // Re-sanitize the full text when it changes
       final newSanitizedText = _safeTextSanitize(widget.text, preserveMarkdown: widget.useMarkdown);
 
       _timer?.cancel();
       if (widget.isStreaming) {
-        // For real-time streaming with deltas, show new content immediately
-        // The delta is already appended in the ChatBloc, so we just update display
         setState(() {
           _sanitizedFullText = newSanitizedText;
-          _displayedText = newSanitizedText; // Show immediately for delta updates
+          _displayedText = newSanitizedText;
           _currentIndex = newSanitizedText.length;
         });
       } else {
@@ -66,7 +62,6 @@ class _StreamingTextState extends State<StreamingText> {
       }
     } else if (widget.isStreaming != oldWidget.isStreaming) {
       if (widget.isStreaming) {
-        // Don't animate when starting streaming (content is already there)
         setState(() {
           _displayedText = _sanitizedFullText;
           _currentIndex = _sanitizedFullText.length;
@@ -90,12 +85,10 @@ class _StreamingTextState extends State<StreamingText> {
       if (_currentIndex < _sanitizedFullText.length) {
         setState(() {
           _currentIndex++;
-          // Skip over low surrogates to avoid splitting surrogate pairs
           while (_currentIndex < _sanitizedFullText.length &&
                  _isLowSurrogate(_sanitizedFullText.codeUnitAt(_currentIndex))) {
             _currentIndex++;
           }
-          // Use the pre-sanitized text, just substring it
           _displayedText = _sanitizedFullText.substring(0, _currentIndex);
         });
       } else {
@@ -104,12 +97,9 @@ class _StreamingTextState extends State<StreamingText> {
     });
   }
 
-  /// Checks if a code unit is a low surrogate (second half of a surrogate pair)
   bool _isLowSurrogate(int codeUnit) {
     return codeUnit >= 0xDC00 && codeUnit <= 0xDFFF;
   }
-
-
 
   @override
   Widget build(BuildContext context) {
@@ -173,7 +163,7 @@ class _StreamingTextState extends State<StreamingText> {
       text: TextSpan(
         children: [
           TextSpan(
-            text: _displayedText, // Already sanitized, no need to sanitize again
+            text: _displayedText,
             style: widget.style,
           ),
           if (widget.isStreaming && _currentIndex < _sanitizedFullText.length)
@@ -188,7 +178,6 @@ class _StreamingTextState extends State<StreamingText> {
     );
   }
 
-  /// Safe text sanitization with fallback handling
   String _safeTextSanitize(String text, {bool preserveMarkdown = true}) {
     try {
       return TextSanitizer.sanitize(text, preserveMarkdown: preserveMarkdown);

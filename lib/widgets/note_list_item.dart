@@ -3,8 +3,6 @@ import 'package:flutter/services.dart';
 import '../theme/spacenotes_theme.dart';
 import '../generated/note.dart';
 
-/// List item component for displaying note preview information
-/// Optimized for performance and accessibility
 class NoteListItem extends StatefulWidget {
   final Note note;
   final VoidCallback onTap;
@@ -50,7 +48,6 @@ class _NoteListItemState extends State<NoteListItem> {
     return SpaceNotesTheme.surface;
   }
 
-
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -76,7 +73,6 @@ class _NoteListItemState extends State<NoteListItem> {
               ),
               child: Row(
                 children: [
-                  // File icon
                   Icon(
                     Icons.description_outlined,
                     color: widget.isSelected
@@ -85,7 +81,6 @@ class _NoteListItemState extends State<NoteListItem> {
                     size: 16,
                   ),
                   const SizedBox(width: 8),
-                  // File name
                   Expanded(
                     child: Text(
                       widget.note.name,
