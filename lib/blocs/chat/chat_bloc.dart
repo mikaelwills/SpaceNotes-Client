@@ -61,7 +61,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     final currentSessionId = sessionBloc.currentSessionId;
     
     if (currentSessionId == null) {
-      // Silently return, as the SessionBloc listener in ChatScreen will handle navigation.
+      // Silently return - no session to load messages for.
       return;
     }
 

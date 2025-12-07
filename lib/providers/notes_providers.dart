@@ -4,6 +4,9 @@ import '../generated/client.dart';
 import '../generated/folder.dart';
 import '../generated/note.dart';
 
+/// Provider to track if AI chat mode is active (used by NavBar)
+final isAiChatModeProvider = StateProvider<bool>((ref) => false);
+
 final notesRepositoryProvider = Provider<SpacetimeDbNotesRepository>((ref) {
   final repository = SpacetimeDbNotesRepository(
     host: '100.84.184.121:3003',

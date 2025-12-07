@@ -2,17 +2,18 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter_client_sse/constants/sse_request_type_enum.dart';
 import 'package:flutter_client_sse/flutter_client_sse.dart';
-import '../config/opencode_config.dart';
+import '../blocs/config/config_cubit.dart';
 import '../models/opencode_event.dart';
 
 class SSEService {
+  final ConfigCubit _configCubit;
   StreamSubscription? _subscription;
   StreamController<OpenCodeEvent>? _eventController;
   Timer? _reconnectTimer;
   bool _isConnected = false;
   int _reconnectAttempts = 0;
 
-  SSEService();
+  SSEService({required ConfigCubit configCubit}) : _configCubit = configCubit;
 
 
 
@@ -31,7 +32,7 @@ class SSEService {
     _reconnectAttempts++;
     _subscription = SSEClient.subscribeToSSE(
             method: SSERequestType.GET,
-            url: '${OpenCodeConfig.baseUrl}${OpenCodeConfig.sseEndpoint}',
+            url: '${_configCubit.baseUrl}${ConfigCubit.sseEndpoint}',
             header: {
               "Accept": "text/event-stream",
               "Cache-Control": "no-cache",

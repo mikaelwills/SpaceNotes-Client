@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import '../utils/session_validator.dart';
 import '../theme/spacenotes_theme.dart';
 import '../blocs/session_list/session_list_bloc.dart';
@@ -146,17 +147,25 @@ class _SessionsScreenState extends State<SessionsScreen> {
                           },
                         ),
                       ),
-                      if (state.sessions.isNotEmpty) ...[
-                        Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: TerminalButton(
-                            command: 'delete_all_sessions',
-                            type: TerminalButtonType.danger,
-                            width: double.infinity,
-                            onPressed: _deleteAllSessions,
-                          ),
+                      Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Row(
+                          children: [
+                            _buildBackButton(),
+                            if (state.sessions.isNotEmpty) ...[
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: TerminalButton(
+                                  command: 'delete_all_sessions',
+                                  type: TerminalButtonType.danger,
+                                  width: double.infinity,
+                                  onPressed: _deleteAllSessions,
+                                ),
+                              ),
+                            ],
+                          ],
                         ),
-                      ],
+                      ),
                     ],
                   );
                 }
@@ -167,6 +176,26 @@ class _SessionsScreenState extends State<SessionsScreen> {
           return const SizedBox.shrink();
         },
       );
+  }
+
+  Widget _buildBackButton() {
+    return Container(
+      width: 48,
+      height: 48,
+      decoration: const BoxDecoration(
+        color: Color(0xFF2A2A2A),
+        shape: BoxShape.circle,
+      ),
+      child: IconButton(
+        onPressed: () => context.go('/notes'),
+        tooltip: 'Back',
+        icon: const Icon(
+          Icons.arrow_back,
+          size: 24,
+          color: SpaceNotesTheme.primary,
+        ),
+      ),
+    );
   }
 
   void _selectSession(BuildContext context, Session session) {
@@ -252,9 +281,7 @@ class _SessionsScreenState extends State<SessionsScreen> {
   Future<void> _deleteAllSessions() async {
     // Capture context-dependent values before async operations
     final currentSessionId = context.read<SessionBloc>().currentSessionId;
-    
     final sessionListBloc = context.read<SessionListBloc>();
-    final scaffoldMessenger = ScaffoldMessenger.of(context);
 
     // Show confirmation dialog
     final confirmed = await showDialog<bool>(
@@ -293,27 +320,8 @@ class _SessionsScreenState extends State<SessionsScreen> {
     try {
       // Trigger delete all sessions event with exclusion
       sessionListBloc.add(DeleteAllSessions(excludeSessionId: currentSessionId));
-      
-      if (mounted) {
-        final message = currentSessionId != null
-            ? 'Deleting all sessions except the active one...'
-            : 'Deleting all sessions...';
-        scaffoldMessenger.showSnackBar(
-          SnackBar(
-            content: Text(message),
-            backgroundColor: SpaceNotesTheme.warning,
-          ),
-        );
-      }
     } catch (e) {
-      if (mounted) {
-        scaffoldMessenger.showSnackBar(
-          SnackBar(
-            content: Text('Failed to delete all sessions: $e'),
-            backgroundColor: SpaceNotesTheme.error,
-          ),
-        );
-      }
+      debugPrint('Failed to delete all sessions: $e');
     }
   }
 }

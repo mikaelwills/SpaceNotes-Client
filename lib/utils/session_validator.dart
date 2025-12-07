@@ -13,15 +13,9 @@ class SessionValidator {
     return sessionState is SessionLoaded;
   }
 
-  /// Navigates to the chat screen only if the session is valid.
-  /// Otherwise, navigates to the connect screen.
+  /// Navigates to the notes screen (which contains AI chat functionality).
+  /// Previously navigated to /chat but AI chat is now integrated into notes.
   static void navigateToChat(BuildContext context) {
-    if (isValidSession(context)) {
-      context.go('/chat');
-    } else {
-      // Silently redirect to connect screen if session is not ready.
-      // This prevents navigating to a broken chat screen.
-      context.go('/connect');
-    }
+    context.go('/notes');
   }
 }

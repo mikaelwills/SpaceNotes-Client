@@ -16,12 +16,7 @@ import 'blocs/session_list/session_list_bloc.dart';
 import 'blocs/chat/chat_bloc.dart';
 import 'blocs/config/config_cubit.dart';
 import 'blocs/config/config_state.dart';
-import 'blocs/instance/instance_bloc.dart';
-import 'blocs/obsidian_instance/obsidian_instance_bloc.dart';
-import 'blocs/obsidian_connection/obsidian_connection_cubit.dart';
-import 'blocs/spacetimedb_instance/spacetimedb_instance_bloc.dart';
 import 'router/app_router.dart';
-import 'config/opencode_config.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -30,19 +25,11 @@ void main() async {
   final configCubit = ConfigCubit();
   await configCubit.initialize();
 
-  // Set the cubit for backward compatibility
-  OpenCodeConfig.setConfigCubit(configCubit);
-
-  print('🚀 Creating services...');
-
   // Create unconfigured Obsidian service
   final notesService = NotesService.unconfigured();
-  print('  Created NotesService (unconfigured)');
 
-  print('  SpacetimeDbNotesRepository created');
-  print('✅ All services created');
-
-  final openCodeClient = OpenCodeClient();
+  // Create OpenCodeClient with ConfigCubit
+  final openCodeClient = OpenCodeClient(configCubit: configCubit);
 
   // Apply saved provider/model settings if available
   final configState = configCubit.state;
@@ -132,7 +119,7 @@ class _OpenCodeAppState extends State<OpenCodeApp> with WidgetsBindingObserver {
     return MultiProvider(
       providers: [
         Provider<OpenCodeClient>.value(value: widget.openCodeClient),
-        Provider<SSEService>(create: (_) => SSEService()),
+        Provider<SSEService>(create: (_) => SSEService(configCubit: widget.configCubit)),
       ],
       child: MultiBlocProvider(
         providers: [
@@ -171,18 +158,6 @@ class _OpenCodeAppState extends State<OpenCodeApp> with WidgetsBindingObserver {
 
               return chatBloc;
             },
-          ),
-          BlocProvider<InstanceBloc>(
-            create: (context) => InstanceBloc(),
-          ),
-          BlocProvider<ObsidianInstanceBloc>(
-            create: (context) => ObsidianInstanceBloc(),
-          ),
-          BlocProvider<ObsidianConnectionCubit>(
-            create: (context) => ObsidianConnectionCubit(),
-          ),
-          BlocProvider<SpacetimeDbInstanceBloc>(
-            create: (context) => SpacetimeDbInstanceBloc(),
           ),
         ],
         child: Container(

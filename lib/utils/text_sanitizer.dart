@@ -61,10 +61,41 @@ class TextSanitizer {
   /// Sanitizes text more aggressively for plain text content (tool names, etc.)
   static String _sanitizeForPlainText(String text) {
     // More aggressive cleaning for plain text (tool names, etc.)
-    return text
+    var result = text
         .replaceAll(_plainTextControlCharsRegex, '') // Control characters
         .replaceAll(_invalidUnicodeRegex, '') // Invalid Unicode
         .replaceAll(_unpairedSurrogatesRegex, ''); // Unpaired surrogates
+
+    // Additional pass: remove any remaining unpaired surrogates by checking codeUnits
+    final buffer = StringBuffer();
+    final codeUnits = result.codeUnits;
+    for (int i = 0; i < codeUnits.length; i++) {
+      final unit = codeUnits[i];
+      // Check for high surrogate
+      if (unit >= 0xD800 && unit <= 0xDBFF) {
+        // Must be followed by low surrogate
+        if (i + 1 < codeUnits.length) {
+          final nextUnit = codeUnits[i + 1];
+          if (nextUnit >= 0xDC00 && nextUnit <= 0xDFFF) {
+            // Valid surrogate pair, keep both
+            buffer.writeCharCode(unit);
+            buffer.writeCharCode(nextUnit);
+            i++; // Skip next unit
+            continue;
+          }
+        }
+        // Invalid/unpaired high surrogate, skip it
+        continue;
+      }
+      // Check for low surrogate without preceding high surrogate
+      if (unit >= 0xDC00 && unit <= 0xDFFF) {
+        // Skip unpaired low surrogate
+        continue;
+      }
+      // Normal character
+      buffer.writeCharCode(unit);
+    }
+    return buffer.toString();
   }
 
   /// Caches result with size management

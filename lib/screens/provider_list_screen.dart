@@ -60,31 +60,23 @@ class _ProviderListScreenState extends State<ProviderListScreen> {
 
   Future<void> _selectProvider(String providerID, String modelID) async {
     if (!mounted) return;
-    
-    final scaffoldMessenger = ScaffoldMessenger.of(context);
+
     final configCubit = context.read<ConfigCubit>();
     final openCodeClient = context.read<OpenCodeClient>();
-    
+
     try {
       // Update ConfigCubit
       await configCubit.updateProvider(providerID, modelID);
-      
+
       // Update OpenCodeClient
       openCodeClient.setProvider(providerID, modelID);
-      
+
       if (mounted) {
         // Navigate back to chat
         SessionValidator.navigateToChat(context);
       }
     } catch (e) {
-      if (mounted) {
-        scaffoldMessenger.showSnackBar(
-          SnackBar(
-            content: Text('Failed to update provider: $e'),
-            backgroundColor: SpaceNotesTheme.error,
-          ),
-        );
-      }
+      debugPrint('Failed to update provider: $e');
     }
   }
 

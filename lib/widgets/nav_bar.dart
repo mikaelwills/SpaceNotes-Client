@@ -22,7 +22,8 @@ class NavBar extends ConsumerWidget {
   void _onNewSessionPressed(BuildContext context) {
     context.read<ChatBloc>().add(ClearChat());
     final configState = context.read<ConfigCubit>().state;
-    final defaultAgent = configState is ConfigLoaded ? configState.defaultAgent : null;
+    final defaultAgent =
+        configState is ConfigLoaded ? configState.defaultAgent : null;
     context.read<SessionBloc>().add(CreateSession(agent: defaultAgent));
   }
 
@@ -64,19 +65,12 @@ class NavBar extends ConsumerWidget {
           ),
           child: Row(
             children: [
-              // Back button for non-chat screens
+              // Back button for settings screen
               if (currentLocation == '/settings') ...[
                 GestureDetector(
-                  onTap: () => context.go("/chat"),
-                  child: const Icon(Icons.arrow_back,
-                      color: SpaceNotesTheme.text),
-                ),
-              ],
-              if (currentLocation == '/sessions') ...[
-                GestureDetector(
-                  onTap: () => context.go("/chat"),
-                  child: const Icon(Icons.arrow_back,
-                      color: SpaceNotesTheme.text),
+                  onTap: () => context.go("/notes"),
+                  child:
+                      const Icon(Icons.arrow_back, color: SpaceNotesTheme.text),
                 ),
               ],
 
@@ -102,8 +96,8 @@ class NavBar extends ConsumerWidget {
                 const SizedBox(width: 16),
               ],
 
-              // Chat screen specific navigation
-              if (currentLocation == '/chat') ...[
+              // Chat screen specific navigation (hide on sessions page)
+              if (ref.watch(isAiChatModeProvider) && currentLocation != '/sessions') ...[
                 GestureDetector(
                   onTap: () => context.go("/sessions"),
                   child: const Icon(Icons.list_outlined,
@@ -118,10 +112,10 @@ class NavBar extends ConsumerWidget {
                 const Spacer(),
               ],
 
-              // Spacer for other screens (not folder, not note, not chat)
+              // Spacer for other screens (not folder, not note, not in AI chat mode)
               if (!currentLocation.startsWith('/notes/folder/') &&
                   !isOnNote &&
-                  currentLocation != '/chat')
+                  !ref.watch(isAiChatModeProvider))
                 const Spacer(),
 
               // Show ellipsis menu on note screen, settings elsewhere
@@ -279,7 +273,6 @@ class NavBar extends ConsumerWidget {
     return 'Note';
   }
 
-
   void _navigateBackFromNote(BuildContext context, String currentLocation) {
     final uri = Uri.parse(currentLocation);
     final pathSegments = uri.pathSegments;
@@ -337,7 +330,8 @@ class NavBar extends ConsumerWidget {
           stream: client.connection.connectionStatus,
           initialData: client.connection.status,
           builder: (context, statusSnapshot) {
-            final status = statusSnapshot.data ?? stdb.ConnectionStatus.disconnected;
+            final status =
+                statusSnapshot.data ?? stdb.ConnectionStatus.disconnected;
 
             return StreamBuilder<stdb.ConnectionQuality>(
               stream: client.connection.connectionQuality,
@@ -490,7 +484,8 @@ class _EditableNoteNameState extends ConsumerState<_EditableNoteName> {
     }
 
     final notesAsync = ref.read(notesListProvider);
-    final note = notesAsync.valueOrNull?.firstWhereOrNull((n) => n.path == widget.notePath);
+    final note = notesAsync.valueOrNull
+        ?.firstWhereOrNull((n) => n.path == widget.notePath);
 
     if (note == null) return;
 
@@ -512,13 +507,6 @@ class _EditableNoteNameState extends ConsumerState<_EditableNoteName> {
         final encodedNewPath = Uri.encodeComponent(newPath);
         context.go('/notes/$encodedNewPath');
       }
-    } else if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Failed to rename note'),
-          backgroundColor: SpaceNotesTheme.error,
-        ),
-      );
     }
   }
 }
@@ -534,7 +522,8 @@ class _EditableFolderName extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<_EditableFolderName> createState() => _EditableFolderNameState();
+  ConsumerState<_EditableFolderName> createState() =>
+      _EditableFolderNameState();
 }
 
 class _EditableFolderNameState extends ConsumerState<_EditableFolderName> {
@@ -598,20 +587,10 @@ class _EditableFolderNameState extends ConsumerState<_EditableFolderName> {
 
     final success = await repo.moveFolder(widget.folderPath, newFolderPath);
 
-    if (mounted) {
-      if (success) {
-        // Navigate to the new folder path
-        final encodedNewPath = Uri.encodeComponent(newFolderPath);
-        context.go('/notes/folder/$encodedNewPath');
-      } else {
-        // Show error
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Failed to rename folder'),
-            backgroundColor: SpaceNotesTheme.error,
-          ),
-        );
-      }
+    if (mounted && success) {
+      // Navigate to the new folder path
+      final encodedNewPath = Uri.encodeComponent(newFolderPath);
+      context.go('/notes/folder/$encodedNewPath');
     }
   }
 
@@ -768,36 +747,38 @@ class _PulsingHealthBarState extends ConsumerState<_PulsingHealthBar>
           animation: _pulseAnimation,
           builder: (context, child) {
             final glowOpacity = (_pulseAnimation.value - 1.0) / 0.15;
-          return Container(
-            width: 4,
-            height: 20,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(2),
-              color: color.withValues(alpha: 0.15),
-              boxShadow: glowOpacity > 0 ? [
-                BoxShadow(
-                  color: color.withValues(alpha: glowOpacity * 0.8),
-                  blurRadius: 60,
-                  spreadRadius: 20,
-                ),
-              ] : null,
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(2),
-              child: Align(
-                alignment: Alignment.bottomCenter,
-                child: FractionallySizedBox(
-                  heightFactor: healthScore.clamp(0.0, 1.0),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: color,
-                      borderRadius: BorderRadius.circular(2),
+            return Container(
+              width: 4,
+              height: 20,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(2),
+                color: color.withValues(alpha: 0.15),
+                boxShadow: glowOpacity > 0
+                    ? [
+                        BoxShadow(
+                          color: color.withValues(alpha: glowOpacity * 0.8),
+                          blurRadius: 60,
+                          spreadRadius: 20,
+                        ),
+                      ]
+                    : null,
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(2),
+                child: Align(
+                  alignment: Alignment.bottomCenter,
+                  child: FractionallySizedBox(
+                    heightFactor: healthScore.clamp(0.0, 1.0),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: color,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
-          );
+            );
           },
         ),
       ),
