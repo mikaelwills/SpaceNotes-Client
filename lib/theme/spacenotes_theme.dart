@@ -4,7 +4,8 @@ import 'package:flutter/material.dart';
 class SpaceNotesTheme {
   // Terminal color scheme
   static const Color background = Color(0xFF0A0A0A); // Very dark background
-  static const Color surface = Color(0xFF0d0d0d); // Slightly lighter
+  static const Color surface = Color(0xFF0d0d0d); // Cards, panels
+  static const Color inputSurface = Color(0xFF1A1A1A); // Input fields, buttons
   static const Color primary = Color(0xFF00D9FF); // Cyan blue for prompts
   static const Color secondary = Color(0xFF7C3AED); // Purple accent
   static const Color text = Color(0xFFFFFFFF); // Pure white text

@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import '../config/opencode_config.dart';
+import '../blocs/config/config_cubit.dart';
 import '../models/session.dart';
 import '../models/opencode_message.dart';
 import '../models/provider.dart';
@@ -9,8 +9,13 @@ import '../models/session_status.dart';
 
 class OpenCodeClient {
   final http.Client _client = http.Client();
+  final ConfigCubit _configCubit;
   String? _providerID;
   String? _modelID;
+
+  OpenCodeClient({required ConfigCubit configCubit}) : _configCubit = configCubit;
+
+  String get _baseUrl => _configCubit.baseUrl;
 
   String? get providerID => _providerID;
   String? get modelID => _modelID;
@@ -79,7 +84,7 @@ class OpenCodeClient {
 
   Future<void> getProviders() async {
     try {
-      final uri = Uri.parse('${OpenCodeConfig.baseUrl}/config');
+      final uri = Uri.parse('$_baseUrl/config');
       final response = await _client.get(
         uri,
         headers: {'Accept': 'application/json'},
@@ -100,9 +105,9 @@ class OpenCodeClient {
       }
     } catch (e) {
       if (e.toString().contains('No route to host') || e.toString().contains('Connection failed')) {
-        throw Exception('Cannot connect to OpenCode server at ${OpenCodeConfig.baseUrl}. Please check:\n'
+        throw Exception('Cannot connect to OpenCode server at $_baseUrl. Please check:\n'
             '1. Tailscale is running and connected\n'
-            '2. OpenCode server is running at ${OpenCodeConfig.baseUrl}\n'
+            '2. OpenCode server is running at $_baseUrl\n'
             '3. Network connectivity is available');
       }
 
@@ -112,7 +117,7 @@ class OpenCodeClient {
 
   Future<bool> ping() async {
     try {
-      final uri = Uri.parse('${OpenCodeConfig.baseUrl}/config');
+      final uri = Uri.parse('$_baseUrl/config');
       final response = await _client.get(
         uri,
         headers: {'Accept': 'application/json'},
@@ -126,7 +131,7 @@ class OpenCodeClient {
 
   Future<List<Session>> getSessions() async {
     try {
-      final uri = Uri.parse('${OpenCodeConfig.baseUrl}/session');
+      final uri = Uri.parse('$_baseUrl/session');
       final response = await _client.get(
         uri,
         headers: {'Accept': 'application/json'},
@@ -146,7 +151,7 @@ class OpenCodeClient {
 
   Future<Session> createSession({String? agent}) async {
     try {
-      final uri = Uri.parse('${OpenCodeConfig.baseUrl}/session');
+      final uri = Uri.parse('$_baseUrl/session');
       final Map<String, dynamic> body = {};
       if (agent != null) {
         body['agent'] = agent;
@@ -173,7 +178,7 @@ class OpenCodeClient {
 
   Future<void> switchAgent(String sessionId, String agent) async {
     try {
-      final uri = Uri.parse('${OpenCodeConfig.baseUrl}/session/$sessionId/agent');
+      final uri = Uri.parse('$_baseUrl/session/$sessionId/agent');
       final response = await _client.post(
         uri,
         headers: {'Content-Type': 'application/json'},
@@ -190,7 +195,7 @@ class OpenCodeClient {
 
   Future<OpenCodeMessage> sendMessage(String sessionId, String message, {String? agent}) async {
     try {
-      final uri = Uri.parse('${OpenCodeConfig.baseUrl}/session/$sessionId/message');
+      final uri = Uri.parse('$_baseUrl/session/$sessionId/message');
       final Map<String, dynamic> body = {
         'model': {
           'providerID': _providerID,
@@ -232,7 +237,7 @@ class OpenCodeClient {
 
   Future<void> abortSession(String sessionId) async {
     try {
-      final uri = Uri.parse('${OpenCodeConfig.baseUrl}/session/$sessionId/abort');
+      final uri = Uri.parse('$_baseUrl/session/$sessionId/abort');
       final response = await _client.post(
         uri,
         headers: {'Content-Type': 'application/json'},
@@ -251,7 +256,7 @@ class OpenCodeClient {
 
   Future<void> deleteSession(String sessionId) async {
     try {
-      final uri = Uri.parse('${OpenCodeConfig.baseUrl}/session/$sessionId');
+      final uri = Uri.parse('$_baseUrl/session/$sessionId');
       final response = await _client.delete(
         uri,
         headers: {'Content-Type': 'application/json'},
@@ -279,7 +284,7 @@ class OpenCodeClient {
   ) async {
     try {
       final uri = Uri.parse(
-        '${OpenCodeConfig.baseUrl}/session/$sessionId/permissions/$permissionId',
+        '$_baseUrl/session/$sessionId/permissions/$permissionId',
       );
 
       final requestBody = json.encode({
@@ -305,7 +310,7 @@ class OpenCodeClient {
   /// Returns the current status of the session (idle/busy/retry)
   Future<SessionStatus> getSessionStatus(String sessionId) async {
     try {
-      final uri = Uri.parse('${OpenCodeConfig.baseUrl}/session/status');
+      final uri = Uri.parse('$_baseUrl/session/status');
 
       final response = await _client.get(
         uri,
@@ -325,7 +330,7 @@ class OpenCodeClient {
 
   Future<String> generateSessionSummary(String sessionId) async {
     try {
-      final uri = Uri.parse('${OpenCodeConfig.baseUrl}/session/$sessionId/summarize');
+      final uri = Uri.parse('$_baseUrl/session/$sessionId/summarize');
 
       final requestBody = json.encode({
         'providerID': _providerID,
@@ -388,7 +393,7 @@ class OpenCodeClient {
 
   Future<String> _tryGetSummary(String sessionId) async {
     try {
-      final uri = Uri.parse('${OpenCodeConfig.baseUrl}/session/$sessionId/summary');
+      final uri = Uri.parse('$_baseUrl/session/$sessionId/summary');
       final response = await _client.get(uri, headers: {'Accept': 'application/json'}).timeout(const Duration(seconds: 5));
       
       if (response.statusCode == 200) {
@@ -423,7 +428,7 @@ class OpenCodeClient {
 
     for (final body in alternatives) {
       try {
-        final uri = Uri.parse('${OpenCodeConfig.baseUrl}/session/$sessionId/summarize');
+        final uri = Uri.parse('$_baseUrl/session/$sessionId/summarize');
         final response = await _client.post(
           uri,
           headers: {'Content-Type': 'application/json'},
@@ -445,7 +450,7 @@ class OpenCodeClient {
 
   Future<List<OpenCodeMessage>> getSessionMessages(String sessionId, {int limit = 100}) async {
     try {
-      final uri = Uri.parse('${OpenCodeConfig.baseUrl}/session/$sessionId/message?limit=$limit');
+      final uri = Uri.parse('$_baseUrl/session/$sessionId/message?limit=$limit');
       final response = await _client.get(
         uri,
         headers: {'Accept': 'application/json'},
@@ -465,7 +470,7 @@ class OpenCodeClient {
 
   Future<ProvidersResponse> getAvailableProviders() async {
     try {
-      final uri = Uri.parse('${OpenCodeConfig.baseUrl}/config/providers');
+      final uri = Uri.parse('$_baseUrl/config/providers');
       final response = await _client.get(
         uri,
         headers: {'Accept': 'application/json'},
@@ -491,7 +496,7 @@ class OpenCodeClient {
   /// Get available agents from OpenCode
   Future<List<String>> getAgents() async {
     try {
-      final uri = Uri.parse('${OpenCodeConfig.baseUrl}/agents');
+      final uri = Uri.parse('$_baseUrl/agents');
       final response = await _client.get(
         uri,
         headers: {'Accept': 'application/json'},

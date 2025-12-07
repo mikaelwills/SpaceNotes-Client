@@ -90,6 +90,11 @@ class _StreamingTextState extends State<StreamingText> {
       if (_currentIndex < _sanitizedFullText.length) {
         setState(() {
           _currentIndex++;
+          // Skip over low surrogates to avoid splitting surrogate pairs
+          while (_currentIndex < _sanitizedFullText.length &&
+                 _isLowSurrogate(_sanitizedFullText.codeUnitAt(_currentIndex))) {
+            _currentIndex++;
+          }
           // Use the pre-sanitized text, just substring it
           _displayedText = _sanitizedFullText.substring(0, _currentIndex);
         });
@@ -97,6 +102,11 @@ class _StreamingTextState extends State<StreamingText> {
         timer.cancel();
       }
     });
+  }
+
+  /// Checks if a code unit is a low surrogate (second half of a surrogate pair)
+  bool _isLowSurrogate(int codeUnit) {
+    return codeUnit >= 0xDC00 && codeUnit <= 0xDFFF;
   }
 
 

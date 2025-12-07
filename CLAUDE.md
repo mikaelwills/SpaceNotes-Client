@@ -13,11 +13,11 @@ mcp__spacenotes-mcp__list_notes_in_folder or mcp__spacenotes-mcp__get_note
 When the user says "look at note updates", use spacenotes-mcp to get the note titled "spacetime flutter client updates". This note contains a list of issues and features that need to be implemented or fixed.
 
 ```
-mcp__spacenotes-mcp__get_note with path: "Development/spacetime flutter client updates.md"
+mcp__spacenotes-mcp__get_note with path: "Development/spacenotes flutter client updates.md"
 ```
 
-### Editing "obsidian flutter client updates" Note
-Anytime you update or edit `Development/spacetime flutter client updates.md`, the future tasks should always remain at the top and be clear bullet points. Don't make the user scroll to see what's next. Don't write any giant updates into it or anything that's too verbose.
+### Editing "spacenotes flutter client updates" Note
+Anytime you update or edit `Development/spacenote flutter client updates.md`, the future tasks should always remain at the top and be clear bullet points. Don't make the user scroll to see what's next. Don't write any giant updates into it or anything that's too verbose.
 
 ## Current Server Configuration
 - SpacetimeDB: `100.84.184.121:3003` (Tailscale IP)

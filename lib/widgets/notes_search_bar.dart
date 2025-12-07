@@ -13,6 +13,8 @@ class NotesSearchBar extends StatefulWidget {
   final String? errorText;
   final double? height;
   final String? hintText;
+  final ValueChanged<bool>? onFocusChanged;
+  final VoidCallback? onSubmitted;
 
   const NotesSearchBar({
     super.key,
@@ -23,6 +25,8 @@ class NotesSearchBar extends StatefulWidget {
     this.errorText,
     this.height,
     this.hintText,
+    this.onFocusChanged,
+    this.onSubmitted,
   });
 
   @override
@@ -36,12 +40,18 @@ class _NotesSearchBarState extends State<NotesSearchBar> {
   void initState() {
     super.initState();
     _focusNode = FocusNode();
+    _focusNode.addListener(_onFocusChange);
   }
 
   @override
   void dispose() {
+    _focusNode.removeListener(_onFocusChange);
     _focusNode.dispose();
     super.dispose();
+  }
+
+  void _onFocusChange() {
+    widget.onFocusChanged?.call(_focusNode.hasFocus);
   }
 
   void _handleClear() {
@@ -55,15 +65,16 @@ class _NotesSearchBarState extends State<NotesSearchBar> {
   Widget? _buildSuffixIcon() {
     if (widget.controller.text.isEmpty) return null;
 
-    return IconButton(
-      onPressed: _handleClear,
-      icon: const Icon(
-        Icons.clear,
-        color: SpaceNotesTheme.textSecondary,
-        size: 18,
+    return GestureDetector(
+      onTap: _handleClear,
+      child: const Padding(
+        padding: EdgeInsets.only(right: 4),
+        child: Icon(
+          Icons.clear,
+          color: SpaceNotesTheme.textSecondary,
+          size: 25,
+        ),
       ),
-      tooltip: 'Clear search',
-      splashRadius: 20,
     );
   }
 
@@ -77,10 +88,11 @@ class _NotesSearchBarState extends State<NotesSearchBar> {
           hintText: widget.hintText ?? 'Search notes...',
           onChanged: widget.onChanged,
           focusNode: _focusNode,
-          textInputAction: TextInputAction.search,
+          textInputAction: TextInputAction.send,
           suffixIcon: _buildSuffixIcon(),
           height: widget.height,
           showBorders: false,
+          onSubmitted: widget.onSubmitted != null ? (_) => widget.onSubmitted!() : null,
         ),
         if (widget.errorText != null) ...[
           const SizedBox(height: 4),

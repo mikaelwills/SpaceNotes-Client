@@ -41,7 +41,8 @@
       "mcp__spacenotes-mcp__prepend_to_note",
       "WebFetch(domain:opencode.ai)",
       "mcp__spacenotes-mcp__move_notes_to_folder",
-      "mcp__spacenotes-mcp__search_notes"
+      "mcp__spacenotes-mcp__search_notes",
+      "Skill(create-new-workspace)"
     ],
     "deny": []
   }

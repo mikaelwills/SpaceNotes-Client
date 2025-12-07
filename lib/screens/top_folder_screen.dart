@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:spacenotes_client/providers/notes_providers.dart';
@@ -11,6 +12,11 @@ import '../widgets/notes_search_bar.dart';
 import '../widgets/recent_notes_grid.dart';
 import '../dialogs/notes_list_dialogs.dart';
 import '../router/app_router.dart';
+import '../blocs/chat/chat_bloc.dart';
+import '../blocs/chat/chat_event.dart';
+import '../blocs/chat/chat_state.dart';
+import '../widgets/connection_status_row.dart';
+import '../widgets/terminal_message.dart';
 
 class TopFolderListScreen extends ConsumerStatefulWidget {
   final String folderPath;
@@ -27,8 +33,14 @@ class TopFolderListScreen extends ConsumerStatefulWidget {
 
 class _TopFolderListScreenState extends ConsumerState<TopFolderListScreen>
     with RouteAware {
-  // 1. CONSTRUCTOR
+  // 1. CONSTANTS
+  static const Color _inputAreaBackgroundColor = SpaceNotesTheme.inputSurface;
+
+  // 2. STATE
   final TextEditingController _searchController = TextEditingController();
+  final ScrollController _chatScrollController = ScrollController();
+  bool _isSearchFocused = false;
+  bool _showScrollToBottom = false;
 
   // 2. INIT
   @override
@@ -45,6 +57,7 @@ class _TopFolderListScreenState extends ConsumerState<TopFolderListScreen>
   void dispose() {
     routeObserver.unsubscribe(this);
     _searchController.dispose();
+    _chatScrollController.dispose();
     super.dispose();
   }
 
@@ -89,79 +102,255 @@ class _TopFolderListScreenState extends ConsumerState<TopFolderListScreen>
   Widget build(BuildContext context) {
     // Only show recent notes grid at root level
     final isRootLevel = widget.folderPath.isEmpty;
+    final isAiChatMode = ref.watch(isAiChatModeProvider);
 
-    return Column(
+    return Stack(
       children: [
-        if (isRootLevel) const RecentNotesGrid(),
-        _buildFoldersList(),
-        _buildBottomInputArea(),
+        // Scrollable content layer (fills entire stack)
+        Positioned.fill(
+          child: isAiChatMode
+              ? Column(
+                  children: [
+                    const ConnectionStatusRow(),
+                    Expanded(child: _buildChatMessagesArea()),
+                  ],
+                )
+              : _buildFoldersList(showRecentNotes: isRootLevel),
+        ),
+        // Bottom input overlay
+        Positioned(
+          left: 0,
+          right: 0,
+          bottom: 0,
+          child: _buildBottomInputArea(),
+        ),
       ],
     );
   }
 
   // 4. WIDGET FUNCTIONS
   Widget _buildBottomInputArea() {
+    final isAiChatMode = ref.watch(isAiChatModeProvider);
+
+    return BlocBuilder<ChatBloc, ChatState>(
+      builder: (context, chatState) {
+        final isWorking = chatState is ChatSendingMessage ||
+            (chatState is ChatReady && chatState.isStreaming);
+
+        return Container(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              // Back button - only show when in AI mode
+              if (isAiChatMode)
+                _buildCircularButton(
+                  onPressed: _exitAiChatMode,
+                  tooltip: 'Exit AI chat',
+                  icon: Icons.arrow_back,
+                ),
+              if (isAiChatMode) const SizedBox(width: 12),
+              // Search/input field with rounded background
+              Expanded(
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: _inputAreaBackgroundColor,
+                    borderRadius: BorderRadius.circular(28),
+                  ),
+                  child: NotesSearchBar(
+                    controller: _searchController,
+                    height: 48,
+                    hintText: isAiChatMode ? 'Ask AI...' : 'Search notes...',
+                    onChanged: isAiChatMode ? (_) {} : _onSearchChanged,
+                    onFocusChanged: (focused) {
+                      setState(() => _isSearchFocused = focused);
+                    },
+                    onSubmitted: _onSendToAi,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              // In AI mode: show cancel when working, send when not
+              if (isAiChatMode) ...[
+                if (isWorking)
+                  _buildCircularButton(
+                    onPressed: () =>
+                        context.read<ChatBloc>().add(CancelCurrentOperation()),
+                    tooltip: 'Cancel',
+                    icon: Icons.stop,
+                  )
+                else
+                  _buildCircularButton(
+                    onPressed: _onSendToAi,
+                    tooltip: 'Send to AI',
+                    icon: Icons.arrow_upward,
+                  ),
+              ]
+              // Not in AI mode: show send when focused, otherwise create buttons
+              else if (_isSearchFocused) ...[
+                _buildCircularButton(
+                  onPressed: _onSendToAi,
+                  tooltip: 'Send to AI',
+                  icon: Icons.arrow_upward,
+                ),
+              ] else ...[
+                // Create folder button
+                _buildCircularButton(
+                  onPressed: () => NotesListDialogs.showCreateFolderDialog(
+                    context,
+                    ref,
+                    currentPath: widget.folderPath,
+                  ),
+                  tooltip: 'Create new folder',
+                  icon: Icons.create_new_folder_outlined,
+                ),
+                const SizedBox(width: 8),
+                // Add note button
+                _buildCircularButton(
+                  onPressed: _createQuickNote,
+                  tooltip: 'Create new note',
+                  icon: Icons.edit_outlined,
+                ),
+              ],
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildCircularButton({
+    required VoidCallback onPressed,
+    required String tooltip,
+    required IconData icon,
+  }) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-      child: Row(
-        children: [
-          // Back button (left side)
-          IconButton(
-            onPressed: _navigateBack,
-            tooltip: 'Back',
-            icon: const Icon(
-              size: 30,
-              Icons.arrow_back,
-              color: SpaceNotesTheme.primary,
-            ),
-          ),
-          Expanded(
-            child: NotesSearchBar(
-              controller: _searchController,
-              height: 56,
-              onChanged: _onSearchChanged,
-            ),
-          ),
-          const SizedBox(width: 8),
-          // Create folder button (right)
-          IconButton(
-            onPressed: () => NotesListDialogs.showCreateFolderDialog(
-              context,
-              ref,
-              currentPath: widget.folderPath,
-            ),
-            tooltip: 'Create new folder',
-            icon: const Icon(
-              size: 30,
-              Icons.create_new_folder_outlined,
-              color: SpaceNotesTheme.primary,
-            ),
-          ),
-          // Add note button (right)
-          IconButton(
-            onPressed: _createQuickNote,
-            tooltip: 'Create new note',
-            icon: const Icon(
-              size: 30,
-              Icons.add,
-              color: SpaceNotesTheme.primary,
-            ),
-          ),
-        ],
+      width: 48,
+      height: 48,
+      decoration: const BoxDecoration(
+        color: _inputAreaBackgroundColor,
+        shape: BoxShape.circle,
+      ),
+      child: IconButton(
+        onPressed: onPressed,
+        tooltip: tooltip,
+        icon: Icon(
+          icon,
+          size: 24,
+          color: SpaceNotesTheme.primary,
+        ),
       ),
     );
   }
 
-  Widget _buildFoldersList() {
+  Widget _buildChatMessagesArea() {
+    return BlocConsumer<ChatBloc, ChatState>(
+      listener: (context, state) {
+        // Auto-scroll to bottom when new messages arrive or streaming
+        if (state is ChatReady || state is ChatSendingMessage) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (_chatScrollController.hasClients) {
+              _chatScrollController.animateTo(
+                _chatScrollController.position.maxScrollExtent,
+                duration: const Duration(milliseconds: 200),
+                curve: Curves.easeOut,
+              );
+            }
+          });
+        }
+      },
+      builder: (context, state) {
+        final messages = state is ChatReady
+            ? state.messages
+            : state is ChatSendingMessage
+                ? state.messages
+                : <dynamic>[];
+        final isStreaming = state is ChatReady ? state.isStreaming : false;
+
+        if (messages.isEmpty) {
+          return const Center(
+            child: Text(
+              'Ask me anything...',
+              style: SpaceNotesTextStyles.terminal,
+            ),
+          );
+        }
+
+        return Stack(
+          children: [
+            NotificationListener<ScrollNotification>(
+              onNotification: (notification) {
+                if (notification is ScrollUpdateNotification) {
+                  final isNearBottom = _chatScrollController.position.pixels >=
+                      _chatScrollController.position.maxScrollExtent - 100;
+                  if (_showScrollToBottom == isNearBottom) {
+                    setState(() => _showScrollToBottom = !isNearBottom);
+                  }
+                }
+                return false;
+              },
+              child: ListView.builder(
+                controller: _chatScrollController,
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
+                itemCount: messages.length,
+                itemBuilder: (context, index) {
+                  final message = messages[index];
+                  final isLastMessage = index == messages.length - 1;
+                  final isStreamingMessage = isStreaming && isLastMessage;
+
+                  return TerminalMessage(
+                    message: message,
+                    isStreaming: isStreamingMessage,
+                  );
+                },
+              ),
+            ),
+            if (_showScrollToBottom) _buildScrollToBottomButton(),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildScrollToBottomButton() {
+    return Positioned(
+      bottom: 16,
+      right: 16,
+      child: Container(
+        width: 48,
+        height: 48,
+        decoration: const BoxDecoration(
+          color: _inputAreaBackgroundColor,
+          shape: BoxShape.circle,
+        ),
+        child: IconButton(
+          onPressed: () {
+            _chatScrollController.animateTo(
+              _chatScrollController.position.maxScrollExtent,
+              duration: const Duration(milliseconds: 200),
+              curve: Curves.easeOut,
+            );
+          },
+          tooltip: 'Scroll to bottom',
+          icon: const Icon(
+            Icons.arrow_downward,
+            size: 24,
+            color: SpaceNotesTheme.primary,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFoldersList({bool showRecentNotes = false}) {
     final combinedAsync =
         ref.watch(dynamicFolderContentsProvider(widget.folderPath));
 
-    return Expanded(
-      child: combinedAsync.when(
-        loading: () => _buildLoadingState(),
-        error: (error, stack) => _buildErrorMessage(error.toString()),
-        data: (data) => _buildLoadedState(data.folders, data.notes),
-      ),
+    return combinedAsync.when(
+      loading: () => _buildLoadingState(),
+      error: (error, stack) => _buildErrorMessage(error.toString()),
+      data: (data) =>
+          _buildLoadedState(data.folders, data.notes, showRecentNotes),
     );
   }
 
@@ -200,7 +389,11 @@ class _TopFolderListScreenState extends ConsumerState<TopFolderListScreen>
     );
   }
 
-  Widget _buildLoadedState(List<Folder> folders, List<Note> notes) {
+  Widget _buildLoadedState(
+    List<Folder> folders,
+    List<Note> notes,
+    bool showRecentNotes,
+  ) {
     final searchQuery = ref.watch(folderSearchQueryProvider);
 
     // Handle empty search results
@@ -209,23 +402,44 @@ class _TopFolderListScreenState extends ConsumerState<TopFolderListScreen>
     }
 
     // Handle general empty state (no search, no folders)
-    if (folders.isEmpty && notes.isEmpty) {
+    if (folders.isEmpty && notes.isEmpty && !showRecentNotes) {
       return _buildEmptyState();
     }
 
     // Build combined list: folders first, then notes (only shown during search)
     final totalItems = folders.length + notes.length;
 
-    return ListView.builder(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-      itemCount: totalItems,
-      itemBuilder: (context, index) {
-        if (index < folders.length) {
-          return _buildFolderItem(folders[index]);
-        } else {
-          return _buildNoteItem(notes[index - folders.length]);
-        }
-      },
+    return CustomScrollView(
+      slivers: [
+        // Recent notes grid at top (only on root level)
+        if (showRecentNotes)
+          const SliverToBoxAdapter(
+            child: RecentNotesGrid(),
+          ),
+        // Folders and notes list
+        if (totalItems > 0)
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 80),
+            sliver: SliverList(
+              delegate: SliverChildBuilderDelegate(
+                (context, index) {
+                  if (index < folders.length) {
+                    return _buildFolderItem(folders[index]);
+                  } else {
+                    return _buildNoteItem(notes[index - folders.length]);
+                  }
+                },
+                childCount: totalItems,
+              ),
+            ),
+          ),
+        // Empty state when only showing recent notes
+        if (totalItems == 0 && showRecentNotes)
+          SliverFillRemaining(
+            hasScrollBody: false,
+            child: _buildEmptyState(),
+          ),
+      ],
     );
   }
 
@@ -340,22 +554,22 @@ class _TopFolderListScreenState extends ConsumerState<TopFolderListScreen>
     ref.read(folderSearchQueryProvider.notifier).state = query;
   }
 
-  void _navigateBack() {
-    if (widget.folderPath == null || widget.folderPath!.isEmpty) {
-      // At root, go to chat
-      context.go('/chat');
-      return;
-    }
+  void _onSendToAi() {
+    final message = _searchController.text.trim();
+    if (message.isEmpty) return;
 
-    // Parse parent folder path
-    final parts = widget.folderPath!.split('/');
-    if (parts.length <= 1) {
-      // Go to notes root
-      context.go('/notes');
-    } else {
-      // Go to parent folder
-      final parentPath = parts.sublist(0, parts.length - 1).join('/');
-      context.go('/notes/folder/$parentPath');
-    }
+    // Enter AI chat mode and send the message
+    ref.read(isAiChatModeProvider.notifier).state = true;
+
+    // Send message to ChatBloc
+    context.read<ChatBloc>().add(SendChatMessage(message));
+
+    // Clear the search field
+    _searchController.clear();
+    ref.read(folderSearchQueryProvider.notifier).state = '';
+  }
+
+  void _exitAiChatMode() {
+    ref.read(isAiChatModeProvider.notifier).state = false;
   }
 }

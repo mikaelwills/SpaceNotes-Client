@@ -6,12 +6,11 @@ import 'package:uuid/uuid.dart';
 import '../generated/client.dart';
 import '../generated/note.dart';
 import '../generated/folder.dart';
-import 'notes_repository.dart';
 import 'shared_preferences_token_store.dart';
 import 'package:rxdart/rxdart.dart';
 
 /// Notes repository implementation using SpacetimeDB
-class SpacetimeDbNotesRepository implements NotesRepository {
+class SpacetimeDbNotesRepository {
   // Configuration
   String? _host;
   String? _database;
@@ -300,14 +299,26 @@ class SpacetimeDbNotesRepository implements NotesRepository {
   }
 
 
-  @override
   Future<bool> isConfigured() async {
     final configured = _host != null && _host!.isNotEmpty;
     print('SpacetimeDbNotesRepository.isConfigured() = $configured');
     return configured;
   }
 
-  @override
+  /// Configure the repository with a new host.
+  /// Database is always 'spacenotes'.
+  /// Call [connectAndGetInitialData] after configuring to establish connection.
+  void configure({required String host}) {
+    // Reset existing connection if any
+    if (_client != null) {
+      resetConnection();
+    }
+
+    _host = host;
+    _database = 'spacenotes';
+    print('SpacetimeDbNotesRepository configured: host=$host');
+  }
+
   Future<bool> checkConnection() async {
     if (_client == null) {
       return false;
@@ -319,7 +330,6 @@ class SpacetimeDbNotesRepository implements NotesRepository {
   }
 
 
-  @override
   Future<Note?> getNote(String id) async {
     try {
       await _ensureConnected();
@@ -337,7 +347,6 @@ class SpacetimeDbNotesRepository implements NotesRepository {
     }
   }
 
-  @override
   Future<String?> createNote(String path, String content) async {
     try {
       await _ensureConnected();
@@ -389,7 +398,6 @@ class SpacetimeDbNotesRepository implements NotesRepository {
     }
   }
 
-  @override
   Future<bool> updateNote(String id, String content) async {
     try {
       await _ensureConnected();
@@ -414,7 +422,6 @@ class SpacetimeDbNotesRepository implements NotesRepository {
     }
   }
 
-  @override
   Future<bool> deleteNote(String id) async {
     print('SpacetimeDbNotesRepository.deleteNote() called');
     print('  id: $id');
@@ -516,7 +523,6 @@ class SpacetimeDbNotesRepository implements NotesRepository {
     }
   }
 
-  @override
   Future<bool> patchNote({
     required String path,
     required String content,
@@ -637,7 +643,6 @@ class SpacetimeDbNotesRepository implements NotesRepository {
     }
   }
 
-  @override
   Future<List<Note>> searchNotes(String query) async {
     try {
       await _ensureConnected();
