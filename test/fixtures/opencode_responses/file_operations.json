@@ -1,0 +1,66 @@
+{
+  "info": {
+    "id": "msg_ae0f10c29001AR1DQWTDimyR5d",
+    "sessionID": "ses_51f0fcf92ffe3sBEhsnPAef0wX",
+    "role": "assistant",
+    "time": {
+      "created": 1764710485033,
+      "completed": 1764710487312
+    },
+    "parentID": "msg_ae0f0f455001RFn1ivv5lMNa02",
+    "modelID": "claude-sonnet-4-20250514",
+    "providerID": "anthropic",
+    "mode": "build",
+    "path": {
+      "cwd": "/volume1/homes/mikael",
+      "root": "/"
+    },
+    "cost": 0,
+    "tokens": {
+      "input": 7,
+      "output": 28,
+      "reasoning": 0,
+      "cache": {
+        "read": 13790,
+        "write": 111
+      }
+    },
+    "finish": "stop"
+  },
+  "parts": [
+    {
+      "id": "prt_ae0f112310010nfVElS3ts8n4F",
+      "sessionID": "ses_51f0fcf92ffe3sBEhsnPAef0wX",
+      "messageID": "msg_ae0f10c29001AR1DQWTDimyR5d",
+      "type": "step-start"
+    },
+    {
+      "id": "prt_ae0f11232001idV16vNugT77wx",
+      "sessionID": "ses_51f0fcf92ffe3sBEhsnPAef0wX",
+      "messageID": "msg_ae0f10c29001AR1DQWTDimyR5d",
+      "type": "text",
+      "text": "Done! I created the file `test_file.txt` with the content \"test\" and then deleted it successfully.",
+      "time": {
+        "start": 1764710487281,
+        "end": 1764710487281
+      }
+    },
+    {
+      "id": "prt_ae0f115080014aV25LqZI1vk9x",
+      "sessionID": "ses_51f0fcf92ffe3sBEhsnPAef0wX",
+      "messageID": "msg_ae0f10c29001AR1DQWTDimyR5d",
+      "type": "step-finish",
+      "reason": "stop",
+      "cost": 0,
+      "tokens": {
+        "input": 7,
+        "output": 28,
+        "reasoning": 0,
+        "cache": {
+          "read": 13790,
+          "write": 111
+        }
+      }
+    }
+  ]
+}

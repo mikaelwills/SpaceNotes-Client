@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_highlight/flutter_highlight.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
-import '../theme/opencode_theme.dart';
+import '../theme/spacenotes_theme.dart';
 import '../models/message_part.dart';
 import '../utils/text_sanitizer.dart';
 import '../utils/tool_display_helper.dart';
@@ -49,37 +49,37 @@ class MessagePartWidget extends StatelessWidget {
       child: MarkdownBody(
         data: _safeTextSanitize(content, preserveMarkdown: true),
         styleSheet: MarkdownStyleSheet(
-          p: OpenCodeTextStyles.terminal,
-          code: OpenCodeTextStyles.code,
+          p: SpaceNotesTextStyles.terminal,
+          code: SpaceNotesTextStyles.code,
           codeblockDecoration: BoxDecoration(
-            color: OpenCodeTheme.surface,
+            color: SpaceNotesTheme.surface,
             borderRadius: BorderRadius.circular(4),
           ),
           codeblockPadding: const EdgeInsets.all(8),
-          blockquote: OpenCodeTextStyles.terminal.copyWith(
-            color: OpenCodeTheme.textSecondary,
+          blockquote: SpaceNotesTextStyles.terminal.copyWith(
+            color: SpaceNotesTheme.textSecondary,
           ),
           blockquoteDecoration: const BoxDecoration(
             border: Border(
               left: BorderSide(
-                color: OpenCodeTheme.textSecondary,
+                color: SpaceNotesTheme.textSecondary,
                 width: 2,
               ),
             ),
           ),
-          h1: OpenCodeTextStyles.terminal.copyWith(
+          h1: SpaceNotesTextStyles.terminal.copyWith(
             fontSize: 20,
             fontWeight: FontWeight.bold,
           ),
-          h2: OpenCodeTextStyles.terminal.copyWith(
+          h2: SpaceNotesTextStyles.terminal.copyWith(
             fontSize: 18,
             fontWeight: FontWeight.bold,
           ),
-          h3: OpenCodeTextStyles.terminal.copyWith(
+          h3: SpaceNotesTextStyles.terminal.copyWith(
             fontSize: 16,
             fontWeight: FontWeight.bold,
           ),
-          listBullet: OpenCodeTextStyles.terminal,
+          listBullet: SpaceNotesTextStyles.terminal,
           listIndent: 16,
         ),
         selectable: true,
@@ -96,7 +96,7 @@ class MessagePartWidget extends StatelessWidget {
       margin: const EdgeInsets.symmetric(vertical: 4),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: OpenCodeTheme.surface,
+        color: SpaceNotesTheme.surface,
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
           color: _getToolStatusColor(toolStatus),
@@ -111,14 +111,14 @@ class MessagePartWidget extends StatelessWidget {
             children: [
               Text(
                 '│',
-                style: OpenCodeTextStyles.terminal.copyWith(
+                style: SpaceNotesTextStyles.terminal.copyWith(
                   color: _getToolStatusColor(toolStatus),
                 ),
               ),
               const SizedBox(width: 8),
               Text(
                 _safeTextSanitize(toolName, preserveMarkdown: false),
-                style: OpenCodeTextStyles.terminal.copyWith(
+                style: SpaceNotesTextStyles.terminal.copyWith(
                   fontWeight: FontWeight.w600,
                   color: _getToolStatusColor(toolStatus),
                 ),
@@ -126,9 +126,9 @@ class MessagePartWidget extends StatelessWidget {
               const Spacer(),
               Text(
                 toolStatus,
-                style: OpenCodeTextStyles.terminal.copyWith(
+                style: SpaceNotesTextStyles.terminal.copyWith(
                   fontSize: 12,
-                  color: OpenCodeTheme.textSecondary,
+                  color: SpaceNotesTheme.textSecondary,
                 ),
               ),
             ],
@@ -140,12 +140,12 @@ class MessagePartWidget extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: OpenCodeTheme.background,
+                color: SpaceNotesTheme.background,
                 borderRadius: BorderRadius.circular(4),
               ),
                child: SelectableText(
                  _safeTextSanitize(toolOutput, preserveMarkdown: true),
-                 style: OpenCodeTextStyles.code,
+                 style: SpaceNotesTextStyles.code,
                ),            ),
           ],
         ],
@@ -161,7 +161,7 @@ class MessagePartWidget extends StatelessWidget {
       margin: const EdgeInsets.symmetric(vertical: 4),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: OpenCodeTheme.surface,
+        color: SpaceNotesTheme.surface,
         borderRadius: BorderRadius.circular(8),
       ),
       child: Column(
@@ -172,14 +172,14 @@ class MessagePartWidget extends StatelessWidget {
               const Icon(
                 Icons.difference,
                 size: 16,
-                color: OpenCodeTheme.primary,
+                color: SpaceNotesTheme.primary,
               ),
               const SizedBox(width: 8),
               Text(
                 'Code Changes',
-                style: OpenCodeTextStyles.terminal.copyWith(
+                style: SpaceNotesTextStyles.terminal.copyWith(
                   fontWeight: FontWeight.w600,
-                  color: OpenCodeTheme.primary,
+                  color: SpaceNotesTheme.primary,
                 ),
               ),
             ],
@@ -190,14 +190,14 @@ class MessagePartWidget extends StatelessWidget {
             language: language,
             theme: const {
               'root': TextStyle(
-                backgroundColor: OpenCodeTheme.surface,
-                color: OpenCodeTheme.text,
+                backgroundColor: SpaceNotesTheme.surface,
+                color: SpaceNotesTheme.text,
               ),
               'comment': TextStyle(color: Color(0xFF6A737D)),
               'keyword': TextStyle(color: Color(0xFFD73A49)),
               'string': TextStyle(color: Color(0xFF032F62)),
             },
-            textStyle: OpenCodeTextStyles.code,
+            textStyle: SpaceNotesTextStyles.code,
           ),
         ],
       ),
@@ -211,10 +211,10 @@ class MessagePartWidget extends StatelessWidget {
       margin: const EdgeInsets.symmetric(vertical: 4),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: OpenCodeTheme.surface,
+        color: SpaceNotesTheme.surface,
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
-          color: OpenCodeTheme.primary,
+          color: SpaceNotesTheme.primary,
           width: 1,
         ),
       ),
@@ -226,14 +226,14 @@ class MessagePartWidget extends StatelessWidget {
               const Icon(
                 Icons.list,
                 size: 16,
-                color: OpenCodeTheme.primary,
+                color: SpaceNotesTheme.primary,
               ),
               const SizedBox(width: 8),
               Text(
                 'Plan Options',
-                style: OpenCodeTextStyles.terminal.copyWith(
+                style: SpaceNotesTextStyles.terminal.copyWith(
                   fontWeight: FontWeight.w600,
-                  color: OpenCodeTheme.primary,
+                  color: SpaceNotesTheme.primary,
                 ),
               ),
             ],
@@ -259,8 +259,8 @@ class MessagePartWidget extends StatelessWidget {
                     children: [
                       Text(
                         '${index + 1}.',
-                        style: OpenCodeTextStyles.terminal.copyWith(
-                          color: OpenCodeTheme.primary,
+                        style: SpaceNotesTextStyles.terminal.copyWith(
+                          color: SpaceNotesTheme.primary,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -268,7 +268,7 @@ class MessagePartWidget extends StatelessWidget {
                       Expanded(
                         child: Text(
                           option,
-                          style: OpenCodeTextStyles.terminal,
+                          style: SpaceNotesTextStyles.terminal,
                         ),
                       ),
                     ],
@@ -300,15 +300,15 @@ class MessagePartWidget extends StatelessWidget {
     switch (status.toLowerCase()) {
       case 'completed':
       case 'success':
-        return OpenCodeTheme.success;
+        return SpaceNotesTheme.success;
       case 'error':
       case 'failed':
-        return OpenCodeTheme.error;
+        return SpaceNotesTheme.error;
       case 'running':
       case 'in_progress':
-        return OpenCodeTheme.warning;
+        return SpaceNotesTheme.warning;
       default:
-        return OpenCodeTheme.primary;
+        return SpaceNotesTheme.primary;
     }
   }
 }

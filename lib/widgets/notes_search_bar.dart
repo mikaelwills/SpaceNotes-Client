@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../theme/opencode_theme.dart';
+import '../theme/spacenotes_theme.dart';
 import 'terminal_input_field.dart';
 
 /// Search bar component for filtering notes
@@ -12,6 +12,7 @@ class NotesSearchBar extends StatefulWidget {
   final bool isLoading;
   final String? errorText;
   final double? height;
+  final String? hintText;
 
   const NotesSearchBar({
     super.key,
@@ -21,6 +22,7 @@ class NotesSearchBar extends StatefulWidget {
     this.isLoading = false,
     this.errorText,
     this.height,
+    this.hintText,
   });
 
   @override
@@ -57,7 +59,7 @@ class _NotesSearchBarState extends State<NotesSearchBar> {
       onPressed: _handleClear,
       icon: const Icon(
         Icons.clear,
-        color: OpenCodeTheme.textSecondary,
+        color: SpaceNotesTheme.textSecondary,
         size: 18,
       ),
       tooltip: 'Clear search',
@@ -72,7 +74,7 @@ class _NotesSearchBarState extends State<NotesSearchBar> {
       children: [
         TerminalInputField(
           controller: widget.controller,
-          hintText: ' Search notes...',
+          hintText: widget.hintText ?? 'Search notes...',
           onChanged: widget.onChanged,
           focusNode: _focusNode,
           textInputAction: TextInputAction.search,
@@ -89,7 +91,7 @@ class _NotesSearchBarState extends State<NotesSearchBar> {
               style: const TextStyle(
                 fontFamily: 'FiraCode',
                 fontSize: 12,
-                color: OpenCodeTheme.error,
+                color: SpaceNotesTheme.error,
               ),
             ),
           ),

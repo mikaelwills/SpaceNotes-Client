@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:opencode_flutter_client/blocs/session/session_bloc.dart';
-import 'package:opencode_flutter_client/blocs/session/session_state.dart';
+import 'package:spacenotes_client/blocs/session/session_bloc.dart';
+import 'package:spacenotes_client/blocs/session/session_state.dart';
 
 class SessionValidator {
   /// Checks if there is a valid, loaded session.

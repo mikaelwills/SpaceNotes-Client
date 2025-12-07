@@ -1,0 +1,66 @@
+{
+  "info": {
+    "id": "msg_ae11fe23600109YdZKI8ZFcWNe",
+    "sessionID": "ses_51ee0279affeWI6wZJ90cevECt",
+    "role": "assistant",
+    "time": {
+      "created": 1764713554486,
+      "completed": 1764713556698
+    },
+    "parentID": "msg_ae11fd8f2001PJL9PfMR8kJu3D",
+    "modelID": "claude-sonnet-4-20250514",
+    "providerID": "anthropic",
+    "mode": "build",
+    "path": {
+      "cwd": "/volume1/homes/mikael",
+      "root": "/"
+    },
+    "cost": 0,
+    "tokens": {
+      "input": 7,
+      "output": 16,
+      "reasoning": 0,
+      "cache": {
+        "read": 10985,
+        "write": 116
+      }
+    },
+    "finish": "stop"
+  },
+  "parts": [
+    {
+      "id": "prt_ae11fe75b0016MUtuGHlhI9JEk",
+      "sessionID": "ses_51ee0279affeWI6wZJ90cevECt",
+      "messageID": "msg_ae11fe23600109YdZKI8ZFcWNe",
+      "type": "step-start"
+    },
+    {
+      "id": "prt_ae11fe75d001uk39Ec9YwrEL5P",
+      "sessionID": "ses_51ee0279affeWI6wZJ90cevECt",
+      "messageID": "msg_ae11fe23600109YdZKI8ZFcWNe",
+      "type": "text",
+      "text": "The rust directory has been successfully deleted along with all its contents.",
+      "time": {
+        "start": 1764713556467,
+        "end": 1764713556467
+      }
+    },
+    {
+      "id": "prt_ae11fead70013sNaHgVbucrmkI",
+      "sessionID": "ses_51ee0279affeWI6wZJ90cevECt",
+      "messageID": "msg_ae11fe23600109YdZKI8ZFcWNe",
+      "type": "step-finish",
+      "reason": "stop",
+      "cost": 0,
+      "tokens": {
+        "input": 7,
+        "output": 16,
+        "reasoning": 0,
+        "cache": {
+          "read": 10985,
+          "write": 116
+        }
+      }
+    }
+  ]
+}

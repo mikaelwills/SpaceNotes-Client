@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../theme/opencode_theme.dart';
+import '../theme/spacenotes_theme.dart';
 
 enum TerminalButtonType {
   primary,
@@ -87,26 +87,26 @@ class _TerminalButtonState extends State<TerminalButton>
   Color get _borderColor {
     switch (widget.type) {
       case TerminalButtonType.primary:
-        return OpenCodeTheme.primary;
+        return SpaceNotesTheme.primary;
       case TerminalButtonType.warning:
-        return OpenCodeTheme.warning;
+        return SpaceNotesTheme.warning;
       case TerminalButtonType.danger:
-        return OpenCodeTheme.error;
+        return SpaceNotesTheme.error;
       case TerminalButtonType.neutral:
-        return OpenCodeTheme.text;
+        return SpaceNotesTheme.text;
     }
   }
 
   Color get _textColor {
     switch (widget.type) {
       case TerminalButtonType.primary:
-        return OpenCodeTheme.primary;
+        return SpaceNotesTheme.primary;
       case TerminalButtonType.warning:
-        return OpenCodeTheme.warning;
+        return SpaceNotesTheme.warning;
       case TerminalButtonType.danger:
-        return OpenCodeTheme.error;
+        return SpaceNotesTheme.error;
       case TerminalButtonType.neutral:
-        return OpenCodeTheme.text;
+        return SpaceNotesTheme.text;
     }
   }
 
@@ -148,7 +148,7 @@ class _TerminalButtonState extends State<TerminalButton>
             width: widget.width,
             height: widget.height,
             decoration: BoxDecoration(
-              color: OpenCodeTheme.background,
+              color: SpaceNotesTheme.background,
               border: Border.all(
                 color: _borderColor.withValues(alpha: _isHovered ? 0.5 : 0.35),
                 width: _isHovered ? 2 : 1,

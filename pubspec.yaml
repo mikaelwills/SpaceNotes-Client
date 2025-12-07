@@ -1,8 +1,8 @@
-name: opencode_flutter_client
-description: "Flutter mobile client for OpenCode - an AI-powered coding assistant that runs locally."
-homepage: https://github.com/mikaelwills/opencode-flutter-client
-repository: https://github.com/mikaelwills/opencode-flutter-client
-issue_tracker: https://github.com/mikaelwills/opencode-flutter-client/issues
+name: spacenotes_client
+description: "SpaceNotes Client - View and chat with your SpaceNotes via SpacetimeDB and OpenCode."
+homepage: https://github.com/mikaelwills/spacenotes-client
+repository: https://github.com/mikaelwills/spacenotes-client
+issue_tracker: https://github.com/mikaelwills/spacenotes-client/issues
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: "none" # Remove this line if you wish to publish to pub.dev
@@ -34,13 +34,14 @@ dependencies:
   flutter:
     sdk: flutter
 
-  # Core dependencies for OpenCode mobile client
+  # Core dependencies
   http: ^1.1.0 # HTTP requests to OpenCode API
-  web_socket_channel: ^2.4.0 # WebSocket/SSE connection
+  web_socket_channel: ^3.0.3
   flutter_client_sse: ^2.0.0
   flutter_bloc: ^8.1.3 # BLoC state management
   bloc: ^8.1.2 # Core BLoC library
   provider: ^6.1.1 # MultiProvider for dependency injection
+  flutter_riverpod: ^2.6.1 # Reactive state management for SpacetimeDB
   flutter_highlight: ^0.7.0 # Syntax highlighting for code
   flutter_markdown: ^0.6.18 # Markdown rendering (server-provided)
   connectivity_plus: ^6.1.0 # Network connectivity monitoring
@@ -55,9 +56,14 @@ dependencies:
   flutter_secure_storage: ^9.0.0 # Secure storage for API keys
   rxdart: ^0.28.0 # Reactive extensions for Dart (debouncing)
 
+  # SpacetimeDB feature dependencies
+  spacetimedb_dart_sdk:
+    path: ../../Dart/spacetimedb_dart_sdk # Local SDK path
+
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
+  collection: ^1.19.1
 
 dev_dependencies:
   flutter_test:

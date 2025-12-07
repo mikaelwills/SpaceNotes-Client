@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../theme/opencode_theme.dart';
+import '../theme/spacenotes_theme.dart';
 
 class InstanceListItem extends StatelessWidget {
   final String name;
@@ -24,12 +24,12 @@ class InstanceListItem extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         border: Border.all(
-          color: OpenCodeTheme.primary.withValues(alpha: 0.3),
+          color: SpaceNotesTheme.primary.withValues(alpha: 0.3),
           width: 1,
         ),
       ),
       child: Material(
-        color: OpenCodeTheme.surface,
+        color: SpaceNotesTheme.surface,
         child: InkWell(
           onTap: onTap,
           child: Padding(
@@ -44,7 +44,7 @@ class InstanceListItem extends StatelessWidget {
                     style: const TextStyle(
                       fontFamily: 'FiraCode',
                       fontSize: 14,
-                      color: OpenCodeTheme.text,
+                      color: SpaceNotesTheme.text,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -55,7 +55,7 @@ class InstanceListItem extends StatelessWidget {
                   style: const TextStyle(
                     fontFamily: 'FiraCode',
                     fontSize: 12,
-                    color: OpenCodeTheme.textSecondary,
+                    color: SpaceNotesTheme.textSecondary,
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -70,8 +70,8 @@ class InstanceListItem extends StatelessWidget {
                       decoration: BoxDecoration(
                         border: Border.all(
                           color: isConnected
-                              ? OpenCodeTheme.primary
-                              : OpenCodeTheme.textSecondary,
+                              ? SpaceNotesTheme.primary
+                              : SpaceNotesTheme.textSecondary,
                           width: 2,
                         ),
                         borderRadius: BorderRadius.circular(4),
@@ -79,8 +79,8 @@ class InstanceListItem extends StatelessWidget {
                       child: Icon(
                         isConnected ? Icons.link : Icons.link_off,
                         color: isConnected
-                            ? OpenCodeTheme.primary
-                            : OpenCodeTheme.textSecondary,
+                            ? SpaceNotesTheme.primary
+                            : SpaceNotesTheme.textSecondary,
                         size: 20,
                       ),
                     ),

@@ -9,6 +9,8 @@ import '../../services/message_queue_service.dart';
 import '../../models/opencode_message.dart';
 import '../../models/opencode_event.dart';
 import '../../models/message_part.dart';
+import '../../models/permission_request.dart';
+import '../../models/session_status.dart';
 import 'chat_event.dart';
 import 'chat_state.dart';
 
@@ -42,6 +44,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     on<RetryMessage>(_onRetryMessage);
     on<DeleteQueuedMessage>(_onDeleteQueuedMessage);
     on<MessageStatusChanged>(_onMessageStatusChanged);
+    on<RespondToPermission>(_onRespondToPermission);
     
     // Listen to SessionBloc for session changes (permanent subscription)
     _permanentSessionSubscription = sessionBloc.stream.listen((sessionState) {
@@ -260,6 +263,36 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
         _handleSessionIdle();
         _emitCurrentState(emit);
         break;
+      case 'permission.updated':
+        if (sseEvent.data != null) {
+          try {
+            final permission = PermissionRequest.fromJson(sseEvent.data!);
+            emit(ChatPermissionRequired(
+              sessionId: sessionBloc.currentSessionId!,
+              permission: permission,
+              messages: List.from(_messages),
+            ));
+          } catch (e) {
+            print('❌ [ChatBloc] Failed to parse permission request: $e');
+          }
+        }
+        break;
+      case 'session.status':
+        if (sseEvent.data != null) {
+          try {
+            final status = SessionStatus.fromJson(sseEvent.data!);
+            print('📊 [ChatBloc] Session status: ${status.displayMessage}');
+
+            // Update current state with new status
+            final currentState = state;
+            if (currentState is ChatReady) {
+              emit(currentState.copyWith(sessionStatus: status));
+            }
+          } catch (e) {
+            print('❌ [ChatBloc] Failed to parse session status: $e');
+          }
+        }
+        break;
       case 'storage.write':
       case 'session.updated':
         // These are internal server events - ignore
@@ -458,6 +491,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       final partId = partData['id'] as String?;
       final partType = partData['type'] as String?;
       final partText = partData['text'] as String?;
+      final delta = partData['delta'] as String?; // Extract delta for streaming
 
       if (messageId != null) {
         final messageIndex = _messageIndex[messageId];
@@ -471,10 +505,22 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
 
           if (partIndex != -1) {
             // Update existing part
+            final existingPart = updatedParts[partIndex];
+
+            // For text parts with delta, append the delta to existing content
+            String? newContent;
+            if (delta != null && partType == 'text') {
+              final currentContent = existingPart.content ?? '';
+              newContent = currentContent + delta;
+              print('📝 [ChatBloc] Appending delta: "${delta.substring(0, delta.length > 50 ? 50 : delta.length)}..."');
+            } else {
+              newContent = partText ?? existingPart.content;
+            }
+
             updatedParts[partIndex] = MessagePart(
-              id: partId ?? updatedParts[partIndex].id,
-              type: partType ?? updatedParts[partIndex].type,
-              content: partText ?? updatedParts[partIndex].content,
+              id: partId ?? existingPart.id,
+              type: partType ?? existingPart.type,
+              content: newContent,
               metadata: partData,
             );
           } else {
@@ -761,6 +807,34 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     );
     
     print('✅ [ChatBloc] SSE subscription restarted successfully');
+  }
+
+  Future<void> _onRespondToPermission(
+    RespondToPermission event,
+    Emitter<ChatState> emit,
+  ) async {
+    try {
+      final sessionId = sessionBloc.currentSessionId;
+      if (sessionId == null) {
+        print('❌ [ChatBloc] No session ID available for permission response');
+        return;
+      }
+
+      // Send permission response to server
+      await openCodeClient.respondToPermission(
+        sessionId,
+        event.permissionId,
+        event.response,
+      );
+
+      print('✅ [ChatBloc] Permission response sent: ${event.response.value}');
+
+      // Return to ready state with current messages
+      emit(_createChatReadyState());
+    } catch (e) {
+      print('❌ [ChatBloc] Failed to send permission response: $e');
+      emit(const ChatError('Failed to respond to permission request'));
+    }
   }
 
   @override

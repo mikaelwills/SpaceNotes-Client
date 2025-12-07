@@ -1,44 +1,44 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
-import '../theme/opencode_theme.dart';
+import '../theme/spacenotes_theme.dart';
 
 class OpenCodeMarkdownStyles {
   static MarkdownStyleSheet get standard => MarkdownStyleSheet(
         p: const TextStyle(
           fontFamily: 'FiraCode',
           fontSize: 14,
-          color: OpenCodeTheme.text,
+          color: SpaceNotesTheme.text,
           height: 1.6,
         ),
         h1: const TextStyle(
           fontFamily: 'FiraCode',
           fontSize: 24,
-          color: OpenCodeTheme.primary,
+          color: SpaceNotesTheme.primary,
           fontWeight: FontWeight.bold,
         ),
         h2: const TextStyle(
           fontFamily: 'FiraCode',
           fontSize: 20,
-          color: OpenCodeTheme.primary,
+          color: SpaceNotesTheme.primary,
           fontWeight: FontWeight.bold,
         ),
         h3: const TextStyle(
           fontFamily: 'FiraCode',
           fontSize: 16,
-          color: OpenCodeTheme.primary,
+          color: SpaceNotesTheme.primary,
           fontWeight: FontWeight.bold,
         ),
         code: const TextStyle(
           fontFamily: 'FiraCode',
           fontSize: 13,
-          color: OpenCodeTheme.success,
-          backgroundColor: OpenCodeTheme.background,
+          color: SpaceNotesTheme.success,
+          backgroundColor: SpaceNotesTheme.background,
         ),
         codeblockDecoration: const BoxDecoration(
-          color: OpenCodeTheme.background,
+          color: SpaceNotesTheme.background,
           border: Border(
             left: BorderSide(
-              color: OpenCodeTheme.primary,
+              color: SpaceNotesTheme.primary,
               width: 4,
             ),
           ),
@@ -46,11 +46,11 @@ class OpenCodeMarkdownStyles {
         blockquote: const TextStyle(
           fontFamily: 'FiraCode',
           fontSize: 14,
-          color: OpenCodeTheme.textSecondary,
+          color: SpaceNotesTheme.textSecondary,
           fontStyle: FontStyle.italic,
         ),
         listBullet: const TextStyle(
-          color: OpenCodeTheme.primary,
+          color: SpaceNotesTheme.primary,
         ),
       );
 }

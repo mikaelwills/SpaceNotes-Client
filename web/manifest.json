@@ -1,11 +1,11 @@
 {
-    "name": "opencode_flutter_client",
-    "short_name": "opencode_flutter_client",
+    "name": "SpaceNotes Client",
+    "short_name": "SpaceNotes",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "View and chat with your SpaceNotes.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

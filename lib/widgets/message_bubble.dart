@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../theme/opencode_theme.dart';
+import '../theme/spacenotes_theme.dart';
 import '../models/opencode_message.dart';
 import 'message_part_widget.dart';
 
@@ -28,15 +28,15 @@ class MessageBubble extends StatelessWidget {
               child: Row(
                 children: [
                   const Text(
-                    OpenCodeSymbols.prompt,
-                    style: OpenCodeTextStyles.prompt,
+                    SpaceNotesSymbols.prompt,
+                    style: SpaceNotesTextStyles.prompt,
                   ),
                   const SizedBox(width: 8),
                   Text(
                     message.parts.isNotEmpty && message.parts.first.content != null
                         ? message.parts.first.content!
                         : '',
-                    style: OpenCodeTextStyles.terminal,
+                    style: SpaceNotesTextStyles.terminal,
                   ),
                 ],
               ),
@@ -67,15 +67,15 @@ class MessageBubble extends StatelessWidget {
                     height: 12,
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
-                      color: OpenCodeTheme.primary,
+                      color: SpaceNotesTheme.primary,
                     ),
                   ),
                   const SizedBox(width: 8),
                   Text(
                     'Streaming...',
-                    style: OpenCodeTextStyles.terminal.copyWith(
+                    style: SpaceNotesTextStyles.terminal.copyWith(
                       fontSize: 12,
-                      color: OpenCodeTheme.textSecondary,
+                      color: SpaceNotesTheme.textSecondary,
                     ),
                   ),
                 ],

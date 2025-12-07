@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../utils/session_validator.dart';
-import '../theme/opencode_theme.dart';
+import '../theme/spacenotes_theme.dart';
 import '../blocs/chat/chat_bloc.dart';
 import '../blocs/connection/connection_bloc.dart';
 import '../blocs/connection/connection_state.dart' as connection_states;
@@ -82,7 +82,7 @@ class _ConnectScreenState extends State<ConnectScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('Port must be a number between 1 and 65535'),
-              backgroundColor: OpenCodeTheme.error,
+              backgroundColor: SpaceNotesTheme.error,
             ),
           );
         }
@@ -127,7 +127,7 @@ class _ConnectScreenState extends State<ConnectScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Failed to save server settings: $e'),
-            backgroundColor: OpenCodeTheme.error,
+            backgroundColor: SpaceNotesTheme.error,
           ),
         );
       }
@@ -240,19 +240,19 @@ class _ConnectScreenState extends State<ConnectScreen> {
                       child: Text(
                         'and ${instanceState.instances.length - 3} more in settings...',
                         style: TextStyle(
-                          color: OpenCodeTheme.text.withValues(alpha: 0.6),
+                          color: SpaceNotesTheme.text.withValues(alpha: 0.6),
                           fontSize: 12,
                         ),
                       ),
                     ),
                   const Divider(
-                    color: OpenCodeTheme.textSecondary,
+                    color: SpaceNotesTheme.textSecondary,
                     height: 32,
                   ),
                   Text(
                     'Or connect manually:',
                     style: TextStyle(
-                      color: OpenCodeTheme.text.withValues(alpha: 0.8),
+                      color: SpaceNotesTheme.text.withValues(alpha: 0.8),
                       fontSize: 14,
                     ),
                   ),
@@ -280,7 +280,7 @@ class _ConnectScreenState extends State<ConnectScreen> {
     return Text(
       _getStatusText(connectionState, chatState),
       style: const TextStyle(
-        color: OpenCodeTheme.textSecondary,
+        color: SpaceNotesTheme.textSecondary,
         fontSize: 14,
       ),
     );
@@ -324,7 +324,7 @@ class _ConnectScreenState extends State<ConnectScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Failed to connect to instance: $e'),
-            backgroundColor: OpenCodeTheme.error,
+            backgroundColor: SpaceNotesTheme.error,
           ),
         );
       }
@@ -359,10 +359,10 @@ class _ConnectScreenState extends State<ConnectScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: const Text('Save this connection as an instance for quick access?'),
-            backgroundColor: OpenCodeTheme.primary,
+            backgroundColor: SpaceNotesTheme.primary,
             action: SnackBarAction(
               label: 'Save',
-              textColor: OpenCodeTheme.background,
+              textColor: SpaceNotesTheme.background,
               onPressed: _showSaveInstanceDialog,
             ),
             duration: const Duration(seconds: 5),
@@ -383,10 +383,10 @@ class _ConnectScreenState extends State<ConnectScreen> {
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        backgroundColor: OpenCodeTheme.surface,
+        backgroundColor: SpaceNotesTheme.surface,
         title: const Text(
           'Save Instance',
-          style: TextStyle(color: OpenCodeTheme.text),
+          style: TextStyle(color: SpaceNotesTheme.text),
         ),
         content: Form(
           key: formKey,
@@ -396,22 +396,22 @@ class _ConnectScreenState extends State<ConnectScreen> {
               Text(
                 'Save "$_savedIP:$_savedPort" as an instance for quick access.',
                 style: TextStyle(
-                  color: OpenCodeTheme.text.withValues(alpha: 0.7),
+                  color: SpaceNotesTheme.text.withValues(alpha: 0.7),
                   fontSize: 14,
                 ),
               ),
               const SizedBox(height: 16),
               TextFormField(
                 controller: nameController,
-                style: const TextStyle(color: OpenCodeTheme.text),
+                style: const TextStyle(color: SpaceNotesTheme.text),
                 decoration: const InputDecoration(
                   labelText: 'Instance Name',
-                  labelStyle: TextStyle(color: OpenCodeTheme.textSecondary),
+                  labelStyle: TextStyle(color: SpaceNotesTheme.textSecondary),
                   enabledBorder: UnderlineInputBorder(
-                    borderSide: BorderSide(color: OpenCodeTheme.textSecondary),
+                    borderSide: BorderSide(color: SpaceNotesTheme.textSecondary),
                   ),
                   focusedBorder: UnderlineInputBorder(
-                    borderSide: BorderSide(color: OpenCodeTheme.primary),
+                    borderSide: BorderSide(color: SpaceNotesTheme.primary),
                   ),
                 ),
                 validator: (value) {
@@ -430,7 +430,7 @@ class _ConnectScreenState extends State<ConnectScreen> {
             onPressed: () => Navigator.of(dialogContext).pop(),
             child: const Text(
               'Cancel',
-              style: TextStyle(color: OpenCodeTheme.textSecondary),
+              style: TextStyle(color: SpaceNotesTheme.textSecondary),
             ),
           ),
           TextButton(
@@ -442,7 +442,7 @@ class _ConnectScreenState extends State<ConnectScreen> {
             },
             child: const Text(
               'Save',
-              style: TextStyle(color: OpenCodeTheme.primary),
+              style: TextStyle(color: SpaceNotesTheme.primary),
             ),
           ),
         ],
@@ -455,7 +455,7 @@ class _ConnectScreenState extends State<ConnectScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('No connection details to save'),
-          backgroundColor: OpenCodeTheme.error,
+          backgroundColor: SpaceNotesTheme.error,
         ),
       );
       return;
@@ -476,7 +476,7 @@ class _ConnectScreenState extends State<ConnectScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('Saved "$name" as an instance'),
-        backgroundColor: OpenCodeTheme.success,
+        backgroundColor: SpaceNotesTheme.success,
       ),
     );
   }

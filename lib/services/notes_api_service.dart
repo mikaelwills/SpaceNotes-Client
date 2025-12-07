@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:developer';
 import 'package:dio/dio.dart';
-import '../models/note.dart';
+import '../models/api_note.dart';
 
 class NotesService {
   final Dio _dio;
@@ -68,10 +68,10 @@ class NotesService {
     }
   }
 
-  Future<NotesData> getNotesList() async {
+  Future<ApiNotesData> getNotesList() async {
     if (!(await isConfigured())) {
       log('NotesService not configured - cannot fetch notes list');
-      return const NotesData(folders: [], notes: []);
+      return const ApiNotesData(folders: [], notes: []);
     }
 
     try {
@@ -79,19 +79,19 @@ class NotesService {
 
       if (response.statusCode != 200) {
         log('Failed to fetch notes list: HTTP ${response.statusCode}');
-        return const NotesData(folders: [], notes: []);
+        return const ApiNotesData(folders: [], notes: []);
       }
 
       final data = response.data;
       if (data == null || data is! Map<String, dynamic>) {
         log('Invalid response format from notes list endpoint');
-        return const NotesData(folders: [], notes: []);
+        return const ApiNotesData(folders: [], notes: []);
       }
 
       final files = data['files'];
       if (files == null || files is! List) {
         log('No files array in notes list response');
-        return const NotesData(folders: [], notes: []);
+        return const ApiNotesData(folders: [], notes: []);
       }
 
       // Convert to List<String> and filter only relevant files
@@ -123,29 +123,29 @@ class NotesService {
       // Create simple flat lists
       final folders = allFiles
           .where((file) => file.endsWith('/'))
-          .map((path) => Folder.fromPath(path))
+          .map((path) => ApiFolder.fromPath(path))
           .toList();
 
       final notes = allFiles
           .where((file) => file.endsWith('.md'))
-          .map((path) => Note.fromPath(path))
+          .map((path) => ApiNote.fromPath(path))
           .toList();
 
       // Sort alphabetically
       folders.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
       notes.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
 
-      return NotesData(
+      return ApiNotesData(
         folders: folders,
         notes: notes,
       );
     } catch (e) {
       log('Error loading notes list: $e');
-      return const NotesData(folders: [], notes: []);
+      return const ApiNotesData(folders: [], notes: []);
     }
   }
 
-  Future<Note?> getNote(String path) async {
+  Future<ApiNote?> getNote(String path) async {
     if (!(await isConfigured())) {
       log('NotesService not configured - cannot fetch note: $path');
       return null;
@@ -174,7 +174,7 @@ class NotesService {
       // Handle plain text response (raw markdown content)
       if (data is String) {
         final now = DateTime.now();
-        final note = Note.fromPath(path).copyWith(
+        final note = ApiNote.fromPath(path).copyWith(
           content: data,
           size: data.length,
           createdTime: now,
@@ -186,7 +186,7 @@ class NotesService {
       // Handle JSON response
       if (data is Map<String, dynamic>) {
         try {
-          return Note.fromJson(data);
+          return ApiNote.fromJson(data);
         } catch (e) {
           log('Failed to parse note JSON for "$path": $e');
           return null;
@@ -350,7 +350,7 @@ class NotesService {
     }
   }
 
-  Future<List<Note>> searchNotes(String query) async {
+  Future<List<ApiNote>> searchNotes(String query) async {
     try {
       final response = await _dio.get('/search/', queryParameters: {
         'query': query.trim(),
@@ -371,11 +371,11 @@ class NotesService {
         return [];
       }
 
-      final notes = <Note>[];
+      final notes = <ApiNote>[];
       for (final result in data) {
         try {
           if (result is String && result.endsWith('.md')) {
-            notes.add(Note.fromPath(result));
+            notes.add(ApiNote.fromPath(result));
           }
         } catch (e) {
           // Skip invalid results

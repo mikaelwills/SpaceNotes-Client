@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import '../utils/session_validator.dart';
-import '../theme/opencode_theme.dart';
+import '../theme/spacenotes_theme.dart';
 import '../blocs/chat/chat_bloc.dart';
 import '../blocs/config/config_cubit.dart';
 import '../blocs/config/config_state.dart';
 import '../blocs/connection/connection_bloc.dart';
-import '../blocs/connection/connection_event.dart';
+import '../blocs/connection/connection_event.dart' as connection_events;
 import '../blocs/instance/instance_bloc.dart';
 import '../blocs/instance/instance_event.dart';
 import '../blocs/instance/instance_state.dart';
@@ -15,11 +15,17 @@ import '../blocs/obsidian_instance/obsidian_instance_bloc.dart';
 import '../blocs/obsidian_instance/obsidian_instance_event.dart';
 import '../blocs/obsidian_instance/obsidian_instance_state.dart';
 import '../blocs/obsidian_connection/obsidian_connection_cubit.dart';
+import '../blocs/spacetimedb_instance/spacetimedb_instance_bloc.dart';
+import '../blocs/spacetimedb_instance/spacetimedb_instance_event.dart';
+import '../blocs/spacetimedb_instance/spacetimedb_instance_state.dart';
 import '../models/opencode_instance.dart';
 import '../models/obsidian_instance.dart';
+import '../models/spacetimedb_instance.dart';
 import '../services/sse_service.dart';
 import '../widgets/terminal_button.dart';
 import '../widgets/instance_list_item.dart';
+import '../providers/notes_providers.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart' hide Provider;
 
 
 class SettingsScreen extends StatefulWidget {
@@ -30,12 +36,14 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
+  WidgetRef? _ref;
 
   @override
   void initState() {
     super.initState();
     context.read<InstanceBloc>().add(LoadInstances());
     context.read<ObsidianInstanceBloc>().add(LoadObsidianInstances());
+    context.read<SpacetimeDbInstanceBloc>().add(LoadSpacetimeDbInstances());
   }
 
   @override
@@ -43,34 +51,31 @@ class _SettingsScreenState extends State<SettingsScreen> {
     super.dispose();
   }
 
-
-
-
   @override
   Widget build(BuildContext context) {
-    return MultiBlocListener(
+    return Consumer(
+      builder: (context, ref, child) {
+        _ref = ref;
+        return MultiBlocListener(
       listeners: [
         BlocListener<InstanceBloc, InstanceState>(
           listener: (context, state) {
             if (state is InstanceError) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(state.message),
-                  backgroundColor: OpenCodeTheme.error,
-                ),
-              );
+              print('Instance error: ${state.message}');
             }
           },
         ),
         BlocListener<ObsidianInstanceBloc, ObsidianInstanceState>(
           listener: (context, state) {
             if (state is ObsidianInstanceError) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(state.message),
-                  backgroundColor: OpenCodeTheme.error,
-                ),
-              );
+              print('Obsidian instance error: ${state.message}');
+            }
+          },
+        ),
+        BlocListener<SpacetimeDbInstanceBloc, SpacetimeDbInstanceState>(
+          listener: (context, state) {
+            if (state is SpacetimeDbInstanceError) {
+              print('SpacetimeDB instance error: ${state.message}');
             }
           },
         ),
@@ -87,12 +92,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   _buildOpenCodeInstancesSection(),
                   const SizedBox(height: 32),
                   _buildObsidianInstancesSection(),
+                  const SizedBox(height: 32),
+                  _buildSpacetimeDbInstancesSection(),
                 ],
               ),
             ),
           ],
         ),
       ),
+        );
+      },
     );
   }
 
@@ -118,21 +127,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
         final chatBloc = context.read<ChatBloc>();
         chatBloc.restartSSESubscription();
         
-        context.read<ConnectionBloc>().add(ResetConnection());
-        context.read<ConnectionBloc>().add(CheckConnection());
+        context.read<ConnectionBloc>().add(connection_events.ResetConnection());
+        context.read<ConnectionBloc>().add(connection_events.CheckConnection());
 
         // Navigate to chat screen
         SessionValidator.navigateToChat(context);
       }
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to connect to instance: $e'),
-            backgroundColor: OpenCodeTheme.error,
-          ),
-        );
-      }
+      print('Failed to connect to instance: $e');
     }
   }
 
@@ -149,14 +151,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         context.go('/notes');
       }
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to connect to Obsidian instance: $e'),
-            backgroundColor: OpenCodeTheme.error,
-          ),
-        );
-      }
+      print('Failed to connect to Obsidian instance: $e');
     }
   }
 
@@ -184,11 +179,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        backgroundColor: OpenCodeTheme.background,
+        backgroundColor: SpaceNotesTheme.background,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.zero,
           side: BorderSide(
-            color: OpenCodeTheme.primary.withValues(alpha: 0.3),
+            color: SpaceNotesTheme.primary.withValues(alpha: 0.3),
             width: 1,
           ),
         ),
@@ -208,11 +203,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       color: Colors.transparent,
                       border: Border(
                         left: BorderSide(
-                          color: OpenCodeTheme.primary,
+                          color: SpaceNotesTheme.primary,
                           width: 2,
                         ),
                         right: BorderSide(
-                          color: OpenCodeTheme.primary,
+                          color: SpaceNotesTheme.primary,
                           width: 2,
                         ),
                       ),
@@ -225,7 +220,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           style: TextStyle(
                             fontFamily: 'FiraCode',
                             fontSize: 14,
-                            color: OpenCodeTheme.primary,
+                            color: SpaceNotesTheme.primary,
                             fontWeight: FontWeight.w500,
                           ),
                         ),
@@ -236,7 +231,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             style: const TextStyle(
                               fontFamily: 'FiraCode',
                               fontSize: 14,
-                              color: OpenCodeTheme.text,
+                              color: SpaceNotesTheme.text,
                               height: 1.4,
                             ),
                             decoration: const InputDecoration(
@@ -248,7 +243,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               disabledBorder: InputBorder.none,
                               hintText: 'Instance Name',
                               hintStyle:
-                                  TextStyle(color: OpenCodeTheme.textSecondary),
+                                  TextStyle(color: SpaceNotesTheme.textSecondary),
                             ),
                             validator: (value) {
                               if (value == null || value.trim().isEmpty) {
@@ -269,11 +264,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       color: Colors.transparent,
                       border: Border(
                         left: BorderSide(
-                          color: OpenCodeTheme.primary,
+                          color: SpaceNotesTheme.primary,
                           width: 2,
                         ),
                         right: BorderSide(
-                          color: OpenCodeTheme.primary,
+                          color: SpaceNotesTheme.primary,
                           width: 2,
                         ),
                       ),
@@ -286,7 +281,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           style: TextStyle(
                             fontFamily: 'FiraCode',
                             fontSize: 14,
-                            color: OpenCodeTheme.primary,
+                            color: SpaceNotesTheme.primary,
                             fontWeight: FontWeight.w500,
                           ),
                         ),
@@ -298,7 +293,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             style: const TextStyle(
                               fontFamily: 'FiraCode',
                               fontSize: 14,
-                              color: OpenCodeTheme.text,
+                              color: SpaceNotesTheme.text,
                               height: 1.4,
                             ),
                             decoration: const InputDecoration(
@@ -310,7 +305,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               disabledBorder: InputBorder.none,
                               hintText: 'IP Address',
                               hintStyle:
-                                  TextStyle(color: OpenCodeTheme.textSecondary),
+                                  TextStyle(color: SpaceNotesTheme.textSecondary),
                             ),
                             keyboardType: const TextInputType.numberWithOptions(
                                 decimal: true),
@@ -329,7 +324,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             style: TextStyle(
                               fontFamily: 'FiraCode',
                               fontSize: 14,
-                              color: OpenCodeTheme.text,
+                              color: SpaceNotesTheme.text,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
@@ -341,7 +336,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             style: const TextStyle(
                               fontFamily: 'FiraCode',
                               fontSize: 14,
-                              color: OpenCodeTheme.text,
+                              color: SpaceNotesTheme.text,
                               height: 1.4,
                             ),
                             decoration: const InputDecoration(
@@ -353,7 +348,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               disabledBorder: InputBorder.none,
                               hintText: 'Port',
                               hintStyle:
-                                  TextStyle(color: OpenCodeTheme.textSecondary),
+                                  TextStyle(color: SpaceNotesTheme.textSecondary),
                             ),
                             keyboardType: TextInputType.number,
                             validator: (value) {
@@ -455,11 +450,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        backgroundColor: OpenCodeTheme.background,
+        backgroundColor: SpaceNotesTheme.background,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.zero,
           side: BorderSide(
-            color: OpenCodeTheme.primary.withValues(alpha: 0.3),
+            color: SpaceNotesTheme.primary.withValues(alpha: 0.3),
             width: 1,
           ),
         ),
@@ -479,11 +474,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       color: Colors.transparent,
                       border: Border(
                         left: BorderSide(
-                          color: OpenCodeTheme.primary,
+                          color: SpaceNotesTheme.primary,
                           width: 2,
                         ),
                         right: BorderSide(
-                          color: OpenCodeTheme.primary,
+                          color: SpaceNotesTheme.primary,
                           width: 2,
                         ),
                       ),
@@ -496,7 +491,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           style: TextStyle(
                             fontFamily: 'FiraCode',
                             fontSize: 14,
-                            color: OpenCodeTheme.primary,
+                            color: SpaceNotesTheme.primary,
                             fontWeight: FontWeight.w500,
                           ),
                         ),
@@ -507,7 +502,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             style: const TextStyle(
                               fontFamily: 'FiraCode',
                               fontSize: 14,
-                              color: OpenCodeTheme.text,
+                              color: SpaceNotesTheme.text,
                               height: 1.4,
                             ),
                             decoration: const InputDecoration(
@@ -519,7 +514,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               disabledBorder: InputBorder.none,
                               hintText: 'Instance Name',
                               hintStyle:
-                                  TextStyle(color: OpenCodeTheme.textSecondary),
+                                  TextStyle(color: SpaceNotesTheme.textSecondary),
                             ),
                             validator: (value) {
                               if (value == null || value.trim().isEmpty) {
@@ -540,11 +535,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       color: Colors.transparent,
                       border: Border(
                         left: BorderSide(
-                          color: OpenCodeTheme.primary,
+                          color: SpaceNotesTheme.primary,
                           width: 2,
                         ),
                         right: BorderSide(
-                          color: OpenCodeTheme.primary,
+                          color: SpaceNotesTheme.primary,
                           width: 2,
                         ),
                       ),
@@ -557,7 +552,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           style: TextStyle(
                             fontFamily: 'FiraCode',
                             fontSize: 14,
-                            color: OpenCodeTheme.primary,
+                            color: SpaceNotesTheme.primary,
                             fontWeight: FontWeight.w500,
                           ),
                         ),
@@ -569,7 +564,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             style: const TextStyle(
                               fontFamily: 'FiraCode',
                               fontSize: 14,
-                              color: OpenCodeTheme.text,
+                              color: SpaceNotesTheme.text,
                               height: 1.4,
                             ),
                             decoration: const InputDecoration(
@@ -581,7 +576,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               disabledBorder: InputBorder.none,
                               hintText: 'IP Address',
                               hintStyle:
-                                  TextStyle(color: OpenCodeTheme.textSecondary),
+                                  TextStyle(color: SpaceNotesTheme.textSecondary),
                             ),
                             keyboardType: const TextInputType.numberWithOptions(
                                 decimal: true),
@@ -600,7 +595,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             style: TextStyle(
                               fontFamily: 'FiraCode',
                               fontSize: 14,
-                              color: OpenCodeTheme.text,
+                              color: SpaceNotesTheme.text,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
@@ -612,7 +607,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             style: const TextStyle(
                               fontFamily: 'FiraCode',
                               fontSize: 14,
-                              color: OpenCodeTheme.text,
+                              color: SpaceNotesTheme.text,
                               height: 1.4,
                             ),
                             decoration: const InputDecoration(
@@ -624,7 +619,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               disabledBorder: InputBorder.none,
                               hintText: 'Port',
                               hintStyle:
-                                  TextStyle(color: OpenCodeTheme.textSecondary),
+                                  TextStyle(color: SpaceNotesTheme.textSecondary),
                             ),
                             keyboardType: TextInputType.number,
                             validator: (value) {
@@ -650,11 +645,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       color: Colors.transparent,
                       border: Border(
                         left: BorderSide(
-                          color: OpenCodeTheme.primary,
+                          color: SpaceNotesTheme.primary,
                           width: 2,
                         ),
                         right: BorderSide(
-                          color: OpenCodeTheme.primary,
+                          color: SpaceNotesTheme.primary,
                           width: 2,
                         ),
                       ),
@@ -667,7 +662,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           style: TextStyle(
                             fontFamily: 'FiraCode',
                             fontSize: 14,
-                            color: OpenCodeTheme.primary,
+                            color: SpaceNotesTheme.primary,
                             fontWeight: FontWeight.w500,
                           ),
                         ),
@@ -678,7 +673,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             style: const TextStyle(
                               fontFamily: 'FiraCode',
                               fontSize: 14,
-                              color: OpenCodeTheme.text,
+                              color: SpaceNotesTheme.text,
                               height: 1.4,
                             ),
                             decoration: const InputDecoration(
@@ -690,7 +685,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               disabledBorder: InputBorder.none,
                               hintText: 'API Key',
                               hintStyle:
-                                  TextStyle(color: OpenCodeTheme.textSecondary),
+                                  TextStyle(color: SpaceNotesTheme.textSecondary),
                             ),
                             validator: (value) {
                               if (value == null || value.trim().isEmpty) {
@@ -782,7 +777,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           style: TextStyle(
             fontFamily: 'FiraCode',
             fontSize: 16,
-            color: OpenCodeTheme.text,
+            color: SpaceNotesTheme.text,
             fontWeight: FontWeight.w500,
           ),
         ),
@@ -792,7 +787,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             if (state is InstancesLoading) {
               return const Center(
                 child: CircularProgressIndicator(
-                  color: OpenCodeTheme.primary,
+                  color: SpaceNotesTheme.primary,
                 ),
               );
             }
@@ -805,7 +800,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       padding: const EdgeInsets.all(24),
                       decoration: BoxDecoration(
                         border: Border.all(
-                          color: OpenCodeTheme.primary.withValues(alpha: 0.3),
+                          color: SpaceNotesTheme.primary.withValues(alpha: 0.3),
                           width: 1,
                         ),
                       ),
@@ -815,7 +810,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           style: TextStyle(
                             fontFamily: 'FiraCode',
                             fontSize: 14,
-                            color: OpenCodeTheme.text.withValues(alpha: 0.6),
+                            color: SpaceNotesTheme.text.withValues(alpha: 0.6),
                           ),
                         ),
                       ),
@@ -860,7 +855,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           style: TextStyle(
             fontFamily: 'FiraCode',
             fontSize: 16,
-            color: OpenCodeTheme.text,
+            color: SpaceNotesTheme.text,
             fontWeight: FontWeight.w500,
           ),
         ),
@@ -870,7 +865,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             if (state is ObsidianInstancesLoading) {
               return const Center(
                 child: CircularProgressIndicator(
-                  color: OpenCodeTheme.primary,
+                  color: SpaceNotesTheme.primary,
                 ),
               );
             }
@@ -883,7 +878,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       padding: const EdgeInsets.all(24),
                       decoration: BoxDecoration(
                         border: Border.all(
-                          color: OpenCodeTheme.primary.withValues(alpha: 0.3),
+                          color: SpaceNotesTheme.primary.withValues(alpha: 0.3),
                           width: 1,
                         ),
                       ),
@@ -893,7 +888,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           style: TextStyle(
                             fontFamily: 'FiraCode',
                             fontSize: 14,
-                            color: OpenCodeTheme.text.withValues(alpha: 0.6),
+                            color: SpaceNotesTheme.text.withValues(alpha: 0.6),
                           ),
                         ),
                       ),
@@ -945,26 +940,33 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return connectionCubit.isInstanceActive(instance);
   }
 
+  bool _isSpacetimeDbCurrentlyConnected(SpacetimeDbInstance instance) {
+    if (_ref == null) return false;
+    final repository = _ref!.read(notesRepositoryProvider);
+    return repository.host == instance.host &&
+           repository.database == instance.database;
+  }
+
   void _showDeleteConfirmation(
       BuildContext context, OpenCodeInstance instance) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: OpenCodeTheme.surface,
+        backgroundColor: SpaceNotesTheme.surface,
         title: const Text(
           'Delete Instance',
-          style: TextStyle(color: OpenCodeTheme.text),
+          style: TextStyle(color: SpaceNotesTheme.text),
         ),
         content: Text(
           'Are you sure you want to delete "${instance.name}"? This action cannot be undone.',
-          style: const TextStyle(color: OpenCodeTheme.textSecondary),
+          style: const TextStyle(color: SpaceNotesTheme.textSecondary),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
             child: const Text(
               'Cancel',
-              style: TextStyle(color: OpenCodeTheme.textSecondary),
+              style: TextStyle(color: SpaceNotesTheme.textSecondary),
             ),
           ),
           TextButton(
@@ -974,7 +976,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             },
             child: const Text(
               'Delete',
-              style: TextStyle(color: OpenCodeTheme.error),
+              style: TextStyle(color: SpaceNotesTheme.error),
             ),
           ),
         ],
@@ -987,21 +989,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: OpenCodeTheme.surface,
+        backgroundColor: SpaceNotesTheme.surface,
         title: const Text(
           'Delete Obsidian Instance',
-          style: TextStyle(color: OpenCodeTheme.text),
+          style: TextStyle(color: SpaceNotesTheme.text),
         ),
         content: Text(
           'Are you sure you want to delete "${instance.name}"? This action cannot be undone.',
-          style: const TextStyle(color: OpenCodeTheme.textSecondary),
+          style: const TextStyle(color: SpaceNotesTheme.textSecondary),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
             child: const Text(
               'Cancel',
-              style: TextStyle(color: OpenCodeTheme.textSecondary),
+              style: TextStyle(color: SpaceNotesTheme.textSecondary),
             ),
           ),
           TextButton(
@@ -1011,7 +1013,567 @@ class _SettingsScreenState extends State<SettingsScreen> {
             },
             child: const Text(
               'Delete',
-              style: TextStyle(color: OpenCodeTheme.error),
+              style: TextStyle(color: SpaceNotesTheme.error),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSpacetimeDbInstancesSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'SpacetimeDB Instances (Notes)',
+          style: TextStyle(
+            fontFamily: 'FiraCode',
+            fontSize: 16,
+            color: SpaceNotesTheme.text,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const SizedBox(height: 16),
+        BlocBuilder<SpacetimeDbInstanceBloc, SpacetimeDbInstanceState>(
+          builder: (context, state) {
+            if (state is SpacetimeDbInstancesLoading) {
+              return const Center(
+                child: CircularProgressIndicator(
+                  color: SpaceNotesTheme.primary,
+                ),
+              );
+            }
+
+            if (state is SpacetimeDbInstancesLoaded) {
+              return Column(
+                children: [
+                  if (state.instances.isEmpty)
+                    Container(
+                      padding: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        border: Border.all(
+                          color: SpaceNotesTheme.primary.withValues(alpha: 0.3),
+                          width: 1,
+                        ),
+                      ),
+                      child: Center(
+                        child: Text(
+                          'No SpacetimeDB instances saved',
+                          style: TextStyle(
+                            fontFamily: 'FiraCode',
+                            fontSize: 14,
+                            color: SpaceNotesTheme.text.withValues(alpha: 0.6),
+                          ),
+                        ),
+                      ),
+                    )
+                  else
+                    ...state.instances.map((instance) {
+                      return InstanceListItem(
+                        name: instance.name,
+                        ip: instance.ip,
+                        port: instance.port,
+                        isConnected: _isSpacetimeDbCurrentlyConnected(instance),
+                        onTap: () => _showEditSpacetimeDbInstanceDialog(context, instance),
+                        onConnectionTap: () => _connectToSpacetimeDbInstance(instance),
+                      );
+                    }),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    child: TerminalButton(
+                      command: 'Add SpacetimeDB Instance',
+                      type: TerminalButtonType.primary,
+                      onPressed: () => _showSpacetimeDbInstanceDialog(context, title: 'Add SpacetimeDB Instance'),
+                    ),
+                  ),
+                ],
+              );
+            }
+
+            return const SizedBox.shrink();
+          },
+        ),
+      ],
+    );
+  }
+
+  Future<void> _connectToSpacetimeDbInstance(SpacetimeDbInstance instance) async {
+    try {
+      print('Settings: Connecting to SpacetimeDB instance: ${instance.name}');
+
+      // Update last used timestamp
+      context.read<SpacetimeDbInstanceBloc>().add(UpdateSpacetimeDbLastUsed(instance.id));
+
+      if (mounted && _ref != null) {
+        // Update repository configuration and reconnect
+        print('Settings: Updating repository configuration...');
+        final repository = _ref!.read(notesRepositoryProvider);
+        repository.updateConfiguration(
+          host: instance.host,
+          database: instance.database,
+          // authStorage will be created automatically by the repository
+        );
+
+        // Reconnect and get initial data
+        print('Settings: Reconnecting to new instance...');
+        await repository.connectAndGetInitialData();
+
+        // Navigate to notes screen
+        print('Settings: Navigating to /notes...');
+        if (mounted) {
+          context.go('/notes');
+        }
+      }
+    } catch (e) {
+      print('Settings: Error connecting to SpacetimeDB: $e');
+    }
+  }
+
+  void _showEditSpacetimeDbInstanceDialog(
+      BuildContext context, SpacetimeDbInstance instance) {
+    _showSpacetimeDbInstanceDialog(context, title: 'Edit SpacetimeDB Instance', instance: instance);
+  }
+
+  void _showSpacetimeDbInstanceDialog(
+    BuildContext context, {
+    required String title,
+    SpacetimeDbInstance? instance,
+  }) {
+    final nameController = TextEditingController(text: instance?.name ?? '');
+    final ipController = TextEditingController(text: instance?.ip ?? '');
+    final portController = TextEditingController(text: instance?.port ?? '3000');
+    final databaseController = TextEditingController(text: instance?.database ?? '');
+    final authTokenController = TextEditingController(text: instance?.authToken ?? '');
+    final formKey = GlobalKey<FormState>();
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: SpaceNotesTheme.background,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.zero,
+          side: BorderSide(
+            color: SpaceNotesTheme.primary.withValues(alpha: 0.3),
+            width: 1,
+          ),
+        ),
+        content: SizedBox(
+          width: 300,
+          child: Padding(
+            padding: const EdgeInsets.only(top: 8.0),
+            child: Form(
+              key: formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Instance Name Input
+                  Container(
+                    height: 52,
+                    decoration: const BoxDecoration(
+                      color: Colors.transparent,
+                      border: Border(
+                        left: BorderSide(
+                          color: SpaceNotesTheme.primary,
+                          width: 2,
+                        ),
+                        right: BorderSide(
+                          color: SpaceNotesTheme.primary,
+                          width: 2,
+                        ),
+                      ),
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: Row(
+                      children: [
+                        const Text(
+                          '❯',
+                          style: TextStyle(
+                            fontFamily: 'FiraCode',
+                            fontSize: 14,
+                            color: SpaceNotesTheme.primary,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: TextFormField(
+                            controller: nameController,
+                            style: const TextStyle(
+                              fontFamily: 'FiraCode',
+                              fontSize: 14,
+                              color: SpaceNotesTheme.text,
+                              height: 1.4,
+                            ),
+                            decoration: const InputDecoration(
+                              border: InputBorder.none,
+                              enabledBorder: InputBorder.none,
+                              focusedBorder: InputBorder.none,
+                              errorBorder: InputBorder.none,
+                              focusedErrorBorder: InputBorder.none,
+                              disabledBorder: InputBorder.none,
+                              hintText: 'Instance Name',
+                              hintStyle:
+                                  TextStyle(color: SpaceNotesTheme.textSecondary),
+                            ),
+                            validator: (value) {
+                              if (value == null || value.trim().isEmpty) {
+                                return 'Name is required';
+                              }
+                              return null;
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  // IP Input
+                  Container(
+                    height: 52,
+                    decoration: const BoxDecoration(
+                      color: Colors.transparent,
+                      border: Border(
+                        left: BorderSide(
+                          color: SpaceNotesTheme.primary,
+                          width: 2,
+                        ),
+                        right: BorderSide(
+                          color: SpaceNotesTheme.primary,
+                          width: 2,
+                        ),
+                      ),
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: Row(
+                      children: [
+                        const Text(
+                          '❯',
+                          style: TextStyle(
+                            fontFamily: 'FiraCode',
+                            fontSize: 14,
+                            color: SpaceNotesTheme.primary,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: TextFormField(
+                            controller: ipController,
+                            style: const TextStyle(
+                              fontFamily: 'FiraCode',
+                              fontSize: 14,
+                              color: SpaceNotesTheme.text,
+                              height: 1.4,
+                            ),
+                            decoration: const InputDecoration(
+                              border: InputBorder.none,
+                              enabledBorder: InputBorder.none,
+                              focusedBorder: InputBorder.none,
+                              errorBorder: InputBorder.none,
+                              focusedErrorBorder: InputBorder.none,
+                              disabledBorder: InputBorder.none,
+                              hintText: 'IP Address (e.g., 192.168.1.91)',
+                              hintStyle:
+                                  TextStyle(color: SpaceNotesTheme.textSecondary),
+                            ),
+                            validator: (value) {
+                              if (value == null || value.trim().isEmpty) {
+                                return 'IP is required';
+                              }
+                              return null;
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  // Port Input
+                  Container(
+                    height: 52,
+                    decoration: const BoxDecoration(
+                      color: Colors.transparent,
+                      border: Border(
+                        left: BorderSide(
+                          color: SpaceNotesTheme.primary,
+                          width: 2,
+                        ),
+                        right: BorderSide(
+                          color: SpaceNotesTheme.primary,
+                          width: 2,
+                        ),
+                      ),
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: Row(
+                      children: [
+                        const Text(
+                          '❯',
+                          style: TextStyle(
+                            fontFamily: 'FiraCode',
+                            fontSize: 14,
+                            color: SpaceNotesTheme.primary,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: TextFormField(
+                            controller: portController,
+                            keyboardType: TextInputType.number,
+                            style: const TextStyle(
+                              fontFamily: 'FiraCode',
+                              fontSize: 14,
+                              color: SpaceNotesTheme.text,
+                              height: 1.4,
+                            ),
+                            decoration: const InputDecoration(
+                              border: InputBorder.none,
+                              enabledBorder: InputBorder.none,
+                              focusedBorder: InputBorder.none,
+                              errorBorder: InputBorder.none,
+                              focusedErrorBorder: InputBorder.none,
+                              disabledBorder: InputBorder.none,
+                              hintText: 'Port (e.g., 3000)',
+                              hintStyle:
+                                  TextStyle(color: SpaceNotesTheme.textSecondary),
+                            ),
+                            validator: (value) {
+                              if (value == null || value.trim().isEmpty) {
+                                return 'Port is required';
+                              }
+                              final port = int.tryParse(value);
+                              if (port == null || port < 1 || port > 65535) {
+                                return 'Invalid port number';
+                              }
+                              return null;
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  // Database Input
+                  Container(
+                    height: 52,
+                    decoration: const BoxDecoration(
+                      color: Colors.transparent,
+                      border: Border(
+                        left: BorderSide(
+                          color: SpaceNotesTheme.primary,
+                          width: 2,
+                        ),
+                        right: BorderSide(
+                          color: SpaceNotesTheme.primary,
+                          width: 2,
+                        ),
+                      ),
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: Row(
+                      children: [
+                        const Text(
+                          '❯',
+                          style: TextStyle(
+                            fontFamily: 'FiraCode',
+                            fontSize: 14,
+                            color: SpaceNotesTheme.primary,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: TextFormField(
+                            controller: databaseController,
+                            style: const TextStyle(
+                              fontFamily: 'FiraCode',
+                              fontSize: 14,
+                              color: SpaceNotesTheme.text,
+                              height: 1.4,
+                            ),
+                            decoration: const InputDecoration(
+                              border: InputBorder.none,
+                              enabledBorder: InputBorder.none,
+                              focusedBorder: InputBorder.none,
+                              errorBorder: InputBorder.none,
+                              focusedErrorBorder: InputBorder.none,
+                              disabledBorder: InputBorder.none,
+                              hintText: 'Database Name (e.g., notesdb)',
+                              hintStyle:
+                                  TextStyle(color: SpaceNotesTheme.textSecondary),
+                            ),
+                            validator: (value) {
+                              if (value == null || value.trim().isEmpty) {
+                                return 'Database is required';
+                              }
+                              return null;
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  // Auth Token Input (Optional)
+                  Container(
+                    height: 52,
+                    decoration: const BoxDecoration(
+                      color: Colors.transparent,
+                      border: Border(
+                        left: BorderSide(
+                          color: SpaceNotesTheme.primary,
+                          width: 2,
+                        ),
+                        right: BorderSide(
+                          color: SpaceNotesTheme.primary,
+                          width: 2,
+                        ),
+                      ),
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: Row(
+                      children: [
+                        const Text(
+                          '❯',
+                          style: TextStyle(
+                            fontFamily: 'FiraCode',
+                            fontSize: 14,
+                            color: SpaceNotesTheme.primary,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: TextFormField(
+                            controller: authTokenController,
+                            style: const TextStyle(
+                              fontFamily: 'FiraCode',
+                              fontSize: 14,
+                              color: SpaceNotesTheme.text,
+                              height: 1.4,
+                            ),
+                            decoration: const InputDecoration(
+                              border: InputBorder.none,
+                              enabledBorder: InputBorder.none,
+                              focusedBorder: InputBorder.none,
+                              errorBorder: InputBorder.none,
+                              focusedErrorBorder: InputBorder.none,
+                              disabledBorder: InputBorder.none,
+                              hintText: 'Auth Token (optional)',
+                              hintStyle:
+                                  TextStyle(color: SpaceNotesTheme.textSecondary),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(4.0, 0.0, 4.0, 4.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (instance != null) ...[
+                  TerminalButton(
+                    command: 'delete',
+                    type: TerminalButtonType.danger,
+                    width: double.infinity,
+                    onPressed: () {
+                      Navigator.of(dialogContext).pop();
+                      _showDeleteSpacetimeDbConfirmation(context, instance);
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                ],
+                TerminalButton(
+                  command: 'cancel',
+                  type: TerminalButtonType.neutral,
+                  width: double.infinity,
+                  onPressed: () => Navigator.of(dialogContext).pop(),
+                ),
+                const SizedBox(height: 12),
+                TerminalButton(
+                  command: instance == null ? 'add' : 'update',
+                  type: TerminalButtonType.primary,
+                  width: double.infinity,
+                  onPressed: () {
+                    if (formKey.currentState?.validate() ?? false) {
+                      final now = DateTime.now();
+                      final newInstance = SpacetimeDbInstance(
+                        id: instance?.id ?? '',
+                        name: nameController.text.trim(),
+                        ip: ipController.text.trim(),
+                        port: portController.text.trim(),
+                        database: databaseController.text.trim(),
+                        authToken: authTokenController.text.trim().isNotEmpty
+                            ? authTokenController.text.trim()
+                            : null,
+                        createdAt: instance?.createdAt ?? now,
+                        lastUsed: instance?.lastUsed ?? now,
+                      );
+
+                      if (instance == null) {
+                        context
+                            .read<SpacetimeDbInstanceBloc>()
+                            .add(AddSpacetimeDbInstance(newInstance));
+                      } else {
+                        context
+                            .read<SpacetimeDbInstanceBloc>()
+                            .add(UpdateSpacetimeDbInstance(newInstance));
+                      }
+
+                      Navigator.of(dialogContext).pop();
+                    }
+                  },
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showDeleteSpacetimeDbConfirmation(
+      BuildContext context, SpacetimeDbInstance instance) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: SpaceNotesTheme.surface,
+        title: const Text(
+          'Delete SpacetimeDB Instance',
+          style: TextStyle(color: SpaceNotesTheme.text),
+        ),
+        content: Text(
+          'Are you sure you want to delete "${instance.name}"? This action cannot be undone.',
+          style: const TextStyle(color: SpaceNotesTheme.textSecondary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(color: SpaceNotesTheme.textSecondary),
+            ),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              context.read<SpacetimeDbInstanceBloc>().add(DeleteSpacetimeDbInstance(instance.id));
+            },
+            child: const Text(
+              'Delete',
+              style: TextStyle(color: SpaceNotesTheme.error),
             ),
           ),
         ],

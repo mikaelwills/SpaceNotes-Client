@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
-/// OpenCode terminal-style theme and colors
-class OpenCodeTheme {
-  // Terminal color scheme - matching OpenCode
+/// SpaceNotes terminal-style theme and colors
+class SpaceNotesTheme {
+  // Terminal color scheme
   static const Color background = Color(0xFF0A0A0A); // Very dark background
   static const Color surface = Color(0xFF0d0d0d); // Slightly lighter
   static const Color primary = Color(0xFF00D9FF); // Cyan blue for prompts
@@ -11,7 +11,7 @@ class OpenCodeTheme {
   static const Color textSecondary = Color(0xFF888888); // Gray text
   static const Color error = Color(0xFFFF5555); // Bright red for errors
   static const Color warning = Color(0xFFFFB86C); // Orange for warnings
-  static const Color success = Color(0xFF50FA7B); // Bright green for success
+  static const Color success = Color(0xFF00D9FF); // Cyan for success (same as primary)
 
   /// Get the main theme data for the app
   static ThemeData get themeData {
@@ -42,7 +42,7 @@ class OpenCodeTheme {
       ),
 
       // Text theme with monospace fonts
-      textTheme: OpenCodeTextStyles.textTheme,
+      textTheme: SpaceNotesTextStyles.textTheme,
 
       // Input decoration theme
       inputDecorationTheme: InputDecorationTheme(
@@ -86,57 +86,57 @@ class OpenCodeTheme {
   }
 }
 
-/// OpenCode terminal-style text styles
-class OpenCodeTextStyles {
+/// SpaceNotes terminal-style text styles
+class SpaceNotesTextStyles {
   // Font family preference: FiraCode > SF Mono > Consolas > monospace
   static const String _fontFamily = 'FiraCode';
 
   static const TextStyle terminal = TextStyle(
     fontFamily: _fontFamily,
     fontSize: 14,
-    color: OpenCodeTheme.text,
+    color: SpaceNotesTheme.text,
     height: 1.4,
   );
 
   static const TextStyle prompt = TextStyle(
     fontFamily: _fontFamily,
     fontSize: 14,
-    color: OpenCodeTheme.primary,
+    color: SpaceNotesTheme.primary,
     fontWeight: FontWeight.w500,
   );
 
   static const TextStyle code = TextStyle(
     fontFamily: _fontFamily,
     fontSize: 13,
-    color: OpenCodeTheme.text,
-    backgroundColor: OpenCodeTheme.surface,
+    color: SpaceNotesTheme.text,
+    backgroundColor: SpaceNotesTheme.surface,
   );
 
   static const TextStyle userMessage = TextStyle(
     fontFamily: _fontFamily,
     fontSize: 14,
-    color: OpenCodeTheme.text,
+    color: SpaceNotesTheme.text,
     height: 1.4,
   );
 
   static const TextStyle assistantMessage = TextStyle(
     fontFamily: _fontFamily,
     fontSize: 14,
-    color: OpenCodeTheme.text,
+    color: SpaceNotesTheme.text,
     height: 1.4,
   );
 
   static const TextStyle toolExecution = TextStyle(
     fontFamily: _fontFamily,
     fontSize: 13,
-    color: OpenCodeTheme.textSecondary,
+    color: SpaceNotesTheme.textSecondary,
     height: 1.3,
   );
 
   static const TextStyle connectionStatus = TextStyle(
     fontFamily: _fontFamily,
     fontSize: 12,
-    color: OpenCodeTheme.textSecondary,
+    color: SpaceNotesTheme.textSecondary,
     fontWeight: FontWeight.w500,
   );
 
@@ -146,55 +146,55 @@ class OpenCodeTextStyles {
       displayLarge: TextStyle(
         fontFamily: _fontFamily,
         fontSize: 32,
-        color: OpenCodeTheme.text,
+        color: SpaceNotesTheme.text,
         fontWeight: FontWeight.w300,
       ),
       displayMedium: TextStyle(
         fontFamily: _fontFamily,
         fontSize: 28,
-        color: OpenCodeTheme.text,
+        color: SpaceNotesTheme.text,
         fontWeight: FontWeight.w300,
       ),
       displaySmall: TextStyle(
         fontFamily: _fontFamily,
         fontSize: 24,
-        color: OpenCodeTheme.text,
+        color: SpaceNotesTheme.text,
         fontWeight: FontWeight.w400,
       ),
       headlineLarge: TextStyle(
         fontFamily: _fontFamily,
         fontSize: 22,
-        color: OpenCodeTheme.text,
+        color: SpaceNotesTheme.text,
         fontWeight: FontWeight.w400,
       ),
       headlineMedium: TextStyle(
         fontFamily: _fontFamily,
         fontSize: 20,
-        color: OpenCodeTheme.text,
+        color: SpaceNotesTheme.text,
         fontWeight: FontWeight.w400,
       ),
       headlineSmall: TextStyle(
         fontFamily: _fontFamily,
         fontSize: 18,
-        color: OpenCodeTheme.text,
+        color: SpaceNotesTheme.text,
         fontWeight: FontWeight.w400,
       ),
       titleLarge: TextStyle(
         fontFamily: _fontFamily,
         fontSize: 16,
-        color: OpenCodeTheme.text,
+        color: SpaceNotesTheme.text,
         fontWeight: FontWeight.w500,
       ),
       titleMedium: TextStyle(
         fontFamily: _fontFamily,
         fontSize: 14,
-        color: OpenCodeTheme.text,
+        color: SpaceNotesTheme.text,
         fontWeight: FontWeight.w500,
       ),
       titleSmall: TextStyle(
         fontFamily: _fontFamily,
         fontSize: 12,
-        color: OpenCodeTheme.text,
+        color: SpaceNotesTheme.text,
         fontWeight: FontWeight.w500,
       ),
       bodyLarge: terminal,
@@ -202,25 +202,25 @@ class OpenCodeTextStyles {
       bodySmall: TextStyle(
         fontFamily: _fontFamily,
         fontSize: 12,
-        color: OpenCodeTheme.text,
+        color: SpaceNotesTheme.text,
         height: 1.4,
       ),
       labelLarge: TextStyle(
         fontFamily: _fontFamily,
         fontSize: 14,
-        color: OpenCodeTheme.text,
+        color: SpaceNotesTheme.text,
         fontWeight: FontWeight.w500,
       ),
       labelMedium: TextStyle(
         fontFamily: _fontFamily,
         fontSize: 12,
-        color: OpenCodeTheme.text,
+        color: SpaceNotesTheme.text,
         fontWeight: FontWeight.w500,
       ),
       labelSmall: TextStyle(
         fontFamily: _fontFamily,
         fontSize: 10,
-        color: OpenCodeTheme.textSecondary,
+        color: SpaceNotesTheme.textSecondary,
         fontWeight: FontWeight.w500,
       ),
     );
@@ -228,14 +228,14 @@ class OpenCodeTextStyles {
 }
 
 /// Terminal UI symbols and constants
-class OpenCodeSymbols {
-  static const String prompt = '❯';
-  static const String pipe = '│';
+class SpaceNotesSymbols {
+  static const String prompt = '>';
+  static const String pipe = '|';
   static const String cancel = '^C';
-  static const String loading = '⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏'; // Spinner frames
+  static const String loading = '.....'; // Spinner frames
 
   // Connection status indicators
-  static const String connected = '●';
-  static const String disconnected = '○';
-  static const String reconnecting = '◐';
+  static const String connected = '*';
+  static const String disconnected = 'o';
+  static const String reconnecting = '~';
 }

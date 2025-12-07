@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'dart:async';
-import '../theme/opencode_theme.dart';
+import '../theme/spacenotes_theme.dart';
 import '../utils/text_sanitizer.dart';
 
 class StreamingText extends StatefulWidget {
@@ -46,29 +46,31 @@ class _StreamingTextState extends State<StreamingText> {
   @override
   void didUpdateWidget(StreamingText oldWidget) {
     super.didUpdateWidget(oldWidget);
-    
+
     if (widget.text != oldWidget.text) {
       // Re-sanitize the full text when it changes
-      _sanitizedFullText = _safeTextSanitize(widget.text, preserveMarkdown: widget.useMarkdown);
-      
+      final newSanitizedText = _safeTextSanitize(widget.text, preserveMarkdown: widget.useMarkdown);
+
       _timer?.cancel();
       if (widget.isStreaming) {
-        // If text changed and we're streaming, continue from current position
-        if (_sanitizedFullText.startsWith(_displayedText)) {
-          _currentIndex = _displayedText.length;
-          _startStreaming();
-        } else {
-          // Text completely changed, restart streaming
-          _currentIndex = 0;
-          _displayedText = '';
-          _startStreaming();
-        }
+        // For real-time streaming with deltas, show new content immediately
+        // The delta is already appended in the ChatBloc, so we just update display
+        setState(() {
+          _sanitizedFullText = newSanitizedText;
+          _displayedText = newSanitizedText; // Show immediately for delta updates
+          _currentIndex = newSanitizedText.length;
+        });
       } else {
-        _displayedText = _sanitizedFullText;
+        _sanitizedFullText = newSanitizedText;
+        _displayedText = newSanitizedText;
       }
     } else if (widget.isStreaming != oldWidget.isStreaming) {
       if (widget.isStreaming) {
-        _startStreaming();
+        // Don't animate when starting streaming (content is already there)
+        setState(() {
+          _displayedText = _sanitizedFullText;
+          _currentIndex = _sanitizedFullText.length;
+        });
       } else {
         _timer?.cancel();
         _displayedText = _sanitizedFullText;
@@ -108,37 +110,37 @@ class _StreamingTextState extends State<StreamingText> {
           MarkdownBody(
             data: _displayedText,
             styleSheet: MarkdownStyleSheet(
-              p: widget.style ?? OpenCodeTextStyles.terminal,
-              code: OpenCodeTextStyles.code,
+              p: widget.style ?? SpaceNotesTextStyles.terminal,
+              code: SpaceNotesTextStyles.code,
               codeblockDecoration: BoxDecoration(
-                color: OpenCodeTheme.surface,
+                color: SpaceNotesTheme.surface,
                 borderRadius: BorderRadius.circular(4),
               ),
               codeblockPadding: const EdgeInsets.all(8),
-              blockquote: (widget.style ?? OpenCodeTextStyles.terminal).copyWith(
-                color: OpenCodeTheme.textSecondary,
+              blockquote: (widget.style ?? SpaceNotesTextStyles.terminal).copyWith(
+                color: SpaceNotesTheme.textSecondary,
               ),
               blockquoteDecoration: const BoxDecoration(
                 border: Border(
                   left: BorderSide(
-                    color: OpenCodeTheme.textSecondary,
+                    color: SpaceNotesTheme.textSecondary,
                     width: 2,
                   ),
                 ),
               ),
-              h1: (widget.style ?? OpenCodeTextStyles.terminal).copyWith(
+              h1: (widget.style ?? SpaceNotesTextStyles.terminal).copyWith(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
               ),
-              h2: (widget.style ?? OpenCodeTextStyles.terminal).copyWith(
+              h2: (widget.style ?? SpaceNotesTextStyles.terminal).copyWith(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
               ),
-              h3: (widget.style ?? OpenCodeTextStyles.terminal).copyWith(
+              h3: (widget.style ?? SpaceNotesTextStyles.terminal).copyWith(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
               ),
-              listBullet: widget.style ?? OpenCodeTextStyles.terminal,
+              listBullet: widget.style ?? SpaceNotesTextStyles.terminal,
               listIndent: 16,
             ),
             selectable: true,

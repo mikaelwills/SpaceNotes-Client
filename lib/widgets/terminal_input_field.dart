@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../theme/opencode_theme.dart';
+import '../theme/spacenotes_theme.dart';
 
 /// Reusable terminal-style input field component
 /// Follows OpenCode design system with consistent styling
@@ -46,11 +46,11 @@ class TerminalInputField extends StatelessWidget {
            decoration: BoxDecoration(
           border: showBorders ? const Border(
             left: BorderSide(
-              color: OpenCodeTheme.primary,
+              color: SpaceNotesTheme.primary,
               width: 2,
             ),
             right: BorderSide(
-              color: OpenCodeTheme.primary,
+              color: SpaceNotesTheme.primary,
               width: 2,
             ),
           ) : null,
@@ -71,8 +71,7 @@ class TerminalInputField extends StatelessWidget {
                     style: const TextStyle(
                       fontFamily: 'FiraCode',
                       fontSize: 14,
-                      color: OpenCodeTheme.text,
-                      height: 1.4,
+                      color: SpaceNotesTheme.text,
                     ),
                     decoration: InputDecoration(
                       border: InputBorder.none,
@@ -81,13 +80,15 @@ class TerminalInputField extends StatelessWidget {
                       errorBorder: InputBorder.none,
                       focusedErrorBorder: InputBorder.none,
                       disabledBorder: InputBorder.none,
-                      fillColor: Colors.transparent,
-                      filled: true,
-                      isDense: true,
-                      contentPadding: EdgeInsets.zero,
+                      filled: false,
+                      isDense: false,
+                      contentPadding: EdgeInsets.symmetric(vertical: (height ?? 52) / 2 - 10),
                       hintText: hintText,
-                      hintStyle:
-                          const TextStyle(color: OpenCodeTheme.textSecondary),
+                      hintStyle: const TextStyle(
+                        fontFamily: 'FiraCode',
+                        fontSize: 14,
+                        color: SpaceNotesTheme.textSecondary,
+                      ),
                     ),
                     keyboardType: keyboardType,
                     maxLines: maxLines,
@@ -104,8 +105,7 @@ class TerminalInputField extends StatelessWidget {
                     style: const TextStyle(
                       fontFamily: 'FiraCode',
                       fontSize: 14,
-                      color: OpenCodeTheme.text,
-                      height: 1.4,
+                      color: SpaceNotesTheme.text,
                     ),
                     decoration: InputDecoration(
                       border: InputBorder.none,
@@ -114,13 +114,15 @@ class TerminalInputField extends StatelessWidget {
                       errorBorder: InputBorder.none,
                       focusedErrorBorder: InputBorder.none,
                       disabledBorder: InputBorder.none,
-                      fillColor: Colors.transparent,
-                      filled: true,
-                      isDense: true,
-                      contentPadding: EdgeInsets.zero,
+                      filled: false,
+                      isDense: false,
+                      contentPadding: EdgeInsets.symmetric(vertical: (height ?? 52) / 2 - 10),
                       hintText: hintText,
-                      hintStyle:
-                          const TextStyle(color: OpenCodeTheme.textSecondary),
+                      hintStyle: const TextStyle(
+                        fontFamily: 'FiraCode',
+                        fontSize: 14,
+                        color: SpaceNotesTheme.textSecondary,
+                      ),
                     ),
                     keyboardType: keyboardType,
                     maxLines: maxLines,

@@ -1,6 +1,7 @@
 import 'package:equatable/equatable.dart';
 import '../../models/opencode_event.dart';
 import '../../models/opencode_message.dart';
+import '../../models/permission_request.dart';
 
 abstract class ChatEvent extends Equatable {
   const ChatEvent();
@@ -73,4 +74,17 @@ class MessageStatusChanged extends ChatEvent {
 
   @override
   List<Object> get props => [status];
+}
+
+class RespondToPermission extends ChatEvent {
+  final String permissionId;
+  final PermissionResponse response;
+
+  const RespondToPermission({
+    required this.permissionId,
+    required this.response,
+  });
+
+  @override
+  List<Object> get props => [permissionId, response];
 }

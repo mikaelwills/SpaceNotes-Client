@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:opencode_flutter_client/blocs/chat/chat_bloc.dart';
-import 'package:opencode_flutter_client/blocs/chat/chat_state.dart';
-import '../theme/opencode_theme.dart';
+import 'package:spacenotes_client/blocs/chat/chat_bloc.dart';
+import 'package:spacenotes_client/blocs/chat/chat_state.dart';
+import '../theme/spacenotes_theme.dart';
 import '../blocs/connection/connection_bloc.dart';
 import '../blocs/connection/connection_state.dart' as connection_states;
 import '../blocs/config/config_cubit.dart';
@@ -94,6 +94,10 @@ class _ConnectionStatusRowState extends State<ConnectionStatusRow>
                     final isStreamingResponse =
                         chatState is ChatReady && chatState.isStreaming;
                     final isWorking = isSendingMessage || isStreamingResponse;
+
+                    // Get session status if available
+                    final sessionStatus = chatState is ChatReady ? chatState.sessionStatus : null;
+
                     final displayText = modelName;
                     return Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -104,23 +108,33 @@ class _ConnectionStatusRowState extends State<ConnectionStatusRow>
                               onTap: () => context.go('/provider-list'),
                               child: Text(
                                 displayText,
-                                style: OpenCodeTextStyles.terminal.copyWith(
-                                  fontSize: 11,
-                                  color: OpenCodeTheme.textSecondary,
-                                  fontWeight: FontWeight.w400,
+                                style: SpaceNotesTextStyles.terminal.copyWith(
+                                  fontSize: 13,
+                                  color: SpaceNotesTheme.text,
+                                  fontWeight: FontWeight.w500,
                                 ),
                               ),
                             ),
                           ],
                         ),
-                        if (isWorking) ...[
+                        if (sessionStatus != null && sessionStatus.isRetrying) ...[
+                          const SizedBox(width: 8),
+                          Text(
+                            sessionStatus.displayMessage,
+                            style: SpaceNotesTextStyles.terminal.copyWith(
+                              fontSize: 11,
+                              color: SpaceNotesTheme.warning,
+                              fontWeight: FontWeight.w400,
+                            ),
+                          ),
+                        ] else if (isWorking) ...[
                           const SizedBox(width: 8),
                           SizedBox(
                             width: 70,
                             child: AnimatedDots(
-                              textStyle: OpenCodeTextStyles.terminal.copyWith(
+                              textStyle: SpaceNotesTextStyles.terminal.copyWith(
                                 fontSize: 11,
-                                color: OpenCodeTheme.textSecondary,
+                                color: SpaceNotesTheme.textSecondary,
                                 fontWeight: FontWeight.w400,
                               ),
                             ),
@@ -136,9 +150,9 @@ class _ConnectionStatusRowState extends State<ConnectionStatusRow>
                         child: Text(
                           statusText,
                           style: TextStyle(
-                            color: isReconnecting ? OpenCodeTheme.warning : OpenCodeTheme.textSecondary,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w400,
+                            color: isReconnecting ? SpaceNotesTheme.warning : SpaceNotesTheme.text,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
                       ),
@@ -159,12 +173,12 @@ class _ConnectionStatusRowState extends State<ConnectionStatusRow>
     bool shouldPulse = false;
 
     if (state is connection_states.Connected) {
-      color = OpenCodeTheme.success;
+      color = SpaceNotesTheme.success;
       shouldPulse = true;
     } else if (state is connection_states.Reconnecting) {
-      color = OpenCodeTheme.warning;
+      color = SpaceNotesTheme.warning;
     } else {
-      color = OpenCodeTheme.error;
+      color = SpaceNotesTheme.error;
     }
 
     Widget dot = Container(

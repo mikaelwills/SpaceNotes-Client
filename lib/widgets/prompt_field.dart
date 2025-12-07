@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../theme/opencode_theme.dart';
+import '../theme/spacenotes_theme.dart';
 import '../blocs/chat/chat_bloc.dart';
 import '../blocs/chat/chat_state.dart';
 import 'cancel_button.dart';
@@ -60,11 +60,11 @@ class _PromptFieldState extends State<PromptField> {
       decoration: const BoxDecoration(
         border: Border(
           left: BorderSide(
-            color: OpenCodeTheme.primary,
+            color: SpaceNotesTheme.primary,
             width: 2,
           ),
           right: BorderSide(
-            color: OpenCodeTheme.primary,
+            color: SpaceNotesTheme.primary,
             width: 2,
           ),
         ),
@@ -87,8 +87,8 @@ class _PromptFieldState extends State<PromptField> {
   Widget _buildPromptSymbol() {
     return const Center(
       child: Text(
-        OpenCodeSymbols.prompt,
-        style: OpenCodeTextStyles.prompt,
+        SpaceNotesSymbols.prompt,
+        style: SpaceNotesTextStyles.prompt,
       ),
     );
   }
@@ -100,7 +100,7 @@ class _PromptFieldState extends State<PromptField> {
       child: TextField(
         controller: _controller,
         focusNode: _focusNode,
-        style: OpenCodeTextStyles.terminal,
+        style: SpaceNotesTextStyles.terminal,
         textAlignVertical: TextAlignVertical.top,
         showCursor: true,
         scrollPhysics: const BouncingScrollPhysics(),
@@ -115,8 +115,8 @@ class _PromptFieldState extends State<PromptField> {
           isDense: false,
           filled: false,
           hintText: 'Type your message...',
-          hintStyle: OpenCodeTextStyles.terminal.copyWith(
-            color: OpenCodeTheme.textSecondary.withValues(alpha: 0.6),
+          hintStyle: SpaceNotesTextStyles.terminal.copyWith(
+            color: SpaceNotesTheme.textSecondary.withValues(alpha: 0.6),
           ),
         ),
         maxLines: null,

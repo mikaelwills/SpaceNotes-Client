@@ -9,17 +9,25 @@ abstract class SessionEvent extends Equatable {
 }
 
 
-class CreateSession extends SessionEvent {}
+class CreateSession extends SessionEvent {
+  final String? agent;
+
+  const CreateSession({this.agent});
+
+  @override
+  List<Object> get props => agent != null ? [agent!] : [];
+}
 
 
 class SendMessage extends SessionEvent {
   final String sessionId;
   final String message;
+  final String? agent;
 
-  const SendMessage({required this.sessionId, required this.message});
+  const SendMessage({required this.sessionId, required this.message, this.agent});
 
   @override
-  List<Object> get props => [sessionId, message];
+  List<Object> get props => [sessionId, message, if (agent != null) agent!];
 }
 
 class CancelSessionOperation extends SessionEvent {
