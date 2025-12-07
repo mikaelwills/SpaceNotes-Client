@@ -28,9 +28,7 @@ class NavBar extends ConsumerWidget {
   }
 
   bool _isOnNoteScreen(String location) {
-    return location.startsWith('/notes/') &&
-        !location.startsWith('/notes/folder/') &&
-        location != '/notes';
+    return location.startsWith('/notes/note/');
   }
 
   String _safeDecodeUri(String encoded) {
@@ -42,10 +40,13 @@ class NavBar extends ConsumerWidget {
   }
 
   String _extractNotePathFromLocation(String location) {
+    // Route is /notes/note/:path(.*) - path spans from index 2 onwards
     final uri = Uri.parse(location);
     final pathSegments = uri.pathSegments;
-    if (pathSegments.length >= 2) {
-      return _safeDecodeUri(pathSegments[1]);
+    if (pathSegments.length >= 3 && pathSegments[1] == 'note') {
+      // Join all segments after "note" to reconstruct the full path
+      final notePathSegments = pathSegments.sublist(2);
+      return notePathSegments.map(_safeDecodeUri).join('/');
     }
     return '';
   }
@@ -260,59 +261,19 @@ class NavBar extends ConsumerWidget {
   }
 
   String _extractNoteName(String location) {
+    // Route is /notes/note/:path(.*) - path spans from index 2 onwards
     final uri = Uri.parse(location);
     final pathSegments = uri.pathSegments;
 
-    if (pathSegments.length >= 2) {
-      final notePath = _safeDecodeUri(pathSegments[1]);
-      final fileName = notePath.split('/').last;
+    if (pathSegments.length >= 3 && pathSegments[1] == 'note') {
+      // Join all segments after "note" to reconstruct the full path
+      final notePathSegments = pathSegments.sublist(2);
+      final fileName = _safeDecodeUri(notePathSegments.last);
       final noteName = fileName.replaceAll('.md', '');
       return noteName;
     }
 
     return 'Note';
-  }
-
-  void _navigateBackFromNote(BuildContext context, String currentLocation) {
-    final uri = Uri.parse(currentLocation);
-    final pathSegments = uri.pathSegments;
-
-    if (pathSegments.length >= 2) {
-      final notePath = _safeDecodeUri(pathSegments[1]);
-
-      if (notePath.contains('/')) {
-        final lastSlash = notePath.lastIndexOf('/');
-        final folderPath = notePath.substring(0, lastSlash);
-
-        final encodedFolderPath = Uri.encodeComponent(folderPath);
-        context.go('/notes/folder/$encodedFolderPath');
-      } else {
-        context.go('/notes');
-      }
-    } else {
-      context.go('/notes');
-    }
-  }
-
-  void _navigateBackFromFolder(BuildContext context, String currentLocation) {
-    final uri = Uri.parse(currentLocation);
-    final pathSegments = uri.pathSegments;
-
-    if (pathSegments.length >= 3 && pathSegments[1] == 'folder') {
-      final folderPath = _safeDecodeUri(pathSegments[2]);
-
-      if (folderPath.contains('/')) {
-        final lastSlash = folderPath.lastIndexOf('/');
-        final parentFolderPath = folderPath.substring(0, lastSlash);
-
-        final encodedParentPath = Uri.encodeComponent(parentFolderPath);
-        context.go('/notes/folder/$encodedParentPath');
-      } else {
-        context.go('/notes');
-      }
-    } else {
-      context.go('/notes');
-    }
   }
 
   Widget _buildConnectionIndicator(WidgetRef ref) {
@@ -504,8 +465,9 @@ class _EditableNoteNameState extends ConsumerState<_EditableNoteName> {
     if (success) {
       _lastRenamedTo = newName;
       if (mounted) {
-        final encodedNewPath = Uri.encodeComponent(newPath);
-        context.go('/notes/$encodedNewPath');
+        final encodedNewPath =
+            newPath.split('/').map(Uri.encodeComponent).join('/');
+        context.go('/notes/note/$encodedNewPath');
       }
     }
   }

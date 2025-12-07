@@ -137,83 +137,110 @@ class _TopFolderListScreenState extends ConsumerState<TopFolderListScreen>
         final isWorking = chatState is ChatSendingMessage ||
             (chatState is ChatReady && chatState.isStreaming);
 
-        return Container(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              // Back button - only show when in AI mode
-              if (isAiChatMode)
-                _buildCircularButton(
-                  onPressed: _exitAiChatMode,
-                  tooltip: 'Exit AI chat',
-                  icon: Icons.arrow_back,
-                ),
-              if (isAiChatMode) const SizedBox(width: 12),
-              // Search/input field with rounded background
-              Expanded(
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: _inputAreaBackgroundColor,
-                    borderRadius: BorderRadius.circular(28),
-                  ),
-                  child: NotesSearchBar(
-                    controller: _searchController,
-                    height: 48,
-                    hintText: isAiChatMode ? 'Ask AI...' : 'Search notes...',
-                    onChanged: isAiChatMode ? (_) {} : _onSearchChanged,
-                    onFocusChanged: (focused) {
-                      setState(() => _isSearchFocused = focused);
-                    },
-                    onSubmitted: _onSendToAi,
+        return Stack(
+          children: [
+            // Gradient background layer
+            Positioned.fill(
+              child: Container(
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.transparent,
+                      SpaceNotesTheme.background,
+                    ],
                   ),
                 ),
               ),
-              const SizedBox(width: 12),
-              // In AI mode: show cancel when working, send when not
-              if (isAiChatMode) ...[
-                if (isWorking)
-                  _buildCircularButton(
-                    onPressed: () =>
-                        context.read<ChatBloc>().add(CancelCurrentOperation()),
-                    tooltip: 'Cancel',
-                    icon: Icons.stop,
-                  )
-                else
-                  _buildCircularButton(
-                    onPressed: _onSendToAi,
-                    tooltip: 'Send to AI',
-                    icon: Icons.arrow_upward,
+            ),
+            // Input row on top
+            Container(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  // Back button - show when in AI mode OR inside a folder
+                  if (isAiChatMode)
+                    _buildCircularButton(
+                      onPressed: _exitAiChatMode,
+                      tooltip: 'Exit AI chat',
+                      icon: Icons.arrow_back,
+                    )
+                  else if (widget.folderPath.isNotEmpty)
+                    _buildCircularButton(
+                      onPressed: () => _navigateToParentFolder(),
+                      tooltip: 'Go back',
+                      icon: Icons.arrow_back,
+                    ),
+                  if (isAiChatMode || widget.folderPath.isNotEmpty)
+                    const SizedBox(width: 12),
+                  // Search/input field with rounded background
+                  Expanded(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: _inputAreaBackgroundColor,
+                        borderRadius: BorderRadius.circular(28),
+                      ),
+                      child: NotesSearchBar(
+                        controller: _searchController,
+                        height: 48,
+                        hintText: isAiChatMode ? 'Ask AI...' : 'Search notes...',
+                        onChanged: isAiChatMode ? (_) {} : _onSearchChanged,
+                        onFocusChanged: (focused) {
+                          setState(() => _isSearchFocused = focused);
+                        },
+                        onSubmitted: _onSendToAi,
+                      ),
+                    ),
                   ),
-              ]
-              // Not in AI mode: show send when focused, otherwise create buttons
-              else if (_isSearchFocused) ...[
-                _buildCircularButton(
-                  onPressed: _onSendToAi,
-                  tooltip: 'Send to AI',
-                  icon: Icons.arrow_upward,
-                ),
-              ] else ...[
-                // Create folder button
-                _buildCircularButton(
-                  onPressed: () => NotesListDialogs.showCreateFolderDialog(
-                    context,
-                    ref,
-                    currentPath: widget.folderPath,
-                  ),
-                  tooltip: 'Create new folder',
-                  icon: Icons.create_new_folder_outlined,
-                ),
-                const SizedBox(width: 8),
-                // Add note button
-                _buildCircularButton(
-                  onPressed: _createQuickNote,
-                  tooltip: 'Create new note',
-                  icon: Icons.edit_outlined,
-                ),
-              ],
-            ],
-          ),
+                  const SizedBox(width: 12),
+                  // In AI mode: show cancel when working, send when not
+                  if (isAiChatMode) ...[
+                    if (isWorking)
+                      _buildCircularButton(
+                        onPressed: () =>
+                            context.read<ChatBloc>().add(CancelCurrentOperation()),
+                        tooltip: 'Cancel',
+                        icon: Icons.stop,
+                      )
+                    else
+                      _buildCircularButton(
+                        onPressed: _onSendToAi,
+                        tooltip: 'Send to AI',
+                        icon: Icons.arrow_upward,
+                      ),
+                  ]
+                  // Not in AI mode: show send when focused, otherwise create buttons
+                  else if (_isSearchFocused) ...[
+                    _buildCircularButton(
+                      onPressed: _onSendToAi,
+                      tooltip: 'Send to AI',
+                      icon: Icons.arrow_upward,
+                    ),
+                  ] else ...[
+                    // Create folder button
+                    _buildCircularButton(
+                      onPressed: () => NotesListDialogs.showCreateFolderDialog(
+                        context,
+                        ref,
+                        currentPath: widget.folderPath,
+                      ),
+                      tooltip: 'Create new folder',
+                      icon: Icons.create_new_folder_outlined,
+                    ),
+                    const SizedBox(width: 8),
+                    // Add note button
+                    _buildCircularButton(
+                      onPressed: _createQuickNote,
+                      tooltip: 'Create new note',
+                      icon: Icons.edit_outlined,
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
         );
       },
     );
@@ -571,5 +598,22 @@ class _TopFolderListScreenState extends ConsumerState<TopFolderListScreen>
 
   void _exitAiChatMode() {
     ref.read(isAiChatModeProvider.notifier).state = false;
+  }
+
+  void _navigateToParentFolder() {
+    final currentPath = widget.folderPath;
+    if (currentPath.isEmpty) return;
+
+    // Find the parent folder path
+    final lastSlash = currentPath.lastIndexOf('/');
+    if (lastSlash == -1) {
+      // No slash means we're one level deep, go to root
+      context.go('/notes');
+    } else {
+      // Go to parent folder
+      final parentPath = currentPath.substring(0, lastSlash);
+      final encodedPath = parentPath.split('/').map(Uri.encodeComponent).join('/');
+      context.go('/notes/folder/$encodedPath');
+    }
   }
 }

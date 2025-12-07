@@ -5,12 +5,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:collection/collection.dart';
 import 'package:spacetimedb_dart_sdk/spacetimedb_dart_sdk.dart' as stdb;
-import 'package:go_router/go_router.dart';
 import '../generated/note.dart';
 import '../theme/spacenotes_theme.dart';
 import '../providers/notes_providers.dart';
 import '../widgets/markdown_styles.dart';
-import '../dialogs/notes_list_dialogs.dart';
+import 'home_screen.dart';
 
 // Data structure for editable markdown chunks
 class MarkdownChunk {
@@ -92,6 +91,11 @@ class _NoteScreenState extends ConsumerState<NoteScreen> {
   void initState() {
     super.initState();
     _currentPath = widget.notePath;
+
+    // Update the note path provider for the shell's bottom bar
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(currentNotePathProvider.notifier).state = widget.notePath;
+    });
 
     _contentController = TextEditingController();
     _contentController.addListener(_onContentChanged);
@@ -248,13 +252,10 @@ class _NoteScreenState extends ConsumerState<NoteScreen> {
         _forceSave();
         if (mounted) Navigator.of(context).pop();
       },
-      child: Column(
-        children: [
-          Expanded(
-            child: _isEditing ? _buildEditor() : _buildHybridView(currentNote),
-          ),
-          _buildBottomActionBar(currentNote),
-        ],
+      // Bottom padding for the shell's bottom input area
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 80),
+        child: _isEditing ? _buildEditor() : _buildHybridView(currentNote),
       ),
     );
   }
@@ -366,88 +367,6 @@ class _NoteScreenState extends ConsumerState<NoteScreen> {
           styleSheet: OpenCodeMarkdownStyles.standard,
           softLineBreak: true,
         ),
-      ),
-    );
-  }
-
-  Widget _buildBottomActionBar(Note? currentNote) {
-    if (currentNote == null) {
-      return const SizedBox.shrink();
-    }
-
-    return Container(
-      height: 56,
-      color: SpaceNotesTheme.background,
-      child: Row(
-        children: [
-          // Back button (left side)
-          IconButton(
-            onPressed: _navigateBackFromNote,
-            tooltip: 'Back',
-            icon: const Icon(
-              size: 30,
-              Icons.arrow_back,
-              color: SpaceNotesTheme.primary,
-            ),
-          ),
-          const Spacer(), // Push action buttons to the right
-          Expanded(
-            child: Material(
-              color: SpaceNotesTheme.background,
-              child: InkWell(
-                onTap: () => _handleMoveNote(currentNote),
-                child: const Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.drive_file_move_outlined,
-                      color: SpaceNotesTheme.primary,
-                      size: 20,
-                    ),
-                    SizedBox(width: 8),
-                    Text(
-                      'Move',
-                      style: TextStyle(
-                        fontFamily: 'FiraCode',
-                        fontSize: 14,
-                        color: SpaceNotesTheme.text,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          Expanded(
-            child: Material(
-              color: SpaceNotesTheme.background,
-              child: InkWell(
-                onTap: () => _handleDeleteNote(currentNote),
-                child: const Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.delete_outline,
-                      color: SpaceNotesTheme.error,
-                      size: 20,
-                    ),
-                    SizedBox(width: 8),
-                    Text(
-                      'Delete',
-                      style: TextStyle(
-                        fontFamily: 'FiraCode',
-                        fontSize: 14,
-                        color: SpaceNotesTheme.error,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -659,49 +578,6 @@ class _NoteScreenState extends ConsumerState<NoteScreen> {
     }
     if (firstLine.startsWith('>')) return ChunkType.blockquote;
     return ChunkType.paragraph;
-  }
-
-  void _handleMoveNote(Note note) {
-    NotesListDialogs.showMoveNoteDialog(context, ref, note);
-  }
-
-  void _navigateBackFromNote() {
-    final notePath = widget.notePath;
-    final lastSlash = notePath.lastIndexOf('/');
-
-    if (lastSlash == -1) {
-      // Note is in root, go to /notes
-      context.go('/notes');
-    } else {
-      // Note is in a folder, go to that folder
-      final folderPath = notePath.substring(0, lastSlash);
-      final encodedFolderPath = Uri.encodeComponent(folderPath);
-      context.go('/notes/folder/$encodedFolderPath');
-    }
-  }
-
-  void _handleDeleteNote(Note note) {
-    // Calculate where to navigate after delete
-    final notePath = note.path;
-    final String navigateTo;
-
-    if (notePath.contains('/')) {
-      // Note is in a folder - navigate back to that folder
-      final lastSlash = notePath.lastIndexOf('/');
-      final folderPath = notePath.substring(0, lastSlash);
-      final encodedFolderPath = Uri.encodeComponent(folderPath);
-      navigateTo = '/notes/folder/$encodedFolderPath';
-    } else {
-      // Note is at root - navigate to notes root
-      navigateTo = '/notes';
-    }
-
-    NotesListDialogs.showDeleteNoteConfirmation(
-      context,
-      ref,
-      note,
-      navigateToAfterDelete: navigateTo,
-    );
   }
 
 }

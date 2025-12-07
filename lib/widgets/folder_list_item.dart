@@ -37,12 +37,7 @@ class _FolderListItemState extends State<FolderListItem> {
           highlightColor: SpaceNotesTheme.primary.withValues(alpha: 0.05),
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 200),
-            padding: EdgeInsets.only(
-              left: 16 + (widget.folder.depth * 20.0), // Indent based on depth
-              right: 16,
-              top: 16,
-              bottom: 16,
-            ),
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               border: Border.all(
                 color: widget.isSelected
