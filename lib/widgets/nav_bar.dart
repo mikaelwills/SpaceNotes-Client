@@ -66,7 +66,6 @@ class NavBar extends ConsumerWidget {
           ),
           child: Row(
             children: [
-              // Back button for settings screen
               if (currentLocation == '/settings') ...[
                 GestureDetector(
                   onTap: () => context.go("/notes"),
@@ -75,7 +74,6 @@ class NavBar extends ConsumerWidget {
                 ),
               ],
 
-              // Folder contents navigation
               if (currentLocation.startsWith('/notes/folder/')) ...[
                 Expanded(
                   child: _EditableFolderName(
@@ -86,7 +84,6 @@ class NavBar extends ConsumerWidget {
                 const SizedBox(width: 16),
               ],
 
-              // Note screen navigation
               if (isOnNote) ...[
                 Expanded(
                   child: _EditableNoteName(
@@ -97,7 +94,6 @@ class NavBar extends ConsumerWidget {
                 const SizedBox(width: 16),
               ],
 
-              // Chat screen specific navigation (hide on sessions page)
               if (currentLocation.startsWith('/notes/chat') && currentLocation != '/sessions') ...[
                 GestureDetector(
                   onTap: () => context.go("/sessions"),
@@ -113,22 +109,11 @@ class NavBar extends ConsumerWidget {
                 const Spacer(),
               ],
 
-              // Spacer for other screens (not folder, not note, not in chat)
               if (!currentLocation.startsWith('/notes/folder/') &&
                   !isOnNote &&
                   !currentLocation.startsWith('/notes/chat'))
                 const Spacer(),
 
-              // Show ellipsis menu on note screen, settings elsewhere
-              // NOTE: Ellipsis menu commented out - using bottom action bar instead
-              // if (isOnNote) ...[
-              //   _buildNoteMenu(context, ref, currentLocation),
-              // ] else ...[
-              //   GestureDetector(
-              //     onTap: () => context.go("/settings"),
-              //     child: const Icon(Icons.settings, color: SpaceNotesTheme.text),
-              //   ),
-              // ],
               GestureDetector(
                 onTap: () => context.go("/settings"),
                 child: const Icon(Icons.settings, color: SpaceNotesTheme.text),
@@ -141,95 +126,6 @@ class NavBar extends ConsumerWidget {
       },
     );
   }
-
-  // NOTE: Ellipsis menu commented out - using bottom action bar in note screen instead
-  // Widget _buildNoteMenu(BuildContext context, WidgetRef ref, String currentLocation) {
-  //   final notePath = _extractNotePathFromLocation(currentLocation);
-  //
-  //   return PopupMenuButton<String>(
-  //     icon: const Icon(Icons.more_vert, color: SpaceNotesTheme.text),
-  //     color: SpaceNotesTheme.surface,
-  //     onSelected: (value) async {
-  //       // Get the note from provider
-  //       final notesAsync = ref.read(notesListProvider);
-  //       final note = notesAsync.valueOrNull?.firstWhereOrNull((n) => n.path == notePath);
-  //
-  //       if (note == null) return;
-  //
-  //       switch (value) {
-  //         case 'move':
-  //           NotesListDialogs.showMoveNoteDialog(context, ref, note);
-  //           break;
-  //         case 'delete':
-  //           // Calculate where to navigate after delete based on current location
-  //           final currentPath = GoRouterState.of(context).uri.toString();
-  //           final String navigateTo;
-  //
-  //           // If we're viewing a specific note, navigate back appropriately
-  //           if (currentPath.startsWith('/notes/') && !currentPath.startsWith('/notes/folder/')) {
-  //             final notePath = note.path;
-  //
-  //             if (notePath.contains('/')) {
-  //               // Note is in a folder - navigate back to that folder
-  //               final lastSlash = notePath.lastIndexOf('/');
-  //               final folderPath = notePath.substring(0, lastSlash);
-  //               final encodedFolderPath = Uri.encodeComponent(folderPath);
-  //               navigateTo = '/notes/folder/$encodedFolderPath';
-  //             } else {
-  //               // Note is at root - navigate to notes root
-  //               navigateTo = '/notes';
-  //             }
-  //
-  //             print('🗑️  NavBar DELETE: Current path=$currentPath, Will navigate to $navigateTo after delete');
-  //
-  //             NotesListDialogs.showDeleteNoteConfirmation(
-  //               context,
-  //               ref,
-  //               note,
-  //               navigateToAfterDelete: navigateTo,
-  //             );
-  //           }
-  //           break;
-  //       }
-  //     },
-  //     itemBuilder: (context) => [
-  //       const PopupMenuItem<String>(
-  //         value: 'move',
-  //         child: Row(
-  //           children: [
-  //             Icon(Icons.drive_file_move_outlined, color: SpaceNotesTheme.text, size: 20),
-  //             SizedBox(width: 12),
-  //             Text(
-  //               'Move to folder',
-  //               style: TextStyle(
-  //                 fontFamily: 'FiraCode',
-  //                 fontSize: 14,
-  //                 color: SpaceNotesTheme.text,
-  //               ),
-  //             ),
-  //           ],
-  //         ),
-  //       ),
-  //       const PopupMenuItem<String>(
-  //         value: 'delete',
-  //         child: Row(
-  //           children: [
-  //             Icon(Icons.delete_outline, color: SpaceNotesTheme.error, size: 20),
-  //             SizedBox(width: 12),
-  //             Text(
-  //               'Delete',
-  //               style: TextStyle(
-  //                 fontFamily: 'FiraCode',
-  //                 fontSize: 14,
-  //                 color: SpaceNotesTheme.error,
-  //               ),
-  //             ),
-  //           ],
-  //         ),
-  //       ),
-  //     ],
-  //   );
-  // }
 
   String _extractFullFolderPath(String location) {
     final uri = Uri.parse(location);
@@ -261,12 +157,10 @@ class NavBar extends ConsumerWidget {
   }
 
   String _extractNoteName(String location) {
-    // Route is /notes/note/:path(.*) - path spans from index 2 onwards
     final uri = Uri.parse(location);
     final pathSegments = uri.pathSegments;
 
     if (pathSegments.length >= 3 && pathSegments[1] == 'note') {
-      // Join all segments after "note" to reconstruct the full path
       final notePathSegments = pathSegments.sublist(2);
       final fileName = _safeDecodeUri(notePathSegments.last);
       final noteName = fileName.replaceAll('.md', '');
@@ -313,7 +207,6 @@ class NavBar extends ConsumerWidget {
 
   Widget _buildDisconnectedIndicator() {
     return Container(
-      // Match padding from _PulsingHealthBar for consistent width
       padding: const EdgeInsets.all(12),
       child: Container(
         width: 4,
@@ -327,7 +220,6 @@ class NavBar extends ConsumerWidget {
   }
 }
 
-// Inline editable note name widget
 class _EditableNoteName extends ConsumerStatefulWidget {
   final String notePath;
   final String currentName;
@@ -342,14 +234,12 @@ class _EditableNoteName extends ConsumerStatefulWidget {
 }
 
 class _EditableNoteNameState extends ConsumerState<_EditableNoteName> {
-  // 1. CONSTRUCTOR
   bool _isEditing = false;
   late TextEditingController _controller;
   late FocusNode _focusNode;
   Timer? _debounceTimer;
   String _lastRenamedTo = '';
 
-  // 2. INIT
   @override
   void initState() {
     super.initState();
@@ -369,7 +259,6 @@ class _EditableNoteNameState extends ConsumerState<_EditableNoteName> {
     super.dispose();
   }
 
-  // 3. BUILD
   @override
   Widget build(BuildContext context) {
     if (_isEditing) {
@@ -408,7 +297,6 @@ class _EditableNoteNameState extends ConsumerState<_EditableNoteName> {
     );
   }
 
-  // 5. HELPER FUNCTIONS
   void _onTextChanged() {
     if (!_isEditing) return;
 
@@ -473,7 +361,6 @@ class _EditableNoteNameState extends ConsumerState<_EditableNoteName> {
   }
 }
 
-// Inline editable folder name widget
 class _EditableFolderName extends ConsumerStatefulWidget {
   final String folderPath;
   final String currentName;
@@ -537,20 +424,17 @@ class _EditableFolderNameState extends ConsumerState<_EditableFolderName> {
       return;
     }
 
-    // Build new folder path
     final parentPath = widget.folderPath.contains('/')
         ? widget.folderPath.substring(0, widget.folderPath.lastIndexOf('/') + 1)
         : '';
     final newFolderPath = '$parentPath$newName';
 
-    // Use the moveFolder reducer to rename the folder and all its contents
     final repo = ref.read(notesRepositoryProvider);
     debugPrint('🏷️  RENAME FOLDER: ${widget.folderPath} -> $newFolderPath');
 
     final success = await repo.moveFolder(widget.folderPath, newFolderPath);
 
     if (mounted && success) {
-      // Navigate to the new folder path
       final encodedNewPath = Uri.encodeComponent(newFolderPath);
       context.go('/notes/folder/$encodedNewPath');
     }
@@ -595,7 +479,6 @@ class _EditableFolderNameState extends ConsumerState<_EditableFolderName> {
   }
 }
 
-// Pulsing health bar widget
 class _PulsingHealthBar extends ConsumerStatefulWidget {
   final stdb.ConnectionStatus status;
   final stdb.ConnectionQuality? quality;
@@ -634,11 +517,9 @@ class _PulsingHealthBarState extends ConsumerState<_PulsingHealthBar>
 
     final currentPong = widget.quality?.lastPongReceived;
 
-    // Only pulse if we received a NEW pong (successful server communication)
     if (currentPong != null && currentPong != _lastPongTimestamp) {
       _lastPongTimestamp = currentPong;
 
-      // Debounce pulse animation by 500ms
       _debounceTimer?.cancel();
       _debounceTimer = Timer(const Duration(milliseconds: 500), () {
         if (mounted) {
@@ -680,7 +561,6 @@ class _PulsingHealthBarState extends ConsumerState<_PulsingHealthBar>
     if (widget.quality != null) {
       return widget.quality!.healthScore;
     }
-    // Infer from status
     switch (widget.status) {
       case stdb.ConnectionStatus.connected:
         return 1.0;
@@ -703,7 +583,6 @@ class _PulsingHealthBarState extends ConsumerState<_PulsingHealthBar>
       onTap: isDegraded ? _handleReconnectTap : null,
       behavior: HitTestBehavior.opaque,
       child: Container(
-        // Larger tap target area (44x44 minimum for touch)
         padding: const EdgeInsets.all(12),
         child: AnimatedBuilder(
           animation: _pulseAnimation,
@@ -754,10 +633,8 @@ class _PulsingHealthBarState extends ConsumerState<_PulsingHealthBar>
   void _forceReconnect() async {
     final repo = ref.read(notesRepositoryProvider);
 
-    // Step 1: Reset connection (closes WebSocket, clears client)
     repo.resetConnection();
 
-    // Step 2: Reconnect (creates new client, fetches data)
     await repo.connectAndGetInitialData();
   }
 }

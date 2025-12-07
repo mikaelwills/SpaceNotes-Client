@@ -43,25 +43,26 @@ class TerminalMessage extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        if (message.sendStatus == MessageSendStatus.failed || message.sendStatus == MessageSendStatus.queued)
+          _buildStatusIcons(context),
         Expanded(
           child: Container(
             decoration: const BoxDecoration(
               border: Border(
-                left: BorderSide(
-                  color: Color(0xFF444444),
+                right: BorderSide(
+                  color: SpaceNotesTheme.primary,
                   width: 2,
                 ),
               ),
             ),
-            padding: const EdgeInsets.only(left: 12, top: 8, bottom: 12),
+            padding: const EdgeInsets.only(right: 12, top: 8, bottom: 12),
             child: Text(
               _safeTextSanitize(content, preserveMarkdown: false),
               style: SpaceNotesTextStyles.terminal,
+              textAlign: TextAlign.right,
             ),
           ),
         ),
-        if (message.sendStatus == MessageSendStatus.failed || message.sendStatus == MessageSendStatus.queued)
-          _buildStatusIcons(context),
       ],
     );
   }
@@ -168,50 +169,40 @@ class TerminalMessage extends StatelessWidget {
   Widget _buildToolPart(MessagePart part) {
     final toolName = ToolDisplayHelper.getDisplayName(part);
 
-    // State can be either a String directly or inside a Map
     String state = 'pending';
     final stateValue = part.metadata?['state'];
     if (stateValue is String) {
       state = stateValue;
     } else if (stateValue is Map) {
-      // If state is a Map, look for common status fields
       state = (stateValue['status'] ?? stateValue['state'] ?? 'pending') as String;
     }
 
     final error = part.metadata?['error'] as String?;
     final output = part.metadata?['output'] as String?;
 
-    // Extract command/args for bash and other tools
     String? commandDetails;
 
-    // Try to get input from various locations in the metadata
     Map<String, dynamic>? input;
 
-    // First try: input is directly in metadata
     if (part.metadata?['input'] is Map) {
       input = part.metadata!['input'] as Map<String, dynamic>;
     }
-    // Second try: input is inside state map
     else if (stateValue is Map && stateValue['input'] is Map) {
       input = stateValue['input'] as Map<String, dynamic>;
     }
 
     if (input != null) {
-      // For bash commands, show the actual command
       if (input['command'] != null) {
         commandDetails = input['command'] as String;
       }
-      // For file operations, show the path
       else if (input['path'] != null || input['filePath'] != null) {
         commandDetails = (input['path'] ?? input['filePath']) as String;
       }
-      // For other operations, try to get a meaningful detail
       else if (input['pattern'] != null) {
         commandDetails = input['pattern'] as String;
       }
     }
 
-    // Determine icon and color based on state
     IconData icon;
     Color color;
     switch (state) {
@@ -241,7 +232,6 @@ class TerminalMessage extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Tool execution line with icon
           Row(
             children: [
               Icon(icon, size: 14, color: color),
@@ -291,7 +281,6 @@ class TerminalMessage extends StatelessWidget {
               ],
             ],
           ),
-          // Show error message if present
           if (error != null) ...[
             const SizedBox(height: 2),
             Padding(
@@ -305,7 +294,6 @@ class TerminalMessage extends StatelessWidget {
               ),
             ),
           ],
-          // Show output preview if present and completed
           if (state == 'completed' && output != null && output.isNotEmpty) ...[
             const SizedBox(height: 2),
             Padding(
@@ -327,8 +315,6 @@ class TerminalMessage extends StatelessWidget {
       ),
     );
   }
-  
-
 
   Widget _buildReasoningPart(MessagePart part) {
     final content = part.content;
@@ -511,7 +497,6 @@ class TerminalMessage extends StatelessWidget {
     );
   }
 
-  /// Safe text sanitization with fallback handling
   String _safeTextSanitize(String text, {bool preserveMarkdown = true}) {
     try {
       return TextSanitizer.sanitize(text, preserveMarkdown: preserveMarkdown);
@@ -557,7 +542,6 @@ class TerminalMessage extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 8),
-            // Delete button for queued messages
             Tooltip(
               message: 'Remove from queue',
               child: InkWell(

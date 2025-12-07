@@ -3,8 +3,6 @@ import '../theme/spacenotes_theme.dart';
 import 'terminal_input_field.dart';
 import 'terminal_button.dart';
 
-/// Terminal-style dialog component that follows OpenCode design system
-/// Provides consistent styling and behavior for modal dialogs
 class TerminalDialog extends StatelessWidget {
   final String title;
   final List<Widget> children;
@@ -44,7 +42,6 @@ class TerminalDialog extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Title bar
             Container(
               padding: const EdgeInsets.all(16),
               decoration: const BoxDecoration(
@@ -81,7 +78,6 @@ class TerminalDialog extends StatelessWidget {
               ),
             ),
 
-            // Content
             Flexible(
               child: Padding(
                 padding: const EdgeInsets.all(16),
@@ -93,7 +89,6 @@ class TerminalDialog extends StatelessWidget {
               ),
             ),
 
-            // Actions
             if (actions.isNotEmpty)
               Container(
                 padding: const EdgeInsets.all(16),
@@ -131,7 +126,6 @@ class TerminalDialog extends StatelessWidget {
   }
 }
 
-/// Action configuration for terminal dialogs
 class TerminalDialogAction {
   final String label;
   final VoidCallback? onPressed;
@@ -144,7 +138,6 @@ class TerminalDialogAction {
   });
 }
 
-/// Terminal-style input dialog for common use cases
 class TerminalInputDialog extends StatefulWidget {
   final String title;
   final String hintText;

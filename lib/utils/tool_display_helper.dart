@@ -6,10 +6,9 @@ class ToolDisplayHelper {
   // Cache for computed display names to avoid recalculation on rebuilds
   static final Map<String, String> _cache = {};
   
-  // Pre-computed tool name mappings for O(1) lookup
   static const Map<String, String> _toolNameMap = {
     'read': 'read',
-    'write': 'write', 
+    'write': 'write',
     'bash': 'bash',
     'grep': 'search',
     'list': 'list',
@@ -18,6 +17,27 @@ class ToolDisplayHelper {
     'obsidian-server_str_replace': 'edit',
     'obsidian-server_create': 'create',
     'storage.write': 'write',
+  };
+
+  static const List<String> _spaceNotesPrefixes = [
+    'mcp__spacenotes-mcp__',
+    'spacenotes-mcp_',
+  ];
+
+  static const Map<String, String> _spaceNotesActionMap = {
+    'get_note': 'get',
+    'create_note': 'create',
+    'delete_note': 'delete',
+    'move_note': 'move',
+    'edit_note': 'edit',
+    'append_to_note': 'append',
+    'prepend_to_note': 'prepend',
+    'search_notes': 'search',
+    'list_notes_in_folder': 'list',
+    'create_folder': 'create folder',
+    'delete_folder': 'delete folder',
+    'move_folder': 'move folder',
+    'move_notes_to_folder': 'move notes',
   };
 
   /// Main entry point - gets display name with caching
@@ -127,15 +147,20 @@ class ToolDisplayHelper {
     return spaceIndex == -1 ? text : text.substring(0, spaceIndex);
   }
 
-  /// Optimized tool name formatting with pre-computed mappings
   static String _formatToolName(String toolName) {
-    // Use pre-computed map for O(1) lookup
     final lowerName = toolName.toLowerCase();
     if (_toolNameMap.containsKey(lowerName)) {
       return _toolNameMap[lowerName]!;
     }
 
-    // Handle underscore-separated names
+    for (final prefix in _spaceNotesPrefixes) {
+      if (toolName.startsWith(prefix)) {
+        final action = toolName.substring(prefix.length);
+        final actionDisplay = _spaceNotesActionMap[action] ?? action;
+        return 'SpaceNotes $actionDisplay';
+      }
+    }
+
     if (toolName.contains('_')) {
       final lastPart = toolName.substring(toolName.lastIndexOf('_') + 1);
       return lastPart.isNotEmpty ? lastPart : toolName;

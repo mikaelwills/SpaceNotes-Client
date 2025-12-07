@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import '../theme/spacenotes_theme.dart';
 
-/// Reusable terminal-style input field component
-/// Follows OpenCode design system with consistent styling
 class TerminalInputField extends StatelessWidget {
   final TextEditingController? controller;
   final String? hintText;

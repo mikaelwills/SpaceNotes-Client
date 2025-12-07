@@ -30,8 +30,7 @@ class _PerformanceMonitorState extends State<PerformanceMonitor> {
   @override
   void initState() {
     super.initState();
-    
-    // Only show in debug mode unless explicitly enabled for production
+
     if (kDebugMode || widget.showInProduction) {
       _startMonitoring();
     }
@@ -55,7 +54,6 @@ class _PerformanceMonitorState extends State<PerformanceMonitor> {
 
   @override
   Widget build(BuildContext context) {
-    // Don't show in production unless explicitly enabled
     if (!kDebugMode && !widget.showInProduction) {
       return const SizedBox.shrink();
     }
@@ -176,7 +174,6 @@ class _PerformanceMonitorState extends State<PerformanceMonitor> {
   }
 }
 
-// Performance overlay for easy debugging
 class PerformanceOverlay extends StatelessWidget {
   final Widget child;
   final bool enabled;

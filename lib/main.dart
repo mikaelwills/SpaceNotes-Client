@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart' hide Provider;
 import 'package:spacenotes_client/providers/notes_providers.dart';
+import 'package:spacenotes_client/providers/connection_providers.dart';
 import 'package:provider/provider.dart';
 
 import 'theme/spacenotes_theme.dart';
 import 'services/opencode_client.dart';
 import 'services/sse_service.dart';
 import 'services/message_queue_service.dart';
-import 'services/notes_api_service.dart';
 import 'blocs/connection/connection_bloc.dart';
 import 'blocs/session/session_bloc.dart';
 import 'blocs/session/session_event.dart';
@@ -24,9 +24,6 @@ void main() async {
   // Create and initialize ConfigCubit
   final configCubit = ConfigCubit();
   await configCubit.initialize();
-
-  // Create unconfigured Obsidian service
-  final notesService = NotesService.unconfigured();
 
   // Create OpenCodeClient with ConfigCubit
   final openCodeClient = OpenCodeClient(configCubit: configCubit);
@@ -47,7 +44,17 @@ void main() async {
   );
   sessionBloc.add(LoadStoredSession());
 
-  final container = ProviderContainer();
+  // Create ConnectionBloc
+  final connectionBloc = ConnectionBloc(
+    openCodeClient: openCodeClient,
+    sessionBloc: sessionBloc,
+  );
+
+  final container = ProviderContainer(
+    overrides: [
+      connectionBlocProvider.overrideWith((ref) => connectionBloc),
+    ],
+  );
 
   runApp(UncontrolledProviderScope(
     container: container,
@@ -55,7 +62,7 @@ void main() async {
       openCodeClient: openCodeClient,
       configCubit: configCubit,
       sessionBloc: sessionBloc,
-      notesService: notesService,
+      connectionBloc: connectionBloc,
       container: container,
     ),
   ));
@@ -65,7 +72,7 @@ class OpenCodeApp extends StatefulWidget {
   final OpenCodeClient openCodeClient;
   final ConfigCubit configCubit;
   final SessionBloc sessionBloc;
-  final NotesService notesService;
+  final ConnectionBloc connectionBloc;
   final ProviderContainer container;
 
   const OpenCodeApp({
@@ -73,7 +80,7 @@ class OpenCodeApp extends StatefulWidget {
     required this.openCodeClient,
     required this.configCubit,
     required this.sessionBloc,
-    required this.notesService,
+    required this.connectionBloc,
     required this.container,
   });
 
@@ -130,12 +137,7 @@ class _OpenCodeAppState extends State<OpenCodeApp> with WidgetsBindingObserver {
               openCodeClient: context.read<OpenCodeClient>(),
             ),
           ),
-          BlocProvider<ConnectionBloc>(
-            create: (context) => ConnectionBloc(
-              openCodeClient: context.read<OpenCodeClient>(),
-              sessionBloc: widget.sessionBloc,
-            ),
-          ),
+          BlocProvider<ConnectionBloc>.value(value: widget.connectionBloc),
           Provider<MessageQueueService>(
             create: (context) => MessageQueueService(
               connectionBloc: context.read<ConnectionBloc>(),

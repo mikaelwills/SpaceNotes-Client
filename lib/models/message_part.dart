@@ -66,10 +66,6 @@ class MessagePart extends Equatable {
       }
     }
     
-    // Only log tool parts when they're actually created (reduce spam)
-    if (type == 'tool' && (metadata['tool'] != null || metadata['name'] != null)) {
-      print('🔧 Tool: ${metadata['tool'] ?? metadata['name']}');
-    }
     
     return MessagePart(
       id: id,

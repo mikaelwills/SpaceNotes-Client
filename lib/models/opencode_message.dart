@@ -143,8 +143,6 @@ class OpenCodeMessage extends Equatable {
       return MessagePart.fromJson(partData as Map<String, dynamic>);
     }).toList();
     
-    print('🔍 [OpenCodeMessage] Parsed ${parts.length} parts');
-    // Removed individual part content logging to prevent giant system prompt dumps
     
     // A message is only streaming if:
     // 1. It's an assistant message AND
@@ -174,7 +172,6 @@ class OpenCodeMessage extends Equatable {
       isStreaming: isMessageStreaming,
     );
     
-    print('📝 Message ${message.id}: ${message.parts.length} parts');
     return message;
   }
 

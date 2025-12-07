@@ -3,8 +3,6 @@ import 'package:flutter/services.dart';
 import '../theme/spacenotes_theme.dart';
 import 'terminal_input_field.dart';
 
-/// Search bar component for filtering notes
-/// Provides terminal-style search interface with enhanced UX features
 class NotesSearchBar extends StatefulWidget {
   final TextEditingController controller;
   final ValueChanged<String> onChanged;
@@ -58,7 +56,6 @@ class _NotesSearchBarState extends State<NotesSearchBar> {
     widget.controller.clear();
     widget.onChanged('');
     widget.onClear?.call();
-    // Provide haptic feedback
     HapticFeedback.lightImpact();
   }
 

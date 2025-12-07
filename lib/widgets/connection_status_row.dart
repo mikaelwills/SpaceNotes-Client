@@ -62,7 +62,6 @@ class _ConnectionStatusRowState extends State<ConnectionStatusRow>
               ipText = configState.serverIp;
             }
 
-            // Get network status for enhanced display
             final networkService = NetworkService();
             final networkStatus = networkService.currentStatus;
             final networkIcon = networkStatus?.icon ?? '';
@@ -89,13 +88,11 @@ class _ConnectionStatusRowState extends State<ConnectionStatusRow>
                 children: [
                   BlocBuilder<ChatBloc, ChatState>(
                       builder: (context, chatState) {
-                    // Check if we're working: either sending a message OR streaming a response
                     final isSendingMessage = chatState is ChatSendingMessage;
                     final isStreamingResponse =
                         chatState is ChatReady && chatState.isStreaming;
                     final isWorking = isSendingMessage || isStreamingResponse;
 
-                    // Get session status if available
                     final sessionStatus = chatState is ChatReady ? chatState.sessionStatus : null;
 
                     final displayText = modelName;

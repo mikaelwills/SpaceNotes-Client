@@ -69,32 +69,20 @@ class MessageQueueService {
     });
   }
   
-  /// Called when assistant starts streaming - marks pending message as sent
   void _handleStreamingStarted() {
-    print('📬 [MessageQueue] Assistant streaming started - checking for pending messages');
-    
-    // Mark the most recent pending message as sent
     if (_pendingMessageTimeouts.isNotEmpty) {
       final messageId = _pendingMessageTimeouts.keys.first;
-      print('📬 [MessageQueue] Marking pending message $messageId as sent via SSE');
       _markMessageSentViaSSE(messageId);
     }
   }
   
-  /// Mark a message as sent via SSE (cancel timeout)
   void _markMessageSentViaSSE(String messageId) {
     if (_pendingMessageTimeouts.containsKey(messageId)) {
-      // Cancel timeout
       _pendingMessageTimeouts[messageId]?.cancel();
-      
-      // Mark as sent
       final callback = _pendingCallbacks[messageId];
       if (callback != null) {
-        print('📊 [MessageQueue] Message $messageId status → sent (reason: SSE streaming started)');
         callback(MessageSendStatus.sent);
       }
-      
-      // Clean up
       _cleanupPendingMessage(messageId);
     }
   }
