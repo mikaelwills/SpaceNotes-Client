@@ -151,7 +151,7 @@ class _DesktopTopBar extends ConsumerWidget {
           IconButton(
             icon: const Icon(Icons.settings_outlined, size: 18),
             color: SpaceNotesTheme.textSecondary,
-            onPressed: () {},
+            onPressed: () => context.go('/settings'),
             tooltip: 'Settings',
           ),
           const SizedBox(width: 8),

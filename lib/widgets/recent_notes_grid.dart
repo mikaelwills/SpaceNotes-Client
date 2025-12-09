@@ -122,7 +122,7 @@ class RecentNotesGrid extends ConsumerWidget {
                   color: SpaceNotesTheme.textSecondary,
                   height: 1.4,
                 ),
-                overflow: TextOverflow.fade,
+                overflow: TextOverflow.clip,
               ),
             ),
           ],
