@@ -10,6 +10,7 @@ class TerminalIPInput extends StatelessWidget {
   final bool isConnecting;
   final bool isConnected;
   final double? maxWidth;
+  final bool showConnectButton;
 
   const TerminalIPInput({
     super.key,
@@ -21,6 +22,7 @@ class TerminalIPInput extends StatelessWidget {
     this.isConnecting = false,
     this.isConnected = false,
     this.maxWidth,
+    this.showConnectButton = true,
   });
 
   Color get _accentColor => isConnected ? SpaceNotesTheme.primary : SpaceNotesTheme.textSecondary;
@@ -33,8 +35,10 @@ class TerminalIPInput extends StatelessWidget {
       child: Row(
         children: [
           Expanded(child: _buildTerminalInput()),
-          const SizedBox(width: 12),
-          _buildConnectButton(),
+          if (showConnectButton) ...[
+            const SizedBox(width: 12),
+            _buildConnectButton(),
+          ],
         ],
       ),
     );

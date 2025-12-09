@@ -204,6 +204,8 @@ class _FolderListViewState extends ConsumerState<FolderListView> {
       key: ValueKey(folder.path),
       folder: folder,
       onTap: () {
+        FocusManager.instance.primaryFocus?.unfocus();
+        ref.read(folderSearchQueryProvider.notifier).state = '';
         final encodedPath = Uri.encodeComponent(folder.path);
         context.go('/notes/folder/$encodedPath');
       },
@@ -217,6 +219,8 @@ class _FolderListViewState extends ConsumerState<FolderListView> {
       key: ValueKey(note.id),
       note: note,
       onTap: () {
+        FocusManager.instance.primaryFocus?.unfocus();
+        ref.read(folderSearchQueryProvider.notifier).state = '';
         final encodedPath =
             note.path.split('/').map(Uri.encodeComponent).join('/');
         context.go('/notes/note/$encodedPath');
@@ -226,7 +230,7 @@ class _FolderListViewState extends ConsumerState<FolderListView> {
     );
   }
 
-  void _createQuickNote() {
+  Future<void> _createQuickNote() async {
     final now = DateTime.now();
     final timestamp =
         '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}-${now.hour.toString().padLeft(2, '0')}-${now.minute.toString().padLeft(2, '0')}-${now.second.toString().padLeft(2, '0')}';
@@ -241,8 +245,12 @@ class _FolderListViewState extends ConsumerState<FolderListView> {
       notePath = '${folderPathWithSlash}Untitled-$timestamp.md';
     }
 
-    final encodedPath =
-        notePath.split('/').map(Uri.encodeComponent).join('/');
-    context.go('/notes/note/$encodedPath?new=true');
+    final repo = ref.read(notesRepositoryProvider);
+    final noteId = await repo.createNote(notePath, '# \n');
+    if (noteId != null && mounted) {
+      final encodedPath =
+          notePath.split('/').map(Uri.encodeComponent).join('/');
+      context.go('/notes/note/$encodedPath');
+    }
   }
 }

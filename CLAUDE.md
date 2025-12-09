@@ -10,14 +10,14 @@ mcp__spacenotes-mcp__list_notes_in_folder or mcp__spacenotes-mcp__get_note
 ```
 
 ### "Look at note updates"
-When the user says "look at note updates", use spacenotes-mcp to get the note titled "spacetime flutter client updates". This note contains a list of issues and features that need to be implemented or fixed.
+When the user says "look at note updates", use spacenotes-mcp to get the note containing the list of issues and features that need to be implemented or fixed.
 
 ```
-mcp__spacenotes-mcp__get_note with path: "Development/spacenotes flutter client updates.md"
+mcp__spacenotes-mcp__get_note with path: "Development/SpaceNotes/Spacenotes flutter client.md"
 ```
 
-### Editing "spacenotes flutter client updates" Note
-Anytime you update or edit `Development/spacenote flutter client updates.md`, the future tasks should always remain at the top and be clear bullet points. Don't make the user scroll to see what's next. Don't write any giant updates into it or anything that's too verbose.
+### Editing the updates note
+Future tasks should always remain at the top as clear bullet points. Don't make the user scroll to see what's next. When marking tasks as complete, just remove them.
 
 ## Current Server Configuration
 - SpacetimeDB: `100.84.184.121:3003` (Tailscale IP)
@@ -205,5 +205,3 @@ curl -H "Authorization: Bearer d8c56f738e76182b8963ff34ca9dd4c4a76b40e00da2371cd
 - Rename option available in ellipses menu (⋮)
 - Rename triggers dialog/prompt for new name
 - Calls `repo.renameNote(noteId, newPath)` directly
----
-- When marking future tasks as complete just remove them

@@ -2,6 +2,31 @@
 
 import 'package:spacetimedb_dart_sdk/spacetimedb_dart_sdk.dart';
 
+/// Arguments for the append_to_note reducer
+class AppendToNoteArgs {
+  final String path;
+  final String content;
+  AppendToNoteArgs({required this.path, required this.content, });
+}
+
+/// Decoder for append_to_note reducer arguments
+class AppendToNoteArgsDecoder implements ReducerArgDecoder<AppendToNoteArgs> {
+  @override
+  AppendToNoteArgs? decode(BsatnDecoder decoder) {
+    try {
+      final path = decoder.readString();
+      final content = decoder.readString();
+
+      return AppendToNoteArgs(
+        path: path,
+        content: content,
+      );
+    } catch (e) {
+      return null; // Deserialization failed
+    }
+  }
+}
+
 /// Arguments for the clear_all reducer
 class ClearAllArgs {
   ClearAllArgs();
@@ -58,9 +83,9 @@ class CreateNoteArgs {
   final String folderPath;
   final int depth;
   final String frontmatter;
-  final int size;
-  final int createdTime;
-  final int modifiedTime;
+  final Int64 size;
+  final Int64 createdTime;
+  final Int64 modifiedTime;
   CreateNoteArgs({required this.id, required this.path, required this.name, required this.content, required this.folderPath, required this.depth, required this.frontmatter, required this.size, required this.createdTime, required this.modifiedTime, });
 }
 
@@ -135,6 +160,37 @@ class DeleteNoteArgsDecoder implements ReducerArgDecoder<DeleteNoteArgs> {
 
       return DeleteNoteArgs(
         id: id,
+      );
+    } catch (e) {
+      return null; // Deserialization failed
+    }
+  }
+}
+
+/// Arguments for the find_replace_in_note reducer
+class FindReplaceInNoteArgs {
+  final String path;
+  final String oldText;
+  final String newText;
+  final bool replaceAll;
+  FindReplaceInNoteArgs({required this.path, required this.oldText, required this.newText, required this.replaceAll, });
+}
+
+/// Decoder for find_replace_in_note reducer arguments
+class FindReplaceInNoteArgsDecoder implements ReducerArgDecoder<FindReplaceInNoteArgs> {
+  @override
+  FindReplaceInNoteArgs? decode(BsatnDecoder decoder) {
+    try {
+      final path = decoder.readString();
+      final oldText = decoder.readString();
+      final newText = decoder.readString();
+      final replaceAll = decoder.readBool();
+
+      return FindReplaceInNoteArgs(
+        path: path,
+        oldText: oldText,
+        newText: newText,
+        replaceAll: replaceAll,
       );
     } catch (e) {
       return null; // Deserialization failed
@@ -271,6 +327,31 @@ class MoveNoteArgsDecoder implements ReducerArgDecoder<MoveNoteArgs> {
   }
 }
 
+/// Arguments for the prepend_to_note reducer
+class PrependToNoteArgs {
+  final String path;
+  final String content;
+  PrependToNoteArgs({required this.path, required this.content, });
+}
+
+/// Decoder for prepend_to_note reducer arguments
+class PrependToNoteArgsDecoder implements ReducerArgDecoder<PrependToNoteArgs> {
+  @override
+  PrependToNoteArgs? decode(BsatnDecoder decoder) {
+    try {
+      final path = decoder.readString();
+      final content = decoder.readString();
+
+      return PrependToNoteArgs(
+        path: path,
+        content: content,
+      );
+    } catch (e) {
+      return null; // Deserialization failed
+    }
+  }
+}
+
 /// Arguments for the rename_note reducer
 class RenameNoteArgs {
   final String id;
@@ -301,8 +382,8 @@ class UpdateNoteContentArgs {
   final String id;
   final String content;
   final String frontmatter;
-  final int size;
-  final int modifiedTime;
+  final Int64 size;
+  final Int64 modifiedTime;
   UpdateNoteContentArgs({required this.id, required this.content, required this.frontmatter, required this.size, required this.modifiedTime, });
 }
 
@@ -392,9 +473,9 @@ class UpsertNoteArgs {
   final String folderPath;
   final int depth;
   final String frontmatter;
-  final int size;
-  final int createdTime;
-  final int modifiedTime;
+  final Int64 size;
+  final Int64 createdTime;
+  final Int64 modifiedTime;
   UpsertNoteArgs({required this.id, required this.path, required this.name, required this.content, required this.folderPath, required this.depth, required this.frontmatter, required this.size, required this.createdTime, required this.modifiedTime, });
 }
 

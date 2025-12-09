@@ -51,12 +51,10 @@ enum ChunkType { paragraph, header, list, codeBlock, blockquote }
 
 class NoteScreen extends ConsumerStatefulWidget {
   final String notePath;
-  final bool isNewNote;
 
   const NoteScreen({
     super.key,
     required this.notePath,
-    this.isNewNote = false,
   });
 
   @override
@@ -75,7 +73,6 @@ class _NoteScreenState extends ConsumerState<NoteScreen> {
 
   // Dynamic filename tracking
   String _currentPath = ''; // Display path (updated optimistically)
-  String _savedPath = ''; // Last path known to server (for updates)
 
   Timer? _debounceTimer;
 
@@ -103,29 +100,51 @@ class _NoteScreenState extends ConsumerState<NoteScreen> {
     _focusNode = FocusNode();
     _focusNode.addListener(_onFocusChanged);
 
-    if (widget.isNewNote) {
-      // Start with just "# " so user types the title directly
-      _contentController.text = '# \n';
-      _lastSavedContent = '# \n';
-      // Position cursor after "# "
-      _contentController.selection = const TextSelection.collapsed(offset: 2);
-      _isEditing = true;
-      _savedPath = _currentPath;
-      // Create note immediately on server
-      _createNoteImmediately();
-    } else {
-      // For existing notes, look up the ID from cached data
-      final notes = ref.read(notesListProvider).valueOrNull;
-      final existingNote =
-          notes?.firstWhereOrNull((n) => n.path == _currentPath);
-      if (existingNote != null) {
-        _noteId = existingNote.id;
-        _savedPath = _currentPath;
-      }
+    final notes = ref.read(notesListProvider).valueOrNull;
+    final existingNote =
+        notes?.firstWhereOrNull((n) => n.path == _currentPath);
+    if (existingNote != null) {
+      _noteId = existingNote.id;
     }
 
     // Subscribe to update events
     _setupUpdateEventListener();
+  }
+
+  @override
+  void didUpdateWidget(NoteScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.notePath != widget.notePath) {
+      print('🟡 NoteScreen didUpdateWidget: ${oldWidget.notePath} -> ${widget.notePath}');
+      _loadNewNote();
+    }
+  }
+
+  void _loadNewNote() {
+    _debounceTimer?.cancel();
+    _updateEventSubscription?.cancel();
+
+    _currentPath = widget.notePath;
+    _isEditing = false;
+    _noteId = null;
+
+    Future(() {
+      ref.read(currentNotePathProvider.notifier).state = widget.notePath;
+    });
+
+    final notes = ref.read(notesListProvider).valueOrNull;
+    final existingNote = notes?.firstWhereOrNull((n) => n.path == _currentPath);
+    if (existingNote != null) {
+      _noteId = existingNote.id;
+      _updateControllerSilently(existingNote.content);
+      _lastSavedContent = existingNote.content;
+    } else {
+      _updateControllerSilently('');
+      _lastSavedContent = '';
+    }
+
+    _setupUpdateEventListener();
+    setState(() {});
   }
 
   void _setupUpdateEventListener() {
@@ -169,23 +188,6 @@ class _NoteScreenState extends ConsumerState<NoteScreen> {
   }
 
 
-  Future<void> _createNoteImmediately() async {
-    final repo = ref.read(notesRepositoryProvider);
-    try {
-      final id = await repo.createNote(_savedPath, _contentController.text);
-      if (mounted && id != null) {
-        _noteId = id;
-        debugPrint('✅ CREATE: ID=$id | path=$_savedPath');
-        // Save any content typed while waiting for ID
-        if (_contentController.text != _lastSavedContent) {
-          _saveContent();
-        }
-      }
-    } catch (e) {
-      debugPrint('❌ CREATE FAILED: $e');
-    }
-  }
-
   @override
   void dispose() {
     _debounceTimer?.cancel();
@@ -219,7 +221,6 @@ class _NoteScreenState extends ConsumerState<NoteScreen> {
           // Update current path if it changed (from rename)
           if (remoteNote.path != _currentPath) {
             _currentPath = remoteNote.path;
-            _savedPath = remoteNote.path;
           }
         } else if (_noteId != null && mounted) {
           // Note was deleted (selector returns null because ID no longer exists)
@@ -231,8 +232,7 @@ class _NoteScreenState extends ConsumerState<NoteScreen> {
 
     // 3. Controller Synchronization Logic
     // If we have data from server, but controller is empty, sync it up.
-    if (!widget.isNewNote &&
-        currentNote != null &&
+    if (currentNote != null &&
         _contentController.text.isEmpty &&
         !_isLocalChange) {
       // We use PostFrameCallback to safely update controller state
@@ -449,7 +449,6 @@ class _NoteScreenState extends ConsumerState<NoteScreen> {
     if (success && mounted) {
       setState(() {
         _currentPath = newPath;
-        _savedPath = newPath;
       });
     }
   }

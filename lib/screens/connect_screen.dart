@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../theme/spacenotes_theme.dart';
 import '../providers/notes_providers.dart';
-import '../widgets/terminal_input_field.dart';
+import '../widgets/terminal_ip_input.dart';
 
 /// Screen shown when no SpaceNotes server is configured.
 class ConnectScreen extends ConsumerStatefulWidget {
@@ -14,30 +14,36 @@ class ConnectScreen extends ConsumerStatefulWidget {
 }
 
 class _ConnectScreenState extends ConsumerState<ConnectScreen> {
-  final TextEditingController _hostController = TextEditingController();
+  final TextEditingController _ipController = TextEditingController();
+  final TextEditingController _portController = TextEditingController();
   bool _isConnecting = false;
   String? _errorMessage;
 
   @override
   void initState() {
     super.initState();
+    _portController.text = '3003';
   }
 
   @override
   void dispose() {
-    _hostController.dispose();
+    _ipController.dispose();
+    _portController.dispose();
     super.dispose();
   }
 
   Future<void> _connect() async {
-    final host = _hostController.text.trim();
+    final ip = _ipController.text.trim();
+    final port = _portController.text.trim();
 
-    if (host.isEmpty) {
+    if (ip.isEmpty) {
       setState(() {
         _errorMessage = 'Server address is required';
       });
       return;
     }
+
+    final host = port.isNotEmpty ? '$ip:$port' : '$ip:3003';
 
     setState(() {
       _isConnecting = true;
@@ -48,7 +54,7 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
       final repository = ref.read(notesRepositoryProvider);
 
       // Configure and connect
-      repository.configure(host: host);
+      await repository.configure(host: host);
       await repository.connectAndGetInitialData();
 
       // Check if connected
@@ -88,36 +94,17 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
                 fontWeight: FontWeight.w600,
               ),
             ),
-            const SizedBox(height: 8),
-            Text(
-              'Enter your SpaceNotes server address',
-              style: TextStyle(
-                color: SpaceNotesTheme.text.withValues(alpha: 0.6),
-                fontSize: 14,
-              ),
-            ),
             const SizedBox(height: 32),
-            Container(
-              constraints: const BoxConstraints(maxWidth: 300),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Server Address',
-                    style: TextStyle(
-                      color: SpaceNotesTheme.text.withValues(alpha: 0.8),
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  TerminalInputField(
-                    controller: _hostController,
-                    hintText: '0.0.0.0:3003',
-                    onSubmitted: (_) => _connect(),
-                  ),
-                ],
-              ),
+            TerminalIPInput(
+              ipController: _ipController,
+              portController: _portController,
+              ipHint: 'IP Address',
+              portHint: '3003',
+              isConnecting: _isConnecting,
+              isConnected: false,
+              onConnect: _connect,
+              maxWidth: 350,
+              showConnectButton: false,
             ),
             const SizedBox(height: 24),
             if (_errorMessage != null) ...[
@@ -143,19 +130,22 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
               const SizedBox(height: 16),
             ],
             Container(
-              constraints: const BoxConstraints(maxWidth: 300),
+              constraints: const BoxConstraints(maxWidth: 350),
               width: double.infinity,
               height: 48,
               child: ElevatedButton(
                 onPressed: _isConnecting ? null : _connect,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: SpaceNotesTheme.primary,
-                  foregroundColor: SpaceNotesTheme.background,
+                  backgroundColor: SpaceNotesTheme.surface,
+                  foregroundColor: SpaceNotesTheme.primary,
                   disabledBackgroundColor:
-                      SpaceNotesTheme.primary.withValues(alpha: 0.5),
+                      SpaceNotesTheme.surface.withValues(alpha: 0.5),
                   elevation: 0,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),
+                    side: BorderSide(
+                      color: SpaceNotesTheme.primary.withValues(alpha: 0.3),
+                    ),
                   ),
                 ),
                 child: _isConnecting

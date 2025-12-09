@@ -1,0 +1,208 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+
+import '../../theme/spacenotes_theme.dart';
+import 'sidebar.dart';
+
+final sidebarCollapsedProvider = StateProvider<bool>((ref) => false);
+final sidebarWidthProvider = StateProvider<double>((ref) => 310.0);
+
+class DesktopShell extends ConsumerStatefulWidget {
+  final Widget child;
+
+  const DesktopShell({
+    super.key,
+    required this.child,
+  });
+
+  @override
+  ConsumerState<DesktopShell> createState() => _DesktopShellState();
+}
+
+class _DesktopShellState extends ConsumerState<DesktopShell> {
+  static const double _minSidebarWidth = 200.0;
+  static const double _maxSidebarWidth = 400.0;
+  static const double _collapsedWidth = 48.0;
+  static const double _dividerWidth = 1.0;
+
+  bool _isResizing = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final isCollapsed = ref.watch(sidebarCollapsedProvider);
+    final sidebarWidth = ref.watch(sidebarWidthProvider);
+
+    return Scaffold(
+      backgroundColor: SpaceNotesTheme.background,
+      body: Row(
+        children: [
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeOutCubic,
+            width: isCollapsed ? _collapsedWidth : sidebarWidth,
+            child: const Sidebar(),
+          ),
+          MouseRegion(
+            cursor: isCollapsed
+                ? SystemMouseCursors.basic
+                : SystemMouseCursors.resizeColumn,
+            child: GestureDetector(
+              onHorizontalDragStart: isCollapsed ? null : (_) {
+                setState(() => _isResizing = true);
+              },
+              onHorizontalDragUpdate: isCollapsed ? null : (details) {
+                final newWidth = sidebarWidth + details.delta.dx;
+                ref.read(sidebarWidthProvider.notifier).state =
+                    newWidth.clamp(_minSidebarWidth, _maxSidebarWidth);
+              },
+              onHorizontalDragEnd: isCollapsed ? null : (_) {
+                setState(() => _isResizing = false);
+              },
+              child: Container(
+                width: _dividerWidth,
+                color: _isResizing
+                    ? SpaceNotesTheme.primary
+                    : SpaceNotesTheme.surface,
+              ),
+            ),
+          ),
+          Expanded(
+            child: _DesktopContentArea(child: widget.child),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DesktopContentArea extends StatelessWidget {
+  final Widget child;
+
+  const _DesktopContentArea({required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        const _DesktopTopBar(),
+        Expanded(child: child),
+        const _DesktopStatusBar(),
+      ],
+    );
+  }
+}
+
+class _DesktopTopBar extends ConsumerWidget {
+  const _DesktopTopBar();
+
+  String _getBreadcrumb(String location) {
+    if (location.startsWith('/notes/note/')) {
+      final encodedPath = location.substring('/notes/note/'.length);
+      final decodedPath = Uri.decodeComponent(encodedPath);
+      return '/$decodedPath';
+    }
+    if (location.startsWith('/notes/folder/')) {
+      final encodedPath = location.substring('/notes/folder/'.length);
+      final decodedPath = Uri.decodeComponent(encodedPath);
+      return '/$decodedPath';
+    }
+    if (location == '/notes' || location == '/notes/') {
+      return '/';
+    }
+    if (location == '/notes/chat') {
+      return '/Chat';
+    }
+    return 'SpaceNotes';
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final location = GoRouterState.of(context).uri.toString();
+    final breadcrumb = _getBreadcrumb(location);
+
+    return Container(
+      height: 40,
+      decoration: const BoxDecoration(
+        color: SpaceNotesTheme.surface,
+        border: Border(
+          bottom: BorderSide(color: SpaceNotesTheme.inputSurface, width: 1),
+        ),
+      ),
+      child: Row(
+        children: [
+          const SizedBox(width: 16),
+          Expanded(
+            child: Text(
+              breadcrumb,
+              style: SpaceNotesTextStyles.terminal.copyWith(
+                color: SpaceNotesTheme.textSecondary,
+                fontSize: 12,
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.search, size: 18),
+            color: SpaceNotesTheme.textSecondary,
+            onPressed: () {},
+            tooltip: 'Search (⌘K)',
+          ),
+          IconButton(
+            icon: const Icon(Icons.settings_outlined, size: 18),
+            color: SpaceNotesTheme.textSecondary,
+            onPressed: () {},
+            tooltip: 'Settings',
+          ),
+          const SizedBox(width: 8),
+        ],
+      ),
+    );
+  }
+}
+
+class _DesktopStatusBar extends ConsumerWidget {
+  const _DesktopStatusBar();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Container(
+      height: 24,
+      decoration: const BoxDecoration(
+        color: SpaceNotesTheme.surface,
+        border: Border(
+          top: BorderSide(color: SpaceNotesTheme.inputSurface, width: 1),
+        ),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      child: Row(
+        children: [
+          Container(
+            width: 8,
+            height: 8,
+            decoration: const BoxDecoration(
+              color: SpaceNotesTheme.success,
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            'Connected',
+            style: SpaceNotesTextStyles.terminal.copyWith(
+              fontSize: 11,
+              color: SpaceNotesTheme.textSecondary,
+            ),
+          ),
+          const Spacer(),
+          Text(
+            'SpacetimeDB',
+            style: SpaceNotesTextStyles.terminal.copyWith(
+              fontSize: 11,
+              color: SpaceNotesTheme.textSecondary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

@@ -32,7 +32,7 @@ class NoteStatusDraft extends NoteStatus {
 }
 
 class NoteStatusPublished extends NoteStatus {
-  final int value;
+  final Int64 value;
 
   const NoteStatusPublished(this.value);
 

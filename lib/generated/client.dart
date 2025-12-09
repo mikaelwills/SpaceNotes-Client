@@ -96,17 +96,20 @@ class SpacetimeDbClient {
     // Auto-register view decoders
 
     // Auto-register reducer argument decoders
+    subscriptionManager.reducerRegistry.registerDecoder('append_to_note', AppendToNoteArgsDecoder());
     subscriptionManager.reducerRegistry.registerDecoder('clear_all', ClearAllArgsDecoder());
     subscriptionManager.reducerRegistry.registerDecoder('create_folder', CreateFolderArgsDecoder());
     subscriptionManager.reducerRegistry.registerDecoder('create_note', CreateNoteArgsDecoder());
     subscriptionManager.reducerRegistry.registerDecoder('delete_folder', DeleteFolderArgsDecoder());
     subscriptionManager.reducerRegistry.registerDecoder('delete_note', DeleteNoteArgsDecoder());
+    subscriptionManager.reducerRegistry.registerDecoder('find_replace_in_note', FindReplaceInNoteArgsDecoder());
     subscriptionManager.reducerRegistry.registerDecoder('get_recent_notes', GetRecentNotesArgsDecoder());
     subscriptionManager.reducerRegistry.registerDecoder('identity_connected', IdentityConnectedArgsDecoder());
     subscriptionManager.reducerRegistry.registerDecoder('identity_disconnected', IdentityDisconnectedArgsDecoder());
     subscriptionManager.reducerRegistry.registerDecoder('init', InitArgsDecoder());
     subscriptionManager.reducerRegistry.registerDecoder('move_folder', MoveFolderArgsDecoder());
     subscriptionManager.reducerRegistry.registerDecoder('move_note', MoveNoteArgsDecoder());
+    subscriptionManager.reducerRegistry.registerDecoder('prepend_to_note', PrependToNoteArgsDecoder());
     subscriptionManager.reducerRegistry.registerDecoder('rename_note', RenameNoteArgsDecoder());
     subscriptionManager.reducerRegistry.registerDecoder('update_note_content', UpdateNoteContentArgsDecoder());
     subscriptionManager.reducerRegistry.registerDecoder('update_note_path', UpdateNotePathArgsDecoder());
