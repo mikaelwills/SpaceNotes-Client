@@ -33,6 +33,12 @@ class _BottomInputBarState extends ConsumerState<BottomInputBar> {
 
   @override
   Widget build(BuildContext context) {
+    final searchQuery = ref.watch(folderSearchQueryProvider);
+    if (searchQuery.isEmpty && _searchController.text.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _searchController.clear();
+      });
+    }
     final viewType = _getCurrentViewType();
     final isChat = viewType == HomeViewType.chat;
     final folderPath = ref.watch(currentFolderPathProvider);
@@ -341,7 +347,7 @@ class _BottomInputBarState extends ConsumerState<BottomInputBar> {
     ref.read(folderSearchQueryProvider.notifier).state = '';
   }
 
-  void _createQuickNote(String folderPath) {
+  Future<void> _createQuickNote(String folderPath) async {
     final now = DateTime.now();
     final timestamp =
         '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}-${now.hour.toString().padLeft(2, '0')}-${now.minute.toString().padLeft(2, '0')}-${now.second.toString().padLeft(2, '0')}';
@@ -355,10 +361,12 @@ class _BottomInputBarState extends ConsumerState<BottomInputBar> {
       notePath = '${folderPathWithSlash}Untitled-$timestamp.md';
     }
 
-    final encodedPath =
-        notePath.split('/').map(Uri.encodeComponent).join('/');
-    if (mounted) {
-      context.go('/notes/note/$encodedPath?new=true');
+    final repo = ref.read(notesRepositoryProvider);
+    final noteId = await repo.createNote(notePath, '# \n');
+    if (noteId != null && mounted) {
+      final encodedPath =
+          notePath.split('/').map(Uri.encodeComponent).join('/');
+      context.go('/notes/note/$encodedPath');
     }
   }
 

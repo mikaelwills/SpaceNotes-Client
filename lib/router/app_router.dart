@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../screens/connect_screen.dart';
 import '../screens/sessions_screen.dart';
@@ -8,18 +9,34 @@ import '../screens/home_screen.dart';
 import '../screens/folder_list_view.dart';
 import '../screens/note_screen.dart';
 import '../screens/chat_view.dart';
-import '../widgets/main_scaffold.dart';
+import '../widgets/adaptive/adaptive_app_shell.dart';
+import '../providers/notes_providers.dart';
 
-// Global RouteObserver for detecting navigation back to screens
 final RouteObserver<ModalRoute<void>> routeObserver = RouteObserver<ModalRoute<void>>();
 
-final GoRouter appRouter = GoRouter(
-  initialLocation: '/notes',
-  observers: [routeObserver],
-  routes: [
-    // Main scaffold shell (nav bar)
+GoRouter createAppRouter(ProviderContainer container) {
+  return GoRouter(
+    initialLocation: '/notes',
+    observers: [routeObserver],
+    redirect: (context, state) {
+      final repo = container.read(notesRepositoryProvider);
+      final host = repo.host;
+      final isDefault = host == null ||
+          host.isEmpty ||
+          host.startsWith('0.0.0.0') ||
+          host.startsWith('localhost');
+      final isConnectRoute = state.matchedLocation == '/connect';
+      final isSettingsRoute = state.matchedLocation == '/settings';
+
+      if (isDefault && !isConnectRoute && !isSettingsRoute) {
+        return '/connect';
+      }
+      return null;
+    },
+    routes: [
+    // Adaptive shell (mobile: nav bar + bottom bar, desktop: sidebar + content)
     ShellRoute(
-      builder: (context, state, child) => MainScaffold(child: child),
+      builder: (context, state, child) => AdaptiveAppShell(child: child),
       routes: [
         GoRoute(
           path: '/connect',
@@ -105,13 +122,9 @@ final GoRouter appRouter = GoRouter(
                   print('⚠️ URI decode failed for: $encodedPath, using as-is');
                   path = encodedPath;
                 }
-                final isNewNote = state.uri.queryParameters['new'] == 'true';
                 return _buildFadeTransitionPage(
                   key: state.pageKey,
-                  child: NoteScreen(
-                    notePath: path,
-                    isNewNote: isNewNote,
-                  ),
+                  child: NoteScreen(notePath: path),
                 );
               },
             ),
@@ -120,12 +133,13 @@ final GoRouter appRouter = GoRouter(
       ],
     ),
   ],
-  errorBuilder: (context, state) => Scaffold(
-    body: Center(
-      child: Text('Page not found: ${state.error}'),
+    errorBuilder: (context, state) => Scaffold(
+      body: Center(
+        child: Text('Page not found: ${state.error}'),
+      ),
     ),
-  ),
-);
+  );
+}
 
 CustomTransitionPage<void> _buildFadeTransitionPage({
   required LocalKey key,

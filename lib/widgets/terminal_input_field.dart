@@ -55,7 +55,7 @@ class TerminalInputField extends StatelessWidget {
         ),
         padding: const EdgeInsets.symmetric(horizontal: 12),
         child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             if (prefixIcon != null) ...[
               prefixIcon!,
@@ -68,7 +68,6 @@ class TerminalInputField extends StatelessWidget {
                       textAlignVertical: TextAlignVertical.center,
                       expands: true,
                       maxLines: null,
-                      minLines: null,
                       style: const TextStyle(
                         fontFamily: 'FiraCode',
                         fontSize: 14,
@@ -82,8 +81,6 @@ class TerminalInputField extends StatelessWidget {
                         focusedErrorBorder: InputBorder.none,
                         disabledBorder: InputBorder.none,
                         filled: false,
-                        isDense: true,
-                        contentPadding: EdgeInsets.zero,
                         hintText: hintText,
                         hintStyle: const TextStyle(
                           fontFamily: 'FiraCode',
@@ -104,7 +101,6 @@ class TerminalInputField extends StatelessWidget {
                       textAlignVertical: TextAlignVertical.center,
                       expands: true,
                       maxLines: null,
-                      minLines: null,
                       style: const TextStyle(
                         fontFamily: 'FiraCode',
                         fontSize: 14,
@@ -118,8 +114,6 @@ class TerminalInputField extends StatelessWidget {
                         focusedErrorBorder: InputBorder.none,
                         disabledBorder: InputBorder.none,
                         filled: false,
-                        isDense: true,
-                        contentPadding: EdgeInsets.zero,
                         hintText: hintText,
                         hintStyle: const TextStyle(
                           fontFamily: 'FiraCode',

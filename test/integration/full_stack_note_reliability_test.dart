@@ -3,9 +3,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
-import 'package:opencode_flutter_client/screens/note_screen.dart';
-import 'package:opencode_flutter_client/repositories/spacetimedb_notes_repository.dart';
-import 'package:opencode_flutter_client/providers/notes_providers.dart';
+import 'package:spacenotes_client/screens/note_screen.dart';
+import 'package:spacenotes_client/repositories/spacetimedb_notes_repository.dart';
+import 'package:spacenotes_client/providers/notes_providers.dart';
 import 'package:spacetimedb_dart_sdk/spacetimedb_dart_sdk.dart' show AuthTokenStore;
 
 // Helper to enter edit mode robustly

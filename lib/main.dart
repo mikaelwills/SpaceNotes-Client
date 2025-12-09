@@ -56,6 +56,9 @@ void main() async {
     ],
   );
 
+  final repo = container.read(notesRepositoryProvider);
+  await repo.loadSavedConfig();
+
   runApp(UncontrolledProviderScope(
     container: container,
     child: OpenCodeApp(
@@ -94,8 +97,6 @@ class _OpenCodeAppState extends State<OpenCodeApp> with WidgetsBindingObserver {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
 
-    // Initialize SpacetimeDB connection after app starts
-    // This prevents blocking the splash screen
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final repo = widget.container.read(notesRepositoryProvider);
       repo.connectAndGetInitialData();
@@ -166,9 +167,9 @@ class _OpenCodeAppState extends State<OpenCodeApp> with WidgetsBindingObserver {
           color: SpaceNotesTheme.background,
           child: SafeArea(
             child: MaterialApp.router(
-              title: 'OpenCode Mobile',
+              title: 'SpaceNotes',
               theme: SpaceNotesTheme.themeData,
-              routerConfig: appRouter,
+              routerConfig: createAppRouter(widget.container),
               debugShowCheckedModeBanner: false,
             ),
           ),

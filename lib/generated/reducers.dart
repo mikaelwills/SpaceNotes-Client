@@ -17,6 +17,26 @@ class Reducers {
 
   Reducers(this._reducerCaller, this._reducerEmitter);
 
+  /// Call the append_to_note reducer
+  ///
+  /// Returns [TransactionResult] with execution metadata:
+  /// - `result.isSuccess` - Check if reducer committed
+  /// - `result.energyConsumed` - Energy used (null for lightweight responses)
+  /// - `result.executionDuration` - How long it took (null for lightweight responses)
+  ///
+  /// Throws [ReducerException] if the reducer fails or runs out of energy.
+  /// Throws [TimeoutException] if the reducer doesn't complete within the timeout.
+  Future<TransactionResult> appendToNote({
+    required String path,
+    required String content,
+  }) async {
+    final encoder = BsatnEncoder();
+    encoder.writeString(path);
+    encoder.writeString(content);
+
+    return await _reducerCaller.call('append_to_note', encoder.toBytes());
+  }
+
   /// Call the clear_all reducer
   ///
   /// Returns [TransactionResult] with execution metadata:
@@ -71,9 +91,9 @@ class Reducers {
     required String folderPath,
     required int depth,
     required String frontmatter,
-    required int size,
-    required int createdTime,
-    required int modifiedTime,
+    required Int64 size,
+    required Int64 createdTime,
+    required Int64 modifiedTime,
   }) async {
     final encoder = BsatnEncoder();
     encoder.writeString(id);
@@ -124,6 +144,30 @@ class Reducers {
     encoder.writeString(id);
 
     return await _reducerCaller.call('delete_note', encoder.toBytes());
+  }
+
+  /// Call the find_replace_in_note reducer
+  ///
+  /// Returns [TransactionResult] with execution metadata:
+  /// - `result.isSuccess` - Check if reducer committed
+  /// - `result.energyConsumed` - Energy used (null for lightweight responses)
+  /// - `result.executionDuration` - How long it took (null for lightweight responses)
+  ///
+  /// Throws [ReducerException] if the reducer fails or runs out of energy.
+  /// Throws [TimeoutException] if the reducer doesn't complete within the timeout.
+  Future<TransactionResult> findReplaceInNote({
+    required String path,
+    required String oldText,
+    required String newText,
+    required bool replaceAll,
+  }) async {
+    final encoder = BsatnEncoder();
+    encoder.writeString(path);
+    encoder.writeString(oldText);
+    encoder.writeString(newText);
+    encoder.writeBool(replaceAll);
+
+    return await _reducerCaller.call('find_replace_in_note', encoder.toBytes());
   }
 
   /// Call the get_recent_notes reducer
@@ -229,6 +273,26 @@ class Reducers {
     return await _reducerCaller.call('move_note', encoder.toBytes());
   }
 
+  /// Call the prepend_to_note reducer
+  ///
+  /// Returns [TransactionResult] with execution metadata:
+  /// - `result.isSuccess` - Check if reducer committed
+  /// - `result.energyConsumed` - Energy used (null for lightweight responses)
+  /// - `result.executionDuration` - How long it took (null for lightweight responses)
+  ///
+  /// Throws [ReducerException] if the reducer fails or runs out of energy.
+  /// Throws [TimeoutException] if the reducer doesn't complete within the timeout.
+  Future<TransactionResult> prependToNote({
+    required String path,
+    required String content,
+  }) async {
+    final encoder = BsatnEncoder();
+    encoder.writeString(path);
+    encoder.writeString(content);
+
+    return await _reducerCaller.call('prepend_to_note', encoder.toBytes());
+  }
+
   /// Call the rename_note reducer
   ///
   /// Returns [TransactionResult] with execution metadata:
@@ -262,8 +326,8 @@ class Reducers {
     required String id,
     required String content,
     required String frontmatter,
-    required int size,
-    required int modifiedTime,
+    required Int64 size,
+    required Int64 modifiedTime,
   }) async {
     final encoder = BsatnEncoder();
     encoder.writeString(id);
@@ -334,9 +398,9 @@ class Reducers {
     required String folderPath,
     required int depth,
     required String frontmatter,
-    required int size,
-    required int createdTime,
-    required int modifiedTime,
+    required Int64 size,
+    required Int64 createdTime,
+    required Int64 modifiedTime,
   }) async {
     final encoder = BsatnEncoder();
     encoder.writeString(id);
@@ -351,6 +415,21 @@ class Reducers {
     encoder.writeU64(modifiedTime);
 
     return await _reducerCaller.call('upsert_note', encoder.toBytes());
+  }
+
+  StreamSubscription<void> onAppendToNote(void Function(EventContext ctx, String path, String content) callback) {
+    return _reducerEmitter.on('append_to_note').listen((EventContext ctx) {
+      // Pattern match to extract ReducerEvent
+      final event = ctx.event;
+      if (event is! ReducerEvent) return;
+
+      // Type guard - ensures args is correct type
+      final args = event.reducerArgs;
+      if (args is! AppendToNoteArgs) return;
+
+      // Extract fields from strongly-typed object - NO CASTING
+      callback(ctx, args.path, args.content);
+    });
   }
 
   StreamSubscription<void> onClearAll(void Function(EventContext ctx) callback) {
@@ -383,7 +462,7 @@ class Reducers {
     });
   }
 
-  StreamSubscription<void> onCreateNote(void Function(EventContext ctx, String id, String path, String name, String content, String folderPath, int depth, String frontmatter, int size, int createdTime, int modifiedTime) callback) {
+  StreamSubscription<void> onCreateNote(void Function(EventContext ctx, String id, String path, String name, String content, String folderPath, int depth, String frontmatter, Int64 size, Int64 createdTime, Int64 modifiedTime) callback) {
     return _reducerEmitter.on('create_note').listen((EventContext ctx) {
       // Pattern match to extract ReducerEvent
       final event = ctx.event;
@@ -425,6 +504,21 @@ class Reducers {
 
       // Extract fields from strongly-typed object - NO CASTING
       callback(ctx, args.id);
+    });
+  }
+
+  StreamSubscription<void> onFindReplaceInNote(void Function(EventContext ctx, String path, String oldText, String newText, bool replaceAll) callback) {
+    return _reducerEmitter.on('find_replace_in_note').listen((EventContext ctx) {
+      // Pattern match to extract ReducerEvent
+      final event = ctx.event;
+      if (event is! ReducerEvent) return;
+
+      // Type guard - ensures args is correct type
+      final args = event.reducerArgs;
+      if (args is! FindReplaceInNoteArgs) return;
+
+      // Extract fields from strongly-typed object - NO CASTING
+      callback(ctx, args.path, args.oldText, args.newText, args.replaceAll);
     });
   }
 
@@ -518,6 +612,21 @@ class Reducers {
     });
   }
 
+  StreamSubscription<void> onPrependToNote(void Function(EventContext ctx, String path, String content) callback) {
+    return _reducerEmitter.on('prepend_to_note').listen((EventContext ctx) {
+      // Pattern match to extract ReducerEvent
+      final event = ctx.event;
+      if (event is! ReducerEvent) return;
+
+      // Type guard - ensures args is correct type
+      final args = event.reducerArgs;
+      if (args is! PrependToNoteArgs) return;
+
+      // Extract fields from strongly-typed object - NO CASTING
+      callback(ctx, args.path, args.content);
+    });
+  }
+
   StreamSubscription<void> onRenameNote(void Function(EventContext ctx, String id, String newPath) callback) {
     return _reducerEmitter.on('rename_note').listen((EventContext ctx) {
       // Pattern match to extract ReducerEvent
@@ -533,7 +642,7 @@ class Reducers {
     });
   }
 
-  StreamSubscription<void> onUpdateNoteContent(void Function(EventContext ctx, String id, String content, String frontmatter, int size, int modifiedTime) callback) {
+  StreamSubscription<void> onUpdateNoteContent(void Function(EventContext ctx, String id, String content, String frontmatter, Int64 size, Int64 modifiedTime) callback) {
     return _reducerEmitter.on('update_note_content').listen((EventContext ctx) {
       // Pattern match to extract ReducerEvent
       final event = ctx.event;
@@ -578,7 +687,7 @@ class Reducers {
     });
   }
 
-  StreamSubscription<void> onUpsertNote(void Function(EventContext ctx, String id, String path, String name, String content, String folderPath, int depth, String frontmatter, int size, int createdTime, int modifiedTime) callback) {
+  StreamSubscription<void> onUpsertNote(void Function(EventContext ctx, String id, String path, String name, String content, String folderPath, int depth, String frontmatter, Int64 size, Int64 createdTime, Int64 modifiedTime) callback) {
     return _reducerEmitter.on('upsert_note').listen((EventContext ctx) {
       // Pattern match to extract ReducerEvent
       final event = ctx.event;

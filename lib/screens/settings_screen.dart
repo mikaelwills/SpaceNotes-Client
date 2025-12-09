@@ -75,7 +75,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
     try {
       final repository = ref.read(notesRepositoryProvider);
-      repository.configure(host: host);
+      await repository.configure(host: host);
       await repository.connectAndGetInitialData();
     } catch (e) {
       debugPrint('Failed to connect to SpaceNotes: $e');

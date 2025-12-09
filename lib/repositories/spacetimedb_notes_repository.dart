@@ -1,7 +1,8 @@
 import 'dart:async';
 import 'dart:developer';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:spacetimedb_dart_sdk/spacetimedb_dart_sdk.dart' as stdb;
-import 'package:spacetimedb_dart_sdk/spacetimedb_dart_sdk.dart' show ConnectionConfig;
+import 'package:spacetimedb_dart_sdk/spacetimedb_dart_sdk.dart' show ConnectionConfig, Int64;
 import 'package:uuid/uuid.dart';
 import '../generated/client.dart';
 import '../generated/note.dart';
@@ -39,6 +40,21 @@ class SpacetimeDbNotesRepository {
   })  : _host = host,
         _database = database,
         _authStorage = authStorage;
+
+  Future<void> loadSavedConfig() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedHost = prefs.getString('spacenotes_host');
+    if (savedHost != null && savedHost.isNotEmpty) {
+      final isValidUtf16 = savedHost.runes.every((r) => r <= 0x10FFFF);
+      if (isValidUtf16 && RegExp(r'^[\x20-\x7E]+$').hasMatch(savedHost)) {
+        _host = savedHost;
+        print('SpacetimeDbNotesRepository loaded saved host: $savedHost');
+      } else {
+        print('SpacetimeDbNotesRepository: Invalid saved host data, clearing');
+        await prefs.remove('spacenotes_host');
+      }
+    }
+  }
 
   /// Ensure client is connected
   Future<void> _ensureConnected() async {
@@ -308,14 +324,16 @@ class SpacetimeDbNotesRepository {
   /// Configure the repository with a new host.
   /// Database is always 'spacenotes'.
   /// Call [connectAndGetInitialData] after configuring to establish connection.
-  void configure({required String host}) {
-    // Reset existing connection if any
+  Future<void> configure({required String host}) async {
     if (_client != null) {
       resetConnection();
     }
 
     _host = host;
     _database = 'spacenotes';
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('spacenotes_host', host);
     print('SpacetimeDbNotesRepository configured: host=$host');
   }
 
@@ -386,9 +404,9 @@ class SpacetimeDbNotesRepository {
         folderPath: folderPath,
         depth: depth,
         frontmatter: '', // Empty frontmatter for new notes
-        size: content.length,
-        createdTime: now,
-        modifiedTime: now,
+        size: Int64(content.length),
+        createdTime: Int64(now),
+        modifiedTime: Int64(now),
       );
 
       return id;
@@ -410,8 +428,8 @@ class SpacetimeDbNotesRepository {
         id: id,
         content: content,
         frontmatter: '', // TODO: Parse frontmatter from content if needed
-        size: content.length,
-        modifiedTime: now,
+        size: Int64(content.length),
+        modifiedTime: Int64(now),
       );
 
       return true;

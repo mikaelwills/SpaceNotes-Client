@@ -1,12 +1,21 @@
 import 'package:spacenotes_client/repositories/spacetimedb_notes_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import '../generated/client.dart';
 import '../generated/folder.dart';
 import '../generated/note.dart';
 
+String _getDefaultHost() {
+  if (kIsWeb) {
+    return '${Uri.base.host}:3000';
+  } else {
+    return '0.0.0.0:3000';
+  }
+}
+
 final notesRepositoryProvider = Provider<SpacetimeDbNotesRepository>((ref) {
   final repository = SpacetimeDbNotesRepository(
-    host: '100.84.184.121:3003',
+    host: _getDefaultHost(),
     database: 'spacenotes',
   );
 

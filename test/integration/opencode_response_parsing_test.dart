@@ -78,7 +78,7 @@ void main() async {
       {'name': 'Multi-step', 'query': 'Briefly analyze the project structure by looking at lib/ directory', 'filename': 'multi_step.json'},
       {'name': 'Code suggestion', 'query': 'What would you add to a basic Flutter app to make it better?', 'filename': 'code_suggestion.json'},
       {'name': 'Simple question', 'query': 'Explain what Flutter is in one sentence', 'filename': 'simple_question.json'},
-      {'name': 'Confirmation prompt', 'query': 'Create a directory called rust and create a file called hello.rs inside it with the content "fn main() { println!(\"Hello\"); }"', 'filename': 'confirmation_prompt.json'},
+      {'name': 'Confirmation prompt', 'query': 'Create a directory called rust and create a file called hello.rs inside it with the content "fn main() { println!("Hello"); }"', 'filename': 'confirmation_prompt.json'},
       {'name': 'Permission request', 'query': 'Delete the rust directory and all its contents using rm -rf', 'filename': 'permission_request.json'},
     ];
 

@@ -10,10 +10,10 @@ class Note {
   final String folderPath;
   final int depth;
   final String frontmatter;
-  final int size;
-  final int createdTime;
-  final int modifiedTime;
-  final int dbUpdatedAt;
+  final Int64 size;
+  final Int64 createdTime;
+  final Int64 modifiedTime;
+  final Int64 dbUpdatedAt;
 
   Note({
     required this.id,

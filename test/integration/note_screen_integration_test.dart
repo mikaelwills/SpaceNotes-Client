@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:opencode_flutter_client/screens/note_screen.dart';
-import 'package:opencode_flutter_client/repositories/spacetimedb_notes_repository.dart';
-import 'package:opencode_flutter_client/providers/notes_providers.dart';
-import 'package:opencode_flutter_client/repositories/shared_preferences_token_store.dart';
+import 'package:spacenotes_client/screens/note_screen.dart';
+import 'package:spacenotes_client/repositories/spacetimedb_notes_repository.dart';
+import 'package:spacenotes_client/providers/notes_providers.dart';
+import 'package:spacenotes_client/repositories/shared_preferences_token_store.dart';
 import 'package:uuid/uuid.dart';
 
 /// Integration tests for NoteScreen that verify behavior against a live SpacetimeDB instance
