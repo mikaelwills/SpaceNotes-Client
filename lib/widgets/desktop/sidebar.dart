@@ -42,33 +42,50 @@ class _SidebarHeader extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return Container(
-      height: 40,
-      padding: EdgeInsets.symmetric(horizontal: isCollapsed ? 8 : 12),
-      child: Row(
-        children: [
-          IconButton(
-            icon: Icon(
-              isCollapsed ? Icons.chevron_right : Icons.chevron_left,
-              size: 18,
-            ),
+    if (isCollapsed) {
+      return Container(
+        height: 48,
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        child: Center(
+          child: IconButton(
+            icon: const Icon(Icons.chevron_right, size: 18),
             color: SpaceNotesTheme.textSecondary,
             onPressed: () {
-              ref.read(sidebarCollapsedProvider.notifier).state = !isCollapsed;
+              ref.read(sidebarCollapsedProvider.notifier).state = false;
             },
-            tooltip: isCollapsed ? 'Expand sidebar' : 'Collapse sidebar',
+            tooltip: 'Expand sidebar',
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
           ),
-          if (!isCollapsed) ...[
-            const SizedBox(width: 8),
-            Text(
-              'Notes',
-              style: SpaceNotesTextStyles.terminal.copyWith(
-                fontWeight: FontWeight.w500,
-              ),
+        ),
+      );
+    }
+
+    return Container(
+      height: 56,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: Row(
+        children: [
+          Text(
+            'SpaceNotes',
+            style: SpaceNotesTextStyles.terminal.copyWith(
+              fontWeight: FontWeight.w600,
+              fontSize: 16,
+              color: SpaceNotesTheme.primary,
+              letterSpacing: 0.5,
             ),
-          ],
+          ),
+          const Spacer(),
+          IconButton(
+            icon: const Icon(Icons.chevron_left, size: 18),
+            color: SpaceNotesTheme.textSecondary,
+            onPressed: () {
+              ref.read(sidebarCollapsedProvider.notifier).state = true;
+            },
+            tooltip: 'Collapse sidebar',
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+          ),
         ],
       ),
     );
@@ -207,20 +224,23 @@ class _FolderTree extends ConsumerWidget {
         final rootNotes = notes.where((n) => n.depth == 0).toList()
           ..sort((a, b) => a.name.compareTo(b.name));
 
-        return ListView(
-          padding: const EdgeInsets.symmetric(horizontal: 4),
-          children: [
-            ...rootFolders.map((folder) => _FolderTreeItem(
-                  folder: folder,
-                  allFolders: folders,
-                  allNotes: notes,
-                  indentLevel: 0,
-                )),
-            ...rootNotes.map((note) => _NoteTreeItem(
-                  note: note,
-                  indentLevel: 0,
-                )),
-          ],
+        return ScrollConfiguration(
+          behavior: ScrollConfiguration.of(context).copyWith(scrollbars: false),
+          child: ListView(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            children: [
+              ...rootFolders.map((folder) => _FolderTreeItem(
+                    folder: folder,
+                    allFolders: folders,
+                    allNotes: notes,
+                    indentLevel: 0,
+                  )),
+              ...rootNotes.map((note) => _NoteTreeItem(
+                    note: note,
+                    indentLevel: 0,
+                  )),
+            ],
+          ),
         );
       },
     );
@@ -578,25 +598,29 @@ class _TreeItemRowState extends State<_TreeItemRow> {
 class _CollapsedSidebar extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return Column(
-      children: [
-        const SizedBox(height: 8),
-        _CollapsedIconButton(
-          icon: Icons.folder,
-          tooltip: 'Notes',
-          onTap: () => context.go('/notes'),
-        ),
-        _CollapsedIconButton(
-          icon: Icons.chat_bubble_outline,
-          tooltip: 'Chat',
-          onTap: () => context.go('/notes/chat'),
-        ),
-        _CollapsedIconButton(
-          icon: Icons.search,
-          tooltip: 'Search',
-          onTap: () {},
-        ),
-      ],
+    return Align(
+      alignment: Alignment.topCenter,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const SizedBox(height: 8),
+          _CollapsedIconButton(
+            icon: Icons.folder,
+            tooltip: 'Notes',
+            onTap: () => context.go('/notes'),
+          ),
+          _CollapsedIconButton(
+            icon: Icons.chat_bubble_outline,
+            tooltip: 'Chat',
+            onTap: () => context.go('/notes/chat'),
+          ),
+          _CollapsedIconButton(
+            icon: Icons.search,
+            tooltip: 'Search',
+            onTap: () {},
+          ),
+        ],
+      ),
     );
   }
 }

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart' hide Provider;
@@ -17,6 +18,7 @@ import 'blocs/chat/chat_bloc.dart';
 import 'blocs/config/config_cubit.dart';
 import 'blocs/config/config_state.dart';
 import 'router/app_router.dart';
+import 'services/web_config_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -58,6 +60,10 @@ void main() async {
 
   final repo = container.read(notesRepositoryProvider);
   await repo.loadSavedConfig();
+
+  if (kIsWeb) {
+    await WebConfigService.tryAutoConfigureFromServer(repo);
+  }
 
   runApp(UncontrolledProviderScope(
     container: container,

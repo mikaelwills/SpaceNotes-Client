@@ -22,7 +22,7 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
   @override
   void initState() {
     super.initState();
-    _portController.text = '3003';
+    _portController.text = '5050';
   }
 
   @override
@@ -43,7 +43,7 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
       return;
     }
 
-    final host = port.isNotEmpty ? '$ip:$port' : '$ip:3003';
+    final host = port.isNotEmpty ? '$ip:$port' : '$ip:5050';
 
     setState(() {
       _isConnecting = true;
@@ -99,7 +99,7 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
               ipController: _ipController,
               portController: _portController,
               ipHint: 'IP Address',
-              portHint: '3003',
+              portHint: '5050',
               isConnecting: _isConnecting,
               isConnected: false,
               onConnect: _connect,
