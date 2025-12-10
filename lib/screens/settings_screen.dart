@@ -184,7 +184,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         ),
         const SizedBox(height: 8),
         Text(
-          'AI assistant connection',
+          'AI assistant connection. We recommend hosting OpenCode on the same server as SpaceNotes, then adding the SpaceNotes MCP to OpenCode.',
           style: TextStyle(
             fontSize: 12,
             color: SpaceNotesTheme.text.withValues(alpha: 0.6),
