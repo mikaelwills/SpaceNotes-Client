@@ -116,10 +116,15 @@ class _DesktopTopBar extends ConsumerWidget {
     return 'SpaceNotes';
   }
 
+  bool _shouldShowBackButton(String location) {
+    return location == '/notes/chat' || location == '/settings';
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final location = GoRouterState.of(context).uri.toString();
     final breadcrumb = _getBreadcrumb(location);
+    final showBack = _shouldShowBackButton(location);
 
     return Container(
       height: 40,
@@ -131,7 +136,15 @@ class _DesktopTopBar extends ConsumerWidget {
       ),
       child: Row(
         children: [
-          const SizedBox(width: 16),
+          if (showBack)
+            IconButton(
+              icon: const Icon(Icons.arrow_back, size: 18),
+              color: SpaceNotesTheme.textSecondary,
+              onPressed: () => context.go('/notes'),
+              tooltip: 'Back to notes',
+            )
+          else
+            const SizedBox(width: 16),
           Expanded(
             child: Text(
               breadcrumb,

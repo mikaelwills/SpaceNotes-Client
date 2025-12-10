@@ -661,6 +661,34 @@ class SpacetimeDbNotesRepository {
     }
   }
 
+  Future<bool> moveNote(String oldPath, String newPath) async {
+    print('SpacetimeDbNotesRepository.moveNote() called');
+    print('  oldPath: $oldPath');
+    print('  newPath: $newPath');
+
+    try {
+      await _ensureConnected();
+
+      if (_client == null) {
+        print('  ❌ Client is null, cannot move note');
+        return false;
+      }
+
+      print('  Calling SpacetimeDB reducer moveNote...');
+      await _client!.reducers.moveNote(
+        oldPath: oldPath,
+        newPath: newPath,
+      );
+
+      print('  ✅ Successfully moved note: $oldPath -> $newPath');
+      return true;
+    } catch (e) {
+      print('  ❌ Error moving note in SpacetimeDB: $e');
+      print('  Stack trace: ${StackTrace.current}');
+      return false;
+    }
+  }
+
   Future<List<Note>> searchNotes(String query) async {
     try {
       await _ensureConnected();
