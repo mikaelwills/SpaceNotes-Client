@@ -393,7 +393,6 @@ class _NoteTreeItem extends ConsumerWidget {
     final repo = ref.read(notesRepositoryProvider);
     switch (action) {
       case 'rename':
-        // TODO: Show rename dialog
         break;
       case 'delete':
         repo.deleteNote(note.id);
@@ -419,6 +418,7 @@ class _NoteTreeItem extends ConsumerWidget {
         final route = '/notes/note/$encodedPath';
         context.go(route);
       },
+      onDelete: () => _handleNoteAction(context, ref, note, 'delete'),
       contextMenuItems: [
         PopupMenuItem(
           value: 'rename',
@@ -448,6 +448,7 @@ class _TreeItemRow extends StatefulWidget {
   final bool isFolder;
   final VoidCallback onTap;
   final VoidCallback? onAddNote;
+  final VoidCallback? onDelete;
   final List<PopupMenuEntry<String>>? contextMenuItems;
   final void Function(String)? onContextMenuSelected;
 
@@ -459,6 +460,7 @@ class _TreeItemRow extends StatefulWidget {
     required this.isFolder,
     required this.onTap,
     this.onAddNote,
+    this.onDelete,
     this.contextMenuItems,
     this.onContextMenuSelected,
   });
@@ -587,6 +589,28 @@ class _TreeItemRowState extends State<_TreeItemRow> {
                     ),
                   ),
                 ),
+              if (!widget.isFolder && _isHovered && widget.onDelete != null)
+                MouseRegion(
+                  cursor: SystemMouseCursors.click,
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: widget.onDelete,
+                    child: Container(
+                      width: 20,
+                      height: 20,
+                      margin: const EdgeInsets.only(left: 4),
+                      decoration: const BoxDecoration(
+                        color: SpaceNotesTheme.inputSurface,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.close,
+                        size: 14,
+                        color: SpaceNotesTheme.error,
+                      ),
+                    ),
+                  ),
+                ),
             ],
           ),
         ),
@@ -674,11 +698,58 @@ class _CollapsedIconButtonState extends State<_CollapsedIconButton> {
   }
 }
 
-class _SidebarFooter extends StatelessWidget {
+class _SidebarFooter extends ConsumerWidget {
   const _SidebarFooter();
 
+  Future<void> _createNote(BuildContext context, WidgetRef ref) async {
+    final repo = ref.read(notesRepositoryProvider);
+    final now = DateTime.now();
+    final timestamp = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}-${now.hour.toString().padLeft(2, '0')}-${now.minute.toString().padLeft(2, '0')}';
+    final notePath = 'All Notes/Untitled-$timestamp.md';
+    final noteId = await repo.createNote(notePath, '# \n');
+    if (noteId != null && context.mounted) {
+      final encodedPath = notePath.split('/').map(Uri.encodeComponent).join('/');
+      context.go('/notes/note/$encodedPath');
+    }
+  }
+
+  Future<void> _createFolder(BuildContext context, WidgetRef ref) async {
+    final controller = TextEditingController();
+    final result = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: SpaceNotesTheme.inputSurface,
+        title: Text('New Folder', style: SpaceNotesTextStyles.terminal.copyWith(fontSize: 16)),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          style: SpaceNotesTextStyles.terminal,
+          decoration: InputDecoration(
+            hintText: 'Folder name',
+            hintStyle: SpaceNotesTextStyles.terminal.copyWith(color: SpaceNotesTheme.textSecondary),
+          ),
+          onSubmitted: (value) => Navigator.of(context).pop(value),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text('Cancel', style: SpaceNotesTextStyles.terminal.copyWith(color: SpaceNotesTheme.textSecondary)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(controller.text),
+            child: Text('Create', style: SpaceNotesTextStyles.terminal.copyWith(color: SpaceNotesTheme.primary)),
+          ),
+        ],
+      ),
+    );
+    if (result != null && result.isNotEmpty && context.mounted) {
+      final repo = ref.read(notesRepositoryProvider);
+      await repo.createFolder(result);
+    }
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Container(
       height: 40,
       padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -692,7 +763,7 @@ class _SidebarFooter extends StatelessWidget {
           IconButton(
             icon: const Icon(Icons.add, size: 18),
             color: SpaceNotesTheme.textSecondary,
-            onPressed: () {},
+            onPressed: () => _createNote(context, ref),
             tooltip: 'New note',
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
@@ -700,7 +771,7 @@ class _SidebarFooter extends StatelessWidget {
           IconButton(
             icon: const Icon(Icons.create_new_folder_outlined, size: 18),
             color: SpaceNotesTheme.textSecondary,
-            onPressed: () {},
+            onPressed: () => _createFolder(context, ref),
             tooltip: 'New folder',
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
