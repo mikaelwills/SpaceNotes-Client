@@ -705,6 +705,14 @@ class _SidebarFooter extends StatelessWidget {
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
           ),
+          IconButton(
+            icon: const Icon(Icons.chat_bubble_outline, size: 18),
+            color: SpaceNotesTheme.textSecondary,
+            onPressed: () => context.go('/notes/chat'),
+            tooltip: 'AI Chat',
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+          ),
         ],
       ),
     );

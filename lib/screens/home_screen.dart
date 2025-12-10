@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../widgets/adaptive/platform_utils.dart';
-import '../widgets/bottom_input_bar.dart';
+import '../widgets/mobile_bottom_input_bar.dart';
 
 /// Enum to track which view is currently active
 enum HomeViewType { folders, chat, note }
@@ -31,7 +31,7 @@ class HomeScreen extends StatelessWidget {
           left: 0,
           right: 0,
           bottom: 0,
-          child: BottomInputBar(),
+          child: MobileBottomInputBar(),
         ),
       ],
     );

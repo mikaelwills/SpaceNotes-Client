@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math' as math;
+import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../services/opencode_client.dart';
 import '../../services/network_service.dart';
@@ -107,16 +108,20 @@ class ConnectionBloc extends Bloc<ConnectionEvent, ConnectionState> {
   ) async {
     _currentEmitter = emit;
     _markActivity(); // Mark activity for adaptive ping
-    
+
+    debugPrint('[OpenCode] Checking connection...');
+
     try {
       // Use shorter timeout for fast reconnect mode
-      final timeout = _isFastReconnectMode 
+      final timeout = _isFastReconnectMode
           ? const Duration(seconds: 3)
           : const Duration(seconds: 10);
-      
+
       final isReachable = await openCodeClient.ping()
           .timeout(timeout);
-      
+
+      debugPrint('[OpenCode] Ping result: $isReachable');
+
       if (isReachable) {
         if (state is! Connected) {
           await _handleConnectionEstablished(emit);
@@ -128,8 +133,10 @@ class ConnectionBloc extends Bloc<ConnectionEvent, ConnectionState> {
       final timeoutMsg = _isFastReconnectMode
           ? 'Fast reconnect timeout'
           : 'Connection timeout';
+      debugPrint('[OpenCode] $timeoutMsg');
       _handleConnectionLost(timeoutMsg, emit);
     } catch (e) {
+      debugPrint('[OpenCode] Connection error: $e');
       _handleConnectionLost(e.toString(), emit);
     }
   }
@@ -143,10 +150,13 @@ class ConnectionBloc extends Bloc<ConnectionEvent, ConnectionState> {
 
   Future<void> _handleConnectionEstablished(Emitter<ConnectionState> emit) async {
     _currentEmitter = emit;
+    debugPrint('[OpenCode] Establishing connection...');
     try {
       // Fetch config to get provider and model information with timeout
       await openCodeClient.getProviders()
           .timeout(const Duration(seconds: 15));
+
+      debugPrint('[OpenCode] Got providers, setting up session...');
 
       _reconnectAttempt = 0;
       _isFastReconnectMode = false; // Disable fast reconnect mode on successful connection
@@ -161,13 +171,14 @@ class ConnectionBloc extends Bloc<ConnectionEvent, ConnectionState> {
         // Initial connection - load stored session (validates or creates new)
         sessionBloc.add(session_events.LoadStoredSession());
       }
-      
+
       // Listen for session creation to get the session ID with timeout
       _sessionSubscription?.cancel();
       final sessionCompleter = Completer<void>();
-      
+
       _sessionSubscription = sessionBloc.stream.listen((sessionState) {
         if (sessionState is session_states.SessionLoaded) {
+          debugPrint('[OpenCode] ✅ Connected with session: ${sessionState.session.id}');
           emit(const Connected());
           _scheduleNextPing(); // Start adaptive pinging once we have a session
           _sessionSubscription?.cancel();
@@ -175,20 +186,23 @@ class ConnectionBloc extends Bloc<ConnectionEvent, ConnectionState> {
             sessionCompleter.complete();
           }
         } else if (sessionState is session_states.SessionError) {
+          debugPrint('[OpenCode] Session error: ${sessionState.message}');
           _sessionSubscription?.cancel();
           if (!sessionCompleter.isCompleted) {
             sessionCompleter.completeError(sessionState.message);
           }
         }
       });
-      
+
       // Wait for session creation with timeout (no intermediate state)
       await sessionCompleter.future
           .timeout(const Duration(seconds: 20));
-          
+
     } on TimeoutException {
+      debugPrint('[OpenCode] Connection establishment timeout');
       _handleConnectionLost('Connection establishment timeout', emit);
     } catch (e) {
+      debugPrint('[OpenCode] Connection establishment error: $e');
       _handleConnectionLost(e.toString(), emit);
     }
   }

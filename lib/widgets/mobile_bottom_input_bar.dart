@@ -14,14 +14,14 @@ import '../generated/note.dart';
 import '../screens/home_screen.dart';
 import 'notes_search_bar.dart';
 
-class BottomInputBar extends ConsumerStatefulWidget {
-  const BottomInputBar({super.key});
+class MobileBottomInputBar extends ConsumerStatefulWidget {
+  const MobileBottomInputBar({super.key});
 
   @override
-  ConsumerState<BottomInputBar> createState() => _BottomInputBarState();
+  ConsumerState<MobileBottomInputBar> createState() => _MobileBottomInputBarState();
 }
 
-class _BottomInputBarState extends ConsumerState<BottomInputBar> {
+class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
   final TextEditingController _searchController = TextEditingController();
   bool _isSearchFocused = false;
 
@@ -174,7 +174,7 @@ class _BottomInputBarState extends ConsumerState<BottomInputBar> {
               tooltip: 'Send to AI',
               icon: Icons.arrow_upward,
             );
-    } else if (_isSearchFocused && isOpenCodeConnected) {
+    } else if ((_isSearchFocused || _searchController.text.isNotEmpty) && isOpenCodeConnected) {
       return _buildCircularButton(
         onPressed: _onSendToAi,
         tooltip: 'Send to AI',
@@ -338,8 +338,10 @@ class _BottomInputBarState extends ConsumerState<BottomInputBar> {
 
   void _onSendToAi() {
     final message = _searchController.text.trim();
+    debugPrint('[MobileBottomInputBar] _onSendToAi called, message: "$message"');
     if (message.isEmpty) return;
 
+    debugPrint('[MobileBottomInputBar] Sending message and navigating to chat');
     context.read<ChatBloc>().add(SendChatMessage(message));
     context.go('/notes/chat');
 

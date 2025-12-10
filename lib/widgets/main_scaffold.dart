@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme/spacenotes_theme.dart';
-import 'nav_bar.dart';
+import 'mobile_nav_bar.dart';
 
 class MainScaffold extends StatelessWidget {
   final Widget child;
@@ -17,7 +17,7 @@ class MainScaffold extends StatelessWidget {
       backgroundColor: SpaceNotesTheme.background,
       body: Column(
         children: [
-          const NavBar(),
+          const MobileNavBar(),
           Expanded(
             child: child,
           ),

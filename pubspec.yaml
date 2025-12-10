@@ -36,6 +36,7 @@ dependencies:
 
   # Core dependencies
   http: ^1.1.0 # HTTP requests to OpenCode API
+  web: ^1.1.0 # Web APIs for browser environment
   web_socket_channel: ^3.0.3
   flutter_client_sse: ^2.0.0
   flutter_bloc: ^8.1.3 # BLoC state management

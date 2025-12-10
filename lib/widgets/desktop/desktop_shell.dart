@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../theme/spacenotes_theme.dart';
+import '../connection_indicator.dart';
 import 'sidebar.dart';
 
 final sidebarCollapsedProvider = StateProvider<bool>((ref) => false);
@@ -87,7 +88,6 @@ class _DesktopContentArea extends StatelessWidget {
       children: [
         const _DesktopTopBar(),
         Expanded(child: child),
-        const _DesktopStatusBar(),
       ],
     );
   }
@@ -143,66 +143,15 @@ class _DesktopTopBar extends ConsumerWidget {
             ),
           ),
           IconButton(
-            icon: const Icon(Icons.search, size: 18),
-            color: SpaceNotesTheme.textSecondary,
-            onPressed: () {},
-            tooltip: 'Search (⌘K)',
-          ),
-          IconButton(
             icon: const Icon(Icons.settings_outlined, size: 18),
             color: SpaceNotesTheme.textSecondary,
             onPressed: () => context.go('/settings'),
             tooltip: 'Settings',
           ),
-          const SizedBox(width: 8),
+          const ConnectionIndicator(),
         ],
       ),
     );
   }
 }
 
-class _DesktopStatusBar extends ConsumerWidget {
-  const _DesktopStatusBar();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return Container(
-      height: 24,
-      decoration: const BoxDecoration(
-        color: SpaceNotesTheme.surface,
-        border: Border(
-          top: BorderSide(color: SpaceNotesTheme.inputSurface, width: 1),
-        ),
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      child: Row(
-        children: [
-          Container(
-            width: 8,
-            height: 8,
-            decoration: const BoxDecoration(
-              color: SpaceNotesTheme.success,
-              shape: BoxShape.circle,
-            ),
-          ),
-          const SizedBox(width: 8),
-          Text(
-            'Connected',
-            style: SpaceNotesTextStyles.terminal.copyWith(
-              fontSize: 11,
-              color: SpaceNotesTheme.textSecondary,
-            ),
-          ),
-          const Spacer(),
-          Text(
-            'SpacetimeDB',
-            style: SpaceNotesTextStyles.terminal.copyWith(
-              fontSize: 11,
-              color: SpaceNotesTheme.textSecondary,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
