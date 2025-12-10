@@ -59,7 +59,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     // Load OpenCode config from ConfigCubit
     final configState = context.read<ConfigCubit>().state;
     if (configState is ConfigLoaded) {
-      _openCodeIpController.text = configState.serverIp == '0.0.0.0' ? '' : configState.serverIp;
+      _openCodeIpController.text =
+          configState.serverIp == '0.0.0.0' ? '' : configState.serverIp;
       _openCodePortController.text = configState.port.toString();
     }
   }
@@ -113,15 +114,17 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildSpaceNotesSection(),
-          const SizedBox(height: 32),
-          _buildOpenCodeSection(),
-        ],
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 500),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            _buildSpaceNotesSection(),
+            const SizedBox(height: 32),
+            _buildOpenCodeSection(),
+          ],
+        ),
       ),
     );
   }
@@ -130,7 +133,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final isConnected = ref.watch(spacetimeConnectedProvider);
 
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         const Text(
           'SpaceNotes Server',
@@ -164,7 +167,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   Widget _buildOpenCodeSection() {
-    final isConnected = ref.watch(openCodeConnectionProvider).valueOrNull ?? false;
+    final isConnected =
+        ref.watch(openCodeConnectionProvider).valueOrNull ?? false;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
