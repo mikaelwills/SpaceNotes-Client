@@ -197,7 +197,7 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
           _buildCircularButton(
             onPressed: () => _createQuickNote(folderPath),
             tooltip: 'Create new note',
-            icon: Icons.edit_outlined,
+            icon: Icons.add,
           ),
         ],
       );
@@ -354,20 +354,12 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
     final timestamp =
         '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}-${now.hour.toString().padLeft(2, '0')}-${now.minute.toString().padLeft(2, '0')}-${now.second.toString().padLeft(2, '0')}';
 
-    final String notePath;
-    if (folderPath.isEmpty) {
-      notePath = 'All Notes/Untitled-$timestamp.md';
-    } else {
-      final folderPathWithSlash =
-          folderPath.endsWith('/') ? folderPath : '$folderPath/';
-      notePath = '${folderPathWithSlash}Untitled-$timestamp.md';
-    }
+    final notePath = 'All Notes/Untitled-$timestamp.md';
 
     final repo = ref.read(notesRepositoryProvider);
     final noteId = await repo.createNote(notePath, '# \n');
     if (noteId != null && mounted) {
-      final encodedPath =
-          notePath.split('/').map(Uri.encodeComponent).join('/');
+      final encodedPath = notePath.split('/').map(Uri.encodeComponent).join('/');
       context.go('/notes/note/$encodedPath');
     }
   }
