@@ -19,7 +19,6 @@ class ConfigCubit extends Cubit<ConfigState> {
       final prefs = await SharedPreferences.getInstance();
       var savedIP = prefs.getString('server_ip');
 
-      // If no OpenCode IP saved, try to use SpaceNotes IP
       if (savedIP == null || savedIP == _defaultServerIp || savedIP.isEmpty) {
         final spaceNotesHost = prefs.getString('spacenotes_host');
         if (spaceNotesHost != null && spaceNotesHost.isNotEmpty) {
@@ -30,7 +29,6 @@ class ConfigCubit extends Cubit<ConfigState> {
         }
       }
 
-      // If still no IP and running on web, use the current URL hostname
       if ((savedIP == null || savedIP == _defaultServerIp || savedIP.isEmpty) && kIsWeb) {
         final webHostname = WebHostnameService.getCurrentHostname();
         if (webHostname != null) {
