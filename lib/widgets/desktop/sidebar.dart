@@ -14,6 +14,14 @@ import 'desktop_shell.dart';
 final expandedFoldersProvider = StateProvider<Set<String>>((ref) => {});
 final searchFocusRequestProvider = StateProvider<int>((ref) => 0);
 
+void _openNoteInDesktop(BuildContext context, String notePath) {
+  context.read<DesktopNotesBloc>().add(OpenNote(notePath));
+  final location = GoRouterState.of(context).uri.toString();
+  if (location == '/notes/chat' || location == '/settings') {
+    context.go('/notes');
+  }
+}
+
 class Sidebar extends ConsumerWidget {
   const Sidebar({super.key});
 
@@ -458,7 +466,7 @@ class _FolderTreeItemState extends ConsumerState<_FolderTreeItem> {
         final notePath = '${folder.path}/Untitled-$timestamp.md';
         final noteId = await repo.createNote(notePath, '');
         if (noteId != null && context.mounted) {
-          context.read<DesktopNotesBloc>().add(OpenNote(notePath));
+          _openNoteInDesktop(context, notePath);
         }
         break;
       case 'new_folder':
@@ -934,7 +942,7 @@ class _NoteTreeItem extends ConsumerWidget {
       isExpanded: false,
       isFolder: false,
       onTap: () {
-        context.read<DesktopNotesBloc>().add(OpenNote(note.path));
+        _openNoteInDesktop(context, note.path);
       },
       onDelete: () => _handleNoteAction(context, ref, note, 'delete'),
       contextMenuItems: [
@@ -1245,7 +1253,7 @@ class _SidebarFooter extends ConsumerWidget {
     final notePath = 'All Notes/Untitled-$timestamp.md';
     final noteId = await repo.createNote(notePath, '');
     if (noteId != null && context.mounted) {
-      context.read<DesktopNotesBloc>().add(OpenNote(notePath));
+      _openNoteInDesktop(context, notePath);
     }
   }
 
