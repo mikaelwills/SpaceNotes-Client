@@ -1,6 +1,8 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'config_state.dart';
+import '../config/web_hostname_service.dart';
 
 class ConfigCubit extends Cubit<ConfigState> {
   static const String _defaultServerIp = '0.0.0.0';
@@ -15,7 +17,28 @@ class ConfigCubit extends Cubit<ConfigState> {
       emit(ConfigLoading());
 
       final prefs = await SharedPreferences.getInstance();
-      final savedIP = prefs.getString('server_ip') ?? _defaultServerIp;
+      var savedIP = prefs.getString('server_ip');
+
+      // If no OpenCode IP saved, try to use SpaceNotes IP
+      if (savedIP == null || savedIP == _defaultServerIp || savedIP.isEmpty) {
+        final spaceNotesHost = prefs.getString('spacenotes_host');
+        if (spaceNotesHost != null && spaceNotesHost.isNotEmpty) {
+          final parts = spaceNotesHost.split(':');
+          if (parts.isNotEmpty && parts[0].isNotEmpty) {
+            savedIP = parts[0];
+          }
+        }
+      }
+
+      // If still no IP and running on web, use the current URL hostname
+      if ((savedIP == null || savedIP == _defaultServerIp || savedIP.isEmpty) && kIsWeb) {
+        final webHostname = WebHostnameService.getCurrentHostname();
+        if (webHostname != null) {
+          savedIP = webHostname;
+        }
+      }
+
+      savedIP ??= _defaultServerIp;
       final port = prefs.getInt('server_port') ?? _defaultPort;
       final selectedProviderID = prefs.getString('selected_provider_id');
       final selectedModelID = prefs.getString('selected_model_id');
