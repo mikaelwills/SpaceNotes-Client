@@ -6,12 +6,12 @@ No subscriptions. No cloud storage. No vendor lock-in. Just your notes, synced i
 
 This is the Flutter client for [SpaceNotes](https://github.com/mikaelwills/spacenotes).
 
-  <img src="assets/screenshots/desktop-notes.png" width="48%" alt="Desktop Notes View" />
-  <img src="assets/screenshots/desktop-chat.png" width="48%" alt="Desktop AI Chat" />
+![Desktop Notes View](assets/screenshots/desktop-notes.png)
+![Desktop AI Chat](assets/screenshots/desktop-chat.png)
 
 <p align="center">
-  <img src="assets/screenshots/mobile-notes.png" width="24%" alt="Mobile Notes View" />
-  <img src="assets/screenshots/mobile-chat.png" width="24%" alt="Mobile AI Chat" />
+  <img src="assets/screenshots/mobile-notes.png" width="45%" alt="Mobile Notes View" />
+  <img src="assets/screenshots/mobile-chat.png" width="45%" alt="Mobile AI Chat" />
 </p>
 
 ## Features
