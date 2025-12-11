@@ -19,6 +19,8 @@ class WebConfigService {
           final host = '$currentHost:$port';
           print('Auto-configured SpacetimeDB host from server: $host');
           await repo.configure(host: host);
+          await repo.connectAndGetInitialData();
+          print('Auto-connected to SpacetimeDB');
         }
       }
     } catch (e) {
