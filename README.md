@@ -6,6 +6,18 @@ No subscriptions. No cloud storage. No vendor lock-in. Just your notes, synced i
 
 This is the Flutter client for [SpaceNotes](https://github.com/mikaelwills/spacenotes).
 
+## Screenshots
+
+<p align="center">
+  <img src="assets/screenshots/desktop-notes.png" width="48%" alt="Desktop Notes View" />
+  <img src="assets/screenshots/desktop-chat.png" width="48%" alt="Desktop AI Chat" />
+</p>
+
+<p align="center">
+  <img src="assets/screenshots/mobile-notes.png" width="24%" alt="Mobile Notes View" />
+  <img src="assets/screenshots/mobile-chat.png" width="24%" alt="Mobile AI Chat" />
+</p>
+
 ## Features
 
 - **Real-time Sync**: Notes sync instantly across all connected devices via SpacetimeDB
