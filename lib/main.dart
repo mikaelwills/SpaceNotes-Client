@@ -17,6 +17,7 @@ import 'blocs/session_list/session_list_bloc.dart';
 import 'blocs/chat/chat_bloc.dart';
 import 'blocs/config/config_cubit.dart';
 import 'blocs/config/config_state.dart';
+import 'blocs/desktop_notes/desktop_notes_bloc.dart';
 import 'router/app_router.dart';
 import 'services/web_config_service.dart';
 
@@ -167,6 +168,9 @@ class _OpenCodeAppState extends State<OpenCodeApp> with WidgetsBindingObserver {
 
               return chatBloc;
             },
+          ),
+          BlocProvider<DesktopNotesBloc>(
+            create: (context) => DesktopNotesBloc(),
           ),
         ],
         child: Container(

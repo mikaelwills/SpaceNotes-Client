@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../blocs/desktop_notes/desktop_notes_bloc.dart';
+import '../../blocs/desktop_notes/desktop_notes_event.dart';
 import '../../generated/folder.dart';
 import '../../generated/note.dart';
 import '../../providers/notes_providers.dart';
@@ -141,7 +144,7 @@ class _SidebarSearchState extends ConsumerState<_SidebarSearch> {
     });
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.only(left: 12, right: 12, top: 8, bottom: 4),
       child: Container(
         height: 32,
         decoration: BoxDecoration(
@@ -208,6 +211,8 @@ class _FolderTree extends ConsumerStatefulWidget {
 
 class _FolderTreeState extends ConsumerState<_FolderTree> {
   bool _isDragOverRoot = false;
+  String _lastSearchQuery = '';
+  Set<String> _expandedBeforeSearch = {};
 
   bool _canAcceptAtRoot(_DraggableData data) {
     if (!data.path.contains('/')) return false;
@@ -250,17 +255,48 @@ class _FolderTreeState extends ConsumerState<_FolderTree> {
       data: (folders) {
         final notes = notesAsync.valueOrNull ?? [];
 
-        if (isSearching) {
-          final matchingNotes = notes
-              .where((n) => n.name.toLowerCase().contains(searchQuery))
-              .toList()
-            ..sort((a, b) => a.name.compareTo(b.name));
-          final matchingFolders = folders
-              .where((f) => f.name.toLowerCase().contains(searchQuery))
-              .toList()
-            ..sort((a, b) => a.name.compareTo(b.name));
+        Set<String> visibleFolderPaths = {};
+        Set<String> foldersToExpand = {};
+        Set<String> matchingNotePaths = {};
+        Set<String> matchingFolderPaths = {};
 
-          if (matchingNotes.isEmpty && matchingFolders.isEmpty) {
+        if (isSearching) {
+          for (final note in notes) {
+            if (note.name.toLowerCase().contains(searchQuery)) {
+              matchingNotePaths.add(note.path);
+              String parentPath = note.folderPath;
+              while (parentPath.isNotEmpty) {
+                if (parentPath.endsWith('/')) {
+                  parentPath = parentPath.substring(0, parentPath.length - 1);
+                }
+                if (parentPath.isNotEmpty) {
+                  visibleFolderPaths.add(parentPath);
+                  foldersToExpand.add(parentPath);
+                }
+                final lastSlash = parentPath.lastIndexOf('/');
+                parentPath = lastSlash > 0 ? parentPath.substring(0, lastSlash) : '';
+              }
+            }
+          }
+
+          for (final folder in folders) {
+            if (folder.name.toLowerCase().contains(searchQuery)) {
+              matchingFolderPaths.add(folder.path);
+              visibleFolderPaths.add(folder.path);
+              String parentPath = folder.path;
+              while (parentPath.contains('/')) {
+                final lastSlash = parentPath.lastIndexOf('/');
+                parentPath = parentPath.substring(0, lastSlash);
+                if (parentPath.isNotEmpty) {
+                  visibleFolderPaths.add(parentPath);
+                  foldersToExpand.add(parentPath);
+                }
+              }
+            }
+          }
+
+          if (matchingNotePaths.isEmpty && matchingFolderPaths.isEmpty) {
+            _lastSearchQuery = searchQuery;
             return Center(
               child: Text(
                 'No results',
@@ -272,29 +308,34 @@ class _FolderTreeState extends ConsumerState<_FolderTree> {
             );
           }
 
-          return ScrollConfiguration(
-            behavior: ScrollConfiguration.of(context).copyWith(scrollbars: false),
-            child: ListView(
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              children: [
-                ...matchingFolders.map((folder) => _SearchResultItem(
-                      isFolder: true,
-                      name: folder.name,
-                      path: folder.path,
-                    )),
-                ...matchingNotes.map((note) => _SearchResultItem(
-                      isFolder: false,
-                      name: note.name,
-                      path: note.path,
-                    )),
-              ],
-            ),
-          );
+          if (_lastSearchQuery.isEmpty && searchQuery.isNotEmpty) {
+            _expandedBeforeSearch = Set.from(ref.read(expandedFoldersProvider));
+          }
+          if (searchQuery != _lastSearchQuery) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              ref.read(expandedFoldersProvider.notifier).state =
+                  Set.from(foldersToExpand);
+            });
+          }
+          _lastSearchQuery = searchQuery;
+        } else if (_lastSearchQuery.isNotEmpty) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            ref.read(expandedFoldersProvider.notifier).state = _expandedBeforeSearch;
+          });
+          _lastSearchQuery = '';
         }
 
-        final rootFolders = folders.where((f) => f.depth == 0).toList()
+        final rootFolders = folders.where((f) {
+          if (f.depth != 0) return false;
+          if (!isSearching) return true;
+          return visibleFolderPaths.contains(f.path) || matchingFolderPaths.contains(f.path);
+        }).toList()
           ..sort((a, b) => a.name.compareTo(b.name));
-        final rootNotes = notes.where((n) => n.depth == 0).toList()
+        final rootNotes = notes.where((n) {
+          if (n.depth != 0) return false;
+          if (!isSearching) return true;
+          return matchingNotePaths.contains(n.path);
+        }).toList()
           ..sort((a, b) => a.name.compareTo(b.name));
 
         return ScrollConfiguration(
@@ -309,11 +350,16 @@ class _FolderTreeState extends ConsumerState<_FolderTree> {
                         allFolders: folders,
                         allNotes: notes,
                         indentLevel: 0,
+                        searchQuery: searchQuery,
+                        visibleFolderPaths: visibleFolderPaths,
+                        matchingNotePaths: matchingNotePaths,
+                        matchingFolderPaths: matchingFolderPaths,
                       )),
                   ...rootNotes.map((note) => _NoteTreeItem(
                         note: note,
                         allFolders: folders,
                         indentLevel: 0,
+                        isMatch: matchingNotePaths.contains(note.path),
                       )),
                 ],
               ),
@@ -362,106 +408,6 @@ class _FolderTreeState extends ConsumerState<_FolderTree> {
   }
 }
 
-class _SearchResultItem extends StatefulWidget {
-  final bool isFolder;
-  final String name;
-  final String path;
-
-  const _SearchResultItem({
-    required this.isFolder,
-    required this.name,
-    required this.path,
-  });
-
-  @override
-  State<_SearchResultItem> createState() => _SearchResultItemState();
-}
-
-class _SearchResultItemState extends State<_SearchResultItem> {
-  bool _isHovered = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final displayName = widget.isFolder
-        ? widget.name
-        : (widget.name.endsWith('.md')
-            ? widget.name.substring(0, widget.name.length - 3)
-            : widget.name);
-
-    final parentPath = widget.path.contains('/')
-        ? widget.path.substring(0, widget.path.lastIndexOf('/'))
-        : '';
-
-    return MouseRegion(
-      onEnter: (_) => setState(() => _isHovered = true),
-      onExit: (_) => setState(() => _isHovered = false),
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: () {
-          if (widget.isFolder) {
-            final encodedPath =
-                widget.path.split('/').map(Uri.encodeComponent).join('/');
-            context.go('/notes/folder/$encodedPath');
-          } else {
-            final encodedPath =
-                widget.path.split('/').map(Uri.encodeComponent).join('/');
-            context.go('/notes/note/$encodedPath');
-          }
-        },
-        child: Container(
-          height: 40,
-          padding: const EdgeInsets.symmetric(horizontal: 8),
-          decoration: BoxDecoration(
-            color: _isHovered
-                ? SpaceNotesTheme.primary.withValues(alpha: 0.1)
-                : Colors.transparent,
-            borderRadius: BorderRadius.circular(4),
-          ),
-          child: Row(
-            children: [
-              Icon(
-                widget.isFolder
-                    ? Icons.folder_outlined
-                    : Icons.description_outlined,
-                size: 16,
-                color: SpaceNotesTheme.primary.withValues(alpha: 0.7),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      displayName,
-                      style: SpaceNotesTextStyles.terminal.copyWith(
-                        fontSize: 13,
-                        color: _isHovered
-                            ? SpaceNotesTheme.primary
-                            : SpaceNotesTheme.text,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    if (parentPath.isNotEmpty)
-                      Text(
-                        parentPath,
-                        style: SpaceNotesTextStyles.terminal.copyWith(
-                          fontSize: 10,
-                          color: SpaceNotesTheme.textSecondary,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class _DraggableData {
   final bool isFolder;
   final String path;
@@ -476,12 +422,22 @@ class _FolderTreeItem extends ConsumerStatefulWidget {
   final List<Folder> allFolders;
   final List<Note> allNotes;
   final int indentLevel;
+  final String searchQuery;
+  final Set<String> visibleFolderPaths;
+  final Set<String> matchingNotePaths;
+  final Set<String> matchingFolderPaths;
+  final bool showAllChildren;
 
   const _FolderTreeItem({
     required this.folder,
     required this.allFolders,
     required this.allNotes,
     required this.indentLevel,
+    this.searchQuery = '',
+    this.visibleFolderPaths = const {},
+    this.matchingNotePaths = const {},
+    this.matchingFolderPaths = const {},
+    this.showAllChildren = false,
   });
 
   @override
@@ -500,11 +456,9 @@ class _FolderTreeItemState extends ConsumerState<_FolderTreeItem> {
         final timestamp =
             '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}-${now.hour.toString().padLeft(2, '0')}-${now.minute.toString().padLeft(2, '0')}';
         final notePath = '${folder.path}/Untitled-$timestamp.md';
-        final noteId = await repo.createNote(notePath, '# \n');
+        final noteId = await repo.createNote(notePath, '');
         if (noteId != null && context.mounted) {
-          final encodedPath =
-              notePath.split('/').map(Uri.encodeComponent).join('/');
-          context.go('/notes/note/$encodedPath');
+          context.read<DesktopNotesBloc>().add(OpenNote(notePath));
         }
         break;
       case 'new_folder':
@@ -680,23 +634,34 @@ class _FolderTreeItemState extends ConsumerState<_FolderTreeItem> {
   @override
   Widget build(BuildContext context) {
     final expandedFolders = ref.watch(expandedFoldersProvider);
+    final isSearching = widget.searchQuery.isNotEmpty;
     final isExpanded = expandedFolders.contains(widget.folder.path);
 
+    final thisFolderMatches = widget.matchingFolderPaths.contains(widget.folder.path);
     final normalizedPath = widget.folder.path.endsWith('/')
         ? widget.folder.path.substring(0, widget.folder.path.length - 1)
         : widget.folder.path;
+    final folderPathWithSlash = '$normalizedPath/';
+    final hasMatchingNotesInside = widget.matchingNotePaths.any((p) => p.startsWith(folderPathWithSlash));
+    final hasMatchingFoldersInside = widget.matchingFolderPaths.any((p) => p != widget.folder.path && p.startsWith(folderPathWithSlash));
+    final hasMatchingChildrenInside = hasMatchingNotesInside || hasMatchingFoldersInside;
+    final shouldShowAllChildren = widget.showAllChildren || (thisFolderMatches && !hasMatchingChildrenInside);
 
     final childFolders = widget.allFolders.where((f) {
-      if (!f.path.startsWith('$normalizedPath/')) return false;
-      final remainder = f.path.substring(normalizedPath.length + 1);
-      return !remainder.contains('/');
+      if (!f.path.startsWith(folderPathWithSlash)) return false;
+      final remainder = f.path.substring(folderPathWithSlash.length);
+      if (remainder.contains('/')) return false;
+      if (!isSearching || shouldShowAllChildren) return true;
+      return widget.visibleFolderPaths.contains(f.path) ||
+             widget.matchingFolderPaths.contains(f.path);
     }).toList()
       ..sort((a, b) => a.name.compareTo(b.name));
 
-    final folderPathWithSlash = '$normalizedPath/';
-    final childNotes = widget.allNotes
-        .where((n) => n.folderPath == folderPathWithSlash)
-        .toList()
+    final childNotes = widget.allNotes.where((n) {
+      if (n.folderPath != folderPathWithSlash) return false;
+      if (!isSearching || shouldShowAllChildren) return true;
+      return widget.matchingNotePaths.contains(n.path);
+    }).toList()
       ..sort((a, b) => a.name.compareTo(b.name));
 
     final hasChildren = childFolders.isNotEmpty || childNotes.isNotEmpty;
@@ -766,11 +731,17 @@ class _FolderTreeItemState extends ConsumerState<_FolderTreeItem> {
                 allFolders: widget.allFolders,
                 allNotes: widget.allNotes,
                 indentLevel: widget.indentLevel + 1,
+                searchQuery: widget.searchQuery,
+                visibleFolderPaths: widget.visibleFolderPaths,
+                matchingNotePaths: widget.matchingNotePaths,
+                matchingFolderPaths: widget.matchingFolderPaths,
+                showAllChildren: shouldShowAllChildren,
               )),
           ...childNotes.map((n) => _NoteTreeItem(
                 note: n,
                 allFolders: widget.allFolders,
                 indentLevel: widget.indentLevel + 1,
+                isMatch: widget.matchingNotePaths.contains(n.path),
               )),
         ],
       ],
@@ -843,11 +814,13 @@ class _NoteTreeItem extends ConsumerWidget {
   final Note note;
   final List<Folder> allFolders;
   final int indentLevel;
+  final bool isMatch;
 
   const _NoteTreeItem({
     required this.note,
     required this.allFolders,
     required this.indentLevel,
+    this.isMatch = false,
   });
 
   void _handleNoteAction(
@@ -961,10 +934,7 @@ class _NoteTreeItem extends ConsumerWidget {
       isExpanded: false,
       isFolder: false,
       onTap: () {
-        final encodedPath =
-            note.path.split('/').map(Uri.encodeComponent).join('/');
-        final route = '/notes/note/$encodedPath';
-        context.go(route);
+        context.read<DesktopNotesBloc>().add(OpenNote(note.path));
       },
       onDelete: () => _handleNoteAction(context, ref, note, 'delete'),
       contextMenuItems: [
@@ -1273,11 +1243,9 @@ class _SidebarFooter extends ConsumerWidget {
     final timestamp =
         '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}-${now.hour.toString().padLeft(2, '0')}-${now.minute.toString().padLeft(2, '0')}';
     final notePath = 'All Notes/Untitled-$timestamp.md';
-    final noteId = await repo.createNote(notePath, '# \n');
+    final noteId = await repo.createNote(notePath, '');
     if (noteId != null && context.mounted) {
-      final encodedPath =
-          notePath.split('/').map(Uri.encodeComponent).join('/');
-      context.go('/notes/note/$encodedPath');
+      context.read<DesktopNotesBloc>().add(OpenNote(notePath));
     }
   }
 
@@ -1353,12 +1321,8 @@ class _SidebarFooter extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return Container(
       height: 40,
+      margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.symmetric(horizontal: 12),
-      decoration: const BoxDecoration(
-        border: Border(
-          top: BorderSide(color: SpaceNotesTheme.inputSurface, width: 1),
-        ),
-      ),
       child: Row(
         children: [
           IconButton(

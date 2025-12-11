@@ -7,9 +7,9 @@ import '../generated/note.dart';
 
 String _getDefaultHost() {
   if (kIsWeb) {
-    return '${Uri.base.host}:3000';
+    return '${Uri.base.host}:5050';
   } else {
-    return '0.0.0.0:3000';
+    return '0.0.0.0:5050';
   }
 }
 

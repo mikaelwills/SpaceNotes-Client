@@ -46,7 +46,8 @@
       "Skill(proper-widget-structure)",
       "Bash(for file in cancel_button send_button mode_toggle_button prompt_field terminal_button message_bubble message_part_widget markdown_styles)",
       "Bash(do echo \"=== $file ===\" grep -r \"$file\" /Users/mikaelwills/Productivity/Development/Flutter/spacenotes_client/lib --include=\"*.dart\")",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(mkdir:*)"
     ],
     "deny": []
   }
