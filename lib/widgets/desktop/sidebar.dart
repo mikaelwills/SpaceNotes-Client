@@ -119,14 +119,6 @@ class _SidebarSearchState extends ConsumerState<_SidebarSearch> {
 
   void _onSearchChanged(String value) {
     ref.read(folderSearchQueryProvider.notifier).state = value;
-    if (value.isNotEmpty) {
-      final location = GoRouterState.of(context).uri.toString();
-      if (!location.startsWith('/notes') ||
-          location.contains('/note/') ||
-          location.contains('/folder/')) {
-        context.go('/notes');
-      }
-    }
   }
 
   void _clearSearch() {
