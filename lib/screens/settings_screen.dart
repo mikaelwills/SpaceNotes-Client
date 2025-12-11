@@ -125,15 +125,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     return Center(
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 500),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            _buildSpaceNotesSection(),
-            const SizedBox(height: 32),
-            _buildOpenCodeSection(),
-          ],
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 500),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _buildSpaceNotesSection(),
+              const SizedBox(height: 32),
+              _buildOpenCodeSection(),
+            ],
+          ),
         ),
       ),
     );
@@ -143,7 +146,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final isConnected = ref.watch(spacetimeConnectedProvider);
 
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
           'SpaceNotes Server',
