@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../services/opencode_client.dart';
 import '../../services/network_service.dart';
+import '../config/config_cubit.dart';
 import '../session/session_bloc.dart';
 import '../session/session_event.dart' as session_events;
 import '../session/session_state.dart' as session_states;
@@ -14,6 +15,7 @@ import 'connection_state.dart';
 class ConnectionBloc extends Bloc<ConnectionEvent, ConnectionState> {
   final OpenCodeClient openCodeClient;
   final SessionBloc sessionBloc;
+  final ConfigCubit configCubit;
   final NetworkService _networkService = NetworkService();
   Timer? _reconnectTimer;
   Timer? _pingTimer;
@@ -35,6 +37,7 @@ class ConnectionBloc extends Bloc<ConnectionEvent, ConnectionState> {
   ConnectionBloc({
     required this.openCodeClient,
     required this.sessionBloc,
+    required this.configCubit,
   }) : super(ConnectionInitial()) {
     on<CheckConnection>(_onCheckConnection);
     on<ConnectionEstablished>(_onConnectionEstablished);

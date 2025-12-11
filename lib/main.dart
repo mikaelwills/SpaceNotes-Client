@@ -51,6 +51,7 @@ void main() async {
   final connectionBloc = ConnectionBloc(
     openCodeClient: openCodeClient,
     sessionBloc: sessionBloc,
+    configCubit: configCubit,
   );
 
   final container = ProviderContainer(
