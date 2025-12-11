@@ -6,9 +6,13 @@ import '../blocs/config/config_cubit.dart';
 import '../blocs/config/config_state.dart';
 import '../blocs/connection/connection_bloc.dart';
 import '../blocs/connection/connection_event.dart';
+import '../blocs/desktop_notes/desktop_notes_bloc.dart';
+import '../blocs/desktop_notes/desktop_notes_event.dart';
+import '../blocs/desktop_notes/desktop_notes_state.dart';
 import '../providers/notes_providers.dart';
 import '../providers/connection_providers.dart';
 import '../widgets/terminal_ip_input.dart';
+import '../widgets/adaptive/platform_utils.dart';
 
 /// Settings screen for configuring SpaceNotes and OpenCode connections.
 /// There is only ONE connection of each type - no multi-instance support.
@@ -24,6 +28,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   final _spaceNotesPortController = TextEditingController();
   final _openCodeIpController = TextEditingController();
   final _openCodePortController = TextEditingController();
+  final _maxNotesController = TextEditingController();
 
   bool _isSpaceNotesConnecting = false;
   bool _isOpenCodeConnecting = false;
@@ -40,6 +45,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     _spaceNotesPortController.dispose();
     _openCodeIpController.dispose();
     _openCodePortController.dispose();
+    _maxNotesController.dispose();
     super.dispose();
   }
 
@@ -63,6 +69,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           configState.serverIp == '0.0.0.0' ? '' : configState.serverIp;
       _openCodePortController.text = configState.port.toString();
     }
+
+    // Load max open notes from DesktopNotesBloc
+    final desktopNotesState = context.read<DesktopNotesBloc>().state;
+    _maxNotesController.text = desktopNotesState.maxOpenNotes.toString();
   }
 
   Future<void> _saveSpaceNotesConfig() async {
@@ -169,6 +179,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Widget _buildOpenCodeSection() {
     final isConnected =
         ref.watch(openCodeConnectionProvider).valueOrNull ?? false;
+    final isDesktop = PlatformUtils.isDesktopLayout(context);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -199,6 +210,68 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           isConnecting: _isOpenCodeConnecting,
           isConnected: isConnected,
           onConnect: _saveOpenCodeConfig,
+        ),
+        if (isDesktop) ...[
+          const SizedBox(height: 24),
+          _buildMaxOpenNotesSection(),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildMaxOpenNotesSection() {
+    return Row(
+      children: [
+        Text(
+          'Max open notes',
+          style: SpaceNotesTextStyles.terminal.copyWith(
+            fontSize: 13,
+            color: SpaceNotesTheme.text,
+          ),
+        ),
+        const Spacer(),
+        Container(
+          width: 80,
+          height: 32,
+          decoration: BoxDecoration(
+            color: SpaceNotesTheme.inputSurface,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Row(
+            children: [
+              const SizedBox(width: 16),
+              Expanded(
+                child: TextField(
+                  controller: _maxNotesController,
+                  style: SpaceNotesTextStyles.terminal.copyWith(fontSize: 12),
+                  keyboardType: TextInputType.number,
+                  textAlign: TextAlign.center,
+                  onChanged: (value) {
+                    final parsed = int.tryParse(value);
+                    if (parsed != null && parsed > 0) {
+                      context
+                          .read<DesktopNotesBloc>()
+                          .add(SetMaxOpenNotes(parsed));
+                    }
+                  },
+                  decoration: InputDecoration(
+                    hintText: '10',
+                    hintStyle: SpaceNotesTextStyles.terminal.copyWith(
+                      fontSize: 12,
+                      color: SpaceNotesTheme.textSecondary,
+                    ),
+                    border: InputBorder.none,
+                    enabledBorder: InputBorder.none,
+                    focusedBorder: InputBorder.none,
+                    filled: false,
+                    isDense: true,
+                    contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 16),
+            ],
+          ),
         ),
       ],
     );

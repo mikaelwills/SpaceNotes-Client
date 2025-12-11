@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../theme/spacenotes_theme.dart';
 import '../connection_indicator.dart';
+import 'desktop_note_view.dart';
+import 'note_tabs.dart';
 import 'sidebar.dart';
 
 final sidebarCollapsedProvider = StateProvider<bool>((ref) => false);
@@ -84,17 +86,32 @@ class _DesktopContentArea extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final location = GoRouterState.of(context).uri.toString();
+    final isChat = location == '/notes/chat';
+    final isSettings = location == '/settings';
+
     return Column(
       children: [
-        const _DesktopTopBar(),
-        Expanded(child: child),
+        _DesktopTopBar(showTabs: !isChat && !isSettings),
+        Expanded(
+          child: _buildContent(context, isChat, isSettings),
+        ),
       ],
     );
+  }
+
+  Widget _buildContent(BuildContext context, bool isChat, bool isSettings) {
+    if (isChat || isSettings) {
+      return child;
+    }
+    return const DesktopNoteView();
   }
 }
 
 class _DesktopTopBar extends ConsumerWidget {
-  const _DesktopTopBar();
+  final bool showTabs;
+
+  const _DesktopTopBar({this.showTabs = false});
 
   String _getBreadcrumb(String location) {
     if (location.startsWith('/notes/note/')) {
@@ -143,18 +160,21 @@ class _DesktopTopBar extends ConsumerWidget {
               onPressed: () => context.go('/notes'),
               tooltip: 'Back to notes',
             )
+          else if (showTabs)
+            const Expanded(child: NoteTabs())
           else
             const SizedBox(width: 16),
-          Expanded(
-            child: Text(
-              breadcrumb,
-              style: SpaceNotesTextStyles.terminal.copyWith(
-                color: SpaceNotesTheme.textSecondary,
-                fontSize: 12,
+          if (!showTabs)
+            Expanded(
+              child: Text(
+                breadcrumb,
+                style: SpaceNotesTextStyles.terminal.copyWith(
+                  color: SpaceNotesTheme.textSecondary,
+                  fontSize: 12,
+                ),
+                overflow: TextOverflow.ellipsis,
               ),
-              overflow: TextOverflow.ellipsis,
             ),
-          ),
           IconButton(
             icon: const Icon(Icons.settings_outlined, size: 18),
             color: SpaceNotesTheme.textSecondary,
