@@ -12,7 +12,6 @@ import 'services/sse_service.dart';
 import 'services/message_queue_service.dart';
 import 'blocs/connection/connection_bloc.dart';
 import 'blocs/session/session_bloc.dart';
-import 'blocs/session/session_event.dart';
 import 'blocs/session_list/session_list_bloc.dart';
 import 'blocs/chat/chat_bloc.dart';
 import 'blocs/config/config_cubit.dart';
@@ -40,12 +39,11 @@ void main() async {
         configState.selectedProviderID!, configState.selectedModelID!);
   }
 
-  // Create SessionBloc and initialize with stored session
+  // Create SessionBloc (session loading is handled by ConnectionBloc after connection)
   final sessionBloc = SessionBloc(
     openCodeClient: openCodeClient,
     configCubit: configCubit,
   );
-  sessionBloc.add(LoadStoredSession());
 
   // Create ConnectionBloc
   final connectionBloc = ConnectionBloc(

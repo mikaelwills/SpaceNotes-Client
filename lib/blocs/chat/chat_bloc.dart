@@ -52,6 +52,11 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
         add(LoadMessagesForCurrentSession());
       }
     });
+
+    // Check if session is already loaded (we may have missed the event)
+    if (sessionBloc.state is SessionLoaded) {
+      add(LoadMessagesForCurrentSession());
+    }
   }
 
   Future<void> _onLoadMessagesForCurrentSession(
@@ -59,38 +64,29 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     Emitter<ChatState> emit,
   ) async {
     final currentSessionId = sessionBloc.currentSessionId;
-    
+
     if (currentSessionId == null) {
-      // Silently return - no session to load messages for.
       return;
     }
 
     try {
-      
       emit(ChatConnecting());
 
-      // Clear current state
       _messages.clear();
       _messageIndex.clear();
 
-      // Load message history from API
       final messages = await openCodeClient.getSessionMessages(currentSessionId);
-      
-      // Add messages to local state
+
       for (final message in messages) {
         _messages.add(message);
         _messageIndex[message.id] = _messages.length - 1;
       }
-      
 
-      // Start listening for new SSE events (without clearing messages)
       _startListening(currentSessionId);
-      
-      // Emit ready state with loaded messages
+
       emit(ChatReady(sessionId: currentSessionId, messages: List.from(_messages)));
-      
+
     } catch (e) {
-      print('❌ [ChatBloc] Failed to load messages for current session: $e');
       emit(const ChatError('Failed to load messages. Please try again.'));
     }
   }

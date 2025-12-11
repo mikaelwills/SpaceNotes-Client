@@ -156,7 +156,6 @@ class SessionBloc extends Bloc<SessionEvent, SessionState> {
         _safelyCreateSession();
       }
     } catch (e) {
-      print('❌ [SessionBloc] Failed to load stored session: $e');
       emit(SessionError('Failed to load stored session: ${e.toString()}'));
     }
   }
@@ -175,7 +174,7 @@ class SessionBloc extends Bloc<SessionEvent, SessionState> {
       } catch (e) {
         session = null;
       }
-      
+
       if (session != null) {
         _currentSession = session;
         emit(SessionLoaded(session: session));
