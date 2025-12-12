@@ -211,6 +211,10 @@ class _FolderListViewState extends ConsumerState<FolderListView> {
       },
       onLongPress: () =>
           NotesListDialogs.showFolderContextMenu(context, ref, folder),
+      onMove: () =>
+          NotesListDialogs.showMoveFolderDialog(context, ref, folder),
+      onDelete: () =>
+          NotesListDialogs.showDeleteFolderConfirmation(context, ref, folder),
     );
   }
 
@@ -227,6 +231,10 @@ class _FolderListViewState extends ConsumerState<FolderListView> {
       },
       onLongPress: () =>
           NotesListDialogs.showNoteContextMenu(context, ref, note),
+      onMove: () =>
+          NotesListDialogs.showMoveNoteDialog(context, ref, note),
+      onDelete: () =>
+          NotesListDialogs.showDeleteNoteConfirmation(context, ref, note),
     );
   }
 
@@ -246,7 +254,7 @@ class _FolderListViewState extends ConsumerState<FolderListView> {
     }
 
     final repo = ref.read(notesRepositoryProvider);
-    final noteId = await repo.createNote(notePath, '# \n');
+    final noteId = await repo.createNote(notePath, '');
     if (noteId != null && mounted) {
       final encodedPath =
           notePath.split('/').map(Uri.encodeComponent).join('/');

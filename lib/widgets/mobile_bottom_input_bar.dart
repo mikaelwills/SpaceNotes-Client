@@ -357,7 +357,7 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
     final notePath = 'All Notes/Untitled-$timestamp.md';
 
     final repo = ref.read(notesRepositoryProvider);
-    final noteId = await repo.createNote(notePath, '# \n');
+    final noteId = await repo.createNote(notePath, '');
     if (noteId != null && mounted) {
       final encodedPath = notePath.split('/').map(Uri.encodeComponent).join('/');
       context.go('/notes/note/$encodedPath');

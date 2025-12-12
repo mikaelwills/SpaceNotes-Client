@@ -161,7 +161,7 @@ class TerminalMessage extends StatelessWidget {
                 listBullet: SpaceNotesTextStyles.terminal,
                 listIndent: 16,
               ),
-              selectable: true,
+              selectable: false,
             ),
     );
   }
