@@ -13,7 +13,7 @@ mcp__spacenotes-mcp__list_notes_in_folder or mcp__spacenotes-mcp__get_note
 When the user says "look at note updates", use spacenotes-mcp to get the note containing the list of issues and features that need to be implemented or fixed.
 
 ```
-mcp__spacenotes-mcp__get_note with path: "Development/SpaceNotes/Spacenotes flutter client.md"
+mcp__spacenotes-mcp__get_note with path: "Development/SpaceNotes/Spacenotes flutter client updates.md"
 ```
 
 ### Editing the updates note

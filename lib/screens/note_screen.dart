@@ -412,17 +412,26 @@ class _NoteScreenState extends ConsumerState<NoteScreen> {
       return;
     }
 
-    final content = _contentController.text.trim();
+    final rawContent = _contentController.text;
+    final lines = rawContent.split('\n');
+    String? firstMeaningfulLine;
+    for (final line in lines) {
+      final trimmed = line.trim();
+      if (trimmed.isNotEmpty) {
+        firstMeaningfulLine = trimmed;
+        break;
+      }
+    }
 
-    if (content.isEmpty || content == '#' || content == '# \n') {
+    if (firstMeaningfulLine == null || firstMeaningfulLine == '#') {
       return;
     }
 
-    final firstLine = content.split('\n').first.trim();
-    String newName = firstLine.replaceAll(RegExp(r'^#+\s*'), '').trim();
+    String newName = firstMeaningfulLine.replaceAll(RegExp(r'^#+\s*'), '').trim();
 
     if (newName.isEmpty) {
-      newName = content.replaceAll('\n', ' ').trim();
+      final contentFlat = rawContent.replaceAll('\n', ' ').trim();
+      newName = contentFlat.replaceAll(RegExp(r'^#+\s*'), '').trim();
       if (newName.length > 50) {
         newName = newName.substring(0, 50);
       }

@@ -51,20 +51,7 @@ class _ChatViewState extends ConsumerState<ChatView> {
   }
 
   Widget _buildChatMessagesArea() {
-    return BlocConsumer<ChatBloc, ChatState>(
-      listener: (context, state) {
-        if (state is ChatReady || state is ChatSendingMessage) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (_chatScrollController.hasClients) {
-              _chatScrollController.animateTo(
-                _chatScrollController.position.maxScrollExtent,
-                duration: const Duration(milliseconds: 200),
-                curve: Curves.easeOut,
-              );
-            }
-          });
-        }
-      },
+    return BlocBuilder<ChatBloc, ChatState>(
       builder: (context, state) {
         final messages = state is ChatReady
             ? state.messages
@@ -84,30 +71,37 @@ class _ChatViewState extends ConsumerState<ChatView> {
 
         return Stack(
           children: [
-            NotificationListener<ScrollNotification>(
-              onNotification: (notification) {
-                if (notification is ScrollUpdateNotification) {
-                  final isNearBottom = _chatScrollController.position.pixels >=
-                      _chatScrollController.position.maxScrollExtent - 100;
-                  if (_showScrollToBottom == isNearBottom) {
-                    setState(() => _showScrollToBottom = !isNearBottom);
-                  }
+            Listener(
+              onPointerMove: (event) {
+                if (event.delta.dy > 3) {
+                  FocusManager.instance.primaryFocus?.unfocus();
                 }
-                return false;
               },
-              child: Center(
-                child: ConstrainedBox(
+              child: NotificationListener<ScrollNotification>(
+                onNotification: (notification) {
+                  if (notification is ScrollUpdateNotification) {
+                    final isNearBottom = _chatScrollController.position.pixels >=
+                        _chatScrollController.position.maxScrollExtent - 100;
+                    if (_showScrollToBottom == isNearBottom) {
+                      setState(() => _showScrollToBottom = !isNearBottom);
+                    }
+                  }
+                  return false;
+                },
+                child: Center(
+                  child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 800),
                   child: ScrollConfiguration(
                     behavior: ScrollConfiguration.of(context).copyWith(scrollbars: false),
                     child: ListView.builder(
                       controller: _chatScrollController,
+                      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
                       padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
                       itemCount: messages.length,
                       itemBuilder: (context, index) {
-                      final message = messages[index];
-                      final isLastMessage = index == messages.length - 1;
-                      final isStreamingMessage = isStreaming && isLastMessage;
+                        final message = messages[index];
+                        final isLastMessage = index == messages.length - 1;
+                        final isStreamingMessage = isStreaming && isLastMessage;
 
                         return TerminalMessage(
                           message: message,
@@ -118,6 +112,7 @@ class _ChatViewState extends ConsumerState<ChatView> {
                   ),
                 ),
               ),
+            ),
             ),
             if (_showScrollToBottom) _buildScrollToBottomButton(),
           ],
