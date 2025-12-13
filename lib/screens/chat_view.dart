@@ -27,26 +27,45 @@ class _ChatViewState extends ConsumerState<ChatView> {
     super.dispose();
   }
 
+  void _scrollToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_chatScrollController.hasClients) {
+        _chatScrollController.animateTo(
+          _chatScrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeOut,
+        );
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDesktop = PlatformUtils.isDesktopLayout(context);
 
-    return Stack(
-      children: [
-        Column(
-          children: [
-            const ConnectionStatusRow(),
-            Expanded(child: _buildChatMessagesArea()),
-          ],
-        ),
-        if (isDesktop)
-          const Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: DesktopChatInput(),
+    return BlocListener<ChatBloc, ChatState>(
+      listener: (context, state) {
+        if (state is ChatSendingMessage) {
+          _scrollToBottom();
+        }
+      },
+      child: Stack(
+        children: [
+          Column(
+            children: [
+              const ConnectionStatusRow(),
+              Expanded(child: _buildChatMessagesArea()),
+            ],
           ),
-      ],
+          if (isDesktop)
+            const Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: DesktopChatInput(),
+            ),
+        ],
+      ),
     );
   }
 

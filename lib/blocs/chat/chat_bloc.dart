@@ -587,15 +587,21 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
 
           _messages[messageIndex] = updatedMessage;
         } else {
-          // Check if this is just an echo of user input - if so, create the message
-          // but with empty content so subsequent real content can be added
-          String? initialContent = partText;
-          if (partText != null && _isDuplicateContent(partText, 'assistant')) {
-            print('🚫 Initial content is echo, creating empty message for: $messageId');
-            initialContent = null; // Don't use echo content, wait for real content
+          // Check if this is a user message echo from the server
+          // User messages are already added locally, so skip server echoes
+          if (partText != null) {
+            final isUserEcho = _messages.any((msg) =>
+                msg.role == 'user' &&
+                msg.parts.isNotEmpty &&
+                msg.parts.any((p) => p.type == 'text' && p.content == partText));
+
+            if (isUserEcho) {
+              print('🚫 [ChatBloc] Skipping user message echo from server: "$partText"');
+              return true;
+            }
           }
 
-          // Create a new streaming message
+          // Create a new streaming message for assistant
           final newMessage = OpenCodeMessage(
             id: messageId,
             sessionId: sseEvent.sessionId ?? sessionBloc.currentSessionId ?? '',
@@ -605,7 +611,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
               MessagePart(
                 id: partId ?? DateTime.now().millisecondsSinceEpoch.toString(),
                 type: partType ?? 'text',
-                content: initialContent,
+                content: partText,
                 metadata: partData['time'] as Map<String, dynamic>?,
               ),
             ],
