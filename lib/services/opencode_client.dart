@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import '../blocs/config/config_cubit.dart';
 import '../models/session.dart';
 import '../models/opencode_message.dart';
+import '../models/message_part.dart';
 import '../models/provider.dart';
 import '../models/permission_request.dart';
 import '../models/session_status.dart';
@@ -233,6 +234,16 @@ class OpenCodeClient {
       ).timeout(const Duration(seconds: 30));
 
       if (response.statusCode == 200) {
+        if (response.body.isEmpty) {
+          return OpenCodeMessage(
+            id: 'pending_${DateTime.now().millisecondsSinceEpoch}',
+            sessionId: sessionId,
+            role: 'user',
+            created: DateTime.now(),
+            parts: [MessagePart(id: 'part_${DateTime.now().millisecondsSinceEpoch}', type: 'text', content: message)],
+          );
+        }
+
         final messageData = json.decode(response.body);
 
         if (messageData.containsKey('name') && messageData.containsKey('data')) {

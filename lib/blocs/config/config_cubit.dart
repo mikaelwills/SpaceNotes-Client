@@ -7,7 +7,7 @@ import '../config/web_hostname_service.dart';
 class ConfigCubit extends Cubit<ConfigState> {
   static const String _defaultServerIp = '0.0.0.0';
   static const int _defaultPort = 5053;
-  static const String _defaultAgentName = 'personal-assistant';
+  static const String _defaultAgentName = 'spacenotes';
 
   ConfigCubit() : super(ConfigLoading());
 
