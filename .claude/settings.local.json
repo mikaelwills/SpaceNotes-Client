@@ -48,7 +48,10 @@
       "Bash(do echo \"=== $file ===\" grep -r \"$file\" /Users/mikaelwills/Productivity/Development/Flutter/spacenotes_client/lib --include=\"*.dart\")",
       "Bash(ls:*)",
       "Bash(mkdir:*)",
-      "mcp__spacenotes-mcp__regex_replace"
+      "mcp__spacenotes-mcp__regex_replace",
+      "Bash(flutter pub add:*)",
+      "Bash(timeout 30 flutter test:*)",
+      "Bash(git restore:*)"
     ],
     "deny": []
   }

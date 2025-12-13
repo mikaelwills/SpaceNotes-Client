@@ -1,8 +1,12 @@
+import 'dart:convert';
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:collection/collection.dart';
+import 'package:image_picker/image_picker.dart';
 import '../theme/spacenotes_theme.dart';
 import '../providers/notes_providers.dart';
 import '../providers/connection_providers.dart';
@@ -14,6 +18,10 @@ import '../generated/note.dart';
 import '../screens/home_screen.dart';
 import 'notes_search_bar.dart';
 
+Future<Uint8List> _readFileBytes(String path) async {
+  return File(path).readAsBytes();
+}
+
 class MobileBottomInputBar extends ConsumerStatefulWidget {
   const MobileBottomInputBar({super.key});
 
@@ -23,7 +31,10 @@ class MobileBottomInputBar extends ConsumerStatefulWidget {
 
 class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
   final TextEditingController _searchController = TextEditingController();
+  final ImagePicker _imagePicker = ImagePicker();
   bool _isSearchFocused = false;
+  String? _pendingImageBase64;
+  String? _pendingImageMimeType;
 
   @override
   void dispose() {
@@ -92,7 +103,7 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           _buildBackButton(viewType, folderPath),
           if (viewType == HomeViewType.chat ||
@@ -135,6 +146,8 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
   }
 
   Widget _buildSearchBar(bool isChat) {
+    final isOpenCodeConnected = ref.watch(openCodeConnectionProvider).valueOrNull ?? false;
+
     return Expanded(
       child: Container(
         decoration: BoxDecoration(
@@ -150,6 +163,15 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
             setState(() => _isSearchFocused = focused);
           },
           onSubmitted: _onSendToAi,
+          showImagePicker: isOpenCodeConnected,
+          onImagePickerTap: _onPickImage,
+          hasImageAttached: _pendingImageBase64 != null,
+          onClearImage: () {
+            setState(() {
+              _pendingImageBase64 = null;
+              _pendingImageMimeType = null;
+            });
+          },
         ),
       ),
     );
@@ -339,14 +361,48 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
   void _onSendToAi() {
     final message = _searchController.text.trim();
     debugPrint('[MobileBottomInputBar] _onSendToAi called, message: "$message"');
-    if (message.isEmpty) return;
+    if (message.isEmpty && _pendingImageBase64 == null) return;
 
     debugPrint('[MobileBottomInputBar] Sending message and navigating to chat');
-    context.read<ChatBloc>().add(SendChatMessage(message));
+    context.read<ChatBloc>().add(SendChatMessage(
+      message.isEmpty ? 'What is in this image?' : message,
+      imageBase64: _pendingImageBase64,
+      imageMimeType: _pendingImageMimeType,
+    ));
     context.go('/notes/chat');
 
     _searchController.clear();
     ref.read(folderSearchQueryProvider.notifier).state = '';
+    setState(() {
+      _pendingImageBase64 = null;
+      _pendingImageMimeType = null;
+    });
+  }
+
+  Future<void> _onPickImage() async {
+    try {
+      final XFile? image = await _imagePicker.pickImage(source: ImageSource.gallery);
+      if (image == null) return;
+
+      final bytes = await compute(_readFileBytes, image.path);
+      final base64 = base64Encode(bytes);
+
+      final extension = image.path.split('.').last.toLowerCase();
+      final mimeType = switch (extension) {
+        'jpg' || 'jpeg' => 'image/jpeg',
+        'png' => 'image/png',
+        'gif' => 'image/gif',
+        'webp' => 'image/webp',
+        _ => 'image/jpeg',
+      };
+
+      setState(() {
+        _pendingImageBase64 = base64;
+        _pendingImageMimeType = mimeType;
+      });
+    } catch (e) {
+      debugPrint('[MobileBottomInputBar] Error picking image: $e');
+    }
   }
 
   Future<void> _createQuickNote(String folderPath) async {

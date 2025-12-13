@@ -13,6 +13,10 @@ class NotesSearchBar extends StatefulWidget {
   final String? hintText;
   final ValueChanged<bool>? onFocusChanged;
   final VoidCallback? onSubmitted;
+  final VoidCallback? onImagePickerTap;
+  final bool showImagePicker;
+  final bool hasImageAttached;
+  final VoidCallback? onClearImage;
 
   const NotesSearchBar({
     super.key,
@@ -25,6 +29,10 @@ class NotesSearchBar extends StatefulWidget {
     this.hintText,
     this.onFocusChanged,
     this.onSubmitted,
+    this.onImagePickerTap,
+    this.showImagePicker = false,
+    this.hasImageAttached = false,
+    this.onClearImage,
   });
 
   @override
@@ -60,18 +68,76 @@ class _NotesSearchBarState extends State<NotesSearchBar> {
   }
 
   Widget? _buildSuffixIcon() {
-    if (widget.controller.text.isEmpty) return null;
+    final hasText = widget.controller.text.isNotEmpty;
+    final showImage = widget.showImagePicker;
+    final hasImage = widget.hasImageAttached;
 
-    return GestureDetector(
-      onTap: _handleClear,
-      child: const Padding(
-        padding: EdgeInsets.only(right: 4),
-        child: Icon(
-          Icons.clear,
-          color: SpaceNotesTheme.textSecondary,
-          size: 25,
-        ),
-      ),
+    if (!hasText && !showImage && !hasImage) return null;
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (hasText)
+          GestureDetector(
+            onTap: _handleClear,
+            child: const Padding(
+              padding: EdgeInsets.only(right: 14),
+              child: Icon(
+                Icons.clear,
+                color: SpaceNotesTheme.textSecondary,
+                size: 25,
+              ),
+            ),
+          ),
+        if (hasImage)
+          Transform.translate(
+            offset: const Offset(6, 0),
+            child: GestureDetector(
+              onTap: () {
+                HapticFeedback.lightImpact();
+                widget.onClearImage?.call();
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                decoration: BoxDecoration(
+                  color: SpaceNotesTheme.primary.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(18),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.image,
+                      color: SpaceNotesTheme.primary,
+                      size: 18,
+                    ),
+                    const SizedBox(width: 6),
+                    Icon(
+                      Icons.close,
+                      color: SpaceNotesTheme.primary.withValues(alpha: 0.7),
+                      size: 16,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        if (showImage && !hasImage)
+          GestureDetector(
+            onTap: () {
+              HapticFeedback.selectionClick();
+              widget.onImagePickerTap?.call();
+            },
+            child: const Padding(
+              padding: EdgeInsets.only(right: 8),
+              child: Icon(
+                Icons.image_outlined,
+                color: SpaceNotesTheme.primary,
+                size: 24,
+              ),
+            ),
+          ),
+      ],
     );
   }
 
@@ -85,11 +151,12 @@ class _NotesSearchBarState extends State<NotesSearchBar> {
           hintText: widget.hintText ?? 'Search notes...',
           onChanged: widget.onChanged,
           focusNode: _focusNode,
-          textInputAction: TextInputAction.send,
+          textInputAction: TextInputAction.newline,
+          keyboardType: TextInputType.multiline,
           suffixIcon: _buildSuffixIcon(),
-          height: widget.height,
+          minHeight: widget.height ?? 48,
           showBorders: false,
-          onSubmitted: widget.onSubmitted != null ? (_) => widget.onSubmitted!() : null,
+          dynamicHeight: true,
         ),
         if (widget.errorText != null) ...[
           const SizedBox(height: 4),

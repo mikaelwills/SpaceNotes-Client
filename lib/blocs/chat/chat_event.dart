@@ -14,11 +14,13 @@ class LoadMessagesForCurrentSession extends ChatEvent {}
 
 class SendChatMessage extends ChatEvent {
   final String message;
+  final String? imageBase64;
+  final String? imageMimeType;
 
-  const SendChatMessage(this.message);
+  const SendChatMessage(this.message, {this.imageBase64, this.imageMimeType});
 
   @override
-  List<Object> get props => [message];
+  List<Object> get props => [message, imageBase64 ?? '', imageMimeType ?? ''];
 }
 
 class CancelCurrentOperation extends ChatEvent {}
