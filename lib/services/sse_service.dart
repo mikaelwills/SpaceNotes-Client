@@ -18,11 +18,13 @@ class SSEService {
 
 
   Stream<OpenCodeEvent> connectToEventStream() {
+    print('🔌 [SSEService] connectToEventStream called, existing controller: ${_eventController != null}, closed: ${_eventController?.isClosed}');
     if (_eventController != null && !_eventController!.isClosed) {
+      print('🔌 [SSEService] Reusing existing stream');
       return _eventController!.stream;
     }
 
-    
+    print('🔌 [SSEService] Creating new SSE connection');
     _eventController = StreamController<OpenCodeEvent>.broadcast();
     _connectToSSE();
     return _eventController!.stream;
@@ -30,9 +32,11 @@ class SSEService {
 
   void _connectToSSE() {
     _reconnectAttempts++;
+    final sseUrl = '${_configCubit.baseUrl}${ConfigCubit.sseEndpoint}';
+    print('🔌 [SSEService] Connecting to: $sseUrl');
     _subscription = SSEClient.subscribeToSSE(
             method: SSERequestType.GET,
-            url: '${_configCubit.baseUrl}${ConfigCubit.sseEndpoint}',
+            url: sseUrl,
             header: {
               "Accept": "text/event-stream",
               "Cache-Control": "no-cache",
@@ -41,33 +45,40 @@ class SSEService {
       (event) {
         if (!_isConnected) {
           _isConnected = true;
+          print('✅ [SSEService] Connected to SSE stream');
         }
         _reconnectAttempts = 0;
         
+        print('📡 [SSEService] Raw SSE event received: ${event.event} / data length: ${event.data?.length ?? 0}');
         if (event.data != null && event.data!.isNotEmpty) {
           try {
-            // PerformanceTracker.markSSEReceived(event.id);
-            
             // Fast path for text streaming - bypass full JSON parsing
-            final openCodeEvent = _tryFastTextExtraction(event.data!) ?? 
+            final openCodeEvent = _tryFastTextExtraction(event.data!) ??
                                   _parseFullEvent(event.data!);
-            
+
             if (openCodeEvent != null) {
+              print('📨 [SSEService] Parsed event: ${openCodeEvent.type} session=${openCodeEvent.sessionId}');
               if (_eventController?.isClosed == false) {
                 _eventController!.add(openCodeEvent);
               }
+            } else {
+              print('⚠️ [SSEService] Failed to parse event, raw: ${event.data!.substring(0, event.data!.length.clamp(0, 200))}');
             }
           } catch (e) {
             print('❌ [SSEService] Parse error: $e');
+            print('❌ [SSEService] Raw data: ${event.data!.substring(0, event.data!.length.clamp(0, 200))}');
             if (_eventController?.isClosed == false) {
               _eventController!.addError(
                 FormatException('Failed to parse SSE event data: $e'),
               );
             }
           }
+        } else {
+          print('📡 [SSEService] Empty SSE event received');
         }
       },
       onError: (error) {
+        print('❌ [SSEService] Stream error: $error');
         _isConnected = false;
         if (_eventController?.isClosed == false) {
           _eventController!.addError(error);
@@ -75,9 +86,11 @@ class SSEService {
         _reconnect();
       },
       onDone: () {
+        print('🔌 [SSEService] Stream onDone called - stream closed');
         _isConnected = false;
         _reconnect();
       },
+      cancelOnError: false,
     );
   }
 

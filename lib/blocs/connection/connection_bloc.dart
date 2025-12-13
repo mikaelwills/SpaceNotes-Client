@@ -155,9 +155,10 @@ class ConnectionBloc extends Bloc<ConnectionEvent, ConnectionState> {
     _currentEmitter = emit;
     debugPrint('[OpenCode] Establishing connection...');
     try {
-      // Fetch config to get provider and model information with timeout
       await openCodeClient.getProviders()
           .timeout(const Duration(seconds: 15));
+
+      await openCodeClient.fetchAndStoreAgents();
 
       debugPrint('[OpenCode] Got providers, setting up session...');
 

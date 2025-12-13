@@ -36,37 +36,40 @@ class OpenCodeEvent extends Equatable {
     if (sessionId == null || messageId == null) {
       if (json['properties'] is Map<String, dynamic>) {
         final properties = json['properties'] as Map<String, dynamic>;
-        
-        // For session.idle events, session ID is directly in properties
-        if (eventType == 'session.idle') {
-          sessionId = sessionId ?? (properties['sessionID'] as String? ?? properties['sessionId'] as String?);
-          messageId = messageId ?? (properties['messageID'] as String? ?? properties['messageId'] as String?);
+
+        // Check properties.sessionID directly (for session.status, session.idle, etc.)
+        sessionId ??= properties['sessionID'] as String? ?? properties['sessionId'] as String?;
+        messageId ??= properties['messageID'] as String? ?? properties['messageId'] as String?;
+
+        // For message.updated and session.updated, info is in properties.info
+        if (properties['info'] is Map<String, dynamic>) {
+          final info = properties['info'] as Map<String, dynamic>;
+          sessionId ??= info['sessionID'] as String? ?? info['sessionId'] as String?;
+          messageId ??= info['id'] as String?;
         }
-        
+
         // For message.part.updated events, session info is in properties.part
-        else if (eventType == 'message.part.updated' && properties['part'] is Map<String, dynamic>) {
+        if (properties['part'] is Map<String, dynamic>) {
           final part = properties['part'] as Map<String, dynamic>;
-          sessionId = sessionId ?? (part['sessionID'] as String? ?? part['sessionId'] as String?);
-          messageId = messageId ?? (part['messageID'] as String? ?? part['messageId'] as String?);
+          sessionId ??= part['sessionID'] as String? ?? part['sessionId'] as String?;
+          messageId ??= part['messageID'] as String? ?? part['messageId'] as String?;
         }
-        
+
         // For storage.write events, extract session ID from the key path
-        else if (eventType == 'storage.write' && properties['key'] is String) {
+        if (eventType == 'storage.write' && properties['key'] is String) {
           final key = properties['key'] as String;
-          // Key format: "session/part/ses_XXX/msg_XXX/prt_XXX"
           final keyParts = key.split('/');
           if (keyParts.length >= 3 && keyParts[2].startsWith('ses_')) {
-            sessionId = sessionId ?? keyParts[2];
+            sessionId ??= keyParts[2];
           }
           if (keyParts.length >= 4 && keyParts[3].startsWith('msg_')) {
-            messageId = messageId ?? keyParts[3];
+            messageId ??= keyParts[3];
           }
-          
-          // Also check if there's session info in the content
+
           if (properties['content'] is Map<String, dynamic>) {
             final content = properties['content'] as Map<String, dynamic>;
-            sessionId = sessionId ?? (content['sessionID'] as String? ?? content['sessionId'] as String?);
-            messageId = messageId ?? (content['messageID'] as String? ?? content['messageId'] as String?);
+            sessionId ??= content['sessionID'] as String? ?? content['sessionId'] as String?;
+            messageId ??= content['messageID'] as String? ?? content['messageId'] as String?;
           }
         }
       }

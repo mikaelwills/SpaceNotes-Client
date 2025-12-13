@@ -48,13 +48,17 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     
     // Listen to SessionBloc for session changes (permanent subscription)
     _permanentSessionSubscription = sessionBloc.stream.listen((sessionState) {
+      print('🔄 [ChatBloc] SessionBloc state changed: ${sessionState.runtimeType}');
       if (sessionState is SessionLoaded) {
+        print('🔄 [ChatBloc] Session loaded, triggering LoadMessagesForCurrentSession');
         add(LoadMessagesForCurrentSession());
       }
     });
 
     // Check if session is already loaded (we may have missed the event)
+    print('🔄 [ChatBloc] Constructor - current SessionBloc state: ${sessionBloc.state.runtimeType}');
     if (sessionBloc.state is SessionLoaded) {
+      print('🔄 [ChatBloc] Session already loaded at construction, triggering LoadMessagesForCurrentSession');
       add(LoadMessagesForCurrentSession());
     }
   }
@@ -63,11 +67,15 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     LoadMessagesForCurrentSession event,
     Emitter<ChatState> emit,
   ) async {
+    print('📥 [ChatBloc] _onLoadMessagesForCurrentSession called');
     final currentSessionId = sessionBloc.currentSessionId;
 
     if (currentSessionId == null) {
+      print('📥 [ChatBloc] No current session ID, returning');
       return;
     }
+
+    print('📥 [ChatBloc] Loading messages for session: $currentSessionId');
 
     try {
       emit(ChatConnecting());
@@ -92,6 +100,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
   }
 
   void _startListening(String sessionId) {
+    print('🎧 [ChatBloc] _startListening called for session: $sessionId');
 
     // Cancel any existing subscription
     _eventSubscription?.cancel();
@@ -238,12 +247,14 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       case 'message.updated':
         if (sseEvent.data != null) {
           try {
-            final message = OpenCodeMessage.fromJson(sseEvent.data!);
-            _updateOrAddMessage(message);
-            _emitCurrentState(emit);
+            final properties = sseEvent.data!['properties'] as Map<String, dynamic>?;
+            if (properties != null) {
+              final message = OpenCodeMessage.fromJson(properties);
+              _updateOrAddMessage(message);
+              _emitCurrentState(emit);
+            }
           } catch (e) {
             print('❌ [ChatBloc] Failed to parse message update: $e');
-            // Don't emit an error state, just log it.
           }
         }
         break;
@@ -442,7 +453,13 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     final messageIndex = _messageIndex[message.id];
 
     if (messageIndex != null && messageIndex < _messages.length) {
-      // Update existing message
+      final existingMessage = _messages[messageIndex];
+
+      if (message.parts.isEmpty && existingMessage.parts.isNotEmpty) {
+        print('🚫 [ChatBloc] Ignoring message.updated with empty parts - keeping existing content for: ${message.id}');
+        return;
+      }
+
       _messages[messageIndex] = message;
       print('🔍 [ChatBloc] Updated existing message: ${message.id}');
     } else {
@@ -491,6 +508,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       final delta = partData['delta'] as String?; // Extract delta for streaming
 
       if (messageId != null) {
+        print('🔎 [ChatBloc] Looking for message: $messageId in index: ${_messageIndex.keys.toList()}');
         final messageIndex = _messageIndex[messageId];
 
         if (messageIndex != null && messageIndex < _messages.length) {
@@ -596,6 +614,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
 
           _messages.add(newMessage);
           _messageIndex[newMessage.id] = _messages.length - 1;
+          print('✨ [ChatBloc] Created new streaming message: ${newMessage.id}, total messages: ${_messages.length}');
           _enforceMessageLimit();
         }
       }
@@ -607,8 +626,10 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
   }
 
   void _handleSessionIdle() {
+    print('💤 [ChatBloc] _handleSessionIdle called, messages count: ${_messages.length}');
     if (_messages.isNotEmpty) {
       final lastMessage = _messages.last;
+      print('💤 [ChatBloc] Last message: id=${lastMessage.id}, role=${lastMessage.role}, isStreaming=${lastMessage.isStreaming}');
       if (lastMessage.role == 'assistant' && lastMessage.isStreaming) {
         print('🔄 Marking assistant message as completed: ${lastMessage.id}');
         final completedMessage = lastMessage.copyWith(

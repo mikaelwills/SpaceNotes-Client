@@ -13,8 +13,11 @@ class OpenCodeClient {
   final ConfigCubit _configCubit;
   String? _providerID;
   String? _modelID;
+  List<String> _availableAgents = [];
 
   OpenCodeClient({required ConfigCubit configCubit}) : _configCubit = configCubit;
+
+  List<String> get availableAgents => _availableAgents;
 
   String get _baseUrl => _configCubit.baseUrl;
 
@@ -216,22 +219,29 @@ class OpenCodeClient {
       }
 
       final Map<String, dynamic> body = {
-        'model': {
-          'providerID': _providerID,
-          'modelID': _modelID,
-        },
         'parts': parts,
       };
-      if (agent != null && agent.isNotEmpty) {
-        body['agent'] = agent;
+      if (_providerID != null && _modelID != null) {
+        body['model'] = {
+          'providerID': _providerID,
+          'modelID': _modelID,
+        };
+      }
+      if (_availableAgents.isNotEmpty) {
+        body['agent'] = _availableAgents.first;
       }
       final requestBody = json.encode(body);
+      print('📤 [OpenCodeClient] Sending to: $uri');
+      print('📤 [OpenCodeClient] Body: $requestBody');
 
       final response = await _client.post(
         uri,
         headers: {'Content-Type': 'application/json'},
         body: requestBody,
       ).timeout(const Duration(seconds: 30));
+
+      print('📤 [OpenCodeClient] Response status: ${response.statusCode}');
+      print('📤 [OpenCodeClient] Response body: ${response.body}');
 
       if (response.statusCode == 200) {
         if (response.body.isEmpty) {
@@ -520,7 +530,12 @@ class OpenCodeClient {
     _modelID = modelID;
   }
 
-  /// Get available agents from OpenCode
+  Future<List<String>> fetchAndStoreAgents() async {
+    _availableAgents = await getAgents();
+    print('🤖 [OpenCodeClient] Available agents: $_availableAgents');
+    return _availableAgents;
+  }
+
   Future<List<String>> getAgents() async {
     try {
       final uri = Uri.parse('$_baseUrl/agents');
@@ -531,7 +546,6 @@ class OpenCodeClient {
 
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
-        // Agents may be returned as objects with 'id' or 'name', or as strings
         return data.map((agent) {
           if (agent is String) return agent;
           if (agent is Map) return agent['id']?.toString() ?? agent['name']?.toString() ?? '';

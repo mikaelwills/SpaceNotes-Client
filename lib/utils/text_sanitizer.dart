@@ -22,13 +22,12 @@ class TextSanitizer {
 
     String result;
     try {
-      if (!_containsProblematicChars(text)) {
-        _cache[cacheKey] = text;
-        return text;
-      }
-      result = preserveMarkdown ? _sanitizeForMarkdown(text) : _sanitizeForPlainText(text);
-    } catch (e) {
       result = _sanitizeCodeUnits(text);
+      if (!preserveMarkdown) {
+        result = result.replaceAll(_plainTextControlCharsRegex, '');
+      }
+    } catch (e) {
+      result = sanitizeToAscii(text);
     }
 
     _cacheResult(cacheKey, result);
@@ -38,7 +37,8 @@ class TextSanitizer {
   static String _sanitizeCodeUnits(String text) {
     final buffer = StringBuffer();
     final codeUnits = text.codeUnits;
-    for (int i = 0; i < codeUnits.length; i++) {
+    int i = 0;
+    while (i < codeUnits.length) {
       final unit = codeUnits[i];
       if (unit >= 0xD800 && unit <= 0xDBFF) {
         if (i + 1 < codeUnits.length) {
@@ -46,19 +46,27 @@ class TextSanitizer {
           if (nextUnit >= 0xDC00 && nextUnit <= 0xDFFF) {
             buffer.writeCharCode(unit);
             buffer.writeCharCode(nextUnit);
-            i++;
+            i += 2;
             continue;
           }
         }
+        i++;
         continue;
       }
       if (unit >= 0xDC00 && unit <= 0xDFFF) {
+        i++;
         continue;
       }
       if (unit < 0x20 && unit != 0x09 && unit != 0x0A && unit != 0x0D) {
+        i++;
+        continue;
+      }
+      if (unit == 0xFFFE || unit == 0xFFFF) {
+        i++;
         continue;
       }
       buffer.writeCharCode(unit);
+      i++;
     }
     return buffer.toString();
   }

@@ -11,7 +11,8 @@
       "mcp__spacenotes-mcp__list_notes_in_folder",
       "mcp__spacenotes-mcp__move_folder",
       "mcp__spacenotes-mcp__move_note",
-      "mcp__spacenotes-mcp__prepend_to_note"
+      "mcp__spacenotes-mcp__prepend_to_note",
+      "Bash(dart test:*)"
     ],
     "deny": [],
     "ask": []
