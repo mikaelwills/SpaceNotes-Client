@@ -27,6 +27,11 @@ void main() async {
   final configCubit = ConfigCubit();
   await configCubit.initialize();
 
+  // Try to auto-configure OpenCode from server config (web only)
+  if (kIsWeb) {
+    await WebConfigService.tryAutoConfigureOpenCode(configCubit);
+  }
+
   // Create OpenCodeClient with ConfigCubit
   final openCodeClient = OpenCodeClient(configCubit: configCubit);
 
