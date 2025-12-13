@@ -140,11 +140,12 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
         messages: List.from(_messages),
       ));
 
-      // Send message via MessageQueueService using the actual message ID (non-blocking)
       messageQueueService.sendMessage(
         messageId: messageId,
         sessionId: sessionId,
         content: event.message,
+        imageBase64: event.imageBase64,
+        imageMimeType: event.imageMimeType,
         onStatusChange: (status) {
           _updateMessageStatus(messageId, status);
           add(MessageStatusChanged(status));
@@ -568,10 +569,12 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
 
           _messages[messageIndex] = updatedMessage;
         } else {
-          // Check for duplicate content before creating new message
+          // Check if this is just an echo of user input - if so, create the message
+          // but with empty content so subsequent real content can be added
+          String? initialContent = partText;
           if (partText != null && _isDuplicateContent(partText, 'assistant')) {
-            print('🚫 Skipping duplicate streaming message: $messageId');
-            return false;
+            print('🚫 Initial content is echo, creating empty message for: $messageId');
+            initialContent = null; // Don't use echo content, wait for real content
           }
 
           // Create a new streaming message
@@ -584,7 +587,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
               MessagePart(
                 id: partId ?? DateTime.now().millisecondsSinceEpoch.toString(),
                 type: partType ?? 'text',
-                content: partText,
+                content: initialContent,
                 metadata: partData['time'] as Map<String, dynamic>?,
               ),
             ],

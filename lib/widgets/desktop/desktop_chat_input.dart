@@ -1,6 +1,8 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../theme/spacenotes_theme.dart';
 import '../../providers/connection_providers.dart';
 import '../../blocs/chat/chat_bloc.dart';
@@ -17,6 +19,8 @@ class DesktopChatInput extends ConsumerStatefulWidget {
 
 class _DesktopChatInputState extends ConsumerState<DesktopChatInput> {
   final TextEditingController _controller = TextEditingController();
+  String? _pendingImageBase64;
+  String? _pendingImageMimeType;
 
   @override
   void dispose() {
@@ -26,10 +30,54 @@ class _DesktopChatInputState extends ConsumerState<DesktopChatInput> {
 
   void _onSend() {
     final message = _controller.text.trim();
-    if (message.isEmpty) return;
+    if (message.isEmpty && _pendingImageBase64 == null) return;
 
-    context.read<ChatBloc>().add(SendChatMessage(message));
+    context.read<ChatBloc>().add(SendChatMessage(
+      message.isEmpty ? 'What is in this image?' : message,
+      imageBase64: _pendingImageBase64,
+      imageMimeType: _pendingImageMimeType,
+    ));
     _controller.clear();
+    setState(() {
+      _pendingImageBase64 = null;
+      _pendingImageMimeType = null;
+    });
+  }
+
+  Future<void> _onPickImage() async {
+    try {
+      final picker = ImagePicker();
+      final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+      if (image == null) return;
+
+      debugPrint('[DesktopChatInput] Image selected: ${image.path}, name: ${image.name}');
+
+      final bytes = await image.readAsBytes();
+      debugPrint('[DesktopChatInput] Read ${bytes.length} bytes');
+
+      final base64 = base64Encode(bytes);
+      debugPrint('[DesktopChatInput] Base64 length: ${base64.length}');
+
+      final extension = image.name.split('.').last.toLowerCase();
+      debugPrint('[DesktopChatInput] Extension: $extension');
+
+      final mimeType = switch (extension) {
+        'jpg' || 'jpeg' => 'image/jpeg',
+        'png' => 'image/png',
+        'gif' => 'image/gif',
+        'webp' => 'image/webp',
+        _ => 'image/jpeg',
+      };
+      debugPrint('[DesktopChatInput] MimeType: $mimeType');
+
+      setState(() {
+        _pendingImageBase64 = base64;
+        _pendingImageMimeType = mimeType;
+      });
+    } catch (e, stack) {
+      debugPrint('[DesktopChatInput] Error picking image: $e');
+      debugPrint('[DesktopChatInput] Stack: $stack');
+    }
   }
 
   @override
@@ -62,6 +110,7 @@ class _DesktopChatInputState extends ConsumerState<DesktopChatInput> {
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 800),
               child: Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Expanded(
                     child: Container(
@@ -74,7 +123,15 @@ class _DesktopChatInputState extends ConsumerState<DesktopChatInput> {
                         height: 48,
                         hintText: 'Ask AI...',
                         onChanged: (_) {},
-                        onSubmitted: _onSend,
+                        showImagePicker: true,
+                        onImagePickerTap: _onPickImage,
+                        hasImageAttached: _pendingImageBase64 != null,
+                        onClearImage: () {
+                          setState(() {
+                            _pendingImageBase64 = null;
+                            _pendingImageMimeType = null;
+                          });
+                        },
                       ),
                     ),
                   ),

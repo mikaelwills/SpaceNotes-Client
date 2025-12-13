@@ -6,11 +6,12 @@ import '../blocs/session/session_bloc.dart';
 import '../blocs/session/session_state.dart';
 import '../models/opencode_message.dart';
 
-/// Represents a queued message with retry metadata
 class QueuedMessage {
   final String messageId;
   final String sessionId;
   final String content;
+  final String? imageBase64;
+  final String? imageMimeType;
   final DateTime queuedAt;
   final Function(MessageSendStatus) onStatusChange;
   int retryCount;
@@ -20,6 +21,8 @@ class QueuedMessage {
     required this.messageId,
     required this.sessionId,
     required this.content,
+    this.imageBase64,
+    this.imageMimeType,
     required this.queuedAt,
     required this.onStatusChange,
     this.retryCount = 0,
@@ -122,32 +125,40 @@ class MessageQueueService {
     });
   }
 
-  /// Send a message, queuing if offline or sending directly if online
   Future<void> sendMessage({
     required String messageId,
     required String sessionId,
     required String content,
     required Function(MessageSendStatus) onStatusChange,
+    String? imageBase64,
+    String? imageMimeType,
   }) async {
     final connectionState = connectionBloc.state;
     print('📤 [MessageQueue] Sending message $messageId: "$content" (session: $sessionId, connectionState: ${connectionState.runtimeType})');
-    
+
     if (connectionState is Connected) {
-      // Online: send directly
       print('📬 [MessageQueue] Online - sending message $messageId directly');
       onStatusChange(MessageSendStatus.sending);
-      await _sendMessageDirect(messageId, sessionId, content, onStatusChange);
+      await _sendMessageDirect(
+        messageId,
+        sessionId,
+        content,
+        onStatusChange,
+        imageBase64: imageBase64,
+        imageMimeType: imageMimeType,
+      );
     } else {
-      // Offline: add to queue
       print('📬 [MessageQueue] Offline (${connectionState.runtimeType}) - queuing message $messageId');
       final queuedMessage = QueuedMessage(
         messageId: messageId,
         sessionId: sessionId,
         content: content,
+        imageBase64: imageBase64,
+        imageMimeType: imageMimeType,
         queuedAt: DateTime.now(),
         onStatusChange: onStatusChange,
       );
-      
+
       _messageQueue.add(queuedMessage);
       onStatusChange(MessageSendStatus.queued);
       print('📬 [MessageQueue] Message $messageId queued. Queue size: ${_messageQueue.length}');
@@ -179,45 +190,43 @@ class MessageQueueService {
     await _sendMessageDirect(messageId, sessionId, content, onStatusChange);
   }
 
-  /// Process all queued messages when connection is restored
   Future<void> _processQueue() async {
     if (_messageQueue.isEmpty) {
       return;
     }
 
-    // Process messages one by one to avoid overwhelming the server
     while (_messageQueue.isNotEmpty) {
       final message = _messageQueue.removeFirst();
       print('📬 [MessageQueue] Processing queued message: "${message.content}"');
-      
+
       message.onStatusChange(MessageSendStatus.sending);
       await _sendMessageDirect(
         message.messageId,
-        message.sessionId, 
+        message.sessionId,
         message.content,
         message.onStatusChange,
+        imageBase64: message.imageBase64,
+        imageMimeType: message.imageMimeType,
       );
-      
-      // Small delay between messages to avoid overwhelming server
+
       await Future.delayed(const Duration(milliseconds: 200));
     }
   }
 
-  /// Send message directly via SessionBloc using Future approach (no subscriptions)
   Future<void> _sendMessageDirect(
     String messageId,
     String sessionId,
     String content,
-    Function(MessageSendStatus) onStatusChange,
-  ) async {
+    Function(MessageSendStatus) onStatusChange, {
+    String? imageBase64,
+    String? imageMimeType,
+  }) async {
     final startTime = DateTime.now();
     print('📤 [MessageQueue] Message $messageId - calling SessionBloc.sendMessageDirect at ${startTime.millisecondsSinceEpoch}');
-    
-    // Set initial status
+
     onStatusChange(MessageSendStatus.sending);
     print('📊 [MessageQueue] Message $messageId status → sending (reason: starting SessionBloc call)');
-    
-    // Start timeout timer (will be cancelled if SSE streaming starts)
+
     final timeoutTimer = Timer(const Duration(seconds: 10), () {
       if (_pendingMessageTimeouts.containsKey(messageId)) {
         final elapsed = DateTime.now().difference(startTime).inMilliseconds;
@@ -225,14 +234,17 @@ class MessageQueueService {
         _markMessageFailed(messageId, 'Timeout - no response from server');
       }
     });
-    
-    // Track this pending message
+
     _pendingMessageTimeouts[messageId] = timeoutTimer;
     _pendingCallbacks[messageId] = onStatusChange;
     print('📬 [MessageQueue] Message $messageId - tracking as pending with timeout');
-    
-    // Start HTTP request (don't await it)
-    final httpFuture = sessionBloc.sendMessageDirect(sessionId, content);
+
+    final httpFuture = sessionBloc.sendMessageDirect(
+      sessionId,
+      content,
+      imageBase64: imageBase64,
+      imageMimeType: imageMimeType,
+    );
     
     // Handle the eventual HTTP completion (but don't wait for it)
     httpFuture.then((_) {

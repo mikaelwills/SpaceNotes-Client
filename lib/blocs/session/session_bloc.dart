@@ -220,7 +220,13 @@ class SessionBloc extends Bloc<SessionEvent, SessionState> {
 
   /// Send message directly without using events - for MessageQueueService
   /// Returns Future that completes on success or throws on error
-  Future<void> sendMessageDirect(String sessionId, String message, {String? agent}) async {
+  Future<void> sendMessageDirect(
+    String sessionId,
+    String message, {
+    String? agent,
+    String? imageBase64,
+    String? imageMimeType,
+  }) async {
 
     // Same validation logic as _onSendMessage
     if (sessionId.trim().isEmpty) {
@@ -251,7 +257,13 @@ class SessionBloc extends Bloc<SessionEvent, SessionState> {
     }
 
     try {
-      await openCodeClient.sendMessage(sessionId, message, agent: effectiveAgent);
+      await openCodeClient.sendMessage(
+        sessionId,
+        message,
+        agent: effectiveAgent,
+        imageBase64: imageBase64,
+        imageMimeType: imageMimeType,
+      );
 
       // Update session to active state (same as event handler)
       final updatedSession = _currentSession!.copyWith(

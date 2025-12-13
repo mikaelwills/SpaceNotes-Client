@@ -193,17 +193,33 @@ class OpenCodeClient {
     }
   }
 
-  Future<OpenCodeMessage> sendMessage(String sessionId, String message, {String? agent}) async {
+  Future<OpenCodeMessage> sendMessage(
+    String sessionId,
+    String message, {
+    String? agent,
+    String? imageBase64,
+    String? imageMimeType,
+  }) async {
     try {
       final uri = Uri.parse('$_baseUrl/session/$sessionId/message');
+      final List<Map<String, dynamic>> parts = [
+        {'type': 'text', 'text': message}
+      ];
+
+      if (imageBase64 != null && imageMimeType != null) {
+        parts.add({
+          'type': 'file',
+          'mime': imageMimeType,
+          'url': 'data:$imageMimeType;base64,$imageBase64',
+        });
+      }
+
       final Map<String, dynamic> body = {
         'model': {
           'providerID': _providerID,
           'modelID': _modelID,
         },
-        'parts': [
-          {'type': 'text', 'text': message}
-        ]
+        'parts': parts,
       };
       if (agent != null && agent.isNotEmpty) {
         body['agent'] = agent;
