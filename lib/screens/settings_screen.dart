@@ -157,14 +157,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             fontWeight: FontWeight.w500,
           ),
         ),
-        const SizedBox(height: 8),
-        Text(
-          'Your notes database connection',
-          style: TextStyle(
-            fontSize: 12,
-            color: SpaceNotesTheme.text.withValues(alpha: 0.6),
-          ),
-        ),
         const SizedBox(height: 16),
         TerminalIPInput(
           ipController: _spaceNotesIpController,
@@ -194,14 +186,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             fontSize: 16,
             color: SpaceNotesTheme.text,
             fontWeight: FontWeight.w500,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          'AI assistant connection. We recommend hosting OpenCode on the same server as SpaceNotes, then adding the SpaceNotes MCP to OpenCode.',
-          style: TextStyle(
-            fontSize: 12,
-            color: SpaceNotesTheme.text.withValues(alpha: 0.6),
           ),
         ),
         const SizedBox(height: 16),

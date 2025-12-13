@@ -47,14 +47,6 @@ GoRouter createAppRouter(ProviderContainer container) {
           ),
         ),
         GoRoute(
-          path: '/sessions',
-          name: 'sessions',
-          pageBuilder: (context, state) => _buildFadeTransitionPage(
-            key: state.pageKey,
-            child: const SessionsScreen(),
-          ),
-        ),
-        GoRoute(
           path: '/settings',
           name: 'settings',
           pageBuilder: (context, state) => _buildFadeTransitionPage(
@@ -72,7 +64,10 @@ GoRouter createAppRouter(ProviderContainer container) {
         ),
         // Home shell (shared bottom input area)
         ShellRoute(
-          builder: (context, state, child) => HomeScreen(child: child),
+          pageBuilder: (context, state, child) => _buildFadeTransitionPage(
+            key: state.pageKey,
+            child: HomeScreen(child: child),
+          ),
           routes: [
             GoRoute(
               path: '/notes',
@@ -88,6 +83,14 @@ GoRouter createAppRouter(ProviderContainer container) {
               pageBuilder: (context, state) => _buildFadeTransitionPage(
                 key: state.pageKey,
                 child: const ChatView(),
+              ),
+            ),
+            GoRoute(
+              path: '/notes/sessions',
+              name: 'sessions',
+              pageBuilder: (context, state) => _buildFadeTransitionPage(
+                key: state.pageKey,
+                child: const SessionsScreen(),
               ),
             ),
             GoRoute(
@@ -149,9 +152,10 @@ CustomTransitionPage<void> _buildFadeTransitionPage({
     key: key,
     child: child,
     transitionDuration: const Duration(milliseconds: 50),
+    reverseTransitionDuration: const Duration(milliseconds: 50),
     transitionsBuilder: (context, animation, secondaryAnimation, child) {
       return FadeTransition(
-        opacity: CurveTween(curve: Curves.easeInOutCirc).animate(animation),
+        opacity: animation,
         child: child,
       );
     },

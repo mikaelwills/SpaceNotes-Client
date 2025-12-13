@@ -75,6 +75,11 @@ class MobileNavBar extends ConsumerWidget {
               ],
 
               if (currentLocation.startsWith('/notes/folder/')) ...[
+                GestureDetector(
+                  onTap: () => _navigateToParentFolder(context, _extractFullFolderPath(currentLocation)),
+                  child: const Icon(Icons.arrow_back, color: SpaceNotesTheme.text),
+                ),
+                const SizedBox(width: 16),
                 Expanded(
                   child: _EditableFolderName(
                     folderPath: _extractFullFolderPath(currentLocation),
@@ -94,33 +99,49 @@ class MobileNavBar extends ConsumerWidget {
                 const SizedBox(width: 16),
               ],
 
-              if (currentLocation.startsWith('/notes/chat') && currentLocation != '/sessions') ...[
+              if (currentLocation.startsWith('/notes/chat')) ...[
                 GestureDetector(
-                  onTap: () => context.go("/sessions"),
-                  child: const Icon(Icons.list_outlined,
+                  onTap: () => context.go("/notes"),
+                  child: const Icon(Icons.arrow_back,
                       color: SpaceNotesTheme.text),
                 ),
-                const SizedBox(width: 20),
+                const Spacer(),
                 GestureDetector(
                   onTap: () => _onNewSessionPressed(context),
                   child: const Icon(Icons.create_outlined,
                       color: SpaceNotesTheme.text),
                 ),
+                const SizedBox(width: 20),
+                GestureDetector(
+                  onTap: () => context.go("/notes/sessions"),
+                  child: const Icon(Icons.list_outlined,
+                      color: SpaceNotesTheme.text),
+                ),
+                const SizedBox(width: 20),
+              ],
+
+              if (currentLocation == '/notes/sessions') ...[
+                GestureDetector(
+                  onTap: () => context.go("/notes/chat"),
+                  child: const Icon(Icons.arrow_back,
+                      color: SpaceNotesTheme.text),
+                ),
                 const Spacer(),
               ],
 
-              if (!currentLocation.startsWith('/notes/folder/') &&
-                  !isOnNote &&
-                  !currentLocation.startsWith('/notes/chat'))
-                const Spacer(),
-
-              if (!isOnNote && !currentLocation.startsWith('/notes/chat')) ...[
+              if (!isOnNote && !currentLocation.startsWith('/notes/chat') && currentLocation != '/notes/sessions' && currentLocation != '/settings') ...[
                 GestureDetector(
                   onTap: () => context.go("/notes/chat"),
                   child: const Icon(Icons.chat_bubble_outline, color: SpaceNotesTheme.text),
                 ),
                 const SizedBox(width: 16),
               ],
+
+              if (!currentLocation.startsWith('/notes/folder/') &&
+                  !isOnNote &&
+                  !currentLocation.startsWith('/notes/chat') &&
+                  currentLocation != '/notes/sessions')
+                const Spacer(),
               GestureDetector(
                 onTap: () => context.go("/settings"),
                 child: const Icon(Icons.settings, color: SpaceNotesTheme.text),
@@ -132,6 +153,22 @@ class MobileNavBar extends ConsumerWidget {
         );
       },
     );
+  }
+
+  void _navigateToParentFolder(BuildContext context, String currentPath) {
+    if (currentPath.isEmpty) {
+      context.go('/notes');
+      return;
+    }
+
+    final lastSlash = currentPath.lastIndexOf('/');
+    if (lastSlash == -1) {
+      context.go('/notes');
+    } else {
+      final parentPath = currentPath.substring(0, lastSlash);
+      final encodedPath = parentPath.split('/').map(Uri.encodeComponent).join('/');
+      context.go('/notes/folder/$encodedPath');
+    }
   }
 
   String _extractFullFolderPath(String location) {

@@ -147,25 +147,16 @@ class _SessionsScreenState extends State<SessionsScreen> {
                           },
                         ),
                       ),
-                      Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Row(
-                          children: [
-                            _buildBackButton(),
-                            if (state.sessions.isNotEmpty) ...[
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: TerminalButton(
-                                  command: 'delete_all_sessions',
-                                  type: TerminalButtonType.danger,
-                                  width: double.infinity,
-                                  onPressed: _deleteAllSessions,
-                                ),
-                              ),
-                            ],
-                          ],
+                      if (state.sessions.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: TerminalButton(
+                            command: 'delete_all_sessions',
+                            type: TerminalButtonType.danger,
+                            width: double.infinity,
+                            onPressed: _deleteAllSessions,
+                          ),
                         ),
-                      ),
                     ],
                   );
                 }
@@ -176,26 +167,6 @@ class _SessionsScreenState extends State<SessionsScreen> {
           return const SizedBox.shrink();
         },
       );
-  }
-
-  Widget _buildBackButton() {
-    return Container(
-      width: 48,
-      height: 48,
-      decoration: const BoxDecoration(
-        color: Color(0xFF2A2A2A),
-        shape: BoxShape.circle,
-      ),
-      child: IconButton(
-        onPressed: () => context.go('/notes'),
-        tooltip: 'Back',
-        icon: const Icon(
-          Icons.arrow_back,
-          size: 24,
-          color: SpaceNotesTheme.primary,
-        ),
-      ),
-    );
   }
 
   void _selectSession(BuildContext context, Session session) {

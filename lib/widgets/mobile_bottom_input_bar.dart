@@ -124,20 +124,10 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
 
   Widget _buildBackButton(HomeViewType viewType, String folderPath) {
     if (viewType == HomeViewType.chat) {
-      return _buildCircularButton(
-        onPressed: _exitChat,
-        tooltip: 'Exit AI chat',
-        icon: Icons.arrow_back,
-      );
+      return const SizedBox.shrink();
     } else if (viewType == HomeViewType.note) {
       return _buildCircularButton(
         onPressed: _navigateBackFromNote,
-        tooltip: 'Go back',
-        icon: Icons.arrow_back,
-      );
-    } else if (folderPath.isNotEmpty) {
-      return _buildCircularButton(
-        onPressed: () => _navigateToParentFolder(folderPath),
         tooltip: 'Go back',
         icon: Icons.arrow_back,
       );
@@ -410,7 +400,8 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
     final timestamp =
         '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}-${now.hour.toString().padLeft(2, '0')}-${now.minute.toString().padLeft(2, '0')}-${now.second.toString().padLeft(2, '0')}';
 
-    final notePath = 'All Notes/Untitled-$timestamp.md';
+    final basePath = folderPath.isEmpty ? 'All Notes' : folderPath;
+    final notePath = '$basePath/Untitled-$timestamp.md';
 
     final repo = ref.read(notesRepositoryProvider);
     final noteId = await repo.createNote(notePath, '');
