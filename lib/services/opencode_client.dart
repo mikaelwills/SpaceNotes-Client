@@ -231,17 +231,12 @@ class OpenCodeClient {
         body['agent'] = _availableAgents.first;
       }
       final requestBody = json.encode(body);
-      print('📤 [OpenCodeClient] Sending to: $uri');
-      print('📤 [OpenCodeClient] Body: $requestBody');
 
       final response = await _client.post(
         uri,
         headers: {'Content-Type': 'application/json'},
         body: requestBody,
       ).timeout(const Duration(seconds: 30));
-
-      print('📤 [OpenCodeClient] Response status: ${response.statusCode}');
-      print('📤 [OpenCodeClient] Response body: ${response.body}');
 
       if (response.statusCode == 200) {
         if (response.body.isEmpty) {
@@ -532,7 +527,6 @@ class OpenCodeClient {
 
   Future<List<String>> fetchAndStoreAgents() async {
     _availableAgents = await getAgents();
-    print('🤖 [OpenCodeClient] Available agents: $_availableAgents');
     return _availableAgents;
   }
 

@@ -90,21 +90,17 @@ class MessageQueueService {
     }
   }
   
-  /// Mark a message as failed
   void _markMessageFailed(String messageId, String reason) {
     final callback = _pendingCallbacks[messageId];
     if (callback != null) {
-      print('📊 [MessageQueue] Message $messageId status → failed (reason: $reason)');
       callback(MessageSendStatus.failed);
     }
     _cleanupPendingMessage(messageId);
   }
-  
-  /// Clean up tracking for a message
+
   void _cleanupPendingMessage(String messageId) {
     _pendingMessageTimeouts.remove(messageId)?.cancel();
     _pendingCallbacks.remove(messageId);
-    print('📬 [MessageQueue] Cleaned up pending message: $messageId');
   }
 
   /// Initialize listeners for connection and session state changes
@@ -116,10 +112,8 @@ class MessageQueueService {
       }
     });
     
-    // Listen for session state changes to clear queue when session becomes invalid
     _sessionSubscription = sessionBloc.stream.listen((sessionState) {
       if (sessionState is SessionError || sessionState is SessionNotFound) {
-        print('📬 [MessageQueue] Session invalid - clearing ${_messageQueue.length} queued messages');
         _messageQueue.clear();
       }
     });
@@ -134,10 +128,8 @@ class MessageQueueService {
     String? imageMimeType,
   }) async {
     final connectionState = connectionBloc.state;
-    print('📤 [MessageQueue] Sending message $messageId: "$content" (session: $sessionId, connectionState: ${connectionState.runtimeType})');
 
     if (connectionState is Connected) {
-      print('📬 [MessageQueue] Online - sending message $messageId directly');
       onStatusChange(MessageSendStatus.sending);
       await _sendMessageDirect(
         messageId,
@@ -148,7 +140,6 @@ class MessageQueueService {
         imageMimeType: imageMimeType,
       );
     } else {
-      print('📬 [MessageQueue] Offline (${connectionState.runtimeType}) - queuing message $messageId');
       final queuedMessage = QueuedMessage(
         messageId: messageId,
         sessionId: sessionId,
@@ -161,31 +152,21 @@ class MessageQueueService {
 
       _messageQueue.add(queuedMessage);
       onStatusChange(MessageSendStatus.queued);
-      print('📬 [MessageQueue] Message $messageId queued. Queue size: ${_messageQueue.length}');
     }
   }
 
-  /// Remove a message from the queue (user-requested deletion)
   bool removeFromQueue(String messageId) {
     final initialSize = _messageQueue.length;
     _messageQueue.removeWhere((msg) => msg.messageId == messageId);
-    final removed = _messageQueue.length < initialSize;
-    
-    if (removed) {
-      print('📬 [MessageQueue] Removed message from queue: $messageId');
-    }
-    
-    return removed;
+    return _messageQueue.length < initialSize;
   }
 
-  /// Retry a failed message manually
   Future<void> retryMessage({
     required String messageId,
     required String sessionId,
     required String content,
     required Function(MessageSendStatus) onStatusChange,
   }) async {
-    print('📬 [MessageQueue] Manual retry requested for message: "$content"');
     onStatusChange(MessageSendStatus.sending);
     await _sendMessageDirect(messageId, sessionId, content, onStatusChange);
   }
@@ -197,7 +178,6 @@ class MessageQueueService {
 
     while (_messageQueue.isNotEmpty) {
       final message = _messageQueue.removeFirst();
-      print('📬 [MessageQueue] Processing queued message: "${message.content}"');
 
       message.onStatusChange(MessageSendStatus.sending);
       await _sendMessageDirect(
@@ -221,23 +201,16 @@ class MessageQueueService {
     String? imageBase64,
     String? imageMimeType,
   }) async {
-    final startTime = DateTime.now();
-    print('📤 [MessageQueue] Message $messageId - calling SessionBloc.sendMessageDirect at ${startTime.millisecondsSinceEpoch}');
-
     onStatusChange(MessageSendStatus.sending);
-    print('📊 [MessageQueue] Message $messageId status → sending (reason: starting SessionBloc call)');
 
     final timeoutTimer = Timer(const Duration(seconds: 10), () {
       if (_pendingMessageTimeouts.containsKey(messageId)) {
-        final elapsed = DateTime.now().difference(startTime).inMilliseconds;
-        print('⏱️ [MessageQueue] Message $messageId - timeout after ${elapsed}ms (no SSE response)');
         _markMessageFailed(messageId, 'Timeout - no response from server');
       }
     });
 
     _pendingMessageTimeouts[messageId] = timeoutTimer;
     _pendingCallbacks[messageId] = onStatusChange;
-    print('📬 [MessageQueue] Message $messageId - tracking as pending with timeout');
 
     final httpFuture = sessionBloc.sendMessageDirect(
       sessionId,
@@ -245,44 +218,31 @@ class MessageQueueService {
       imageBase64: imageBase64,
       imageMimeType: imageMimeType,
     );
-    
-    // Handle the eventual HTTP completion (but don't wait for it)
+
     httpFuture.then((_) {
-      final elapsed = DateTime.now().difference(startTime).inMilliseconds;
-      print('📤 [MessageQueue] Message $messageId - HTTP completed successfully in ${elapsed}ms');
-      // Don't update status here - SSE streaming will have already handled it
       _cleanupPendingMessage(messageId);
     }).catchError((error) {
-      final elapsed = DateTime.now().difference(startTime).inMilliseconds;
-      print('❌ [MessageQueue] Message $messageId - HTTP failed after ${elapsed}ms: $error');
-      // Only mark as failed if not already handled by SSE or timeout
       if (_pendingMessageTimeouts.containsKey(messageId)) {
         _markMessageFailed(messageId, 'HTTP error: ${error.runtimeType}: $error');
       }
     });
   }
 
-  /// Get current queue size
   int get queueSize => _messageQueue.length;
 
-  /// Check if service is currently connected
   bool get isConnected => connectionBloc.state is Connected;
 
-  /// Dispose resources
   void dispose() {
     _connectionSubscription?.cancel();
     _sessionSubscription?.cancel();
     _chatBlocSubscription?.cancel();
     _retryTimer?.cancel();
     _messageQueue.clear();
-    
-    // Cancel any pending timeouts
+
     for (final timer in _pendingMessageTimeouts.values) {
       timer.cancel();
     }
     _pendingMessageTimeouts.clear();
     _pendingCallbacks.clear();
-    
-    print('📬 [MessageQueue] Service disposed');
   }
 }

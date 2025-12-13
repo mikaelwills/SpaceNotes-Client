@@ -46,19 +46,13 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     on<MessageStatusChanged>(_onMessageStatusChanged);
     on<RespondToPermission>(_onRespondToPermission);
     
-    // Listen to SessionBloc for session changes (permanent subscription)
     _permanentSessionSubscription = sessionBloc.stream.listen((sessionState) {
-      print('🔄 [ChatBloc] SessionBloc state changed: ${sessionState.runtimeType}');
       if (sessionState is SessionLoaded) {
-        print('🔄 [ChatBloc] Session loaded, triggering LoadMessagesForCurrentSession');
         add(LoadMessagesForCurrentSession());
       }
     });
 
-    // Check if session is already loaded (we may have missed the event)
-    print('🔄 [ChatBloc] Constructor - current SessionBloc state: ${sessionBloc.state.runtimeType}');
     if (sessionBloc.state is SessionLoaded) {
-      print('🔄 [ChatBloc] Session already loaded at construction, triggering LoadMessagesForCurrentSession');
       add(LoadMessagesForCurrentSession());
     }
   }
@@ -67,15 +61,11 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     LoadMessagesForCurrentSession event,
     Emitter<ChatState> emit,
   ) async {
-    print('📥 [ChatBloc] _onLoadMessagesForCurrentSession called');
     final currentSessionId = sessionBloc.currentSessionId;
 
     if (currentSessionId == null) {
-      print('📥 [ChatBloc] No current session ID, returning');
       return;
     }
-
-    print('📥 [ChatBloc] Loading messages for session: $currentSessionId');
 
     try {
       emit(ChatConnecting());
@@ -100,24 +90,15 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
   }
 
   void _startListening(String sessionId) {
-    print('🎧 [ChatBloc] _startListening called for session: $sessionId');
-
-    // Cancel any existing subscription
     _eventSubscription?.cancel();
 
-    // Subscribe to SSE events and handle them properly
     _eventSubscription = sseService.connectToEventStream().listen(
       (sseEvent) {
-        // Only process events for the current session
         if (sseEvent.sessionId == sessionBloc.currentSessionId) {
           add(SSEEventReceived(sseEvent));
         }
       },
-      onError: (error) {
-        // Errors are now handled by the ConnectionBloc and displayed in the ConnectionStatusRow.
-        // This avoids showing a full-screen error and breaking the chat UI.
-        print('❌ [ChatBloc] SSE stream error: $error');
-      },
+      onError: (error) {},
     );
   }
 
@@ -137,7 +118,6 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     final messageId = _addUserMessage(sessionId, event.message);
     
     if (messageId == null) {
-      print('📬 [ChatBloc] Failed to add user message - session mismatch');
       return;
     }
 
@@ -162,10 +142,8 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       );
       
     } catch (e) {
-      // On failure, update the message status to failed
       _updateMessageStatus(messageId, MessageSendStatus.failed);
-      print('📬 [ChatBloc] Failed to send message: ${e.toString()}');
-      emit(_createChatReadyState()); // Emit ready state to allow retry
+      emit(_createChatReadyState());
     }
   }
 
@@ -179,9 +157,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
           msg.sendStatus != MessageSendStatus.failed); // Don't skip failed messages that are being retried
 
       if (existingUserMessages.isNotEmpty) {
-        print(
-            '🔍 [ChatBloc] User message already exists, skipping duplicate: "$content"');
-        return existingUserMessages.first.id; // Return existing message ID
+        return existingUserMessages.first.id;
       }
 
       final messageId = DateTime.now().millisecondsSinceEpoch.toString();
@@ -203,9 +179,8 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       _messages.add(userMessage);
       _messageIndex[userMessage.id] = _messages.length - 1;
       _enforceMessageLimit();
-      print('🔥 [ChatBloc] Added user message: "$content"');
-      
-      return messageId; // Return the new message ID
+
+      return messageId;
     }
     return null; // Session mismatch
   }
@@ -236,9 +211,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
   ) {
     final sseEvent = event.event;
 
-    // Only process events for the current session
     if (sseEvent.sessionId != sessionBloc.currentSessionId) {
-      print('❌ [ChatBloc] Session ID mismatch - ignoring event');
       return;
     }
 
@@ -250,12 +223,15 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
             final properties = sseEvent.data!['properties'] as Map<String, dynamic>?;
             if (properties != null) {
               final message = OpenCodeMessage.fromJson(properties);
+
+              if (message.role == 'user') {
+                return;
+              }
+
               _updateOrAddMessage(message);
               _emitCurrentState(emit);
             }
-          } catch (e) {
-            print('❌ [ChatBloc] Failed to parse message update: $e');
-          }
+          } catch (e) {}
         }
         break;
       case 'message.part.updated':
@@ -267,7 +243,6 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
         }
         break;
       case 'session.idle':
-        print('💤 Session idle');
         _handleSessionIdle();
         _emitCurrentState(emit);
         break;
@@ -280,25 +255,18 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
               permission: permission,
               messages: List.from(_messages),
             ));
-          } catch (e) {
-            print('❌ [ChatBloc] Failed to parse permission request: $e');
-          }
+          } catch (e) {}
         }
         break;
       case 'session.status':
         if (sseEvent.data != null) {
           try {
             final status = SessionStatus.fromJson(sseEvent.data!);
-            print('📊 [ChatBloc] Session status: ${status.displayMessage}');
-
-            // Update current state with new status
             final currentState = state;
             if (currentState is ChatReady) {
               emit(currentState.copyWith(sessionStatus: status));
             }
-          } catch (e) {
-            print('❌ [ChatBloc] Failed to parse session status: $e');
-          }
+          } catch (e) {}
         }
         break;
       case 'storage.write':
@@ -358,9 +326,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     }
 
     final sessionId = currentState.sessionId;
-    print('📬 [ChatBloc] Retrying message: "${event.messageContent}"');
 
-    // Find the failed message to get its ID
     final failedMessageIndex = _messages.lastIndexWhere((msg) =>
         msg.role == 'user' &&
         msg.parts.isNotEmpty &&
@@ -368,7 +334,6 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
         msg.sendStatus == MessageSendStatus.failed);
 
     if (failedMessageIndex == -1) {
-      print('📬 [ChatBloc] Failed message not found for retry');
       return;
     }
 
@@ -391,9 +356,6 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     DeleteQueuedMessage event,
     Emitter<ChatState> emit,
   ) {
-    print('📬 [ChatBloc] Deleting queued message: "${event.messageContent}"');
-    
-    // Find the queued message to get its actual ID
     final queuedMessageIndex = _messages.lastIndexWhere((msg) =>
         msg.role == 'user' &&
         msg.parts.isNotEmpty &&
@@ -401,19 +363,13 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
         msg.sendStatus == MessageSendStatus.queued);
 
     if (queuedMessageIndex == -1) {
-      print('📬 [ChatBloc] Queued message not found for deletion');
       return;
     }
 
     final queuedMessage = _messages[queuedMessageIndex];
     final messageId = queuedMessage.id;
-    
-    // Remove from queue service using actual message ID
-    final removed = messageQueueService.removeFromQueue(messageId);
-    
-    if (removed) {
-      print('📬 [ChatBloc] Message removed from queue: $messageId');
-    }
+
+    messageQueueService.removeFromQueue(messageId);
     
     // Remove the message from local display
     _messages.removeAt(queuedMessageIndex);
@@ -430,22 +386,15 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
   ) {
     final status = event.status;
     
-    // Update UI based on status change
     if (status == MessageSendStatus.sent) {
       final actuallyStreaming = _messages.isNotEmpty &&
           _messages.last.role == 'assistant' &&
           _messages.last.isStreaming;
-      print('📬 [ChatBloc] Message sent successfully, actuallyStreaming=$actuallyStreaming');
       emit(_createChatReadyState(isStreaming: actuallyStreaming));
     } else if (status == MessageSendStatus.failed) {
-      print('📬 [ChatBloc] Message send failed');
-      emit(_createChatReadyState()); // Emit ready state to allow retry
-    } else if (status == MessageSendStatus.queued) {
-      print('📬 [ChatBloc] Message queued for offline sending');
       emit(_createChatReadyState());
-    } else if (status == MessageSendStatus.sending) {
-      print('📬 [ChatBloc] Message being sent');
-      // Keep current state, no need to emit
+    } else if (status == MessageSendStatus.queued) {
+      emit(_createChatReadyState());
     }
   }
 
@@ -456,14 +405,11 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       final existingMessage = _messages[messageIndex];
 
       if (message.parts.isEmpty && existingMessage.parts.isNotEmpty) {
-        print('🚫 [ChatBloc] Ignoring message.updated with empty parts - keeping existing content for: ${message.id}');
         return;
       }
 
       _messages[messageIndex] = message;
-      print('🔍 [ChatBloc] Updated existing message: ${message.id}');
     } else {
-      // Check for duplicate content before adding new message
       final messageContent = message.parts
           .where((part) => part.type == 'text')
           .map((part) => part.content ?? '')
@@ -471,15 +417,12 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
           .trim();
 
       if (_isDuplicateContent(messageContent, message.role)) {
-        print('🚫 Skipping duplicate message: ${message.id}');
         return;
       }
 
-      // Add new message
       _messages.add(message);
       _messageIndex[message.id] = _messages.length - 1;
       _enforceMessageLimit();
-      print('🔍 [ChatBloc] Added new message: ${message.id}');
     }
   }
 
@@ -496,7 +439,6 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       }
 
       if (partData == null) {
-        print('❌ [ChatBloc] No part data found in event');
         return false;
       }
 
@@ -508,7 +450,6 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       final delta = partData['delta'] as String?; // Extract delta for streaming
 
       if (messageId != null) {
-        print('🔎 [ChatBloc] Looking for message: $messageId in index: ${_messageIndex.keys.toList()}');
         final messageIndex = _messageIndex[messageId];
 
         if (messageIndex != null && messageIndex < _messages.length) {
@@ -522,12 +463,10 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
             // Update existing part
             final existingPart = updatedParts[partIndex];
 
-            // For text parts with delta, append the delta to existing content
             String? newContent;
             if (delta != null && partType == 'text') {
               final currentContent = existingPart.content ?? '';
               newContent = currentContent + delta;
-              print('📝 [ChatBloc] Appending delta: "${delta.substring(0, delta.length > 50 ? 50 : delta.length)}..."');
             } else {
               newContent = partText ?? existingPart.content;
             }
@@ -539,28 +478,23 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
               metadata: partData,
             );
           } else {
-            // Special handling for tool parts to prevent spam
             if (partType == 'tool') {
-              // Extract tool name from the 'tool' field (not 'name')
               final toolName = partData['tool'] as String?;
-              
-              // Look for existing tool parts - if no name, just check if any tool part exists
-              final existingToolIndex = toolName != null 
-                ? updatedParts.indexWhere((p) => 
+
+              final existingToolIndex = toolName != null
+                ? updatedParts.indexWhere((p) =>
                     p.type == 'tool' && p.metadata?['tool'] == toolName)
                 : updatedParts.indexWhere((p) => p.type == 'tool');
-              
+
               if (existingToolIndex != -1) {
-                // Update existing tool part instead of creating new one
                 updatedParts[existingToolIndex] = MessagePart(
                   id: updatedParts[existingToolIndex].id,
                   type: 'tool',
                   content: partText ?? updatedParts[existingToolIndex].content,
                   metadata: partData.isNotEmpty ? partData : updatedParts[existingToolIndex].metadata,
                 );
-                return true; // Skip adding new part
+                return true;
               } else {
-                // Add new tool part only if no duplicate exists
                 updatedParts.add(MessagePart(
                   id: partId ?? DateTime.now().millisecondsSinceEpoch.toString(),
                   type: 'tool',
@@ -569,7 +503,6 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
                 ));
               }
             } else {
-              // Add new non-tool part normally
               updatedParts.add(MessagePart(
                 id: partId ?? DateTime.now().millisecondsSinceEpoch.toString(),
                 type: partType ?? 'text',
@@ -579,7 +512,6 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
             }
           }
 
-          // Create updated message with streaming flag
           final updatedMessage = currentMessage.copyWith(
             parts: updatedParts,
             isStreaming: true,
@@ -587,8 +519,6 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
 
           _messages[messageIndex] = updatedMessage;
         } else {
-          // Check if this is a user message echo from the server
-          // User messages are already added locally, so skip server echoes
           if (partText != null) {
             final isUserEcho = _messages.any((msg) =>
                 msg.role == 'user' &&
@@ -596,12 +526,10 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
                 msg.parts.any((p) => p.type == 'text' && p.content == partText));
 
             if (isUserEcho) {
-              print('🚫 [ChatBloc] Skipping user message echo from server: "$partText"');
               return true;
             }
           }
 
-          // Create a new streaming message for assistant
           final newMessage = OpenCodeMessage(
             id: messageId,
             sessionId: sseEvent.sessionId ?? sessionBloc.currentSessionId ?? '',
@@ -620,42 +548,30 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
 
           _messages.add(newMessage);
           _messageIndex[newMessage.id] = _messages.length - 1;
-          print('✨ [ChatBloc] Created new streaming message: ${newMessage.id}, total messages: ${_messages.length}');
           _enforceMessageLimit();
         }
       }
       return true;
     } catch (e) {
-      print('❌ [ChatBloc] Failed to handle partial update: $e');
       return false;
     }
   }
 
   void _handleSessionIdle() {
-    print('💤 [ChatBloc] _handleSessionIdle called, messages count: ${_messages.length}');
     if (_messages.isNotEmpty) {
       final lastMessage = _messages.last;
-      print('💤 [ChatBloc] Last message: id=${lastMessage.id}, role=${lastMessage.role}, isStreaming=${lastMessage.isStreaming}');
       if (lastMessage.role == 'assistant' && lastMessage.isStreaming) {
-        print('🔄 Marking assistant message as completed: ${lastMessage.id}');
         final completedMessage = lastMessage.copyWith(
           isStreaming: false,
           completed: DateTime.now(),
         );
         _messages[_messages.length - 1] = completedMessage;
-        print(
-            '✅ Message marked as completed, isStreaming: ${completedMessage.isStreaming}');
-      } else {
-        print('🔍 No streaming assistant message to complete');
       }
     }
   }
 
   void _handleSessionAborted(String sessionId) {
     if (sessionId == sessionBloc.currentSessionId) {
-      print('🔍 [ChatBloc] Session aborted - stopping streaming');
-
-      // Mark the last message as completed if it was streaming
       if (_messages.isNotEmpty) {
         final lastMessage = _messages.last;
         if (lastMessage.role == 'assistant' && lastMessage.isStreaming) {
