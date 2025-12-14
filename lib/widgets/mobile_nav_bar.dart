@@ -90,6 +90,11 @@ class MobileNavBar extends ConsumerWidget {
               ],
 
               if (isOnNote) ...[
+                GestureDetector(
+                  onTap: () => _navigateBackFromNote(context, _extractNotePathFromLocation(currentLocation)),
+                  child: const Icon(Icons.arrow_back, color: SpaceNotesTheme.text),
+                ),
+                const SizedBox(width: 16),
                 Expanded(
                   child: _EditableNoteName(
                     notePath: _extractNotePathFromLocation(currentLocation),
@@ -155,6 +160,22 @@ class MobileNavBar extends ConsumerWidget {
     );
   }
 
+  void _navigateBackFromNote(BuildContext context, String notePath) {
+    if (notePath.isEmpty) {
+      context.go('/notes');
+      return;
+    }
+
+    final lastSlash = notePath.lastIndexOf('/');
+    if (lastSlash == -1) {
+      context.go('/notes');
+    } else {
+      final folderPath = notePath.substring(0, lastSlash);
+      final encodedPath = folderPath.split('/').map(Uri.encodeComponent).join('/');
+      context.go('/notes/folder/$encodedPath');
+    }
+  }
+
   void _navigateToParentFolder(BuildContext context, String currentPath) {
     if (currentPath.isEmpty) {
       context.go('/notes');
@@ -176,7 +197,8 @@ class MobileNavBar extends ConsumerWidget {
     final pathSegments = uri.pathSegments;
 
     if (pathSegments.length >= 3 && pathSegments[1] == 'folder') {
-      final folderPath = _safeDecodeUri(pathSegments[2]);
+      final folderPathSegments = pathSegments.sublist(2);
+      final folderPath = folderPathSegments.map(_safeDecodeUri).join('/');
       return folderPath.endsWith('/')
           ? folderPath.substring(0, folderPath.length - 1)
           : folderPath;
@@ -190,11 +212,8 @@ class MobileNavBar extends ConsumerWidget {
     final pathSegments = uri.pathSegments;
 
     if (pathSegments.length >= 3 && pathSegments[1] == 'folder') {
-      final folderPath = _safeDecodeUri(pathSegments[2]);
-      final folderName = folderPath.endsWith('/')
-          ? folderPath.substring(0, folderPath.length - 1).split('/').last
-          : folderPath.split('/').last;
-      return folderName;
+      final lastSegment = pathSegments.last;
+      return _safeDecodeUri(lastSegment);
     }
 
     return 'Folder';
@@ -255,40 +274,80 @@ class _EditableNoteNameState extends ConsumerState<_EditableNoteName> {
     super.dispose();
   }
 
+  String _extractFolderPath() {
+    final lastSlash = widget.notePath.lastIndexOf('/');
+    if (lastSlash == -1) return '';
+    return widget.notePath.substring(0, lastSlash);
+  }
+
   @override
   Widget build(BuildContext context) {
+    final folderPath = _extractFolderPath();
+
     if (_isEditing) {
-      return TextField(
-        controller: _controller,
-        focusNode: _focusNode,
-        style: const TextStyle(
-          fontFamily: 'FiraCode',
-          fontSize: 16,
-          color: SpaceNotesTheme.text,
-          fontWeight: FontWeight.w500,
-        ),
-        decoration: const InputDecoration(
-          border: InputBorder.none,
-          enabledBorder: InputBorder.none,
-          focusedBorder: InputBorder.none,
-          contentPadding: EdgeInsets.zero,
-          isDense: true,
-        ),
-        onSubmitted: (_) => _performRename(),
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          TextField(
+            controller: _controller,
+            focusNode: _focusNode,
+            style: const TextStyle(
+              fontFamily: 'FiraCode',
+              fontSize: 16,
+              color: SpaceNotesTheme.text,
+              fontWeight: FontWeight.w500,
+            ),
+            decoration: const InputDecoration(
+              border: InputBorder.none,
+              enabledBorder: InputBorder.none,
+              focusedBorder: InputBorder.none,
+              contentPadding: EdgeInsets.zero,
+              isDense: true,
+            ),
+            onSubmitted: (_) => _performRename(),
+          ),
+          if (folderPath.isNotEmpty)
+            Text(
+              folderPath,
+              style: TextStyle(
+                fontFamily: 'FiraCode',
+                fontSize: 11,
+                color: SpaceNotesTheme.text.withValues(alpha: 0.5),
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
+        ],
       );
     }
 
     return GestureDetector(
       onTap: _startEditing,
-      child: Text(
-        widget.currentName,
-        style: const TextStyle(
-          fontFamily: 'FiraCode',
-          fontSize: 16,
-          color: SpaceNotesTheme.text,
-          fontWeight: FontWeight.w500,
-        ),
-        overflow: TextOverflow.ellipsis,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            widget.currentName,
+            style: const TextStyle(
+              fontFamily: 'FiraCode',
+              fontSize: 16,
+              color: SpaceNotesTheme.text,
+              fontWeight: FontWeight.w500,
+            ),
+            overflow: TextOverflow.ellipsis,
+          ),
+          if (folderPath.isNotEmpty)
+            Text(
+              folderPath,
+              style: TextStyle(
+                fontFamily: 'FiraCode',
+                fontSize: 11,
+                color: SpaceNotesTheme.text.withValues(alpha: 0.5),
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
+        ],
       ),
     );
   }
@@ -436,40 +495,80 @@ class _EditableFolderNameState extends ConsumerState<_EditableFolderName> {
     }
   }
 
+  String _extractParentPath() {
+    final lastSlash = widget.folderPath.lastIndexOf('/');
+    if (lastSlash == -1) return '';
+    return widget.folderPath.substring(0, lastSlash);
+  }
+
   @override
   Widget build(BuildContext context) {
+    final parentPath = _extractParentPath();
+
     if (_isEditing) {
-      return TextField(
-        controller: _controller,
-        focusNode: _focusNode,
-        style: const TextStyle(
-          fontFamily: 'FiraCode',
-          fontSize: 16,
-          color: SpaceNotesTheme.text,
-          fontWeight: FontWeight.w500,
-        ),
-        decoration: const InputDecoration(
-          border: InputBorder.none,
-          enabledBorder: InputBorder.none,
-          focusedBorder: InputBorder.none,
-          contentPadding: EdgeInsets.zero,
-          isDense: true,
-        ),
-        onSubmitted: (_) => _performRename(),
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          TextField(
+            controller: _controller,
+            focusNode: _focusNode,
+            style: const TextStyle(
+              fontFamily: 'FiraCode',
+              fontSize: 16,
+              color: SpaceNotesTheme.text,
+              fontWeight: FontWeight.w500,
+            ),
+            decoration: const InputDecoration(
+              border: InputBorder.none,
+              enabledBorder: InputBorder.none,
+              focusedBorder: InputBorder.none,
+              contentPadding: EdgeInsets.zero,
+              isDense: true,
+            ),
+            onSubmitted: (_) => _performRename(),
+          ),
+          if (parentPath.isNotEmpty)
+            Text(
+              parentPath,
+              style: TextStyle(
+                fontFamily: 'FiraCode',
+                fontSize: 11,
+                color: SpaceNotesTheme.text.withValues(alpha: 0.5),
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
+        ],
       );
     }
 
     return GestureDetector(
       onLongPress: _startEditing,
-      child: Text(
-        widget.currentName,
-        style: const TextStyle(
-          fontFamily: 'FiraCode',
-          fontSize: 16,
-          color: SpaceNotesTheme.text,
-          fontWeight: FontWeight.w500,
-        ),
-        overflow: TextOverflow.ellipsis,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            widget.currentName,
+            style: const TextStyle(
+              fontFamily: 'FiraCode',
+              fontSize: 16,
+              color: SpaceNotesTheme.text,
+              fontWeight: FontWeight.w500,
+            ),
+            overflow: TextOverflow.ellipsis,
+          ),
+          if (parentPath.isNotEmpty)
+            Text(
+              parentPath,
+              style: TextStyle(
+                fontFamily: 'FiraCode',
+                fontSize: 11,
+                color: SpaceNotesTheme.text.withValues(alpha: 0.5),
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
+        ],
       ),
     );
   }

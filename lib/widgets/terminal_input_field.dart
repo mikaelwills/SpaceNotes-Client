@@ -162,7 +162,7 @@ class _TerminalInputFieldState extends State<TerminalInputField> {
               const SizedBox(width: 12),
             ],
             Expanded(
-              child: _buildTextField(expands: false, maxLines: 1),
+              child: _buildTextField(expands: false, maxLines: null, minLines: 1),
             ),
             if (widget.suffixIcon != null) widget.suffixIcon!,
           ],

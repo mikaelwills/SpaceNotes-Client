@@ -128,6 +128,9 @@ class ConnectionBloc extends Bloc<ConnectionEvent, ConnectionState> {
       if (isReachable) {
         if (state is! Connected) {
           await _handleConnectionEstablished(emit);
+        } else {
+          // Already connected, just reschedule ping
+          _scheduleNextPing();
         }
       } else {
         _handleConnectionLost('Server unreachable', emit);
@@ -167,6 +170,33 @@ class ConnectionBloc extends Bloc<ConnectionEvent, ConnectionState> {
       _fastReconnectAttempt = 0;
       _cancelReconnectTimer();
 
+      // Check if session is already loaded - skip the whole session flow
+      if (sessionBloc.state is session_states.SessionLoaded) {
+        final loadedState = sessionBloc.state as session_states.SessionLoaded;
+        debugPrint('[OpenCode] ✅ Connected with existing session: ${loadedState.session.id}');
+        emit(const Connected());
+        _scheduleNextPing();
+        return;
+      }
+
+      // Listen for session creation BEFORE triggering the event
+      _sessionSubscription?.cancel();
+      final sessionCompleter = Completer<void>();
+
+      _sessionSubscription = sessionBloc.stream.listen((sessionState) {
+        if (sessionState is session_states.SessionLoaded) {
+          debugPrint('[OpenCode] ✅ Connected with session: ${sessionState.session.id}');
+          if (!sessionCompleter.isCompleted) {
+            sessionCompleter.complete();
+          }
+        } else if (sessionState is session_states.SessionError) {
+          debugPrint('[OpenCode] Session error: ${sessionState.message}');
+          if (!sessionCompleter.isCompleted) {
+            sessionCompleter.completeError(sessionState.message);
+          }
+        }
+      });
+
       // Connection is established - handle session appropriately
       if (sessionBloc.currentSession != null) {
         // Reconnection scenario - validate existing session
@@ -176,31 +206,14 @@ class ConnectionBloc extends Bloc<ConnectionEvent, ConnectionState> {
         sessionBloc.add(session_events.LoadStoredSession());
       }
 
-      // Listen for session creation to get the session ID with timeout
-      _sessionSubscription?.cancel();
-      final sessionCompleter = Completer<void>();
-
-      _sessionSubscription = sessionBloc.stream.listen((sessionState) {
-        if (sessionState is session_states.SessionLoaded) {
-          debugPrint('[OpenCode] ✅ Connected with session: ${sessionState.session.id}');
-          emit(const Connected());
-          _scheduleNextPing(); // Start adaptive pinging once we have a session
-          _sessionSubscription?.cancel();
-          if (!sessionCompleter.isCompleted) {
-            sessionCompleter.complete();
-          }
-        } else if (sessionState is session_states.SessionError) {
-          debugPrint('[OpenCode] Session error: ${sessionState.message}');
-          _sessionSubscription?.cancel();
-          if (!sessionCompleter.isCompleted) {
-            sessionCompleter.completeError(sessionState.message);
-          }
-        }
-      });
-
-      // Wait for session creation with timeout (no intermediate state)
+      // Wait for session creation with timeout
       await sessionCompleter.future
           .timeout(const Duration(seconds: 20));
+
+      // Session loaded successfully - emit connected state
+      _sessionSubscription?.cancel();
+      emit(const Connected());
+      _scheduleNextPing();
 
     } on TimeoutException {
       debugPrint('[OpenCode] Connection establishment timeout');

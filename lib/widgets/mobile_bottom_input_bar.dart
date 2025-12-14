@@ -123,15 +123,6 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
   }
 
   Widget _buildBackButton(HomeViewType viewType, String folderPath) {
-    if (viewType == HomeViewType.chat) {
-      return const SizedBox.shrink();
-    } else if (viewType == HomeViewType.note) {
-      return _buildCircularButton(
-        onPressed: _navigateBackFromNote,
-        tooltip: 'Go back',
-        icon: Icons.arrow_back,
-      );
-    }
     return const SizedBox.shrink();
   }
 
