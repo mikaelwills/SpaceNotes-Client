@@ -1,10 +1,12 @@
 # SpaceNotes Client
 
-**Real-time note sync without the cloud.**
+Flutter client for [SpaceNotes](https://github.com/mikaelwills/spacenotes) - an open-source self-hosted notes solution.
 
-No subscriptions. No cloud storage. No vendor lock-in. Just your notes, synced instantly across all your devices via your own server.
+**An open-source attempt at the ideal notes solution.**
 
-This is the Flutter client for [SpaceNotes](https://github.com/mikaelwills/spacenotes).
+This project explores what note-taking could look like if you had full control: your own server, plain markdown files, real-time sync across all devices, and AI that can actually help you organize your thoughts. No vendor lock-in, no subscription fees, no compromises on privacy.
+
+See the main repo for full documentation, setup instructions, and the Docker stack.
 
 ![Desktop Notes View](assets/screenshots/desktop-notes.png)
 ![Desktop AI Chat](assets/screenshots/desktop-chat.png)
@@ -14,50 +16,13 @@ This is the Flutter client for [SpaceNotes](https://github.com/mikaelwills/space
   <img src="assets/screenshots/mobile-chat.png" width="45%" alt="Mobile AI Chat" />
 </p>
 
-## Features
-
-- **Real-time Sync**: Notes sync instantly across all connected devices via SpacetimeDB
-- **Folder Organization**: Hierarchical folder structure for organizing notes
-- **Markdown Support**: Write and render notes in Markdown
-- **Cross-Platform**: iOS, Android, macOS, Windows, and Linux
-- **AI Integration**: Built-in OpenCode chat interface for AI assistance
-
-## Setup
+## Building
 
 ```bash
-git clone https://github.com/mikaelwills/SpaceNotes-Client.git
-cd SpaceNotes-Client
 flutter pub get
 flutter run
 ```
 
-## Configuration
-
-Configure connections in Settings:
-
-**SpaceNotes Server** (SpacetimeDB)
-- IP address and port (default: 3003)
-
-**OpenCode Server** (optional)
-- IP address and port (default: 4096)
-
-## Architecture
-
-- **BLoC + Riverpod**: State management
-- **SpacetimeDB**: Real-time database
-- **Go Router**: Navigation
-
-```
-lib/
-├── blocs/           # BLoC state management
-├── generated/       # SpacetimeDB bindings
-├── providers/       # Riverpod providers
-├── repositories/    # Data access
-├── screens/         # UI screens
-├── services/        # Network services
-└── widgets/         # UI components
-```
-
 ## License
 
-MIT
+GPL-3.0 - See the main SpaceNotes repository for full license details.
