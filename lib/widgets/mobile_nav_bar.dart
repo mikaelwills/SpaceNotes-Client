@@ -107,7 +107,7 @@ class MobileNavBar extends ConsumerWidget {
               if (currentLocation.startsWith('/notes/chat')) ...[
                 GestureDetector(
                   onTap: () => context.go("/notes"),
-                  child: const Icon(Icons.arrow_back,
+                  child: const Icon(Icons.notes,
                       color: SpaceNotesTheme.text),
                 ),
                 const Spacer(),
