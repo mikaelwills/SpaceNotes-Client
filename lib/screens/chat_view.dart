@@ -22,6 +22,12 @@ class _ChatViewState extends ConsumerState<ChatView> {
   bool _showScrollToBottom = false;
 
   @override
+  void initState() {
+    super.initState();
+    _scrollToBottom();
+  }
+
+  @override
   void dispose() {
     _chatScrollController.dispose();
     super.dispose();

@@ -9,6 +9,7 @@ class DesktopNotesBloc extends Bloc<DesktopNotesEvent, DesktopNotesState> {
     on<SetActiveNote>(_onSetActiveNote);
     on<SetMaxOpenNotes>(_onSetMaxOpenNotes);
     on<CloseAllNotes>(_onCloseAllNotes);
+    on<UpdateNotePath>(_onUpdateNotePath);
   }
 
   void _onOpenNote(OpenNote event, Emitter<DesktopNotesState> emit) {
@@ -87,6 +88,25 @@ class DesktopNotesBloc extends Bloc<DesktopNotesEvent, DesktopNotesState> {
     emit(state.copyWith(
       openNotePaths: [],
       clearActiveNote: true,
+    ));
+  }
+
+  void _onUpdateNotePath(UpdateNotePath event, Emitter<DesktopNotesState> emit) {
+    final currentPaths = List<String>.from(state.openNotePaths);
+    final index = currentPaths.indexOf(event.oldPath);
+
+    if (index == -1) return;
+
+    currentPaths[index] = event.newPath;
+
+    String? newActivePath = state.activeNotePath;
+    if (state.activeNotePath == event.oldPath) {
+      newActivePath = event.newPath;
+    }
+
+    emit(state.copyWith(
+      openNotePaths: currentPaths,
+      activeNotePath: newActivePath,
     ));
   }
 }

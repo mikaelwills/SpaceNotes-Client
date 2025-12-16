@@ -21,3 +21,9 @@ class SetMaxOpenNotes extends DesktopNotesEvent {
 }
 
 class CloseAllNotes extends DesktopNotesEvent {}
+
+class UpdateNotePath extends DesktopNotesEvent {
+  final String oldPath;
+  final String newPath;
+  UpdateNotePath(this.oldPath, this.newPath);
+}

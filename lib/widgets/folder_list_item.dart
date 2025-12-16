@@ -177,7 +177,9 @@ class _FolderListItemState extends State<FolderListItem> with SingleTickerProvid
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            widget.folder.name,
+                            widget.folder.name.contains('/')
+                                ? widget.folder.name.split('/').last
+                                : widget.folder.name,
                             style: TextStyle(
                               fontFamily: 'FiraCode',
                               fontSize: 14,

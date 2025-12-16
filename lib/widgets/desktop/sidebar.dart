@@ -879,10 +879,14 @@ class _NoteTreeItem extends ConsumerWidget {
               ? note.path.substring(0, note.path.lastIndexOf('/'))
               : '';
           final newPath = folderPath.isEmpty ? newName : '$folderPath/$newName';
-          await repo.moveNote(note.path, newPath);
+          final success = await repo.moveNote(note.path, newPath);
+          if (success && context.mounted) {
+            context.read<DesktopNotesBloc>().add(UpdateNotePath(note.path, newPath));
+          }
         }
         break;
       case 'delete':
+        context.read<DesktopNotesBloc>().add(CloseNote(note.path));
         repo.deleteNote(note.id);
         break;
     }
@@ -1106,7 +1110,6 @@ class _TreeItemRowState extends State<_TreeItemRow> {
                 ),
               ),
               if (widget.isFolder &&
-                  widget.isExpanded &&
                   _isHovered &&
                   widget.onAddNote != null)
                 MouseRegion(

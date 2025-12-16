@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:collection/collection.dart';
@@ -9,6 +10,8 @@ import '../generated/note.dart';
 import '../theme/spacenotes_theme.dart';
 import '../providers/notes_providers.dart';
 import '../widgets/markdown_styles.dart';
+import '../blocs/desktop_notes/desktop_notes_bloc.dart';
+import '../blocs/desktop_notes/desktop_notes_event.dart';
 import 'home_screen.dart';
 
 // Data structure for editable markdown chunks
@@ -456,9 +459,11 @@ class _NoteScreenState extends ConsumerState<NoteScreen> {
     final success = await repo.renameNote(_noteId!, newPath);
 
     if (success && mounted) {
+      final oldPath = _currentPath;
       setState(() {
         _currentPath = newPath;
       });
+      context.read<DesktopNotesBloc?>()?.add(UpdateNotePath(oldPath, newPath));
     }
   }
 
