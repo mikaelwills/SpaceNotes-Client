@@ -25,15 +25,20 @@ class QuillNoteEditor extends StatefulWidget {
 class QuillNoteEditorState extends State<QuillNoteEditor> {
   late QuillController _controller;
   late FocusNode _focusNode;
+  late FocusNode _rawFocusNode;
+  late TextEditingController _rawController;
   final _mdDocument = md.Document(encodeHtml: false);
   late final MarkdownToDelta _mdToDelta;
   late final DeltaToMarkdown _deltaToMd;
   bool _isUpdatingFromParent = false;
+  bool _isRawMode = false;
 
   @override
   void initState() {
     super.initState();
     _focusNode = widget.focusNode ?? FocusNode();
+    _rawFocusNode = FocusNode();
+    _rawController = TextEditingController(text: widget.initialContent);
     _mdToDelta = MarkdownToDelta(markdownDocument: _mdDocument);
     _deltaToMd = DeltaToMarkdown();
     _controller = _createController(widget.initialContent);
@@ -95,9 +100,223 @@ class QuillNoteEditorState extends State<QuillNoteEditor> {
     }
   }
 
+  void _toggleRawMode() {
+    setState(() {
+      if (_isRawMode) {
+        final rawText = _rawController.text;
+        _isUpdatingFromParent = true;
+        try {
+          final delta = _mdToDelta.convert(rawText);
+          _controller.document = Document.fromDelta(delta);
+        } catch (e) {
+          debugPrint('Error converting markdown to delta: $e');
+        }
+        _isUpdatingFromParent = false;
+        widget.onContentChanged(rawText);
+      } else {
+        _rawController.text = _cleanMarkdown(getMarkdown());
+      }
+      _isRawMode = !_isRawMode;
+    });
+  }
+
+  String _cleanMarkdown(String markdown) {
+    return markdown
+        .replaceAll(r'\-', '-')
+        .replaceAll(r'\.', '.')
+        .replaceAll(r'\!', '!')
+        .replaceAll(r'\#', '#')
+        .replaceAll(r'\*', '*')
+        .replaceAll(r'\_', '_')
+        .replaceAll(r'\[', '[')
+        .replaceAll(r'\]', ']')
+        .replaceAll(r'\(', '(')
+        .replaceAll(r'\)', ')');
+  }
+
+  Widget _buildRawEditor() {
+    return ScrollConfiguration(
+      behavior: ScrollConfiguration.of(context).copyWith(scrollbars: false),
+      child: SingleChildScrollView(
+        child: TextField(
+          controller: _rawController,
+          focusNode: _rawFocusNode,
+          maxLines: null,
+          textAlignVertical: TextAlignVertical.top,
+          style: const TextStyle(
+            fontFamily: 'FiraCode',
+            fontSize: 14,
+            color: SpaceNotesTheme.text,
+            height: 1.6,
+          ),
+          cursorColor: SpaceNotesTheme.primary,
+          decoration: const InputDecoration(
+            contentPadding: EdgeInsets.all(16),
+            border: InputBorder.none,
+            enabledBorder: InputBorder.none,
+            focusedBorder: InputBorder.none,
+            filled: false,
+            hintText: 'Raw markdown...',
+            hintStyle: TextStyle(
+              fontFamily: 'FiraCode',
+              fontSize: 14,
+              color: SpaceNotesTheme.textSecondary,
+            ),
+          ),
+          onChanged: (value) {
+            widget.onContentChanged(value);
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildQuillEditor() {
+    return ScrollConfiguration(
+      behavior: ScrollConfiguration.of(context).copyWith(scrollbars: false),
+      child: QuillEditor.basic(
+        controller: _controller,
+        focusNode: _focusNode,
+      config: QuillEditorConfig(
+        padding: const EdgeInsets.all(16),
+        placeholder: 'Start writing...',
+        embedBuilders: [
+          _DividerEmbedBuilder(),
+        ],
+        unknownEmbedBuilder: _UnknownEmbedBuilder(),
+        customStyles: DefaultStyles(
+          paragraph: const DefaultTextBlockStyle(
+            TextStyle(
+              fontFamily: 'FiraCode',
+              fontSize: 14,
+              color: SpaceNotesTheme.text,
+              height: 1.6,
+            ),
+            HorizontalSpacing(0, 0),
+            VerticalSpacing(0, 8),
+            VerticalSpacing(0, 0),
+            null,
+          ),
+          h1: const DefaultTextBlockStyle(
+            TextStyle(
+              fontFamily: 'FiraCode',
+              fontSize: 28,
+              fontWeight: FontWeight.bold,
+              color: SpaceNotesTheme.text,
+              height: 1.4,
+            ),
+            HorizontalSpacing(0, 0),
+            VerticalSpacing(16, 8),
+            VerticalSpacing(0, 0),
+            null,
+          ),
+          h2: const DefaultTextBlockStyle(
+            TextStyle(
+              fontFamily: 'FiraCode',
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+              color: SpaceNotesTheme.text,
+              height: 1.4,
+            ),
+            HorizontalSpacing(0, 0),
+            VerticalSpacing(12, 6),
+            VerticalSpacing(0, 0),
+            null,
+          ),
+          h3: const DefaultTextBlockStyle(
+            TextStyle(
+              fontFamily: 'FiraCode',
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: SpaceNotesTheme.text,
+              height: 1.4,
+            ),
+            HorizontalSpacing(0, 0),
+            VerticalSpacing(8, 4),
+            VerticalSpacing(0, 0),
+            null,
+          ),
+          code: DefaultTextBlockStyle(
+            const TextStyle(
+              fontFamily: 'FiraCode',
+              fontSize: 13,
+              color: SpaceNotesTheme.primary,
+              backgroundColor: SpaceNotesTheme.inputSurface,
+            ),
+            const HorizontalSpacing(0, 0),
+            const VerticalSpacing(8, 8),
+            const VerticalSpacing(0, 0),
+            BoxDecoration(
+              color: SpaceNotesTheme.inputSurface,
+              borderRadius: BorderRadius.circular(4),
+            ),
+          ),
+          quote: DefaultTextBlockStyle(
+            TextStyle(
+              fontFamily: 'FiraCode',
+              fontSize: 14,
+              color: SpaceNotesTheme.text.withValues(alpha: 0.8),
+              fontStyle: FontStyle.italic,
+            ),
+            const HorizontalSpacing(0, 0),
+            const VerticalSpacing(8, 8),
+            const VerticalSpacing(0, 0),
+            BoxDecoration(
+              border: Border(
+                left: BorderSide(
+                  color: SpaceNotesTheme.primary.withValues(alpha: 0.5),
+                  width: 3,
+                ),
+              ),
+            ),
+          ),
+          lists: const DefaultListBlockStyle(
+            TextStyle(
+              fontFamily: 'FiraCode',
+              fontSize: 14,
+              color: SpaceNotesTheme.text,
+              height: 1.6,
+            ),
+            HorizontalSpacing(0, 0),
+            VerticalSpacing(0, 4),
+            VerticalSpacing(0, 0),
+            null,
+            null,
+          ),
+          inlineCode: InlineCodeStyle(
+            style: const TextStyle(
+              fontFamily: 'FiraCode',
+              fontSize: 13,
+              color: SpaceNotesTheme.primary,
+              backgroundColor: SpaceNotesTheme.inputSurface,
+            ),
+          ),
+          link: const TextStyle(
+            color: SpaceNotesTheme.primary,
+            decoration: TextDecoration.underline,
+          ),
+          placeHolder: const DefaultTextBlockStyle(
+            TextStyle(
+              fontFamily: 'FiraCode',
+              fontSize: 14,
+              color: SpaceNotesTheme.textSecondary,
+            ),
+            HorizontalSpacing(0, 0),
+            VerticalSpacing(0, 0),
+            VerticalSpacing(0, 0),
+            null,
+          ),
+        ),
+      ),
+      ),
+    );
+  }
+
   @override
   void dispose() {
     _controller.dispose();
+    _rawController.dispose();
+    _rawFocusNode.dispose();
     if (widget.focusNode == null) {
       _focusNode.dispose();
     }
@@ -148,6 +367,17 @@ class QuillNoteEditorState extends State<QuillNoteEditor> {
               showClipboardPaste: false,
               color: SpaceNotesTheme.surface,
               sectionDividerColor: SpaceNotesTheme.textSecondary.withValues(alpha: 0.2),
+              customButtons: [
+                QuillToolbarCustomButtonOptions(
+                  icon: Icon(
+                    _isRawMode ? Icons.visibility : Icons.code,
+                    size: 18,
+                    color: SpaceNotesTheme.text,
+                  ),
+                  tooltip: _isRawMode ? 'Show Preview' : 'Show Raw Markdown',
+                  onPressed: _toggleRawMode,
+                ),
+              ],
             ),
           ),
           Container(
@@ -156,141 +386,7 @@ class QuillNoteEditorState extends State<QuillNoteEditor> {
           ),
         ],
         Expanded(
-          child: QuillEditor.basic(
-            controller: _controller,
-            focusNode: _focusNode,
-            config: QuillEditorConfig(
-              padding: const EdgeInsets.all(16),
-              placeholder: 'Start writing...',
-              embedBuilders: [
-                _DividerEmbedBuilder(),
-              ],
-              unknownEmbedBuilder: _UnknownEmbedBuilder(),
-              customStyles: DefaultStyles(
-                paragraph: DefaultTextBlockStyle(
-                  const TextStyle(
-                    fontFamily: 'FiraCode',
-                    fontSize: 14,
-                    color: SpaceNotesTheme.text,
-                    height: 1.6,
-                  ),
-                  const HorizontalSpacing(0, 0),
-                  const VerticalSpacing(0, 8),
-                  const VerticalSpacing(0, 0),
-                  null,
-                ),
-                h1: DefaultTextBlockStyle(
-                  const TextStyle(
-                    fontFamily: 'FiraCode',
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                    color: SpaceNotesTheme.text,
-                    height: 1.4,
-                  ),
-                  const HorizontalSpacing(0, 0),
-                  const VerticalSpacing(16, 8),
-                  const VerticalSpacing(0, 0),
-                  null,
-                ),
-                h2: DefaultTextBlockStyle(
-                  const TextStyle(
-                    fontFamily: 'FiraCode',
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: SpaceNotesTheme.text,
-                    height: 1.4,
-                  ),
-                  const HorizontalSpacing(0, 0),
-                  const VerticalSpacing(12, 6),
-                  const VerticalSpacing(0, 0),
-                  null,
-                ),
-                h3: DefaultTextBlockStyle(
-                  const TextStyle(
-                    fontFamily: 'FiraCode',
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: SpaceNotesTheme.text,
-                    height: 1.4,
-                  ),
-                  const HorizontalSpacing(0, 0),
-                  const VerticalSpacing(8, 4),
-                  const VerticalSpacing(0, 0),
-                  null,
-                ),
-                code: DefaultTextBlockStyle(
-                  TextStyle(
-                    fontFamily: 'FiraCode',
-                    fontSize: 13,
-                    color: SpaceNotesTheme.primary,
-                    backgroundColor: SpaceNotesTheme.inputSurface,
-                  ),
-                  const HorizontalSpacing(0, 0),
-                  const VerticalSpacing(8, 8),
-                  const VerticalSpacing(0, 0),
-                  BoxDecoration(
-                    color: SpaceNotesTheme.inputSurface,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                ),
-                quote: DefaultTextBlockStyle(
-                  TextStyle(
-                    fontFamily: 'FiraCode',
-                    fontSize: 14,
-                    color: SpaceNotesTheme.text.withValues(alpha: 0.8),
-                    fontStyle: FontStyle.italic,
-                  ),
-                  const HorizontalSpacing(0, 0),
-                  const VerticalSpacing(8, 8),
-                  const VerticalSpacing(0, 0),
-                  BoxDecoration(
-                    border: Border(
-                      left: BorderSide(
-                        color: SpaceNotesTheme.primary.withValues(alpha: 0.5),
-                        width: 3,
-                      ),
-                    ),
-                  ),
-                ),
-                lists: DefaultListBlockStyle(
-                  const TextStyle(
-                    fontFamily: 'FiraCode',
-                    fontSize: 14,
-                    color: SpaceNotesTheme.text,
-                    height: 1.6,
-                  ),
-                  const HorizontalSpacing(0, 0),
-                  const VerticalSpacing(0, 4),
-                  const VerticalSpacing(0, 0),
-                  null,
-                  null,
-                ),
-                inlineCode: InlineCodeStyle(
-                  style: TextStyle(
-                    fontFamily: 'FiraCode',
-                    fontSize: 13,
-                    color: SpaceNotesTheme.primary,
-                    backgroundColor: SpaceNotesTheme.inputSurface,
-                  ),
-                ),
-                link: const TextStyle(
-                  color: SpaceNotesTheme.primary,
-                  decoration: TextDecoration.underline,
-                ),
-                placeHolder: DefaultTextBlockStyle(
-                  const TextStyle(
-                    fontFamily: 'FiraCode',
-                    fontSize: 14,
-                    color: SpaceNotesTheme.textSecondary,
-                  ),
-                  const HorizontalSpacing(0, 0),
-                  const VerticalSpacing(0, 0),
-                  const VerticalSpacing(0, 0),
-                  null,
-                ),
-              ),
-            ),
-          ),
+          child: _isRawMode ? _buildRawEditor() : _buildQuillEditor(),
         ),
       ],
     );
@@ -328,7 +424,7 @@ class _UnknownEmbedBuilder extends EmbedBuilder {
       ),
       child: Text(
         '[${embedContext.node.value.type}]',
-        style: TextStyle(
+        style: const TextStyle(
           fontFamily: 'FiraCode',
           fontSize: 12,
           color: SpaceNotesTheme.textSecondary,
