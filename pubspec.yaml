@@ -67,6 +67,11 @@ dependencies:
   collection: ^1.19.1
   image_picker: ^1.0.7
   file_picker: ^10.3.7
+  flutter_quill: ^11.5.0
+  markdown_quill: ^4.3.0
+  markdown: ^7.3.0
+  flutter_localizations:
+    sdk: flutter
 
 dev_dependencies:
   flutter_test:
