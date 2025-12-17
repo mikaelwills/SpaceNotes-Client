@@ -87,21 +87,22 @@ class _DesktopContentArea extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final location = GoRouterState.of(context).uri.toString();
-    final isChat = location == '/notes/chat';
-    final isSettings = location == '/settings';
+    final isChat = location.startsWith('/notes/chat');
+    final isSettings = location.startsWith('/settings');
+    final isConnect = location.startsWith('/connect');
 
     return Column(
       children: [
-        _DesktopTopBar(showTabs: !isChat && !isSettings),
+        _DesktopTopBar(showTabs: !isChat && !isSettings && !isConnect),
         Expanded(
-          child: _buildContent(context, isChat, isSettings),
+          child: _buildContent(context, isChat, isSettings, isConnect),
         ),
       ],
     );
   }
 
-  Widget _buildContent(BuildContext context, bool isChat, bool isSettings) {
-    if (isChat || isSettings) {
+  Widget _buildContent(BuildContext context, bool isChat, bool isSettings, bool isConnect) {
+    if (isChat || isSettings || isConnect) {
       return child;
     }
     return const DesktopNoteView();

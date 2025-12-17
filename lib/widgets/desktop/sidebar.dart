@@ -3,6 +3,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../blocs/connection/connection_bloc.dart';
+import '../../blocs/connection/connection_state.dart' as conn;
 import '../../blocs/desktop_notes/desktop_notes_bloc.dart';
 import '../../blocs/desktop_notes/desktop_notes_event.dart';
 import '../../generated/folder.dart';
@@ -1177,10 +1179,17 @@ class _CollapsedSidebar extends ConsumerWidget {
             tooltip: 'Notes',
             onTap: () => context.go('/notes'),
           ),
-          _CollapsedIconButton(
-            icon: Icons.chat_bubble_outline,
-            tooltip: 'Chat',
-            onTap: () => context.go('/notes/chat'),
+          BlocBuilder<ConnectionBloc, conn.ConnectionState>(
+            builder: (context, state) {
+              if (state is! conn.Connected) {
+                return const SizedBox.shrink();
+              }
+              return _CollapsedIconButton(
+                icon: Icons.chat_bubble_outline,
+                tooltip: 'Chat',
+                onTap: () => context.go('/notes/chat'),
+              );
+            },
           ),
           _CollapsedIconButton(
             icon: Icons.search,
@@ -1352,13 +1361,20 @@ class _SidebarFooter extends ConsumerWidget {
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
           ),
-          IconButton(
-            icon: const Icon(Icons.chat_bubble_outline, size: 18),
-            color: SpaceNotesTheme.textSecondary,
-            onPressed: () => context.go('/notes/chat'),
-            tooltip: 'AI Chat',
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+          BlocBuilder<ConnectionBloc, conn.ConnectionState>(
+            builder: (context, state) {
+              if (state is! conn.Connected) {
+                return const SizedBox.shrink();
+              }
+              return IconButton(
+                icon: const Icon(Icons.chat_bubble_outline, size: 18),
+                color: SpaceNotesTheme.textSecondary,
+                onPressed: () => context.go('/notes/chat'),
+                tooltip: 'AI Chat',
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+              );
+            },
           ),
         ],
       ),
