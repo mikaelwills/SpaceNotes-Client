@@ -56,10 +56,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     if (host.contains(':')) {
       final parts = host.split(':');
       _spaceNotesIpController.text = parts[0];
-      _spaceNotesPortController.text = parts.length > 1 ? parts[1] : '3003';
+      _spaceNotesPortController.text = parts.length > 1 ? parts[1] : '5050';
     } else {
       _spaceNotesIpController.text = host;
-      _spaceNotesPortController.text = '3003';
+      _spaceNotesPortController.text = '5050';
     }
 
     // Load OpenCode config from ConfigCubit
@@ -80,7 +80,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final port = _spaceNotesPortController.text.trim();
     if (ip.isEmpty) return;
 
-    final host = port.isNotEmpty ? '$ip:$port' : '$ip:3003';
+    final host = port.isNotEmpty ? '$ip:$port' : '$ip:5050';
 
     setState(() => _isSpaceNotesConnecting = true);
 
@@ -102,7 +102,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final portText = _openCodePortController.text.trim();
     if (ip.isEmpty) return;
 
-    final port = int.tryParse(portText) ?? 4096;
+    final port = int.tryParse(portText) ?? 5053;
 
     setState(() => _isOpenCodeConnecting = true);
 
@@ -162,7 +162,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ipController: _spaceNotesIpController,
           portController: _spaceNotesPortController,
           ipHint: 'IP Address',
-          portHint: '3003',
+          portHint: '5050',
           isConnecting: _isSpaceNotesConnecting,
           isConnected: isConnected,
           onConnect: _saveSpaceNotesConfig,
@@ -193,7 +193,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ipController: _openCodeIpController,
           portController: _openCodePortController,
           ipHint: 'IP Address',
-          portHint: '4096',
+          portHint: '5053',
           isConnecting: _isOpenCodeConnecting,
           isConnected: isConnected,
           onConnect: _saveOpenCodeConfig,

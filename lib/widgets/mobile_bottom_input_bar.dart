@@ -44,14 +44,15 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
 
   @override
   Widget build(BuildContext context) {
+    final viewType = _getCurrentViewType();
+    final isChat = viewType == HomeViewType.chat;
+
     final searchQuery = ref.watch(folderSearchQueryProvider);
-    if (searchQuery.isEmpty && _searchController.text.isNotEmpty) {
+    if (!isChat && searchQuery.isEmpty && _searchController.text.isNotEmpty) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _searchController.clear();
       });
     }
-    final viewType = _getCurrentViewType();
-    final isChat = viewType == HomeViewType.chat;
     final folderPath = ref.watch(currentFolderPathProvider);
     final notePath = ref.watch(currentNotePathProvider);
 
@@ -387,18 +388,30 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
   }
 
   Future<void> _createQuickNote(String folderPath) async {
+    debugPrint('[MobileBottomInputBar] _createQuickNote called, folderPath: "$folderPath"');
     final now = DateTime.now();
     final timestamp =
         '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}-${now.hour.toString().padLeft(2, '0')}-${now.minute.toString().padLeft(2, '0')}-${now.second.toString().padLeft(2, '0')}';
 
     final basePath = folderPath.isEmpty ? 'All Notes' : folderPath;
     final notePath = '$basePath/Untitled-$timestamp.md';
+    debugPrint('[MobileBottomInputBar] Creating note at path: "$notePath"');
 
     final repo = ref.read(notesRepositoryProvider);
-    final noteId = await repo.createNote(notePath, '');
-    if (noteId != null && mounted) {
-      final encodedPath = notePath.split('/').map(Uri.encodeComponent).join('/');
-      context.go('/notes/note/$encodedPath');
+    try {
+      debugPrint('[MobileBottomInputBar] Calling repo.createNote...');
+      final noteId = await repo.createNote(notePath, '');
+      debugPrint('[MobileBottomInputBar] repo.createNote returned: $noteId');
+      if (noteId != null && mounted) {
+        final encodedPath = notePath.split('/').map(Uri.encodeComponent).join('/');
+        debugPrint('[MobileBottomInputBar] Navigating to /notes/note/$encodedPath');
+        context.go('/notes/note/$encodedPath');
+      } else {
+        debugPrint('[MobileBottomInputBar] noteId is null or widget not mounted');
+      }
+    } catch (e, stack) {
+      debugPrint('[MobileBottomInputBar] Error creating note: $e');
+      debugPrint('[MobileBottomInputBar] Stack trace: $stack');
     }
   }
 

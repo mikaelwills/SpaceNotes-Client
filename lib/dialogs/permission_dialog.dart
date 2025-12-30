@@ -14,12 +14,12 @@ class PermissionDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      backgroundColor: SpaceNotesTheme.surface,
+      backgroundColor: SpaceNotesTheme.dialogSurface,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: BorderSide(
-          color: permission.isDangerous ? SpaceNotesTheme.error : SpaceNotesTheme.primary,
-          width: 2,
+          color: permission.isDangerous ? SpaceNotesTheme.error : SpaceNotesTheme.primaryMuted,
+          width: 1,
         ),
       ),
       child: Container(

@@ -11,6 +11,7 @@ import '../../generated/folder.dart';
 import '../../generated/note.dart';
 import '../../providers/notes_providers.dart';
 import '../../theme/spacenotes_theme.dart';
+import '../../version.dart';
 import 'desktop_shell.dart';
 
 final expandedFoldersProvider = StateProvider<Set<String>>((ref) => {});
@@ -87,6 +88,14 @@ class _SidebarHeader extends ConsumerWidget {
               fontSize: 16,
               color: SpaceNotesTheme.primary,
               letterSpacing: 0.5,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            appVersion,
+            style: SpaceNotesTextStyles.terminal.copyWith(
+              fontSize: 11,
+              color: SpaceNotesTheme.textSecondary,
             ),
           ),
           const Spacer(),
@@ -476,17 +485,13 @@ class _FolderTreeItemState extends ConsumerState<_FolderTreeItem> {
         final result = await showDialog<String>(
           context: context,
           builder: (ctx) => AlertDialog(
-            backgroundColor: SpaceNotesTheme.inputSurface,
-            title: Text('New Folder',
-                style: SpaceNotesTextStyles.terminal.copyWith(fontSize: 16)),
+            title: const Text('New Folder'),
             content: TextField(
               controller: controller,
               autofocus: true,
               style: SpaceNotesTextStyles.terminal,
-              decoration: InputDecoration(
+              decoration: const InputDecoration(
                 hintText: 'Folder name',
-                hintStyle: SpaceNotesTextStyles.terminal
-                    .copyWith(color: SpaceNotesTheme.textSecondary),
               ),
               onSubmitted: (value) => Navigator.of(ctx).pop(value),
             ),
@@ -514,12 +519,9 @@ class _FolderTreeItemState extends ConsumerState<_FolderTreeItem> {
               showDialog(
                 context: context,
                 builder: (ctx) => AlertDialog(
-                  backgroundColor: SpaceNotesTheme.inputSurface,
-                  title: Text('Folder Exists',
-                      style: SpaceNotesTextStyles.terminal.copyWith(fontSize: 16)),
+                  title: const Text('Folder Exists'),
                   content: Text(
                     'A folder named "$result" already exists here.',
-                    style: SpaceNotesTextStyles.terminal.copyWith(fontSize: 14),
                   ),
                   actions: [
                     TextButton(
@@ -542,17 +544,13 @@ class _FolderTreeItemState extends ConsumerState<_FolderTreeItem> {
         final result = await showDialog<String>(
           context: context,
           builder: (ctx) => AlertDialog(
-            backgroundColor: SpaceNotesTheme.inputSurface,
-            title: Text('Rename Folder',
-                style: SpaceNotesTextStyles.terminal.copyWith(fontSize: 16)),
+            title: const Text('Rename Folder'),
             content: TextField(
               controller: controller,
               autofocus: true,
               style: SpaceNotesTextStyles.terminal,
-              decoration: InputDecoration(
+              decoration: const InputDecoration(
                 hintText: 'Folder name',
-                hintStyle: SpaceNotesTextStyles.terminal
-                    .copyWith(color: SpaceNotesTheme.textSecondary),
               ),
               onSubmitted: (value) => Navigator.of(ctx).pop(value),
             ),
@@ -591,12 +589,9 @@ class _FolderTreeItemState extends ConsumerState<_FolderTreeItem> {
           final confirmed = await showDialog<bool>(
             context: context,
             builder: (ctx) => AlertDialog(
-              backgroundColor: SpaceNotesTheme.inputSurface,
-              title: Text('Delete Folder?',
-                  style: SpaceNotesTextStyles.terminal.copyWith(fontSize: 16)),
+              title: const Text('Delete Folder?'),
               content: Text(
                 'This folder contains items. Are you sure you want to delete "${folder.name}" and all its contents?',
-                style: SpaceNotesTextStyles.terminal.copyWith(fontSize: 14),
               ),
               actions: [
                 TextButton(
@@ -845,17 +840,13 @@ class _NoteTreeItem extends ConsumerWidget {
         final result = await showDialog<String>(
           context: context,
           builder: (ctx) => AlertDialog(
-            backgroundColor: SpaceNotesTheme.inputSurface,
-            title: Text('Rename Note',
-                style: SpaceNotesTextStyles.terminal.copyWith(fontSize: 16)),
+            title: const Text('Rename Note'),
             content: TextField(
               controller: controller,
               autofocus: true,
               style: SpaceNotesTextStyles.terminal,
-              decoration: InputDecoration(
+              decoration: const InputDecoration(
                 hintText: 'Note name',
-                hintStyle: SpaceNotesTextStyles.terminal
-                    .copyWith(color: SpaceNotesTheme.textSecondary),
               ),
               onSubmitted: (value) => Navigator.of(ctx).pop(value),
             ),
@@ -1274,17 +1265,13 @@ class _SidebarFooter extends ConsumerWidget {
     final result = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: SpaceNotesTheme.inputSurface,
-        title: Text('New Folder',
-            style: SpaceNotesTextStyles.terminal.copyWith(fontSize: 16)),
+        title: const Text('New Folder'),
         content: TextField(
           controller: controller,
           autofocus: true,
           style: SpaceNotesTextStyles.terminal,
-          decoration: InputDecoration(
+          decoration: const InputDecoration(
             hintText: 'Folder name',
-            hintStyle: SpaceNotesTextStyles.terminal
-                .copyWith(color: SpaceNotesTheme.textSecondary),
           ),
           onSubmitted: (value) => Navigator.of(ctx).pop(value),
         ),
@@ -1312,12 +1299,9 @@ class _SidebarFooter extends ConsumerWidget {
           showDialog(
             context: context,
             builder: (ctx) => AlertDialog(
-              backgroundColor: SpaceNotesTheme.inputSurface,
-              title: Text('Folder Exists',
-                  style: SpaceNotesTextStyles.terminal.copyWith(fontSize: 16)),
+              title: const Text('Folder Exists'),
               content: Text(
                 'A folder named "$result" already exists.',
-                style: SpaceNotesTextStyles.terminal.copyWith(fontSize: 14),
               ),
               actions: [
                 TextButton(

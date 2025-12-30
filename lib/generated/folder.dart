@@ -27,9 +27,25 @@ class Folder {
     );
   }
 
+  Map<String, dynamic> toJson() {
+    return {
+      'path': path,
+      'name': name,
+      'depth': depth,
+    };
+  }
+
+  factory Folder.fromJson(Map<String, dynamic> json) {
+    return Folder(
+      path: (json['path'] as String?) ?? '',
+      name: (json['name'] as String?) ?? '',
+      depth: (json['depth'] as int?) ?? 0,
+    );
+  }
+
 }
 
-class FolderDecoder implements RowDecoder<Folder> {
+class FolderDecoder extends RowDecoder<Folder> {
   @override
   Folder decode(BsatnDecoder decoder) {
     return Folder.decodeBsatn(decoder);
@@ -39,4 +55,13 @@ class FolderDecoder implements RowDecoder<Folder> {
   String? getPrimaryKey(Folder row) {
     return row.path;
   }
+
+  @override
+  Map<String, dynamic>? toJson(Folder row) => row.toJson();
+
+  @override
+  Folder? fromJson(Map<String, dynamic> json) => Folder.fromJson(json);
+
+  @override
+  bool get supportsJsonSerialization => true;
 }

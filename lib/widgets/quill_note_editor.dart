@@ -4,6 +4,19 @@ import 'package:markdown/markdown.dart' as md;
 import 'package:markdown_quill/markdown_quill.dart';
 import '../theme/spacenotes_theme.dart';
 
+class _KeepEmptyLineBlockSyntax extends md.BlockSyntax {
+  @override
+  RegExp get pattern => RegExp(r'^(?:[ \t]*)$');
+
+  const _KeepEmptyLineBlockSyntax();
+
+  @override
+  md.Node? parse(md.BlockParser parser) {
+    parser.advance();
+    return md.Element.text('p', '');
+  }
+}
+
 class QuillNoteEditor extends StatefulWidget {
   final String initialContent;
   final ValueChanged<String> onContentChanged;
@@ -27,7 +40,10 @@ class QuillNoteEditorState extends State<QuillNoteEditor> {
   late FocusNode _focusNode;
   late FocusNode _rawFocusNode;
   late TextEditingController _rawController;
-  final _mdDocument = md.Document(encodeHtml: false);
+  final _mdDocument = md.Document(
+    encodeHtml: false,
+    blockSyntaxes: [const _KeepEmptyLineBlockSyntax()],
+  );
   late final MarkdownToDelta _mdToDelta;
   late final DeltaToMarkdown _deltaToMd;
   bool _isUpdatingFromParent = false;
@@ -39,8 +55,13 @@ class QuillNoteEditorState extends State<QuillNoteEditor> {
     _focusNode = widget.focusNode ?? FocusNode();
     _rawFocusNode = FocusNode();
     _rawController = TextEditingController(text: widget.initialContent);
-    _mdToDelta = MarkdownToDelta(markdownDocument: _mdDocument);
-    _deltaToMd = DeltaToMarkdown();
+    _mdToDelta = MarkdownToDelta(
+      markdownDocument: _mdDocument,
+      softLineBreak: true,
+    );
+    _deltaToMd = DeltaToMarkdown(
+      visitLineHandleNewLine: (style, out) => out.writeln(),
+    );
     _controller = _createController(widget.initialContent);
     _controller.document.changes.listen((_) {
       if (!_isUpdatingFromParent) {

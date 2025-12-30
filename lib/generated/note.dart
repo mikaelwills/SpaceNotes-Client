@@ -59,9 +59,41 @@ class Note {
     );
   }
 
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'path': path,
+      'name': name,
+      'content': content,
+      'folderPath': folderPath,
+      'depth': depth,
+      'frontmatter': frontmatter,
+      'size': size.toInt(),
+      'createdTime': createdTime.toInt(),
+      'modifiedTime': modifiedTime.toInt(),
+      'dbUpdatedAt': dbUpdatedAt.toInt(),
+    };
+  }
+
+  factory Note.fromJson(Map<String, dynamic> json) {
+    return Note(
+      id: (json['id'] as String?) ?? '',
+      path: (json['path'] as String?) ?? '',
+      name: (json['name'] as String?) ?? '',
+      content: (json['content'] as String?) ?? '',
+      folderPath: (json['folderPath'] as String?) ?? '',
+      depth: (json['depth'] as int?) ?? 0,
+      frontmatter: (json['frontmatter'] as String?) ?? '',
+      size: Int64((json['size'] as int?) ?? 0),
+      createdTime: Int64((json['createdTime'] as int?) ?? 0),
+      modifiedTime: Int64((json['modifiedTime'] as int?) ?? 0),
+      dbUpdatedAt: Int64((json['dbUpdatedAt'] as int?) ?? 0),
+    );
+  }
+
 }
 
-class NoteDecoder implements RowDecoder<Note> {
+class NoteDecoder extends RowDecoder<Note> {
   @override
   Note decode(BsatnDecoder decoder) {
     return Note.decodeBsatn(decoder);
@@ -71,4 +103,13 @@ class NoteDecoder implements RowDecoder<Note> {
   String? getPrimaryKey(Note row) {
     return row.id;
   }
+
+  @override
+  Map<String, dynamic>? toJson(Note row) => row.toJson();
+
+  @override
+  Note? fromJson(Map<String, dynamic> json) => Note.fromJson(json);
+
+  @override
+  bool get supportsJsonSerialization => true;
 }

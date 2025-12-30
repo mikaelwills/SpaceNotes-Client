@@ -187,14 +187,9 @@ class _SessionsScreenState extends State<SessionsScreen> {
         context: context,
         builder: (BuildContext context) {
           return AlertDialog(
-            backgroundColor: SpaceNotesTheme.surface,
-            title: const Text(
-              'Cannot Delete Active Session',
-              style: TextStyle(color: SpaceNotesTheme.text),
-            ),
+            title: const Text('Cannot Delete Active Session'),
             content: const Text(
               'You cannot delete the currently active session. Please switch to another session first or go to the chat screen to start a new session.',
-              style: TextStyle(color: SpaceNotesTheme.textSecondary),
             ),
             actions: [
               TextButton(
@@ -216,21 +211,16 @@ class _SessionsScreenState extends State<SessionsScreen> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          backgroundColor: SpaceNotesTheme.surface,
-          title: const Text(
-            'Delete Session',
-            style: TextStyle(color: SpaceNotesTheme.text),
-          ),
-          content: Text(
+          title: const Text('Delete Session'),
+          content: const Text(
             'Are you sure you want to delete this session? This action cannot be undone.',
-            style: TextStyle(color: SpaceNotesTheme.text.withValues(alpha: 0.8)),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: Text(
+              child: const Text(
                 'Cancel',
-                style: TextStyle(color: SpaceNotesTheme.text.withValues(alpha: 0.6)),
+                style: TextStyle(color: SpaceNotesTheme.textSecondary),
               ),
             ),
             TextButton(
@@ -240,7 +230,7 @@ class _SessionsScreenState extends State<SessionsScreen> {
               },
               child: const Text(
                 'Delete',
-                style: TextStyle(color: Colors.red),
+                style: TextStyle(color: SpaceNotesTheme.error),
               ),
             ),
           ],
@@ -258,14 +248,9 @@ class _SessionsScreenState extends State<SessionsScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: SpaceNotesTheme.surface,
-        title: const Text(
-          'Delete All Sessions',
-          style: TextStyle(color: SpaceNotesTheme.text),
-        ),
+        title: const Text('Delete All Sessions'),
         content: const Text(
           'This will permanently delete all sessions and cannot be undone. Are you sure?',
-          style: TextStyle(color: SpaceNotesTheme.textSecondary),
         ),
         actions: [
           TextButton(

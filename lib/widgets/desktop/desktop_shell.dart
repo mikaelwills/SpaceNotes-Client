@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../theme/spacenotes_theme.dart';
 import '../connection_indicator.dart';
+import '../sync_state_indicator.dart';
 import 'desktop_note_view.dart';
 import 'note_tabs.dart';
 import 'sidebar.dart';
@@ -176,6 +177,8 @@ class _DesktopTopBar extends ConsumerWidget {
                 overflow: TextOverflow.ellipsis,
               ),
             ),
+          const SyncStateIndicator(),
+          const SizedBox(width: 8),
           IconButton(
             icon: const Icon(Icons.settings_outlined, size: 18),
             color: SpaceNotesTheme.textSecondary,

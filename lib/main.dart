@@ -127,10 +127,11 @@ class _OpenCodeAppState extends State<OpenCodeApp> with WidgetsBindingObserver {
     if (state == AppLifecycleState.resumed) {
       print('🔥 APP RESUMED - Checking connection health');
 
-      // Get repository and trigger connection check
+      // Get repository and trigger reconnection attempt
       final repo = widget.container.read(notesRepositoryProvider);
 
-      // This will call _ensureConnected() which checks status and reconnects if degraded
+      // Try to reconnect (non-blocking) and emit current data
+      repo.tryReconnect();
       repo.connectAndGetInitialData();
     }
   }

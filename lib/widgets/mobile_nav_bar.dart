@@ -15,6 +15,7 @@ import '../blocs/config/config_cubit.dart';
 import '../blocs/config/config_state.dart';
 import '../providers/notes_providers.dart';
 import 'connection_indicator.dart';
+import 'sync_state_indicator.dart';
 
 class MobileNavBar extends ConsumerWidget {
   const MobileNavBar({super.key});
@@ -146,7 +147,11 @@ class MobileNavBar extends ConsumerWidget {
                   !isOnNote &&
                   !currentLocation.startsWith('/notes/chat') &&
                   currentLocation != '/notes/sessions')
-                const Spacer(),
+                const Expanded(
+                  child: Center(
+                    child: SyncStateIndicator(),
+                  ),
+                ),
               GestureDetector(
                 onTap: () => context.go("/settings"),
                 child: const Icon(Icons.settings, color: SpaceNotesTheme.text),

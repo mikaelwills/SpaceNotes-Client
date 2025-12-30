@@ -6,7 +6,9 @@ class SpaceNotesTheme {
   static const Color background = Color(0xFF0A0A0A); // Very dark background
   static const Color surface = Color(0xFF0d0d0d); // Cards, panels
   static const Color inputSurface = Color(0xFF1A1A1A); // Input fields, buttons
+  static const Color dialogSurface = Color(0xFF121212); // Dialog backgrounds
   static const Color primary = Color(0xFF00D9FF); // Cyan blue for prompts
+  static const Color primaryMuted = Color(0xFF00899E); // Muted cyan for borders
   static const Color secondary = Color(0xFF7C3AED); // Purple accent
   static const Color text = Color(0xFFFFFFFF); // Pure white text
   static const Color textSecondary = Color(0xFF888888); // Gray text
@@ -55,13 +57,33 @@ class SpaceNotesTheme {
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: textSecondary),
+          borderSide: BorderSide(color: textSecondary.withValues(alpha: 0.5)),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: primary),
+          borderSide: const BorderSide(color: primaryMuted),
         ),
         hintStyle: const TextStyle(color: textSecondary),
+      ),
+
+      // Dialog theme
+      dialogTheme: const DialogThemeData(
+        backgroundColor: dialogSurface,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.all(Radius.circular(12)),
+        ),
+        titleTextStyle: TextStyle(
+          fontFamily: 'FiraCode',
+          fontSize: 16,
+          color: text,
+          fontWeight: FontWeight.w500,
+        ),
+        contentTextStyle: TextStyle(
+          fontFamily: 'FiraCode',
+          fontSize: 14,
+          color: text,
+        ),
       ),
 
       // Elevated button theme

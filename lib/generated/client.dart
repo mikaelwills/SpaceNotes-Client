@@ -44,6 +44,18 @@ class SpacetimeDbClient {
   /// Available after connection is established. Returns null if not authenticated.
   String? get token => connection.token;
 
+  /// Whether offline storage is enabled
+  bool get hasOfflineStorage => subscriptions.hasOfflineStorage;
+
+  /// Current sync state for offline mutations
+  SyncState get syncState => subscriptions.syncState;
+
+  /// Stream of sync state changes
+  Stream<SyncState> get onSyncStateChanged => subscriptions.onSyncStateChanged;
+
+  /// Stream of individual mutation sync results
+  Stream<MutationSyncResult> get onMutationSyncResult => subscriptions.onMutationSyncResult;
+
   TableCache<Folder> get folder {
     return subscriptions.cache.getTableByTypedName<Folder>('folder');
   }
@@ -67,10 +79,12 @@ class SpacetimeDbClient {
     required String host,
     required String database,
     AuthTokenStore? authStorage,
-    bool ssl = false, // Added SSL parameter (default false for localhost)
+    OfflineStorage? offlineStorage,
+    bool ssl = false,
     ConnectionConfig config = const ConnectionConfig(),
     List<String>? initialSubscriptions,
     Duration subscriptionTimeout = const Duration(seconds: 10),
+    void Function(SpacetimeDbClient client)? onCacheLoaded,
   }) async {
     // Setup storage (default to in-memory)
     final storage = authStorage ?? InMemoryTokenStore();
@@ -87,7 +101,7 @@ class SpacetimeDbClient {
       config: config, // Pass connection config
     );
 
-    final subscriptionManager = SubscriptionManager(connection);
+    final subscriptionManager = SubscriptionManager(connection, offlineStorage: offlineStorage);
 
     // Auto-register table decoders
     subscriptionManager.cache.registerDecoder<Folder>('folder', FolderDecoder());
@@ -129,12 +143,28 @@ class SpacetimeDbClient {
       connection.updateToken(msg.token);
     });
 
-    await connection.connect();
+    // Load cached data before connecting (for offline-first support)
+    if (offlineStorage != null) {
+      await subscriptionManager.loadFromOfflineCache();
+      onCacheLoaded?.call(client);
+    }
 
-    if (initialSubscriptions != null && initialSubscriptions.isNotEmpty) {
-      // Wait for initial subscription data to load with timeout
-      // Throws TimeoutException if subscriptions take too long - caller can handle this
-      await subscriptionManager.subscribe(initialSubscriptions).timeout(subscriptionTimeout);
+    // Connect and subscribe - with offline support, this is non-blocking on failure
+    try {
+      await connection.connect().timeout(config.connectTimeout);
+      if (initialSubscriptions != null && initialSubscriptions.isNotEmpty) {
+        await subscriptionManager.subscribe(initialSubscriptions).timeout(subscriptionTimeout);
+      }
+    } on SpacetimeDbAuthException {
+      // Auth exceptions must always be rethrown so app can handle recovery
+      rethrow;
+    } catch (e) {
+      if (offlineStorage != null) {
+        // Offline mode: connection failed but we have cached data, continue in offline mode
+        print('📴 Connection failed, operating in offline mode: $e');
+      } else {
+        rethrow;
+      }
     }
 
     return client;
