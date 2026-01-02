@@ -27,7 +27,7 @@ class NoteChatPanel extends StatelessWidget {
   Widget _buildDesktopPanel(BuildContext context) {
     return Container(
       width: 400,
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         color: SpaceNotesTheme.background,
         border: Border(
           left: BorderSide(

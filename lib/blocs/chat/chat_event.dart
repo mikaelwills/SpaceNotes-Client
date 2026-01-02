@@ -90,3 +90,12 @@ class RespondToPermission extends ChatEvent {
   @override
   List<Object> get props => [permissionId, response];
 }
+
+class SessionErrorReceived extends ChatEvent {
+  final String error;
+
+  const SessionErrorReceived(this.error);
+
+  @override
+  List<Object> get props => [error];
+}

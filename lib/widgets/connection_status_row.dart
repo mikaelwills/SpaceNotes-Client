@@ -6,9 +6,6 @@ import 'package:spacenotes_client/blocs/chat/chat_state.dart';
 import '../theme/spacenotes_theme.dart';
 import '../blocs/connection/connection_bloc.dart';
 import '../blocs/connection/connection_state.dart' as connection_states;
-import '../blocs/config/config_cubit.dart';
-import '../blocs/config/config_state.dart';
-import '../services/network_service.dart';
 
 class ConnectionStatusRow extends StatefulWidget {
   const ConnectionStatusRow({super.key});
@@ -49,117 +46,64 @@ class _ConnectionStatusRowState extends State<ConnectionStatusRow>
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<ConfigCubit, ConfigState>(
-      builder: (context, configState) {
-        final connectionBloc = context.read<ConnectionBloc>();
-        final openCodeClient = connectionBloc.openCodeClient;
-        final modelName = openCodeClient.modelDisplayName;
+    final connectionBloc = context.read<ConnectionBloc>();
+    final openCodeClient = connectionBloc.openCodeClient;
+    final modelName = openCodeClient.modelDisplayName;
 
-        return BlocBuilder<ConnectionBloc, connection_states.ConnectionState>(
-          builder: (context, connectionState) {
-            String ipText = '...';
-            if (configState is ConfigLoaded) {
-              ipText = configState.serverIp;
-            }
+    return BlocBuilder<ConnectionBloc, connection_states.ConnectionState>(
+      builder: (context, connectionState) {
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          child: BlocBuilder<ChatBloc, ChatState>(
+            builder: (context, chatState) {
+              final isWorking = chatState is ChatReady && chatState.isWorking;
+              final sessionStatus = chatState is ChatReady ? chatState.sessionStatus : null;
 
-            final networkService = NetworkService();
-            final networkStatus = networkService.currentStatus;
-            final networkIcon = networkStatus?.icon ?? '';
-            
-            String statusText;
-            bool isReconnecting = connectionState is connection_states.Reconnecting;
-            if (connectionState is connection_states.Connected) {
-              statusText = '$networkIcon Connected to $ipText';
-            } else if (isReconnecting) {
-              statusText = '$networkIcon Reconnecting to $ipText...';
-            } else if (connectionState is connection_states.Disconnected) {
-              final isIntentional = connectionState.isIntentional;
-              if (isIntentional) {
-                statusText = '$networkIcon Manually disconnected';
-              } else {
-                statusText = '$networkIcon Disconnected from $ipText';
-              }
-            } else {
-              statusText = '$networkIcon Disconnected from $ipText';
-            }
-            return Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              child: Column(
+              return Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  BlocBuilder<ChatBloc, ChatState>(
-                      builder: (context, chatState) {
-                    final isSendingMessage = chatState is ChatSendingMessage;
-                    final isStreamingResponse =
-                        chatState is ChatReady && chatState.isStreaming;
-                    final isWorking = isSendingMessage || isStreamingResponse;
-
-                    final sessionStatus = chatState is ChatReady ? chatState.sessionStatus : null;
-
-                    final displayText = modelName;
-                    return Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Row(
-                          children: [
-                            GestureDetector(
-                              onTap: () => context.go('/provider-list'),
-                              child: Text(
-                                displayText,
-                                style: SpaceNotesTextStyles.terminal.copyWith(
-                                  fontSize: 13,
-                                  color: SpaceNotesTheme.text,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        if (sessionStatus != null && sessionStatus.isRetrying) ...[
-                          const SizedBox(width: 8),
-                          Text(
-                            sessionStatus.displayMessage,
-                            style: SpaceNotesTextStyles.terminal.copyWith(
-                              fontSize: 11,
-                              color: SpaceNotesTheme.warning,
-                              fontWeight: FontWeight.w400,
-                            ),
-                          ),
-                        ] else if (isWorking) ...[
-                          const SizedBox(width: 8),
-                          SizedBox(
-                            width: 70,
-                            child: AnimatedDots(
-                              textStyle: SpaceNotesTextStyles.terminal.copyWith(
-                                fontSize: 11,
-                                color: SpaceNotesTheme.textSecondary,
-                                fontWeight: FontWeight.w400,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ],
-                    );
-                  }),
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Expanded(
+                      _buildConnectionIndicator(connectionState),
+                      const SizedBox(width: 8),
+                      GestureDetector(
+                        onTap: () => context.go('/provider-list'),
                         child: Text(
-                          statusText,
-                          style: TextStyle(
-                            color: isReconnecting ? SpaceNotesTheme.warning : SpaceNotesTheme.text,
+                          modelName,
+                          style: SpaceNotesTextStyles.terminal.copyWith(
                             fontSize: 13,
+                            color: SpaceNotesTheme.text,
                             fontWeight: FontWeight.w500,
                           ),
                         ),
                       ),
-                      _buildConnectionIndicator(connectionState)
                     ],
                   ),
+                  if (sessionStatus != null && sessionStatus.isRetrying) ...[
+                    Text(
+                      sessionStatus.displayMessage,
+                      style: SpaceNotesTextStyles.terminal.copyWith(
+                        fontSize: 11,
+                        color: SpaceNotesTheme.warning,
+                        fontWeight: FontWeight.w400,
+                      ),
+                    ),
+                  ] else if (isWorking) ...[
+                    SizedBox(
+                      width: 70,
+                      child: AnimatedDots(
+                        textStyle: SpaceNotesTextStyles.terminal.copyWith(
+                          fontSize: 11,
+                          color: SpaceNotesTheme.textSecondary,
+                          fontWeight: FontWeight.w400,
+                        ),
+                      ),
+                    ),
+                  ],
                 ],
-              ),
-            );
-          },
+              );
+            },
+          ),
         );
       },
     );

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:collection/collection.dart';
 import '../theme/spacenotes_theme.dart';
 import '../providers/notes_providers.dart';
+import '../providers/connection_providers.dart';
 import '../dialogs/notes_list_dialogs.dart';
 import '../generated/note.dart';
 import 'quill_note_editor.dart';
@@ -23,6 +24,7 @@ class NoteBottomBar extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isDesktop = PlatformUtils.isDesktopLayout(context);
+    final isOpenCodeConnected = ref.watch(openCodeConnectionProvider).valueOrNull ?? false;
     final buttonSize = isDesktop ? 36.0 : 48.0;
     final iconSize = isDesktop ? 20.0 : 24.0;
 
@@ -72,14 +74,16 @@ class NoteBottomBar extends ConsumerWidget {
               size: buttonSize,
               iconSize: iconSize,
             ),
-            const SizedBox(width: 8),
-            _buildCircularButton(
-              onPressed: onChatTap,
-              tooltip: 'Chat about note',
-              icon: Icons.chat_bubble_outline,
-              size: buttonSize,
-              iconSize: iconSize,
-            ),
+            if (isOpenCodeConnected) ...[
+              const SizedBox(width: 8),
+              _buildCircularButton(
+                onPressed: onChatTap,
+                tooltip: 'Chat about note',
+                icon: Icons.chat_bubble_outline,
+                size: buttonSize,
+                iconSize: iconSize,
+              ),
+            ],
           ],
         ),
       ),

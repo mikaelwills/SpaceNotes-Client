@@ -3,6 +3,54 @@ import '../../models/opencode_message.dart';
 import '../../models/permission_request.dart';
 import '../../models/session_status.dart';
 
+enum ChatFlowPhase {
+  idle,
+  sending,
+  awaitingResponse,
+  streaming,
+  failed,
+  reconnecting,
+}
+
+class ChatTransitions {
+  static const Map<ChatFlowPhase, Set<ChatFlowPhase>> validTransitions = {
+    ChatFlowPhase.idle: {
+      ChatFlowPhase.sending,
+      ChatFlowPhase.reconnecting,
+    },
+    ChatFlowPhase.sending: {
+      ChatFlowPhase.awaitingResponse,
+      ChatFlowPhase.failed,
+      ChatFlowPhase.reconnecting,
+      ChatFlowPhase.streaming,
+    },
+    ChatFlowPhase.awaitingResponse: {
+      ChatFlowPhase.streaming,
+      ChatFlowPhase.failed,
+      ChatFlowPhase.idle,
+      ChatFlowPhase.reconnecting,
+    },
+    ChatFlowPhase.streaming: {
+      ChatFlowPhase.idle,
+      ChatFlowPhase.failed,
+      ChatFlowPhase.reconnecting,
+    },
+    ChatFlowPhase.failed: {
+      ChatFlowPhase.sending,
+      ChatFlowPhase.idle,
+      ChatFlowPhase.reconnecting,
+    },
+    ChatFlowPhase.reconnecting: {
+      ChatFlowPhase.idle,
+      ChatFlowPhase.failed,
+    },
+  };
+
+  static bool canTransition(ChatFlowPhase from, ChatFlowPhase to) {
+    return validTransitions[from]?.contains(to) ?? false;
+  }
+}
+
 abstract class ChatState extends Equatable {
   const ChatState();
 
@@ -17,51 +65,64 @@ class ChatConnecting extends ChatState {}
 class ChatReady extends ChatState {
   final String sessionId;
   final List<OpenCodeMessage> messages;
-  final bool isStreaming;
+  final ChatFlowPhase phase;
   final bool isReconnectionRefresh;
   final SessionStatus? sessionStatus;
+  final String? pendingMessageId;
+  final String? errorMessage;
 
   const ChatReady({
     required this.sessionId,
     this.messages = const [],
-    this.isStreaming = false,
+    this.phase = ChatFlowPhase.idle,
     this.isReconnectionRefresh = false,
     this.sessionStatus,
+    this.pendingMessageId,
+    this.errorMessage,
   });
 
+  bool get isIdle => phase == ChatFlowPhase.idle;
+  bool get isSending => phase == ChatFlowPhase.sending;
+  bool get isAwaitingResponse => phase == ChatFlowPhase.awaitingResponse;
+  bool get isStreaming => phase == ChatFlowPhase.streaming;
+  bool get isFailed => phase == ChatFlowPhase.failed;
+  bool get isReconnecting => phase == ChatFlowPhase.reconnecting;
+
+  bool get isWorking => isSending || isAwaitingResponse || isStreaming;
+  bool get canSend => isIdle || isFailed;
+
   @override
-  List<Object?> get props => [sessionId, messages, isStreaming, isReconnectionRefresh, sessionStatus];
+  List<Object?> get props => [
+        sessionId,
+        messages,
+        phase,
+        isReconnectionRefresh,
+        sessionStatus,
+        pendingMessageId,
+        errorMessage,
+      ];
 
   ChatReady copyWith({
     String? sessionId,
     List<OpenCodeMessage>? messages,
-    bool? isStreaming,
+    ChatFlowPhase? phase,
     bool? isReconnectionRefresh,
     SessionStatus? sessionStatus,
+    String? pendingMessageId,
+    String? errorMessage,
+    bool clearPendingMessageId = false,
+    bool clearErrorMessage = false,
   }) {
     return ChatReady(
       sessionId: sessionId ?? this.sessionId,
       messages: messages ?? this.messages,
-      isStreaming: isStreaming ?? this.isStreaming,
+      phase: phase ?? this.phase,
       isReconnectionRefresh: isReconnectionRefresh ?? this.isReconnectionRefresh,
       sessionStatus: sessionStatus ?? this.sessionStatus,
+      pendingMessageId: clearPendingMessageId ? null : (pendingMessageId ?? this.pendingMessageId),
+      errorMessage: clearErrorMessage ? null : (errorMessage ?? this.errorMessage),
     );
   }
-}
-
-class ChatSendingMessage extends ChatState {
-  final String sessionId;
-  final String message;
-  final List<OpenCodeMessage> messages;
-
-  const ChatSendingMessage({
-    required this.sessionId,
-    required this.message,
-    this.messages = const [],
-  });
-
-  @override
-  List<Object> get props => [sessionId, message, messages];
 }
 
 class ChatError extends ChatState {

@@ -103,9 +103,9 @@ class _NoteTabState extends State<_NoteTab> {
                   onTap: () {
                     context.read<DesktopNotesBloc>().add(CloseNote(widget.notePath));
                   },
-                  child: Padding(
-                    padding: const EdgeInsets.all(2),
-                    child: const Icon(
+                  child: const Padding(
+                    padding: EdgeInsets.all(2),
+                    child: Icon(
                       Icons.close,
                       size: 12,
                       color: SpaceNotesTheme.primary,

@@ -56,8 +56,7 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
 
     return BlocBuilder<ChatBloc, ChatState>(
       builder: (context, chatState) {
-        final isWorking = chatState is ChatSendingMessage ||
-            (chatState is ChatReady && chatState.isStreaming);
+        final isWorking = chatState is ChatReady && chatState.isWorking;
 
         return Stack(
           children: [

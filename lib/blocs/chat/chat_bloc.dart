@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../services/debug_logger.dart';
 import '../session/session_bloc.dart';
 import '../session/session_event.dart' as session_events;
 import '../session/session_state.dart';
@@ -45,10 +46,14 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     on<DeleteQueuedMessage>(_onDeleteQueuedMessage);
     on<MessageStatusChanged>(_onMessageStatusChanged);
     on<RespondToPermission>(_onRespondToPermission);
-    
+    on<SessionErrorReceived>(_onSessionErrorReceived);
+
     _permanentSessionSubscription = sessionBloc.stream.listen((sessionState) {
       if (sessionState is SessionLoaded) {
         add(LoadMessagesForCurrentSession());
+      } else if (sessionState is SessionError) {
+        debugLogger.chatError('Session error received', sessionState.message);
+        add(SessionErrorReceived(sessionState.message));
       }
     });
 
@@ -64,16 +69,22 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     final currentSessionId = sessionBloc.currentSessionId;
 
     if (currentSessionId == null) {
+      debugLogger.chatError('LoadMessages: No session ID');
       return;
     }
 
     try {
+      debugLogger.chat('LoadMessages: Starting', 'sessionId=$currentSessionId');
       emit(ChatConnecting());
 
       _messages.clear();
       _messageIndex.clear();
+      _currentPhase = ChatFlowPhase.idle;
+      _pendingMessageId = null;
+      _errorMessage = null;
 
       final messages = await openCodeClient.getSessionMessages(currentSessionId);
+      debugLogger.chat('LoadMessages: Fetched ${messages.length} messages');
 
       for (final message in messages) {
         _messages.add(message);
@@ -82,15 +93,18 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
 
       _startListening(currentSessionId);
 
+      debugLogger.chat('LoadMessages: Ready', 'messageCount=${_messages.length}');
       emit(ChatReady(sessionId: currentSessionId, messages: List.from(_messages)));
 
     } catch (e) {
+      debugLogger.chatError('LoadMessages: Failed', e.toString());
       emit(const ChatError('Failed to load messages. Please try again.'));
     }
   }
 
   void _startListening(String sessionId) {
     _eventSubscription?.cancel();
+    debugLogger.chat('SSE: Starting listener', 'sessionId=$sessionId');
 
     _eventSubscription = sseService.connectToEventStream().listen(
       (sseEvent) {
@@ -98,7 +112,9 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
           add(SSEEventReceived(sseEvent));
         }
       },
-      onError: (error) {},
+      onError: (error) {
+        debugLogger.chatError('SSE: Stream error', error.toString());
+      },
     );
   }
 
@@ -108,26 +124,36 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
   ) async {
     final currentState = state;
     if (currentState is! ChatReady) {
-      // Silently return, chat is not in a state to send messages.
+      debugLogger.chatError('Send: Not in ChatReady state', 'state=${currentState.runtimeType}');
+      return;
+    }
+
+    if (!currentState.canSend) {
+      debugLogger.chatError('Send: Cannot send in current phase', 'phase=${currentState.phase}');
       return;
     }
 
     final sessionId = currentState.sessionId;
+    final msgPreview = event.message.length > 50 ? '${event.message.substring(0, 50)}...' : event.message;
+    debugLogger.chat('Send: Starting', 'session=$sessionId, msg="$msgPreview"');
 
-    // Add user message to display immediately and get its ID
     final messageId = _addUserMessage(sessionId, event.message);
-    
+
     if (messageId == null) {
+      debugLogger.chatError('Send: Failed to create message');
       return;
     }
 
+    if (!_tryTransition(ChatFlowPhase.sending)) {
+      debugLogger.chatError('Send: Failed to transition to sending');
+      return;
+    }
+
+    _pendingMessageId = messageId;
+
     try {
-      // Emit state with the new user message
-      emit(ChatSendingMessage(
-        sessionId: sessionId,
-        message: event.message,
-        messages: List.from(_messages),
-      ));
+      debugLogger.chat('Send: Created message', 'msgId=$messageId');
+      emit(_createChatReadyState());
 
       messageQueueService.sendMessage(
         messageId: messageId,
@@ -136,13 +162,17 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
         imageBase64: event.imageBase64,
         imageMimeType: event.imageMimeType,
         onStatusChange: (status) {
+          debugLogger.chat('Send: Status change', 'msgId=$messageId, status=$status');
           _updateMessageStatus(messageId, status);
           add(MessageStatusChanged(status));
         },
       );
-      
+
     } catch (e) {
+      debugLogger.chatError('Send: Exception', 'msgId=$messageId, error=$e');
       _updateMessageStatus(messageId, MessageSendStatus.failed);
+      _tryTransition(ChatFlowPhase.failed);
+      _errorMessage = e.toString();
       emit(_createChatReadyState());
     }
   }
@@ -190,10 +220,8 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     Emitter<ChatState> emit,
   ) async {
     final currentState = state;
-    if (currentState is ChatReady || currentState is ChatSendingMessage) {
-      final sessionId = currentState is ChatReady
-          ? currentState.sessionId
-          : (currentState as ChatSendingMessage).sessionId;
+    if (currentState is ChatReady) {
+      final sessionId = currentState.sessionId;
 
       try {
         sessionBloc.add(session_events.CancelSessionOperation(sessionId));
@@ -215,7 +243,8 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       return;
     }
 
-    // Handle different event types
+    debugLogger.sseDebug('Event: ${sseEvent.type}', 'msgId=${sseEvent.messageId}');
+
     switch (sseEvent.type) {
       case 'message.updated':
         if (sseEvent.data != null) {
@@ -228,10 +257,13 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
                 return;
               }
 
+              debugLogger.chat('SSE: message.updated', 'msgId=${message.id}, role=${message.role}');
               _updateOrAddMessage(message);
               _emitCurrentState(emit);
             }
-          } catch (e) {}
+          } catch (e) {
+            debugLogger.chatError('SSE: message.updated parse error', e.toString());
+          }
         }
         break;
       case 'message.part.updated':
@@ -243,6 +275,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
         }
         break;
       case 'session.idle':
+        debugLogger.chat('SSE: session.idle', 'streaming complete');
         _handleSessionIdle();
         _emitCurrentState(emit);
         break;
@@ -250,31 +283,36 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
         if (sseEvent.data != null) {
           try {
             final permission = PermissionRequest.fromJson(sseEvent.data!);
+            debugLogger.chat('SSE: permission.updated', 'type=${permission.type}');
             emit(ChatPermissionRequired(
               sessionId: sessionBloc.currentSessionId!,
               permission: permission,
               messages: List.from(_messages),
             ));
-          } catch (e) {}
+          } catch (e) {
+            debugLogger.chatError('SSE: permission.updated parse error', e.toString());
+          }
         }
         break;
       case 'session.status':
         if (sseEvent.data != null) {
           try {
             final status = SessionStatus.fromJson(sseEvent.data!);
+            debugLogger.chatDebug('SSE: session.status', 'status=$status');
             final currentState = state;
             if (currentState is ChatReady) {
               emit(currentState.copyWith(sessionStatus: status));
             }
-          } catch (e) {}
+          } catch (e) {
+            debugLogger.chatError('SSE: session.status parse error', e.toString());
+          }
         }
         break;
       case 'storage.write':
       case 'session.updated':
-        // These are internal server events - ignore
         break;
       default:
-      // print('🔍 [ChatBloc] Unknown event type: ${sseEvent.type}');
+        debugLogger.chatDebug('SSE: Unknown event type', sseEvent.type);
     }
   }
 
@@ -385,15 +423,16 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     Emitter<ChatState> emit,
   ) {
     final status = event.status;
-    
+
     if (status == MessageSendStatus.sent) {
-      final actuallyStreaming = _messages.isNotEmpty &&
-          _messages.last.role == 'assistant' &&
-          _messages.last.isStreaming;
-      emit(_createChatReadyState(isStreaming: actuallyStreaming));
+      _tryTransition(ChatFlowPhase.awaitingResponse);
+      emit(_createChatReadyState());
     } else if (status == MessageSendStatus.failed) {
+      _tryTransition(ChatFlowPhase.failed);
+      _errorMessage = 'Message failed to send';
       emit(_createChatReadyState());
     } else if (status == MessageSendStatus.queued) {
+      _tryTransition(ChatFlowPhase.idle);
       emit(_createChatReadyState());
     }
   }
@@ -428,7 +467,6 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
 
   bool _handlePartialUpdate(OpenCodeEvent sseEvent) {
     try {
-      // Extract part data from the event
       Map<String, dynamic>? partData;
       if (sseEvent.data != null &&
           sseEvent.data!['properties'] is Map<String, dynamic>) {
@@ -440,6 +478,11 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
 
       if (partData == null) {
         return false;
+      }
+
+      if (_currentPhase == ChatFlowPhase.awaitingResponse ||
+          _currentPhase == ChatFlowPhase.sending) {
+        _tryTransition(ChatFlowPhase.streaming);
       }
 
       final messageId =
@@ -568,6 +611,8 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
         _messages[_messages.length - 1] = completedMessage;
       }
     }
+
+    _tryTransition(ChatFlowPhase.idle);
   }
 
   void _handleSessionAborted(String sessionId) {
@@ -582,6 +627,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
           _messages[_messages.length - 1] = completedMessage;
         }
       }
+      _tryTransition(ChatFlowPhase.idle);
     }
   }
 
@@ -606,7 +652,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
 
         // Check for exact content match (case insensitive)
         if (messageContent.toLowerCase() == contentLower) {
-          print('🚫 [ChatBloc] Same-role duplicate content detected: "$content" ($role duplicates another $role message)');
+          debugLogger.chatDebug('Duplicate: same-role detected', 'role=$role');
           return true;
         }
       }
@@ -626,9 +672,8 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
               .trim()
               .toLowerCase();
 
-          // Check for EXACT echo (assistant exactly repeating user input)
           if (userContent == contentLower) {
-            print('🚫 [ChatBloc] Exact echo detected - blocking assistant message that exactly repeats user input: "$content"');
+            debugLogger.chatDebug('Duplicate: exact echo blocked');
             return true;
           }
 
@@ -683,21 +728,40 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
         _messageIndex[_messages[i].id] = i;
       }
 
-      print(
-          '🗑️ Removed $messagesToRemove old messages to enforce limit of $_maxMessages');
+      debugLogger.chatDebug('Limit: Removed $messagesToRemove old messages');
     }
   }
 
-  ChatReady _createChatReadyState({bool? isStreaming}) {
-    final streaming = isStreaming ??
-        (_messages.isNotEmpty &&
-            _messages.last.role == 'assistant' &&
-            _messages.last.isStreaming);
+  ChatFlowPhase _currentPhase = ChatFlowPhase.idle;
+  String? _pendingMessageId;
+  String? _errorMessage;
 
+  bool _tryTransition(ChatFlowPhase newPhase) {
+    if (_currentPhase == newPhase) {
+      return true;
+    }
+
+    if (ChatTransitions.canTransition(_currentPhase, newPhase)) {
+      debugLogger.chat('Phase transition', '$_currentPhase → $newPhase');
+      _currentPhase = newPhase;
+      if (newPhase == ChatFlowPhase.idle) {
+        _pendingMessageId = null;
+        _errorMessage = null;
+      }
+      return true;
+    }
+
+    debugLogger.chatError('Invalid transition', '$_currentPhase → $newPhase');
+    return false;
+  }
+
+  ChatReady _createChatReadyState() {
     return ChatReady(
       sessionId: sessionBloc.currentSessionId!,
       messages: List.from(_messages),
-      isStreaming: streaming,
+      phase: _currentPhase,
+      pendingMessageId: _pendingMessageId,
+      errorMessage: _errorMessage,
     );
   }
 
@@ -721,34 +785,28 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     if (index != null && index < _messages.length) {
       final originalMessage = _messages[index];
       _messages[index] = originalMessage.copyWith(sendStatus: status);
-      print('📬 [ChatBloc] Updated message $messageId status to $status');
+      debugLogger.chatDebug('Status update', 'msgId=$messageId, status=$status');
     } else {
-      print('📬 [ChatBloc] Message $messageId not found for status update');
+      debugLogger.chatError('Status update: Message not found', 'msgId=$messageId');
     }
   }
 
-  /// Restart SSE event subscription - used when SSE service reconnects to new server
   void restartSSESubscription() {
-    print('🔄 [ChatBloc] Restarting SSE subscription...');
-    
-    // Cancel existing subscription
+    debugLogger.chat('SSE: Restarting subscription');
     _eventSubscription?.cancel();
-    
-    // Reestablish SSE event subscription
+
     _eventSubscription = sseService.connectToEventStream().listen(
       (sseEvent) {
-        // Only process events for the current session
         if (sseEvent.sessionId == sessionBloc.currentSessionId) {
           add(SSEEventReceived(sseEvent));
         }
       },
       onError: (error) {
-        // Errors are now handled by the ConnectionBloc and displayed in the ConnectionStatusRow.
-        print('❌ [ChatBloc] SSE stream error after restart: $error');
+        debugLogger.chatError('SSE: Stream error after restart', error.toString());
       },
     );
-    
-    print('✅ [ChatBloc] SSE subscription restarted successfully');
+
+    debugLogger.chat('SSE: Subscription restarted');
   }
 
   Future<void> _onRespondToPermission(
@@ -758,25 +816,30 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     try {
       final sessionId = sessionBloc.currentSessionId;
       if (sessionId == null) {
-        print('❌ [ChatBloc] No session ID available for permission response');
+        debugLogger.chatError('Permission: No session ID');
         return;
       }
 
-      // Send permission response to server
+      debugLogger.chat('Permission: Responding', 'response=${event.response.value}');
       await openCodeClient.respondToPermission(
         sessionId,
         event.permissionId,
         event.response,
       );
 
-      print('✅ [ChatBloc] Permission response sent: ${event.response.value}');
-
-      // Return to ready state with current messages
+      debugLogger.chat('Permission: Response sent');
       emit(_createChatReadyState());
     } catch (e) {
-      print('❌ [ChatBloc] Failed to send permission response: $e');
+      debugLogger.chatError('Permission: Failed to respond', e.toString());
       emit(const ChatError('Failed to respond to permission request'));
     }
+  }
+
+  void _onSessionErrorReceived(
+    SessionErrorReceived event,
+    Emitter<ChatState> emit,
+  ) {
+    emit(ChatError(event.error));
   }
 
   @override

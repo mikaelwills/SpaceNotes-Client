@@ -9,7 +9,6 @@ import '../widgets/folder_list_item.dart';
 import '../widgets/note_list_item.dart';
 import '../widgets/recent_notes_grid.dart';
 import '../dialogs/notes_list_dialogs.dart';
-import 'home_screen.dart';
 
 /// FolderListView displays folder contents
 /// The bottom input area is provided by the parent HomeScreen shell

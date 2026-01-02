@@ -4,6 +4,7 @@ import 'package:flutter_client_sse/constants/sse_request_type_enum.dart';
 import 'package:flutter_client_sse/flutter_client_sse.dart';
 import '../blocs/config/config_cubit.dart';
 import '../models/opencode_event.dart';
+import 'debug_logger.dart';
 
 class SSEService {
   final ConfigCubit _configCubit;
@@ -30,6 +31,8 @@ class SSEService {
   void _connectToSSE() {
     _reconnectAttempts++;
     final sseUrl = '${_configCubit.baseUrl}${ConfigCubit.sseEndpoint}';
+    debugLogger.sse('Connecting', 'attempt=$_reconnectAttempts, url=$sseUrl');
+
     _subscription = SSEClient.subscribeToSSE(
             method: SSERequestType.GET,
             url: sseUrl,
@@ -41,6 +44,7 @@ class SSEService {
       (event) {
         if (!_isConnected) {
           _isConnected = true;
+          debugLogger.sse('Connected');
         }
         _reconnectAttempts = 0;
 
@@ -55,6 +59,7 @@ class SSEService {
               }
             }
           } catch (e) {
+            debugLogger.sseError('Parse error', e.toString());
             if (_eventController?.isClosed == false) {
               _eventController!.addError(
                 FormatException('Failed to parse SSE event data: $e'),
@@ -64,6 +69,7 @@ class SSEService {
         }
       },
       onError: (error) {
+        debugLogger.sseError('Stream error', error.toString());
         _isConnected = false;
         if (_eventController?.isClosed == false) {
           _eventController!.addError(error);
@@ -71,6 +77,7 @@ class SSEService {
         _reconnect();
       },
       onDone: () {
+        debugLogger.sse('Stream done', 'will reconnect');
         _isConnected = false;
         _reconnect();
       },
@@ -88,6 +95,7 @@ class SSEService {
     final delay =
         Duration(seconds: (_reconnectAttempts * 2).clamp(2, 30).toInt());
 
+    debugLogger.sse('Reconnect scheduled', 'delay=${delay.inSeconds}s');
     _reconnectTimer = Timer(delay, () {
       if (!_isConnected) {
         _connectToSSE();
@@ -99,24 +107,19 @@ class SSEService {
   
   bool get isActive => _eventController != null && !_eventController!.isClosed;
   
-  /// Restart the SSE connection with fresh URL from config
-  /// This properly cleans up the old connection and establishes a new one
   void restartConnection() {
-    
-    // Clean up existing connection
+    debugLogger.sse('Restart: Cleaning up old connection');
     _reconnectTimer?.cancel();
     _subscription?.cancel();
-    
-    // Close existing stream controller if it exists
+
     if (_eventController != null && !_eventController!.isClosed) {
       _eventController!.close();
     }
-    
-    // Reset connection state
+
     _isConnected = false;
     _reconnectAttempts = 0;
     _eventController = null;
-    
+    debugLogger.sse('Restart: Ready for new connection');
   }
 
   // Fast path for text streaming - optimized for message.part.updated events

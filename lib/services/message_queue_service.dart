@@ -5,6 +5,7 @@ import '../blocs/connection/connection_state.dart';
 import '../blocs/session/session_bloc.dart';
 import '../blocs/session/session_state.dart';
 import '../models/opencode_message.dart';
+import 'debug_logger.dart';
 
 class QueuedMessage {
   final String messageId;
@@ -81,6 +82,7 @@ class MessageQueueService {
   
   void _markMessageSentViaSSE(String messageId) {
     if (_pendingMessageTimeouts.containsKey(messageId)) {
+      debugLogger.queue('Message confirmed via SSE', 'msgId=$messageId');
       _pendingMessageTimeouts[messageId]?.cancel();
       final callback = _pendingCallbacks[messageId];
       if (callback != null) {
@@ -89,8 +91,9 @@ class MessageQueueService {
       _cleanupPendingMessage(messageId);
     }
   }
-  
+
   void _markMessageFailed(String messageId, String reason) {
+    debugLogger.error('QUEUE', 'Message failed', 'msgId=$messageId, reason=$reason');
     final callback = _pendingCallbacks[messageId];
     if (callback != null) {
       callback(MessageSendStatus.failed);
@@ -130,6 +133,7 @@ class MessageQueueService {
     final connectionState = connectionBloc.state;
 
     if (connectionState is Connected) {
+      debugLogger.queue('Sending message', 'msgId=$messageId');
       onStatusChange(MessageSendStatus.sending);
       await _sendMessageDirect(
         messageId,
@@ -140,6 +144,7 @@ class MessageQueueService {
         imageMimeType: imageMimeType,
       );
     } else {
+      debugLogger.queue('Queuing message (offline)', 'msgId=$messageId');
       final queuedMessage = QueuedMessage(
         messageId: messageId,
         sessionId: sessionId,
@@ -176,8 +181,10 @@ class MessageQueueService {
       return;
     }
 
+    debugLogger.queue('Processing queue', 'count=${_messageQueue.length}');
     while (_messageQueue.isNotEmpty) {
       final message = _messageQueue.removeFirst();
+      debugLogger.queue('Dequeuing message', 'msgId=${message.messageId}');
 
       message.onStatusChange(MessageSendStatus.sending);
       await _sendMessageDirect(
@@ -201,10 +208,12 @@ class MessageQueueService {
     String? imageBase64,
     String? imageMimeType,
   }) async {
+    debugLogger.queue('HTTP send starting', 'msgId=$messageId, session=$sessionId');
     onStatusChange(MessageSendStatus.sending);
 
     final timeoutTimer = Timer(const Duration(seconds: 10), () {
       if (_pendingMessageTimeouts.containsKey(messageId)) {
+        debugLogger.error('QUEUE', 'Timeout waiting for response', 'msgId=$messageId');
         _markMessageFailed(messageId, 'Timeout - no response from server');
       }
     });
@@ -220,8 +229,9 @@ class MessageQueueService {
     );
 
     httpFuture.then((_) {
-      _cleanupPendingMessage(messageId);
+      debugLogger.queue('HTTP send completed, awaiting SSE confirmation', 'msgId=$messageId');
     }).catchError((error) {
+      debugLogger.error('QUEUE', 'HTTP error', 'msgId=$messageId, error=$error');
       if (_pendingMessageTimeouts.containsKey(messageId)) {
         _markMessageFailed(messageId, 'HTTP error: ${error.runtimeType}: $error');
       }

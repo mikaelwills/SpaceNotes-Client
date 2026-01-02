@@ -1,6 +1,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../services/opencode_client.dart';
+import '../../services/debug_logger.dart';
 import '../../models/session.dart';
 import '../config/config_cubit.dart';
 import '../config/config_state.dart';
@@ -32,12 +33,13 @@ class SessionBloc extends Bloc<SessionEvent, SessionState> {
     CreateSession event,
     Emitter<SessionState> emit,
   ) async {
-    // Prevent concurrent session creation
     if (_isCreatingSession) {
+      debugLogger.chat('Session: Create skipped (already in progress)');
       return;
     }
 
     _isCreatingSession = true;
+    debugLogger.chat('Session: Creating new session');
     emit(SessionLoading());
 
     try {
@@ -45,10 +47,10 @@ class SessionBloc extends Bloc<SessionEvent, SessionState> {
 
       _currentSession = session;
       await _persistCurrentSessionId(session.id);
+      debugLogger.chat('Session: Created', 'id=${session.id}');
       emit(SessionLoaded(session: session));
     } catch (e, stackTrace) {
-      print('❌ [SessionBloc] Failed to create session: $e');
-      print('❌ [SessionBloc] Stack trace: $stackTrace');
+      debugLogger.chatError('Session: Create failed', '$e\n$stackTrace');
       emit(SessionError('Failed to create session: ${e.toString()}'));
     } finally {
       _isCreatingSession = false;
@@ -96,7 +98,6 @@ class SessionBloc extends Bloc<SessionEvent, SessionState> {
     try {
       await openCodeClient.sendMessage(event.sessionId, event.message, agent: effectiveAgent);
 
-      // Update session to active state
       final updatedSession = _currentSession!.copyWith(
         isActive: true,
         lastActivity: DateTime.now(),
@@ -105,8 +106,7 @@ class SessionBloc extends Bloc<SessionEvent, SessionState> {
 
       emit(SessionLoaded(session: updatedSession, isActive: true));
     } catch (e, stackTrace) {
-      print('❌ [SessionBloc] Failed to send message: $e');
-      print('❌ [SessionBloc] Stack trace: $stackTrace');
+      debugLogger.chatError('Session: Send message failed', '$e\n$stackTrace');
       emit(SessionError('Failed to send message: ${e.toString()}'));
     }
   }
@@ -115,12 +115,12 @@ class SessionBloc extends Bloc<SessionEvent, SessionState> {
     CancelSessionOperation event,
     Emitter<SessionState> emit,
   ) async {
-    // Validate input
     if (event.sessionId.trim().isEmpty) {
       emit(const SessionError('Invalid session ID for cancel operation'));
       return;
     }
 
+    debugLogger.chat('Session: Cancelling operation', 'id=${event.sessionId}');
     try {
       await openCodeClient.abortSession(event.sessionId);
 
@@ -129,9 +129,9 @@ class SessionBloc extends Bloc<SessionEvent, SessionState> {
         _currentSession = updatedSession;
         emit(SessionLoaded(session: updatedSession, isActive: false));
       }
+      debugLogger.chat('Session: Operation cancelled');
     } catch (e, stackTrace) {
-      print('❌ [SessionBloc] Failed to cancel operation: $e');
-      print('❌ [SessionBloc] Stack trace: $stackTrace');
+      debugLogger.chatError('Session: Cancel failed', '$e\n$stackTrace');
       emit(SessionError('Failed to cancel operation: ${e.toString()}'));
     }
   }
@@ -148,14 +148,18 @@ class SessionBloc extends Bloc<SessionEvent, SessionState> {
     LoadStoredSession event,
     Emitter<SessionState> emit,
   ) async {
+    debugLogger.chat('Session: Loading stored session');
     try {
       final storedSessionId = await _getStoredSessionId();
       if (storedSessionId != null) {
+        debugLogger.chat('Session: Found stored ID', 'id=$storedSessionId');
         add(ValidateSession(storedSessionId));
       } else {
+        debugLogger.chat('Session: No stored ID, creating new');
         _safelyCreateSession();
       }
     } catch (e) {
+      debugLogger.chatError('Session: Load stored failed', e.toString());
       emit(SessionError('Failed to load stored session: ${e.toString()}'));
     }
   }
@@ -164,10 +168,13 @@ class SessionBloc extends Bloc<SessionEvent, SessionState> {
     ValidateSession event,
     Emitter<SessionState> emit,
   ) async {
+    debugLogger.chat('Session: Validating', 'id=${event.sessionId}');
     emit(SessionValidating(event.sessionId));
 
     try {
       final sessions = await openCodeClient.getSessions();
+      debugLogger.chatDebug('Session: Got ${sessions.length} sessions from server');
+
       Session? session;
       try {
         session = sessions.firstWhere((s) => s.id == event.sessionId);
@@ -177,13 +184,16 @@ class SessionBloc extends Bloc<SessionEvent, SessionState> {
 
       if (session != null) {
         _currentSession = session;
+        debugLogger.chat('Session: Validated successfully', 'id=${session.id}');
         emit(SessionLoaded(session: session));
       } else {
+        debugLogger.chat('Session: Not found on server, creating new', 'id=${event.sessionId}');
         emit(SessionNotFound(event.sessionId));
         await _clearStoredSessionId();
         _safelyCreateSession();
       }
     } catch (e) {
+      debugLogger.chatError('Session: Validation failed, creating new', e.toString());
       emit(SessionNotFound(event.sessionId));
       await _clearStoredSessionId();
       _safelyCreateSession();
@@ -194,6 +204,7 @@ class SessionBloc extends Bloc<SessionEvent, SessionState> {
     SetCurrentSession event,
     Emitter<SessionState> emit,
   ) async {
+    debugLogger.chat('Session: Setting current', 'id=${event.sessionId}');
     try {
       final sessions = await openCodeClient.getSessions();
       Session? session;
@@ -202,16 +213,18 @@ class SessionBloc extends Bloc<SessionEvent, SessionState> {
       } catch (e) {
         session = null;
       }
-      
+
       if (session != null) {
         _currentSession = session;
         await _persistCurrentSessionId(session.id);
+        debugLogger.chat('Session: Set successfully', 'id=${session.id}');
         emit(SessionLoaded(session: session));
       } else {
+        debugLogger.chatError('Session: Not found', 'id=${event.sessionId}');
         emit(SessionError('Session not found: ${event.sessionId}'));
       }
     } catch (e) {
-      print('❌ [SessionBloc] Failed to set current session: $e');
+      debugLogger.chatError('Session: Set failed', e.toString());
       emit(SessionError('Failed to set current session: ${e.toString()}'));
     }
   }
@@ -284,8 +297,9 @@ class SessionBloc extends Bloc<SessionEvent, SessionState> {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_currentSessionKey, sessionId);
+      debugLogger.chatDebug('Session: Persisted ID', 'id=$sessionId');
     } catch (e) {
-      print('Failed to persist session ID: $e');
+      debugLogger.chatError('Session: Failed to persist ID', e.toString());
     }
   }
 
@@ -294,6 +308,7 @@ class SessionBloc extends Bloc<SessionEvent, SessionState> {
       final prefs = await SharedPreferences.getInstance();
       return prefs.getString(_currentSessionKey);
     } catch (e) {
+      debugLogger.chatError('Session: Failed to get stored ID', e.toString());
       return null;
     }
   }
@@ -302,8 +317,9 @@ class SessionBloc extends Bloc<SessionEvent, SessionState> {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove(_currentSessionKey);
+      debugLogger.chatDebug('Session: Cleared stored ID');
     } catch (e) {
-      print('Failed to clear stored session ID: $e');
+      debugLogger.chatError('Session: Failed to clear stored ID', e.toString());
     }
   }
 

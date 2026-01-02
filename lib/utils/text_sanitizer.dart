@@ -1,12 +1,5 @@
-/// Optimized utility class for sanitizing text to prevent UTF-16 encoding errors
-/// while preserving Markdown formatting when needed.
 class TextSanitizer {
-  // Pre-compiled regex patterns for performance
-  static final RegExp _markdownControlCharsRegex = RegExp(r'[\x00-\x08\x0E-\x1F]');
   static final RegExp _plainTextControlCharsRegex = RegExp(r'[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]');
-  static final RegExp _invalidUnicodeRegex = RegExp(r'[\uFFFE\uFFFF]');
-  static final RegExp _unpairedSurrogatesRegex = RegExp(r'[\uD800-\uDFFF](?![\uDC00-\uDFFF])');
-  static final RegExp _problematicCharsRegex = RegExp(r'[\x00-\x08\x0B-\x1F\x7F\uFFFE\uFFFF\uD800-\uDFFF]');
 
   // Cache for sanitized strings to avoid re-processing
   static final Map<String, String> _cache = {};
@@ -69,37 +62,6 @@ class TextSanitizer {
       i++;
     }
     return buffer.toString();
-  }
-
-  static bool _containsProblematicChars(String text) {
-    try {
-      return _problematicCharsRegex.hasMatch(text);
-    } catch (e) {
-      return true;
-    }
-  }
-
-  static String _sanitizeForMarkdown(String text) {
-    try {
-      return text
-          .replaceAll(_markdownControlCharsRegex, '')
-          .replaceAll(_invalidUnicodeRegex, '')
-          .replaceAll(_unpairedSurrogatesRegex, '');
-    } catch (e) {
-      return _sanitizeCodeUnits(text);
-    }
-  }
-
-  static String _sanitizeForPlainText(String text) {
-    try {
-      var result = text
-          .replaceAll(_plainTextControlCharsRegex, '')
-          .replaceAll(_invalidUnicodeRegex, '')
-          .replaceAll(_unpairedSurrogatesRegex, '');
-      return _sanitizeCodeUnits(result);
-    } catch (e) {
-      return _sanitizeCodeUnits(text);
-    }
   }
 
   /// Caches result with size management

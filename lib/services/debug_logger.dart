@@ -51,6 +51,14 @@ class DebugLogger {
   void editor(String msg, [String? details]) => debug('EDITOR', msg, details);
   void transaction(String msg, [String? details]) => info('TXN', msg, details);
 
+  void chat(String msg, [String? details]) => info('CHAT', msg, details);
+  void chatDebug(String msg, [String? details]) => debug('CHAT', msg, details);
+  void chatError(String msg, [String? details]) => error('CHAT', msg, details);
+  void sse(String msg, [String? details]) => info('SSE', msg, details);
+  void sseDebug(String msg, [String? details]) => debug('SSE', msg, details);
+  void sseError(String msg, [String? details]) => error('SSE', msg, details);
+  void queue(String msg, [String? details]) => info('QUEUE', msg, details);
+
   Future<void> exportToFile() async {
     if (_logFile == null) return;
 

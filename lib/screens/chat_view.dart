@@ -8,6 +8,8 @@ import '../widgets/connection_status_row.dart';
 import '../widgets/terminal_message.dart';
 import '../blocs/chat/chat_bloc.dart';
 import '../blocs/chat/chat_state.dart';
+import '../blocs/session/session_bloc.dart';
+import '../blocs/session/session_event.dart';
 
 /// ChatView displays the AI chat interface
 /// Can be reused in different contexts (main chat, note chat panel)
@@ -69,7 +71,7 @@ class _ChatViewState extends ConsumerState<ChatView> {
 
     return BlocListener<ChatBloc, ChatState>(
       listener: (context, state) {
-        if (state is ChatSendingMessage) {
+        if (state is ChatReady && state.isSending) {
           _scrollToBottom();
         }
       },
@@ -103,9 +105,55 @@ class _ChatViewState extends ConsumerState<ChatView> {
   Widget _buildChatMessagesArea() {
     return BlocBuilder<ChatBloc, ChatState>(
       builder: (context, state) {
+        if (state is ChatInitial) {
+          return const Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(color: SpaceNotesTheme.primary),
+                SizedBox(height: 16),
+                Text('Starting session...', style: SpaceNotesTextStyles.terminal),
+              ],
+            ),
+          );
+        }
+
+        if (state is ChatConnecting) {
+          return const Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(color: SpaceNotesTheme.primary),
+                SizedBox(height: 16),
+                Text('Connecting...', style: SpaceNotesTextStyles.terminal),
+              ],
+            ),
+          );
+        }
+
+        if (state is ChatError) {
+          return Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.error_outline, color: SpaceNotesTheme.error, size: 48),
+                const SizedBox(height: 16),
+                Text(state.error, style: SpaceNotesTextStyles.terminal, textAlign: TextAlign.center),
+                const SizedBox(height: 16),
+                TextButton(
+                  onPressed: () {
+                    context.read<SessionBloc>().add(LoadStoredSession());
+                  },
+                  child: const Text('Retry', style: TextStyle(color: SpaceNotesTheme.primary)),
+                ),
+              ],
+            ),
+          );
+        }
+
         final messages = state is ChatReady
             ? state.messages
-            : state is ChatSendingMessage
+            : state is ChatPermissionRequired
                 ? state.messages
                 : <dynamic>[];
         final isStreaming = state is ChatReady ? state.isStreaming : false;
