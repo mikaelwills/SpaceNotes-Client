@@ -266,6 +266,53 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
+  void _showResultDialog(String title, String message) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(title),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _saveLogsToNotes() async {
+    final content = await debugLogger.getLogs();
+    if (content == null || content.isEmpty) {
+      if (mounted) _showResultDialog('No Logs', 'There are no logs to save.');
+      return;
+    }
+
+    final now = DateTime.now();
+    final filename = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}_${now.hour.toString().padLeft(2, '0')}-${now.minute.toString().padLeft(2, '0')}';
+    final path = 'Software Development/SpaceNotes/ClientLogs/$filename.md';
+
+    try {
+      final repo = ref.read(notesRepositoryProvider);
+      final noteId = await repo.createNote(path, content);
+
+      if (!mounted) return;
+
+      if (noteId != null) {
+        await debugLogger.clearLogs();
+        if (!mounted) return;
+        _showResultDialog('Success', 'Logs saved to:\n$path');
+      } else {
+        if (!mounted) return;
+        _showResultDialog('Save Failed', 'Could not save logs. Check your connection and try again.');
+      }
+    } catch (e) {
+      if (!mounted) return;
+      _showResultDialog('Save Failed', 'Could not save logs: $e\n\nCheck your connection and try again.');
+    }
+  }
+
   Widget _buildDebugLogsSection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -281,7 +328,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         ),
         const SizedBox(height: 8),
         const Text(
-          'Export logs to help debug sync issues. Logs are cleared after export.',
+          'Export or save logs to help debug sync issues.',
           style: TextStyle(
             fontFamily: 'FiraCode',
             fontSize: 12,
@@ -289,23 +336,42 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ),
         ),
         const SizedBox(height: 16),
-        SizedBox(
-          width: double.infinity,
-          child: ElevatedButton.icon(
-            onPressed: () async {
-              await debugLogger.exportAndClear();
-            },
-            icon: const Icon(Icons.upload_file, size: 18),
-            label: const Text('Export & Clear Logs'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: SpaceNotesTheme.inputSurface,
-              foregroundColor: SpaceNotesTheme.text,
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
+        Row(
+          children: [
+            Expanded(
+              child: ElevatedButton.icon(
+                onPressed: () async {
+                  await debugLogger.exportToFile();
+                },
+                icon: const Icon(Icons.upload_file, size: 18),
+                label: const Text('Export to File'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: SpaceNotesTheme.inputSurface,
+                  foregroundColor: SpaceNotesTheme.text,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
               ),
             ),
-          ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: ElevatedButton.icon(
+                onPressed: () => _saveLogsToNotes(),
+                icon: const Icon(Icons.note_add, size: 18),
+                label: const Text('Save to Notes'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: SpaceNotesTheme.inputSurface,
+                  foregroundColor: SpaceNotesTheme.text,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ],
     );

@@ -51,7 +51,7 @@ class DebugLogger {
   void editor(String msg, [String? details]) => debug('EDITOR', msg, details);
   void transaction(String msg, [String? details]) => info('TXN', msg, details);
 
-  Future<void> exportAndClear() async {
+  Future<void> exportToFile() async {
     if (_logFile == null) return;
 
     await _sink?.flush();
@@ -67,6 +67,29 @@ class DebugLogger {
           subject: 'SpaceNotes Debug Log',
         ),
       );
+    }
+
+    _sink = _logFile!.openWrite(mode: FileMode.append);
+  }
+
+  Future<String?> getLogs() async {
+    if (_logFile == null) return null;
+    await _sink?.flush();
+    if (await _logFile!.exists()) {
+      return await _logFile!.readAsString();
+    }
+    return null;
+  }
+
+  Future<void> clearLogs() async {
+    if (_logFile == null) return;
+
+    await _sink?.flush();
+    await _sink?.close();
+    _sink = null;
+
+    final path = _logFile!.path;
+    if (await _logFile!.exists()) {
       await _logFile!.delete();
     }
 

@@ -1,16 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../widgets/adaptive/platform_utils.dart';
 import '../widgets/mobile_bottom_input_bar.dart';
 
-/// Enum to track which view is currently active
 enum HomeViewType { folders, chat, note }
-
-/// Provider to track the current folder path for bottom bar context
-final currentFolderPathProvider = StateProvider<String>((ref) => '');
-
-/// Provider to track if we're viewing a note
-final currentNotePathProvider = StateProvider<String?>((ref) => null);
 
 /// HomeScreen shell that provides the shared bottom input area (mobile only)
 class HomeScreen extends StatelessWidget {

@@ -41,6 +41,10 @@ final notesListProvider = StreamProvider<List<Note>>((ref) {
 
 final searchQueryProvider = StateProvider<String>((ref) => '');
 
+final currentFolderPathProvider = StateProvider<String>((ref) => '');
+
+final currentNotePathProvider = StateProvider<String?>((ref) => null);
+
 final filteredNotesProvider =
     Provider.autoDispose<AsyncValue<List<Note>>>((ref) {
   final notesAsync = ref.watch(notesListProvider);

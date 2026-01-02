@@ -11,7 +11,6 @@ import '../blocs/desktop_notes/desktop_notes_bloc.dart';
 import '../blocs/desktop_notes/desktop_notes_event.dart';
 import '../widgets/adaptive/platform_utils.dart';
 import '../services/debug_logger.dart';
-import 'home_screen.dart';
 
 class NoteScreen extends ConsumerStatefulWidget {
   final String notePath;
@@ -26,89 +25,75 @@ class NoteScreen extends ConsumerStatefulWidget {
 }
 
 class _NoteScreenState extends ConsumerState<NoteScreen> {
-  final GlobalKey<QuillNoteEditorState> _quillKey = GlobalKey<QuillNoteEditorState>();
+  final GlobalKey<QuillNoteEditorState> _quillKey = GlobalKey();
 
-  String _lastSavedContent = '';
-  bool _isLocalChange = false;
-  bool _quillInitialized = false;
   String? _noteId;
   String _currentPath = '';
   String _currentContent = '';
+  String _lastSavedContent = '';
+
+  late final _repo = ref.read(notesRepositoryProvider);
 
   Timer? _debounceTimer;
-  StreamSubscription<stdb.TableUpdateEvent<Note>>? _updateEventSubscription;
+  StreamSubscription<stdb.TableUpdateEvent<Note>>? _updateSubscription;
 
   @override
   void initState() {
     super.initState();
-    _currentPath = widget.notePath;
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(currentNotePathProvider.notifier).state = widget.notePath;
-    });
-
-    final notes = ref.read(notesListProvider).valueOrNull;
-    final existingNote = notes?.firstWhereOrNull((n) => n.path == _currentPath);
-    if (existingNote != null) {
-      _noteId = existingNote.id;
-      _currentContent = existingNote.content;
-      _lastSavedContent = existingNote.content;
-    }
-
-    _setupUpdateEventListener();
+    _initNote(widget.notePath);
   }
 
   @override
   void didUpdateWidget(NoteScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.notePath != widget.notePath) {
-      _loadNewNote();
+      _saveContent();
+      _initNote(widget.notePath);
     }
   }
 
-  void _loadNewNote() {
-    _debounceTimer?.cancel();
-    _updateEventSubscription?.cancel();
+  String get _noteName => _currentPath.split('/').last;
 
-    _currentPath = widget.notePath;
-    _quillInitialized = false;
+  void _initNote(String path) {
+    _debounceTimer?.cancel();
+    _updateSubscription?.cancel();
+
+    _currentPath = path;
     _noteId = null;
 
-    Future(() {
-      ref.read(currentNotePathProvider.notifier).state = widget.notePath;
-    });
+    final note = ref.read(notesListProvider).valueOrNull
+        ?.firstWhereOrNull((n) => n.path == path);
 
-    final notes = ref.read(notesListProvider).valueOrNull;
-    final existingNote = notes?.firstWhereOrNull((n) => n.path == _currentPath);
-    if (existingNote != null) {
-      _noteId = existingNote.id;
-      _currentContent = existingNote.content;
-      _lastSavedContent = existingNote.content;
+    if (note != null) {
+      _noteId = note.id;
+      _currentContent = note.content;
+      _lastSavedContent = note.content;
+      debugLogger.info('NOTE', 'Opened: $_noteName (${note.content.length} chars)');
     } else {
       _currentContent = '';
       _lastSavedContent = '';
+      debugLogger.info('NOTE', 'Opened new: $_noteName');
     }
 
-    _setupUpdateEventListener();
-    setState(() {});
+    _setupUpdateListener();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(currentNotePathProvider.notifier).state = path;
+      if (mounted) setState(() {});
+    });
   }
 
-  void _setupUpdateEventListener() {
-    final repo = ref.read(notesRepositoryProvider);
-    _updateEventSubscription = repo.noteUpdateEvents?.listen((event) {
+  void _setupUpdateListener() {
+    _updateSubscription = _repo.noteUpdateEvents?.listen((event) {
       if (_noteId == null || event.newRow.id != _noteId) return;
 
-      final isMyChange = event.context.isMyTransaction;
-
-      if (isMyChange) {
+      if (event.context.isMyTransaction) {
         _lastSavedContent = event.newRow.content;
         return;
       }
 
-      debugLogger.sync('External change detected: ${event.newRow.path}');
-
       if (event.newRow.content != _currentContent) {
-        debugLogger.sync('Syncing external change');
+        debugLogger.sync('External change detected, syncing');
         _debounceTimer?.cancel();
         _currentContent = event.newRow.content;
         _lastSavedContent = event.newRow.content;
@@ -120,66 +105,47 @@ class _NoteScreenState extends ConsumerState<NoteScreen> {
 
   @override
   void dispose() {
+    final hasPending = _currentContent != _lastSavedContent;
+    debugLogger.info('NOTE', 'Dispose: $_noteName${hasPending ? " (saving pending)" : ""}');
     _debounceTimer?.cancel();
-    _updateEventSubscription?.cancel();
+    _saveContent();
+    _updateSubscription?.cancel();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final noteSelector = notesListProvider.select((value) => value.whenData(
-        (notes) => _noteId != null
-            ? notes.firstWhereOrNull((n) => n.id == _noteId)
-            : notes.firstWhereOrNull((n) => n.path == _currentPath)));
+    final note = ref.watch(notesListProvider).valueOrNull
+        ?.firstWhereOrNull((n) => _noteId != null ? n.id == _noteId : n.path == _currentPath);
 
-    final noteAsync = ref.watch(noteSelector);
-    final currentNote = noteAsync.valueOrNull;
+    if (note != null && _noteId == null) {
+      _noteId = note.id;
+    }
 
-    ref.listen<AsyncValue<Note?>>(noteSelector, (previous, next) {
-      next.whenData((remoteNote) {
-        if (remoteNote != null) {
-          _noteId ??= remoteNote.id;
-
-          if (remoteNote.path != _currentPath) {
-            _currentPath = remoteNote.path;
-          }
-        } else if (_noteId != null && mounted) {
-          debugLogger.info('EDITOR', 'Note deleted');
-        }
-      });
-    });
-
-    if (currentNote != null && _currentContent.isEmpty && !_isLocalChange && !_quillInitialized) {
-      _currentContent = currentNote.content;
-      _lastSavedContent = currentNote.content;
+    if (note != null && note.path != _currentPath) {
+      _currentPath = note.path;
     }
 
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, result) async {
         if (didPop) return;
-        _forceSave();
-        if (mounted) Navigator.of(context).pop();
+        _saveAndExit();
       },
       child: Padding(
         padding: const EdgeInsets.only(bottom: 80),
-        child: _buildQuillEditor(currentNote),
+        child: _buildEditor(note),
       ),
     );
   }
 
-  Widget _buildQuillEditor(Note? currentNote) {
-    String initialContent = _currentContent;
-    if (initialContent.isEmpty && currentNote != null) {
-      initialContent = currentNote.content;
-      if (!_quillInitialized) {
-        _currentContent = initialContent;
-        _lastSavedContent = initialContent;
-        _quillInitialized = true;
-      }
-    }
+  Widget _buildEditor(Note? note) {
+    final content = _currentContent.isNotEmpty ? _currentContent : (note?.content ?? '');
 
-    final isDesktop = PlatformUtils.isDesktopLayout(context);
+    if (_currentContent.isEmpty && note != null) {
+      _currentContent = note.content;
+      _lastSavedContent = note.content;
+    }
 
     return Listener(
       onPointerMove: (event) {
@@ -189,13 +155,13 @@ class _NoteScreenState extends ConsumerState<NoteScreen> {
       },
       child: QuillNoteEditor(
         key: _quillKey,
-        initialContent: initialContent,
-        showToolbar: isDesktop,
+        initialContent: content,
+        showToolbar: PlatformUtils.isDesktopLayout(context),
         onContentChanged: (markdown) {
-          _isLocalChange = true;
           _currentContent = markdown;
           _debounceTimer?.cancel();
           _debounceTimer = Timer(const Duration(seconds: 1), () {
+            debugLogger.debug('NOTE', 'Debounce fired: $_noteName');
             _saveContent();
           });
         },
@@ -203,89 +169,64 @@ class _NoteScreenState extends ConsumerState<NoteScreen> {
     );
   }
 
-  void _forceSave() {
+  void _saveAndExit() {
+    debugLogger.info('NOTE', 'Exit: $_noteName');
     _debounceTimer?.cancel();
     _saveContent();
     _autoRenameIfUntitled();
+    if (mounted) Navigator.of(context).pop();
+  }
+
+  Future<void> _saveContent() async {
+    if (_currentContent == _lastSavedContent) return;
+    if (_noteId == null) return;
+
+    try {
+      debugLogger.save('$_noteName: ${_currentContent.length} chars');
+      await _repo.updateNote(_noteId!, _currentContent);
+      _lastSavedContent = _currentContent;
+    } catch (e) {
+      debugLogger.error('SAVE', '$_noteName failed: $e');
+    }
   }
 
   Future<void> _autoRenameIfUntitled() async {
     if (_noteId == null) return;
 
     final fileName = _currentPath.split('/').last.replaceAll('.md', '');
+    if (!fileName.toLowerCase().contains('untitled')) return;
 
-    if (!fileName.toLowerCase().contains('untitled')) {
-      return;
-    }
+    final firstLine = _currentContent
+        .split('\n')
+        .map((l) => l.trim())
+        .firstWhereOrNull((l) => l.isNotEmpty && l != '#');
 
-    final rawContent = _currentContent;
-    final lines = rawContent.split('\n');
-    String? firstMeaningfulLine;
-    for (final line in lines) {
-      final trimmed = line.trim();
-      if (trimmed.isNotEmpty) {
-        firstMeaningfulLine = trimmed;
-        break;
-      }
-    }
+    if (firstLine == null) return;
 
-    if (firstMeaningfulLine == null || firstMeaningfulLine == '#') {
-      return;
-    }
-
-    String newName = firstMeaningfulLine.replaceAll(RegExp(r'^#+\s*'), '').trim();
-
+    var newName = firstLine.replaceAll(RegExp(r'^#+\s*'), '').trim();
     if (newName.isEmpty) {
-      final contentFlat = rawContent.replaceAll('\n', ' ').trim();
-      newName = contentFlat.replaceAll(RegExp(r'^#+\s*'), '').trim();
-      if (newName.length > 50) {
-        newName = newName.substring(0, 50);
-      }
+      newName = _currentContent.replaceAll('\n', ' ').replaceAll(RegExp(r'^#+\s*'), '').trim();
+      if (newName.length > 50) newName = newName.substring(0, 50);
     }
 
-    if (newName.isEmpty || newName.toLowerCase() == 'untitled') {
-      return;
-    }
+    if (newName.isEmpty || newName.toLowerCase() == 'untitled') return;
 
     newName = newName.replaceAll(RegExp(r'[<>:"/\\|?*]'), '');
 
     final folderPath = _currentPath.contains('/')
         ? _currentPath.substring(0, _currentPath.lastIndexOf('/') + 1)
         : '';
-
     final newPath = '$folderPath$newName.md';
 
     if (newPath == _currentPath) return;
 
-    final repo = ref.read(notesRepositoryProvider);
-    debugLogger.save('Auto-rename from Untitled: $newPath');
-    final success = await repo.renameNote(_noteId!, newPath);
+    debugLogger.save('Auto-rename: $newPath');
+    final success = await _repo.renameNote(_noteId!, newPath);
 
     if (success && mounted) {
       final oldPath = _currentPath;
-      setState(() {
-        _currentPath = newPath;
-      });
+      _currentPath = newPath;
       context.read<DesktopNotesBloc?>()?.add(UpdateNotePath(oldPath, newPath));
-    }
-  }
-
-  Future<void> _saveContent() async {
-    final currentText = _currentContent;
-    if (currentText == _lastSavedContent) return;
-
-    if (_noteId == null) {
-      return;
-    }
-
-    final repo = ref.read(notesRepositoryProvider);
-
-    try {
-      debugLogger.save('Content update: ${currentText.length} chars');
-      await repo.updateNote(_noteId!, currentText);
-      _lastSavedContent = currentText;
-    } catch (e) {
-      debugLogger.error('SAVE', 'Content save failed: $e');
     }
   }
 }
