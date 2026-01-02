@@ -50,6 +50,7 @@ class QuillNoteEditorState extends State<QuillNoteEditor> {
   late final DeltaToMarkdown _deltaToMd;
   bool _isUpdatingFromParent = false;
   bool _isRawMode = false;
+  bool _toolbarExpanded = false;
   StreamSubscription? _documentChangesSubscription;
 
   @override
@@ -129,6 +130,17 @@ class QuillNoteEditorState extends State<QuillNoteEditor> {
       return '';
     }
   }
+
+  void undo() {
+    _controller.undo();
+  }
+
+  void redo() {
+    _controller.redo();
+  }
+
+  bool get canUndo => _controller.hasUndo;
+  bool get canRedo => _controller.hasRedo;
 
   void _toggleRawMode() {
     setState(() {
@@ -359,68 +371,102 @@ class QuillNoteEditorState extends State<QuillNoteEditor> {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        if (widget.showToolbar) ...[
-          QuillSimpleToolbar(
-            controller: _controller,
-            config: QuillSimpleToolbarConfig(
-              showBoldButton: true,
-              showItalicButton: true,
-              showUnderLineButton: false,
-              showStrikeThrough: true,
-              showInlineCode: true,
-              showCodeBlock: true,
-              showListNumbers: true,
-              showListBullets: true,
-              showListCheck: true,
-              showQuote: true,
-              showLink: true,
-              showHeaderStyle: true,
-              showDividers: true,
-              showFontFamily: false,
-              showFontSize: false,
-              showBackgroundColorButton: false,
-              showColorButton: false,
-              showClearFormat: false,
-              showAlignmentButtons: false,
-              showLeftAlignment: false,
-              showCenterAlignment: false,
-              showRightAlignment: false,
-              showJustifyAlignment: false,
-              showSearchButton: false,
-              showSubscript: false,
-              showSuperscript: false,
-              showSmallButton: false,
-              showIndent: false,
-              showDirection: false,
-              showUndo: false,
-              showRedo: false,
-              showClipboardCopy: false,
-              showClipboardCut: false,
-              showClipboardPaste: false,
-              color: SpaceNotesTheme.surface,
-              sectionDividerColor: SpaceNotesTheme.textSecondary.withValues(alpha: 0.2),
-              customButtons: [
-                QuillToolbarCustomButtonOptions(
-                  icon: Icon(
-                    _isRawMode ? Icons.visibility : Icons.code,
-                    size: 18,
-                    color: SpaceNotesTheme.text,
-                  ),
-                  tooltip: _isRawMode ? 'Show Preview' : 'Show Raw Markdown',
-                  onPressed: _toggleRawMode,
-                ),
-              ],
-            ),
-          ),
-          Container(
-            height: 1,
-            color: SpaceNotesTheme.textSecondary.withValues(alpha: 0.2),
-          ),
-        ],
+        if (widget.showToolbar) _buildCollapsibleToolbar(),
         Expanded(
           child: _isRawMode ? _buildRawEditor() : _buildQuillEditor(),
         ),
       ],
+    );
+  }
+
+  Widget _buildCollapsibleToolbar() {
+    return SizedBox(
+      height: 44,
+      child: Row(
+        children: [
+          IconButton(
+            onPressed: () => setState(() => _toolbarExpanded = !_toolbarExpanded),
+            icon: AnimatedRotation(
+              turns: _toolbarExpanded ? 0.5 : 0,
+              duration: const Duration(milliseconds: 200),
+              child: const Icon(
+                Icons.chevron_right,
+                color: SpaceNotesTheme.text,
+                size: 24,
+              ),
+            ),
+            tooltip: _toolbarExpanded ? 'Hide toolbar' : 'Show toolbar',
+          ),
+          Expanded(
+            child: ClipRect(
+              child: AnimatedSlide(
+                offset: Offset(_toolbarExpanded ? 0 : -1, 0),
+                duration: const Duration(milliseconds: 200),
+                curve: Curves.easeInOut,
+                child: AnimatedOpacity(
+                  opacity: _toolbarExpanded ? 1 : 0,
+                  duration: const Duration(milliseconds: 200),
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: QuillSimpleToolbar(
+                      controller: _controller,
+                      config: QuillSimpleToolbarConfig(
+                        showBoldButton: true,
+                        showItalicButton: true,
+                        showUnderLineButton: false,
+                        showStrikeThrough: true,
+                        showInlineCode: true,
+                        showCodeBlock: true,
+                        showListNumbers: true,
+                        showListBullets: true,
+                        showListCheck: true,
+                        showQuote: true,
+                        showLink: true,
+                        showHeaderStyle: true,
+                        showDividers: true,
+                        showFontFamily: false,
+                        showFontSize: false,
+                        showBackgroundColorButton: false,
+                        showColorButton: false,
+                        showClearFormat: false,
+                        showAlignmentButtons: false,
+                        showLeftAlignment: false,
+                        showCenterAlignment: false,
+                        showRightAlignment: false,
+                        showJustifyAlignment: false,
+                        showSearchButton: false,
+                        showSubscript: false,
+                        showSuperscript: false,
+                        showSmallButton: false,
+                        showIndent: false,
+                        showDirection: false,
+                        showUndo: false,
+                        showRedo: false,
+                        showClipboardCopy: false,
+                        showClipboardCut: false,
+                        showClipboardPaste: false,
+                        color: Colors.transparent,
+                        sectionDividerColor: SpaceNotesTheme.textSecondary.withValues(alpha: 0.2),
+                        customButtons: [
+                          QuillToolbarCustomButtonOptions(
+                            icon: Icon(
+                              _isRawMode ? Icons.visibility : Icons.code,
+                              size: 18,
+                              color: SpaceNotesTheme.text,
+                            ),
+                            tooltip: _isRawMode ? 'Show Preview' : 'Show Raw Markdown',
+                            onPressed: _toggleRawMode,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

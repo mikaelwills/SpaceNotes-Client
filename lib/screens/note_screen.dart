@@ -7,6 +7,8 @@ import 'package:spacetimedb_dart_sdk/spacetimedb_dart_sdk.dart' as stdb;
 import '../generated/note.dart';
 import '../providers/notes_providers.dart';
 import '../widgets/quill_note_editor.dart';
+import '../widgets/note_bottom_bar.dart';
+import '../widgets/note_chat_panel.dart';
 import '../blocs/desktop_notes/desktop_notes_bloc.dart';
 import '../blocs/desktop_notes/desktop_notes_event.dart';
 import '../widgets/adaptive/platform_utils.dart';
@@ -31,6 +33,7 @@ class _NoteScreenState extends ConsumerState<NoteScreen> {
   String _currentPath = '';
   String _currentContent = '';
   String _lastSavedContent = '';
+  bool _isChatOpen = false;
 
   late final _repo = ref.read(notesRepositoryProvider);
 
@@ -126,15 +129,86 @@ class _NoteScreenState extends ConsumerState<NoteScreen> {
       _currentPath = note.path;
     }
 
+    final isDesktop = PlatformUtils.isDesktopLayout(context);
+
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, result) async {
         if (didPop) return;
+        if (_isChatOpen && isDesktop) {
+          setState(() => _isChatOpen = false);
+          return;
+        }
         _saveAndExit();
       },
-      child: Padding(
-        padding: const EdgeInsets.only(bottom: 80),
-        child: _buildEditor(note),
+      child: isDesktop ? _buildDesktopLayout(note) : _buildMobileLayout(note),
+    );
+  }
+
+  Widget _buildDesktopLayout(Note? note) {
+    return Row(
+      children: [
+        Expanded(
+          child: Stack(
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(bottom: 80),
+                child: _buildEditor(note),
+              ),
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: NoteBottomBar(
+                  notePath: _currentPath,
+                  quillKey: _quillKey,
+                  onChatTap: () => setState(() => _isChatOpen = !_isChatOpen),
+                ),
+              ),
+            ],
+          ),
+        ),
+        if (_isChatOpen)
+          NoteChatPanel(
+            notePath: _currentPath,
+            onClose: () => setState(() => _isChatOpen = false),
+            isDesktop: true,
+          ),
+      ],
+    );
+  }
+
+  Widget _buildMobileLayout(Note? note) {
+    return Stack(
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(bottom: 80),
+          child: _buildEditor(note),
+        ),
+        Positioned(
+          left: 0,
+          right: 0,
+          bottom: 0,
+          child: NoteBottomBar(
+            notePath: _currentPath,
+            quillKey: _quillKey,
+            onChatTap: _openMobileChatSheet,
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _openMobileChatSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      useRootNavigator: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => NoteChatPanel(
+        notePath: _currentPath,
+        onClose: () => Navigator.of(context).pop(),
+        isDesktop: false,
       ),
     );
   }

@@ -19,7 +19,7 @@ class NoteTabs extends StatelessWidget {
         return ListView.builder(
           scrollDirection: Axis.horizontal,
           itemCount: state.openNotePaths.length,
-          padding: const EdgeInsets.only(left: 8),
+          padding: EdgeInsets.zero,
           itemBuilder: (context, index) {
             final notePath = state.openNotePaths[index];
             final isActive = notePath == state.activeNotePath;
@@ -68,22 +68,11 @@ class _NoteTabState extends State<_NoteTab> {
           context.read<DesktopNotesBloc>().add(SetActiveNote(widget.notePath));
         },
         child: Container(
-          margin: const EdgeInsets.symmetric(horizontal: 2, vertical: 4),
-          padding: const EdgeInsets.only(left: 12, right: 4),
-          decoration: BoxDecoration(
-            color: widget.isActive
-                ? SpaceNotesTheme.primary.withValues(alpha: 0.15)
-                : _isHovered
-                    ? SpaceNotesTheme.inputSurface
-                    : Colors.transparent,
-            borderRadius: BorderRadius.circular(4),
-            border: widget.isActive
-                ? Border.all(
-                    color: SpaceNotesTheme.primary.withValues(alpha: 0.3),
-                    width: 1,
-                  )
-                : null,
-          ),
+          margin: const EdgeInsets.symmetric(horizontal: 2),
+          padding: const EdgeInsets.only(left: 10, right: 4),
+          color: _isHovered && !widget.isActive
+              ? SpaceNotesTheme.textSecondary.withValues(alpha: 0.1)
+              : Colors.transparent,
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -91,8 +80,8 @@ class _NoteTabState extends State<_NoteTab> {
                 Icons.description_outlined,
                 size: 14,
                 color: widget.isActive
-                    ? SpaceNotesTheme.primary
-                    : SpaceNotesTheme.textSecondary,
+                    ? SpaceNotesTheme.text
+                    : SpaceNotesTheme.primary,
               ),
               const SizedBox(width: 6),
               ConstrainedBox(
@@ -102,8 +91,8 @@ class _NoteTabState extends State<_NoteTab> {
                   style: SpaceNotesTextStyles.terminal.copyWith(
                     fontSize: 12,
                     color: widget.isActive
-                        ? SpaceNotesTheme.primary
-                        : SpaceNotesTheme.text,
+                        ? SpaceNotesTheme.text
+                        : SpaceNotesTheme.primary,
                   ),
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -114,19 +103,17 @@ class _NoteTabState extends State<_NoteTab> {
                   onTap: () {
                     context.read<DesktopNotesBloc>().add(CloseNote(widget.notePath));
                   },
-                  child: Container(
+                  child: Padding(
                     padding: const EdgeInsets.all(2),
-                    child: Icon(
+                    child: const Icon(
                       Icons.close,
-                      size: 14,
-                      color: widget.isActive
-                          ? SpaceNotesTheme.primary
-                          : SpaceNotesTheme.textSecondary,
+                      size: 12,
+                      color: SpaceNotesTheme.primary,
                     ),
                   ),
                 )
               else
-                const SizedBox(width: 20),
+                const SizedBox(width: 16),
             ],
           ),
         ),

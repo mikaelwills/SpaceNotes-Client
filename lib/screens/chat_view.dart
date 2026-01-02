@@ -10,16 +10,33 @@ import '../blocs/chat/chat_bloc.dart';
 import '../blocs/chat/chat_state.dart';
 
 /// ChatView displays the AI chat interface
+/// Can be reused in different contexts (main chat, note chat panel)
 class ChatView extends ConsumerStatefulWidget {
-  const ChatView({super.key});
+  final bool showConnectionStatus;
+  final bool showInput;
+  final Widget? customInput;
+  final EdgeInsets? messagePadding;
+  final ScrollController? scrollController;
+
+  const ChatView({
+    super.key,
+    this.showConnectionStatus = true,
+    this.showInput = true,
+    this.customInput,
+    this.messagePadding,
+    this.scrollController,
+  });
 
   @override
   ConsumerState<ChatView> createState() => _ChatViewState();
 }
 
 class _ChatViewState extends ConsumerState<ChatView> {
-  final ScrollController _chatScrollController = ScrollController();
+  ScrollController? _ownScrollController;
   bool _showScrollToBottom = false;
+
+  ScrollController get _chatScrollController =>
+      widget.scrollController ?? (_ownScrollController ??= ScrollController());
 
   @override
   void initState() {
@@ -29,7 +46,7 @@ class _ChatViewState extends ConsumerState<ChatView> {
 
   @override
   void dispose() {
-    _chatScrollController.dispose();
+    _ownScrollController?.dispose();
     super.dispose();
   }
 
@@ -48,6 +65,7 @@ class _ChatViewState extends ConsumerState<ChatView> {
   @override
   Widget build(BuildContext context) {
     final isDesktop = PlatformUtils.isDesktopLayout(context);
+    final showDefaultInput = widget.showInput && isDesktop && widget.customInput == null;
 
     return BlocListener<ChatBloc, ChatState>(
       listener: (context, state) {
@@ -59,16 +77,23 @@ class _ChatViewState extends ConsumerState<ChatView> {
         children: [
           Column(
             children: [
-              const ConnectionStatusRow(),
+              if (widget.showConnectionStatus) const ConnectionStatusRow(),
               Expanded(child: _buildChatMessagesArea()),
             ],
           ),
-          if (isDesktop)
+          if (showDefaultInput)
             const Positioned(
               left: 0,
               right: 0,
               bottom: 0,
               child: DesktopChatInput(),
+            ),
+          if (widget.customInput != null)
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: widget.customInput!,
             ),
         ],
       ),
@@ -121,7 +146,7 @@ class _ChatViewState extends ConsumerState<ChatView> {
                     child: ListView.builder(
                       controller: _chatScrollController,
                       keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
+                      padding: widget.messagePadding ?? const EdgeInsets.fromLTRB(16, 16, 16, 120),
                       itemCount: messages.length,
                       itemBuilder: (context, index) {
                         final message = messages[index];

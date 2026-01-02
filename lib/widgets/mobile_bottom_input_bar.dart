@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:collection/collection.dart';
 import 'package:image_picker/image_picker.dart';
 import '../theme/spacenotes_theme.dart';
 import '../providers/notes_providers.dart';
@@ -14,7 +13,6 @@ import '../dialogs/notes_list_dialogs.dart';
 import '../blocs/chat/chat_bloc.dart';
 import '../blocs/chat/chat_event.dart';
 import '../blocs/chat/chat_state.dart';
-import '../generated/note.dart';
 import '../screens/home_screen.dart';
 import 'notes_search_bar.dart';
 
@@ -101,23 +99,21 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
     required String? notePath,
     required bool isWorking,
   }) {
+    if (viewType == HomeViewType.note) {
+      return const SizedBox.shrink();
+    }
+
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           _buildBackButton(viewType, folderPath),
-          if (viewType == HomeViewType.chat ||
-              viewType == HomeViewType.note ||
-              folderPath.isNotEmpty)
+          if (viewType == HomeViewType.chat || folderPath.isNotEmpty)
             const SizedBox(width: 12),
-          if (viewType == HomeViewType.note)
-            ..._buildNoteActions(notePath)
-          else ...[
-            _buildSearchBar(isChat),
-            const SizedBox(width: 12),
-            _buildRightButtons(isChat, isWorking, folderPath),
-          ],
+          _buildSearchBar(isChat),
+          const SizedBox(width: 12),
+          _buildRightButtons(isChat, isWorking, folderPath),
         ],
       ),
     );
@@ -208,65 +204,6 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
     }
   }
 
-  List<Widget> _buildNoteActions(String? notePath) {
-    return [
-      Expanded(
-        child: _buildActionButton(
-          onPressed: () => _handleMoveNote(notePath),
-          icon: Icons.drive_file_move_outlined,
-          label: 'Move',
-          color: SpaceNotesTheme.primary,
-        ),
-      ),
-      const SizedBox(width: 8),
-      Expanded(
-        child: _buildActionButton(
-          onPressed: () => _handleDeleteNote(notePath),
-          icon: Icons.delete_outline,
-          label: 'Delete',
-          color: SpaceNotesTheme.error,
-        ),
-      ),
-    ];
-  }
-
-  Widget _buildActionButton({
-    required VoidCallback onPressed,
-    required IconData icon,
-    required String label,
-    required Color color,
-  }) {
-    return Container(
-      height: 48,
-      decoration: BoxDecoration(
-        color: SpaceNotesTheme.inputSurface,
-        borderRadius: BorderRadius.circular(24),
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onPressed,
-          borderRadius: BorderRadius.circular(24),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, color: color, size: 20),
-              const SizedBox(width: 8),
-              Text(
-                label,
-                style: TextStyle(
-                  fontFamily: 'FiraCode',
-                  fontSize: 14,
-                  color: color,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 
   Widget _buildCircularButton({
     required VoidCallback onPressed,
@@ -297,43 +234,6 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
     if (l.startsWith('/notes/chat')) return HomeViewType.chat;
     if (l.startsWith('/notes/note/')) return HomeViewType.note;
     return HomeViewType.folders;
-  }
-
-  void _exitChat() {
-    context.go('/notes');
-  }
-
-  void _navigateToParentFolder(String currentPath) {
-    if (currentPath.isEmpty) return;
-
-    final lastSlash = currentPath.lastIndexOf('/');
-    if (lastSlash == -1) {
-      context.go('/notes');
-    } else {
-      final parentPath = currentPath.substring(0, lastSlash);
-      final encodedPath =
-          parentPath.split('/').map(Uri.encodeComponent).join('/');
-      context.go('/notes/folder/$encodedPath');
-    }
-  }
-
-  void _navigateBackFromNote() {
-    final notePath = ref.read(currentNotePathProvider);
-    if (notePath == null) {
-      context.go('/notes');
-      return;
-    }
-
-    final lastSlash = notePath.lastIndexOf('/');
-    if (lastSlash == -1) {
-      context.go('/notes');
-    } else {
-      final folderPath = notePath.substring(0, lastSlash);
-      final encodedPath =
-          folderPath.split('/').map(Uri.encodeComponent).join('/');
-      context.go('/notes/folder/$encodedPath');
-    }
-    ref.read(currentNotePathProvider.notifier).state = null;
   }
 
   void _onSearchChanged(String query) {
@@ -415,37 +315,4 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
     }
   }
 
-  Note? _getCurrentNote(String? notePath) {
-    if (notePath == null) return null;
-    final notes = ref.read(notesListProvider).valueOrNull;
-    return notes?.firstWhereOrNull((n) => n.path == notePath);
-  }
-
-  void _handleMoveNote(String? notePath) {
-    final note = _getCurrentNote(notePath);
-    if (note == null) return;
-    NotesListDialogs.showMoveNoteDialog(context, ref, note);
-  }
-
-  void _handleDeleteNote(String? notePath) {
-    final note = _getCurrentNote(notePath);
-    if (note == null) return;
-
-    final String navigateTo;
-    if (notePath!.contains('/')) {
-      final lastSlash = notePath.lastIndexOf('/');
-      final folderPath = notePath.substring(0, lastSlash);
-      final encodedFolderPath = Uri.encodeComponent(folderPath);
-      navigateTo = '/notes/folder/$encodedFolderPath';
-    } else {
-      navigateTo = '/notes';
-    }
-
-    NotesListDialogs.showDeleteNoteConfirmation(
-      context,
-      ref,
-      note,
-      navigateToAfterDelete: navigateTo,
-    );
-  }
 }
