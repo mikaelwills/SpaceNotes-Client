@@ -1,8 +1,10 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 import 'package:markdown/markdown.dart' as md;
 import 'package:markdown_quill/markdown_quill.dart';
 import '../theme/spacenotes_theme.dart';
+import '../services/debug_logger.dart';
 
 class _KeepEmptyLineBlockSyntax extends md.BlockSyntax {
   @override
@@ -48,6 +50,7 @@ class QuillNoteEditorState extends State<QuillNoteEditor> {
   late final DeltaToMarkdown _deltaToMd;
   bool _isUpdatingFromParent = false;
   bool _isRawMode = false;
+  StreamSubscription? _documentChangesSubscription;
 
   @override
   void initState() {
@@ -63,7 +66,12 @@ class QuillNoteEditorState extends State<QuillNoteEditor> {
       visitLineHandleNewLine: (style, out) => out.writeln(),
     );
     _controller = _createController(widget.initialContent);
-    _controller.document.changes.listen((_) {
+    _attachDocumentListener();
+  }
+
+  void _attachDocumentListener() {
+    _documentChangesSubscription?.cancel();
+    _documentChangesSubscription = _controller.document.changes.listen((_) {
       if (!_isUpdatingFromParent) {
         _notifyContentChanged();
       }
@@ -81,7 +89,7 @@ class QuillNoteEditorState extends State<QuillNoteEditor> {
         selection: const TextSelection.collapsed(offset: 0),
       );
     } catch (e) {
-      debugPrint('Error converting markdown to delta: $e');
+      debugLogger.error('EDITOR', 'Error converting markdown to delta: $e');
       return QuillController.basic();
     }
   }
@@ -91,7 +99,7 @@ class QuillNoteEditorState extends State<QuillNoteEditor> {
       final markdown = _deltaToMd.convert(_controller.document.toDelta());
       widget.onContentChanged(markdown);
     } catch (e) {
-      debugPrint('Error converting delta to markdown: $e');
+      debugLogger.error('EDITOR', 'Error converting delta to markdown: $e');
     }
   }
 
@@ -102,11 +110,12 @@ class QuillNoteEditorState extends State<QuillNoteEditor> {
       final delta = _mdToDelta.convert(markdown);
       final currentSelection = _controller.selection;
       _controller.document = Document.fromDelta(delta);
+      _attachDocumentListener();
       try {
         _controller.updateSelection(currentSelection, ChangeSource.local);
       } catch (_) {}
     } catch (e) {
-      debugPrint('Error updating content: $e');
+      debugLogger.error('EDITOR', 'Error updating content: $e');
     } finally {
       _isUpdatingFromParent = false;
     }
@@ -116,7 +125,7 @@ class QuillNoteEditorState extends State<QuillNoteEditor> {
     try {
       return _deltaToMd.convert(_controller.document.toDelta());
     } catch (e) {
-      debugPrint('Error getting markdown: $e');
+      debugLogger.error('EDITOR', 'Error getting markdown: $e');
       return '';
     }
   }
@@ -129,8 +138,9 @@ class QuillNoteEditorState extends State<QuillNoteEditor> {
         try {
           final delta = _mdToDelta.convert(rawText);
           _controller.document = Document.fromDelta(delta);
+          _attachDocumentListener();
         } catch (e) {
-          debugPrint('Error converting markdown to delta: $e');
+          debugLogger.error('EDITOR', 'Error converting markdown to delta: $e');
         }
         _isUpdatingFromParent = false;
         widget.onContentChanged(rawText);
@@ -335,6 +345,7 @@ class QuillNoteEditorState extends State<QuillNoteEditor> {
 
   @override
   void dispose() {
+    _documentChangesSubscription?.cancel();
     _controller.dispose();
     _rawController.dispose();
     _rawFocusNode.dispose();

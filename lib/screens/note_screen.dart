@@ -10,6 +10,7 @@ import '../widgets/quill_note_editor.dart';
 import '../blocs/desktop_notes/desktop_notes_bloc.dart';
 import '../blocs/desktop_notes/desktop_notes_event.dart';
 import '../widgets/adaptive/platform_utils.dart';
+import '../services/debug_logger.dart';
 import 'home_screen.dart';
 
 class NoteScreen extends ConsumerStatefulWidget {
@@ -104,11 +105,13 @@ class _NoteScreenState extends ConsumerState<NoteScreen> {
         return;
       }
 
-      debugPrint('⚠️ External change detected for ${event.newRow.path}');
+      debugLogger.sync('External change detected: ${event.newRow.path}');
 
       if (event.newRow.content != _currentContent) {
-        debugPrint('📡 Syncing external change');
+        debugLogger.sync('Syncing external change');
+        _debounceTimer?.cancel();
         _currentContent = event.newRow.content;
+        _lastSavedContent = event.newRow.content;
         _quillKey.currentState?.updateContent(event.newRow.content);
         if (mounted) setState(() {});
       }
@@ -141,7 +144,7 @@ class _NoteScreenState extends ConsumerState<NoteScreen> {
             _currentPath = remoteNote.path;
           }
         } else if (_noteId != null && mounted) {
-          debugPrint('🗑️ Note deleted (navigation handled by delete dialog)');
+          debugLogger.info('EDITOR', 'Note deleted');
         }
       });
     });
@@ -192,7 +195,7 @@ class _NoteScreenState extends ConsumerState<NoteScreen> {
           _isLocalChange = true;
           _currentContent = markdown;
           _debounceTimer?.cancel();
-          _debounceTimer = Timer(const Duration(milliseconds: 500), () {
+          _debounceTimer = Timer(const Duration(seconds: 1), () {
             _saveContent();
           });
         },
@@ -255,7 +258,7 @@ class _NoteScreenState extends ConsumerState<NoteScreen> {
     if (newPath == _currentPath) return;
 
     final repo = ref.read(notesRepositoryProvider);
-    debugPrint('🏷️  AUTO-RENAME from Untitled: $newPath');
+    debugLogger.save('Auto-rename from Untitled: $newPath');
     final success = await repo.renameNote(_noteId!, newPath);
 
     if (success && mounted) {
@@ -278,11 +281,11 @@ class _NoteScreenState extends ConsumerState<NoteScreen> {
     final repo = ref.read(notesRepositoryProvider);
 
     try {
-      debugPrint('📝 CONTENT UPDATE: ${currentText.length} chars');
+      debugLogger.save('Content update: ${currentText.length} chars');
       await repo.updateNote(_noteId!, currentText);
       _lastSavedContent = currentText;
     } catch (e) {
-      debugPrint('❌ Content save failed: $e');
+      debugLogger.error('SAVE', 'Content save failed: $e');
     }
   }
 }

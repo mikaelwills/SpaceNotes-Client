@@ -1,9 +1,9 @@
 import 'dart:async';
-import 'dart:developer';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:spacetimedb_dart_sdk/spacetimedb_dart_sdk.dart' as stdb;
+import '../services/debug_logger.dart';
 import 'package:spacetimedb_dart_sdk/spacetimedb_dart_sdk.dart'
     show
         ConnectionConfig,
@@ -64,9 +64,9 @@ class SpacetimeDbNotesRepository {
       final isValidUtf16 = savedHost.runes.every((r) => r <= 0x10FFFF);
       if (isValidUtf16 && RegExp(r'^[\x20-\x7E]+$').hasMatch(savedHost)) {
         _host = savedHost;
-        print('SpacetimeDbNotesRepository loaded saved host: $savedHost');
+        debugLogger.info('REPO', 'Loaded saved host: $savedHost');
       } else {
-        print('SpacetimeDbNotesRepository: Invalid saved host data, clearing');
+        debugLogger.warning('REPO', 'Invalid saved host data, clearing');
         await prefs.remove('spacenotes_host');
       }
     }
@@ -83,18 +83,16 @@ class SpacetimeDbNotesRepository {
 
       if (status == stdb.ConnectionStatus.reconnecting ||
           status == stdb.ConnectionStatus.connecting) {
-        print(
-            '📡 Connection in progress ($status), client available for offline operations');
+        debugLogger.connection('In progress ($status), client available for offline ops');
         return;
       }
 
       if (status == stdb.ConnectionStatus.disconnected) {
         if (_client!.hasOfflineStorage) {
-          print(
-              '📴 Offline mode: using existing client for offline operations');
+          debugLogger.connection('Offline mode: using existing client');
           return;
         }
-        print('🔥 DEGRADED CONNECTION DETECTED: $status');
+        debugLogger.warning('CONN', 'DEGRADED CONNECTION: $status');
         resetConnection();
       }
     }
@@ -120,35 +118,30 @@ class SpacetimeDbNotesRepository {
 
   Future<OfflineStorage?> _createOfflineStorage() async {
     if (kIsWeb) {
-      print('  📦 Web platform - using InMemoryOfflineStorage');
+      debugLogger.info('STORAGE', 'Web platform - using InMemoryOfflineStorage');
       return InMemoryOfflineStorage();
     }
 
     try {
       final appDir = await getApplicationSupportDirectory();
       final storagePath = '${appDir.path}/spacenotes_offline';
-      print('  📦 Native platform - using JsonFileStorage at: $storagePath');
+      debugLogger.info('STORAGE', 'Native platform - using JsonFileStorage', storagePath);
       final storage = JsonFileStorage(basePath: storagePath);
       await storage.initialize();
       return storage;
     } catch (e) {
-      print('  ⚠️ Failed to create offline storage: $e');
+      debugLogger.error('STORAGE', 'Failed to create offline storage', e.toString());
       return null;
     }
   }
 
   Future<void> _connect() async {
     try {
-      print('  Attempting to connect to SpacetimeDB:');
-      print('    host: $_host');
-      print('    database: $_database');
-      print('    authStorage provided: ${_authStorage != null}');
+      debugLogger.connection('Connecting to SpacetimeDB', 'host=$_host, db=$_database');
 
       final storage = _authStorage ?? SharedPreferencesTokenStore();
 
       _offlineStorage ??= await _createOfflineStorage();
-      print(
-          '    offlineStorage: ${_offlineStorage != null ? 'enabled' : 'disabled'}');
 
       const maxRetries = 3;
       const retryDelay = Duration(seconds: 2);
@@ -173,7 +166,7 @@ class SpacetimeDbNotesRepository {
               connectTimeout: Duration(seconds: 5),
             ),
             onCacheLoaded: (client) {
-              print('  📦 Offline cache loaded, emitting data immediately');
+              debugLogger.sync('Offline cache loaded, emitting data');
               _client = client;
               _clientSubject.add(client);
               _registerStreamListeners();
@@ -182,8 +175,7 @@ class SpacetimeDbNotesRepository {
           );
           break;
         } on SpacetimeDbAuthException {
-          print(
-              '  ⚠️ Auth failure (401) - server may have been redeployed. Clearing token and retrying...');
+          debugLogger.warning('AUTH', 'Auth failure (401) - clearing token and retrying');
           await storage.clearToken();
           _client = await SpacetimeDbClient.connect(
             host: _host!,
@@ -203,19 +195,18 @@ class SpacetimeDbNotesRepository {
               connectTimeout: Duration(seconds: 5),
             ),
             onCacheLoaded: (client) {
-              print('  📦 Offline cache loaded, emitting data immediately');
+              debugLogger.sync('Offline cache loaded, emitting data');
               _client = client;
               _clientSubject.add(client);
               _registerStreamListeners();
               _emitCurrentNotes();
             },
           );
-          print('  ✅ Reconnected with fresh anonymous identity. Offline data will sync to new identity.');
+          debugLogger.connection('Reconnected with fresh anonymous identity');
           break;
         } catch (e) {
           if (attempt < maxRetries) {
-            print('  ⚠️ Connection attempt $attempt failed: $e');
-            print('  Retrying in ${retryDelay.inSeconds}s...');
+            debugLogger.warning('CONN', 'Attempt $attempt failed: $e, retrying in ${retryDelay.inSeconds}s');
             await Future.delayed(retryDelay);
           } else {
             rethrow;
@@ -228,20 +219,18 @@ class SpacetimeDbNotesRepository {
       final isConnected =
           _client!.connection.status == stdb.ConnectionStatus.connected;
       if (isConnected) {
-        print('  ✅ Successfully connected to SpacetimeDB');
+        debugLogger.connection('Successfully connected to SpacetimeDB');
       } else {
-        print('  📴 Operating in offline mode (cached data available)');
+        debugLogger.connection('Operating in offline mode (cached data available)');
       }
 
-      print('  Registering stream listeners for real-time updates...');
       _registerStreamListeners();
 
       if (isConnected) {
         await ensureGeneralNotesFolder();
       }
     } catch (e) {
-      print('  ❌ Error connecting to SpacetimeDB: $e');
-      print('  Stack trace: ${StackTrace.current}');
+      debugLogger.error('CONN', 'Error connecting to SpacetimeDB', e.toString());
       rethrow;
     }
   }
@@ -302,15 +291,14 @@ class SpacetimeDbNotesRepository {
       _syncStateSubject.add(_client!.syncState);
     }
 
-    print(
-        '  ✅ Stream listeners registered (event streams with local update filtering)');
+    debugLogger.sync('Stream listeners registered');
   }
 
   /// Watch notes list for real-time updates
   ///
   /// Returns a stream that emits List<Note> whenever the note cache is updated
   Stream<List<Note>> watchNotesList() {
-    print('SpacetimeDbNotesRepository.watchNotesList() called');
+    debugLogger.debug('REPO', 'watchNotesList() called');
     return _notesSubject.stream;
   }
 
@@ -318,7 +306,7 @@ class SpacetimeDbNotesRepository {
   ///
   /// Returns a stream that emits List<Folder> whenever the folder cache is updated
   Stream<List<Folder>> watchFoldersList() {
-    print('SpacetimeDbNotesRepository.watchFoldersList() called');
+    debugLogger.debug('REPO', 'watchFoldersList() called');
     return _foldersSubject.stream;
   }
 
@@ -383,7 +371,7 @@ class SpacetimeDbNotesRepository {
 
   Future<bool> isConfigured() async {
     final configured = _host != null && _host!.isNotEmpty;
-    print('SpacetimeDbNotesRepository.isConfigured() = $configured');
+    debugLogger.debug('REPO', 'isConfigured() = $configured');
     return configured;
   }
 
@@ -400,7 +388,7 @@ class SpacetimeDbNotesRepository {
 
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('spacenotes_host', host);
-    print('SpacetimeDbNotesRepository configured: host=$host');
+    debugLogger.info('REPO', 'Configured: host=$host');
   }
 
   Future<bool> checkConnection() async {
@@ -425,26 +413,20 @@ class SpacetimeDbNotesRepository {
 
       return note;
     } catch (e) {
-      log('Error loading note from SpacetimeDB: $e');
+      debugLogger.error('REPO', 'Error loading note: $e');
       return null;
     }
   }
 
   Future<String?> createNote(String path, String content) async {
-    print('[SpacetimeDbNotesRepository] createNote called with path: $path');
+    debugLogger.save('createNote: $path');
     try {
-      print('[SpacetimeDbNotesRepository] Calling _ensureConnected...');
       await _ensureConnected();
-      print(
-          '[SpacetimeDbNotesRepository] _ensureConnected completed, client: ${_client != null ? 'exists' : 'null'}');
 
       if (_client == null) {
-        print('[SpacetimeDbNotesRepository] Client is null, returning null');
+        debugLogger.error('SAVE', 'Client is null, cannot create note');
         return null;
       }
-
-      print(
-          '[SpacetimeDbNotesRepository] Connection status: ${_client!.connection.status}');
 
       final id = const Uuid().v4();
 
@@ -475,8 +457,6 @@ class SpacetimeDbNotesRepository {
         dbUpdatedAt: Int64(0),
       );
 
-      print(
-          '[SpacetimeDbNotesRepository] Calling reducers.createNote with id: $id');
       await _client!.reducers.createNote(
         id: id,
         path: path,
@@ -491,12 +471,10 @@ class SpacetimeDbNotesRepository {
         optimisticChanges: [OptimisticChange.insert('note', newNote.toJson())],
       );
 
-      print(
-          '[SpacetimeDbNotesRepository] reducers.createNote completed successfully');
+      debugLogger.save('Note created: $id');
       return id;
     } catch (e, stack) {
-      print('[SpacetimeDbNotesRepository] ❌ Error creating note: $e');
-      print('[SpacetimeDbNotesRepository] Stack trace: $stack');
+      debugLogger.error('SAVE', 'Error creating note: $e', stack.toString());
       return null;
     }
   }
@@ -539,46 +517,39 @@ class SpacetimeDbNotesRepository {
 
       return true;
     } catch (e) {
-      log('Error updating note content in SpacetimeDB: $e');
+      debugLogger.error('SAVE', 'Error updating note content: $e');
       return false;
     }
   }
 
   Future<bool> deleteNote(String id) async {
-    print('SpacetimeDbNotesRepository.deleteNote() called');
-    print('  id: $id');
+    debugLogger.save('deleteNote: $id');
 
     try {
       await _ensureConnected();
 
       if (_client == null) {
-        print('  ❌ Client is null, cannot delete note');
+        debugLogger.error('SAVE', 'Client is null, cannot delete note');
         return false;
       }
 
       final oldNote = _client!.note.find(id);
       if (oldNote == null) {
-        print('  ❌ Note not found in cache: $id');
+        debugLogger.error('SAVE', 'Note not found in cache: $id');
         return false;
       }
 
-      print('🔍 [CLIENT] Deleting Note ID: "${oldNote.id}" (Len: ${oldNote.id.length})');
-
       final optimisticPayload = oldNote.toJson();
-      print('🔍 [CLIENT] Optimistic Payload ID: "${optimisticPayload['id']}"');
-      print('🔍 [CLIENT] Input ID vs Note ID match: ${id == oldNote.id}');
 
-      print('  Calling SpacetimeDB reducer deleteNote...');
       await _client!.reducers.deleteNote(
         id: id,
         optimisticChanges: [OptimisticChange.delete('note', optimisticPayload)],
       );
 
-      print('  ✅ Successfully deleted note: $id');
+      debugLogger.save('Note deleted: $id');
       return true;
     } catch (e) {
-      print('  ❌ Error deleting note in SpacetimeDB: $e');
-      print('  Stack trace: ${StackTrace.current}');
+      debugLogger.error('SAVE', 'Error deleting note: $e');
       return false;
     }
   }
@@ -628,7 +599,7 @@ class SpacetimeDbNotesRepository {
 
       return true;
     } catch (e) {
-      print('❌ [RENAME] Error renaming note: $e');
+      debugLogger.error('SAVE', 'Error renaming note: $e');
       return false;
     }
   }
@@ -647,13 +618,12 @@ class SpacetimeDbNotesRepository {
       final exists = folderTable.iter().any((f) => f.path == generalNotesPath);
 
       if (!exists) {
-        print('  Creating All Notes folder...');
+        debugLogger.info('FOLDER', 'Creating All Notes folder');
         await _client!.reducers.upsertFolder(
           path: generalNotesPath,
           name: 'All Notes',
           depth: 0,
         );
-        print('  ✅ Created All Notes folder');
       }
 
       final noteTable = _client!.note;
@@ -663,7 +633,7 @@ class SpacetimeDbNotesRepository {
           .toList();
 
       if (rootNotes.isNotEmpty) {
-        print('  Migrating ${rootNotes.length} root-level notes to All Notes');
+        debugLogger.info('FOLDER', 'Migrating ${rootNotes.length} root-level notes to All Notes');
         for (final note in rootNotes) {
           final newPath = 'All Notes/${note.path}';
           await _client!.reducers.moveNote(
@@ -675,7 +645,7 @@ class SpacetimeDbNotesRepository {
 
       _generalNotesFolderEnsured = true;
     } catch (e) {
-      print('  ❌ Error ensuring All Notes folder: $e');
+      debugLogger.error('FOLDER', 'Error ensuring All Notes folder: $e');
     }
   }
 
@@ -685,105 +655,79 @@ class SpacetimeDbNotesRepository {
     int? position,
     String? heading,
   }) async {
-    // Not supported in current SpacetimeDB schema
-    log('Patch note not supported in SpacetimeDB');
+    debugLogger.warning('REPO', 'Patch note not supported in SpacetimeDB');
     return false;
   }
 
   /// Create a new folder
   Future<bool> createFolder(String path) async {
-    print('SpacetimeDbNotesRepository.createFolder() called');
-    print('  path: $path');
+    debugLogger.info('FOLDER', 'createFolder: $path');
 
     try {
       await _ensureConnected();
 
       if (_client == null) {
-        print('  ❌ Client is null, cannot create folder');
+        debugLogger.error('FOLDER', 'Client is null, cannot create folder');
         return false;
       }
 
-      // Normalize path to NO trailing slash (standard)
       final normalizedPath =
           path.endsWith('/') ? path.substring(0, path.length - 1) : path;
 
-      // Extract folder name from path
       final name = normalizedPath.split('/').last;
-
-      // Calculate depth (number of parent folders)
       final depth = normalizedPath.split('/').length - 1;
 
-      print('  Calling SpacetimeDB reducer upsertFolder...');
       await _client!.reducers.upsertFolder(
         path: normalizedPath,
         name: name,
         depth: depth,
       );
 
-      print('  ✅ Successfully created folder: $normalizedPath');
+      debugLogger.info('FOLDER', 'Created folder: $normalizedPath');
       return true;
     } catch (e) {
-      print('  ❌ Error creating folder in SpacetimeDB: $e');
-      print('  Stack trace: ${StackTrace.current}');
+      debugLogger.error('FOLDER', 'Error creating folder: $e');
       return false;
     }
   }
 
   /// Delete a folder (will cascade delete all notes and subfolders)
   Future<bool> deleteFolder(String path) async {
-    print('SpacetimeDbNotesRepository.deleteFolder() called');
-    print('  path: $path');
+    debugLogger.info('FOLDER', 'deleteFolder: $path');
 
     try {
       await _ensureConnected();
 
       if (_client == null) {
-        print('  ❌ Client is null, cannot delete folder');
+        debugLogger.error('FOLDER', 'Client is null, cannot delete folder');
         return false;
       }
 
-      // Normalize path to NO trailing slash (standard)
       final normalizedPath =
           path.endsWith('/') ? path.substring(0, path.length - 1) : path;
 
-      print('  Calling SpacetimeDB reducer deleteFolder...');
       await _client!.reducers.deleteFolder(path: normalizedPath);
 
-      print('  ✅ Successfully deleted folder: $normalizedPath');
-
-      // Debug: Check folder table state after delete
-      final folderTable = _client!.folder;
-      final allFolders = folderTable.iter().toList();
-      final folderCount = allFolders.length;
-      final stillExists = allFolders.any((f) => f.path == normalizedPath);
-      print('  📊 Debug: Folder table count: $folderCount');
-      print('  📊 Debug: Folder still in cache: $stillExists');
-      print(
-          '  📊 Debug: All folder paths: ${allFolders.map((f) => f.path).toList()}');
-
+      debugLogger.info('FOLDER', 'Deleted folder: $normalizedPath');
       return true;
     } catch (e) {
-      print('  ❌ Error deleting folder in SpacetimeDB: $e');
-      print('  Stack trace: ${StackTrace.current}');
+      debugLogger.error('FOLDER', 'Error deleting folder: $e');
       return false;
     }
   }
 
   /// Move a folder to a new path (will cascade move all notes and subfolders)
   Future<bool> moveFolder(String oldPath, String newPath) async {
-    print('SpacetimeDbNotesRepository.moveFolder() called');
-    print('  oldPath: $oldPath');
-    print('  newPath: $newPath');
+    debugLogger.info('FOLDER', 'moveFolder: $oldPath -> $newPath');
 
     try {
       await _ensureConnected();
 
       if (_client == null) {
-        print('  ❌ Client is null, cannot move folder');
+        debugLogger.error('FOLDER', 'Client is null, cannot move folder');
         return false;
       }
 
-      // Normalize paths to NO trailing slash (standard)
       final normalizedOldPath = oldPath.endsWith('/')
           ? oldPath.substring(0, oldPath.length - 1)
           : oldPath;
@@ -791,46 +735,39 @@ class SpacetimeDbNotesRepository {
           ? newPath.substring(0, newPath.length - 1)
           : newPath;
 
-      print('  Calling SpacetimeDB reducer moveFolder...');
       await _client!.reducers.moveFolder(
         oldPath: normalizedOldPath,
         newPath: normalizedNewPath,
       );
 
-      print(
-          '  ✅ Successfully moved folder: $normalizedOldPath -> $normalizedNewPath');
+      debugLogger.info('FOLDER', 'Moved folder: $normalizedOldPath -> $normalizedNewPath');
       return true;
     } catch (e) {
-      print('  ❌ Error moving folder in SpacetimeDB: $e');
-      print('  Stack trace: ${StackTrace.current}');
+      debugLogger.error('FOLDER', 'Error moving folder: $e');
       return false;
     }
   }
 
   Future<bool> moveNote(String oldPath, String newPath) async {
-    print('SpacetimeDbNotesRepository.moveNote() called');
-    print('  oldPath: $oldPath');
-    print('  newPath: $newPath');
+    debugLogger.save('moveNote: $oldPath -> $newPath');
 
     try {
       await _ensureConnected();
 
       if (_client == null) {
-        print('  ❌ Client is null, cannot move note');
+        debugLogger.error('SAVE', 'Client is null, cannot move note');
         return false;
       }
 
-      print('  Calling SpacetimeDB reducer moveNote...');
       await _client!.reducers.moveNote(
         oldPath: oldPath,
         newPath: newPath,
       );
 
-      print('  ✅ Successfully moved note: $oldPath -> $newPath');
+      debugLogger.save('Moved note: $oldPath -> $newPath');
       return true;
     } catch (e) {
-      print('  ❌ Error moving note in SpacetimeDB: $e');
-      print('  Stack trace: ${StackTrace.current}');
+      debugLogger.error('SAVE', 'Error moving note: $e');
       return false;
     }
   }
@@ -855,7 +792,7 @@ class SpacetimeDbNotesRepository {
 
       return matchingNotes;
     } catch (e) {
-      log('Error searching notes in SpacetimeDB: $e');
+      debugLogger.error('REPO', 'Error searching notes: $e');
       return [];
     }
   }
@@ -865,10 +802,8 @@ class SpacetimeDbNotesRepository {
   /// This ensures the client is connected, callbacks are registered,
   /// and emits the initial cache data to the stream
   Future<void> connectAndGetInitialData() async {
-    print('SpacetimeDbNotesRepository.connectAndGetInitialData() called');
+    debugLogger.connection('connectAndGetInitialData() called');
     await _ensureConnected();
-
-    // Emit current cache data after connection
     _emitCurrentNotes();
   }
 
@@ -886,17 +821,17 @@ class SpacetimeDbNotesRepository {
       return;
     }
 
-    print('🔄 Attempting to reconnect to SpacetimeDB...');
+    debugLogger.connection('Attempting to reconnect...');
     try {
       await _client!.connection.reconnect();
     } on SpacetimeDbAuthException {
-      print('⚠️ Auth expired during reconnect (401). Clearing token and getting fresh identity...');
+      debugLogger.warning('AUTH', 'Auth expired during reconnect, clearing token');
       final storage = _authStorage ?? SharedPreferencesTokenStore();
       await storage.clearToken();
       await _client!.connection.reconnect();
-      print('✅ Reconnected with fresh anonymous identity.');
+      debugLogger.connection('Reconnected with fresh identity');
     } catch (e) {
-      print('📴 Reconnection attempt failed: $e, retrying in 2s...');
+      debugLogger.warning('CONN', 'Reconnection failed: $e, retrying in 2s');
       Future.delayed(const Duration(seconds: 2), () {
         if (_client != null &&
             _client!.connection.status == stdb.ConnectionStatus.disconnected) {
@@ -912,52 +847,37 @@ class SpacetimeDbNotesRepository {
     String? database,
     stdb.AuthTokenStore? authStorage,
   }) {
-    print('SpacetimeDbNotesRepository.updateConfiguration() called');
-    print('  new host: $host');
-    print('  new database: $database');
-    print('  new authStorage provided: ${authStorage != null}');
+    debugLogger.info('REPO', 'updateConfiguration: host=$host, db=$database');
 
-    // Store new configuration
     _host = host;
     _database = database;
     _authStorage = authStorage;
 
-    // Reset connection so next operation will use new config
     resetConnection();
-
-    print('  ✅ Configuration updated');
   }
 
   /// Reset the repository connection (used when switching instances)
   void resetConnection() {
-    print('SpacetimeDbNotesRepository.resetConnection() called');
-    print('  Disconnecting and clearing existing client...');
+    debugLogger.connection('Resetting connection');
 
-    // Cancel all stream subscriptions
     for (final sub in _subscriptions) {
       sub.cancel();
     }
     _subscriptions.clear();
 
-    // Disconnect existing client if any
     if (_client != null) {
       try {
         _client!.disconnect();
       } catch (e) {
-        print('  Error disconnecting client: $e');
+        debugLogger.error('CONN', 'Error disconnecting client: $e');
       }
       _client = null;
-
-      // Emit null to stream to notify listeners
       _clientSubject.add(null);
     }
 
-    // Cancel any pending connection
     _connectingFuture = null;
     _generalNotesFolderEnsured = false;
     _streamListenersRegistered = false;
-
-    print('  ✅ Repository connection reset');
   }
 
   /// Get the current client (for connection state monitoring)
@@ -970,7 +890,7 @@ class SpacetimeDbNotesRepository {
 
   /// Dispose resources
   Future<void> dispose() async {
-    print('SpacetimeDbNotesRepository.dispose() called');
+    debugLogger.info('REPO', 'Disposing repository');
     resetConnection();
     _notesSubject.close();
     _foldersSubject.close();

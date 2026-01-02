@@ -6,9 +6,11 @@ import 'package:flutter_quill/flutter_quill.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart' hide Provider;
 import 'package:spacenotes_client/providers/notes_providers.dart';
 import 'package:spacenotes_client/providers/connection_providers.dart';
+import 'package:spacetimedb_dart_sdk/spacetimedb_dart_sdk.dart' show SdkLogger;
 import 'package:provider/provider.dart';
 
 import 'theme/spacenotes_theme.dart';
+import 'services/debug_logger.dart';
 import 'services/opencode_client.dart';
 import 'services/sse_service.dart';
 import 'services/message_queue_service.dart';
@@ -24,6 +26,10 @@ import 'services/web_config_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  debugLogger.info('APP', 'SpaceNotes starting');
+
+  SdkLogger.onLog = (level, msg) => debugLogger.log(level, 'SDK', msg);
 
   // Create and initialize ConfigCubit
   final configCubit = ConfigCubit();
@@ -125,12 +131,8 @@ class _OpenCodeAppState extends State<OpenCodeApp> with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      print('🔥 APP RESUMED - Checking connection health');
-
-      // Get repository and trigger reconnection attempt
+      debugLogger.info('APP', 'App resumed - checking connection health');
       final repo = widget.container.read(notesRepositoryProvider);
-
-      // Try to reconnect (non-blocking) and emit current data
       repo.tryReconnect();
       repo.connectAndGetInitialData();
     }

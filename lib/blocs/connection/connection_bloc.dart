@@ -1,9 +1,9 @@
 import 'dart:async';
 import 'dart:math' as math;
-import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../services/opencode_client.dart';
 import '../../services/network_service.dart';
+import '../../services/debug_logger.dart';
 import '../config/config_cubit.dart';
 import '../session/session_bloc.dart';
 import '../session/session_event.dart' as session_events;
@@ -112,10 +112,9 @@ class ConnectionBloc extends Bloc<ConnectionEvent, ConnectionState> {
     _currentEmitter = emit;
     _markActivity(); // Mark activity for adaptive ping
 
-    debugPrint('[OpenCode] Checking connection...');
+    debugLogger.connection('Checking connection...');
 
     try {
-      // Use shorter timeout for fast reconnect mode
       final timeout = _isFastReconnectMode
           ? const Duration(seconds: 3)
           : const Duration(seconds: 10);
@@ -123,7 +122,7 @@ class ConnectionBloc extends Bloc<ConnectionEvent, ConnectionState> {
       final isReachable = await openCodeClient.ping()
           .timeout(timeout);
 
-      debugPrint('[OpenCode] Ping result: $isReachable');
+      debugLogger.connection('Ping result: $isReachable');
 
       if (isReachable) {
         if (state is! Connected) {
@@ -139,10 +138,10 @@ class ConnectionBloc extends Bloc<ConnectionEvent, ConnectionState> {
       final timeoutMsg = _isFastReconnectMode
           ? 'Fast reconnect timeout'
           : 'Connection timeout';
-      debugPrint('[OpenCode] $timeoutMsg');
+      debugLogger.warning('CONN', timeoutMsg);
       _handleConnectionLost(timeoutMsg, emit);
     } catch (e) {
-      debugPrint('[OpenCode] Connection error: $e');
+      debugLogger.error('CONN', 'Connection error: $e');
       _handleConnectionLost(e.toString(), emit);
     }
   }
@@ -156,41 +155,39 @@ class ConnectionBloc extends Bloc<ConnectionEvent, ConnectionState> {
 
   Future<void> _handleConnectionEstablished(Emitter<ConnectionState> emit) async {
     _currentEmitter = emit;
-    debugPrint('[OpenCode] Establishing connection...');
+    debugLogger.connection('Establishing connection...');
     try {
       await openCodeClient.getProviders()
           .timeout(const Duration(seconds: 15));
 
       await openCodeClient.fetchAndStoreAgents();
 
-      debugPrint('[OpenCode] Got providers, setting up session...');
+      debugLogger.connection('Got providers, setting up session...');
 
       _reconnectAttempt = 0;
       _isFastReconnectMode = false; // Disable fast reconnect mode on successful connection
       _fastReconnectAttempt = 0;
       _cancelReconnectTimer();
 
-      // Check if session is already loaded - skip the whole session flow
       if (sessionBloc.state is session_states.SessionLoaded) {
         final loadedState = sessionBloc.state as session_states.SessionLoaded;
-        debugPrint('[OpenCode] ✅ Connected with existing session: ${loadedState.session.id}');
+        debugLogger.connection('Connected with existing session: ${loadedState.session.id}');
         emit(const Connected());
         _scheduleNextPing();
         return;
       }
 
-      // Listen for session creation BEFORE triggering the event
       _sessionSubscription?.cancel();
       final sessionCompleter = Completer<void>();
 
       _sessionSubscription = sessionBloc.stream.listen((sessionState) {
         if (sessionState is session_states.SessionLoaded) {
-          debugPrint('[OpenCode] ✅ Connected with session: ${sessionState.session.id}');
+          debugLogger.connection('Connected with session: ${sessionState.session.id}');
           if (!sessionCompleter.isCompleted) {
             sessionCompleter.complete();
           }
         } else if (sessionState is session_states.SessionError) {
-          debugPrint('[OpenCode] Session error: ${sessionState.message}');
+          debugLogger.error('CONN', 'Session error: ${sessionState.message}');
           if (!sessionCompleter.isCompleted) {
             sessionCompleter.completeError(sessionState.message);
           }
@@ -216,10 +213,10 @@ class ConnectionBloc extends Bloc<ConnectionEvent, ConnectionState> {
       _scheduleNextPing();
 
     } on TimeoutException {
-      debugPrint('[OpenCode] Connection establishment timeout');
+      debugLogger.warning('CONN', 'Connection establishment timeout');
       _handleConnectionLost('Connection establishment timeout', emit);
     } catch (e) {
-      debugPrint('[OpenCode] Connection establishment error: $e');
+      debugLogger.error('CONN', 'Connection establishment error: $e');
       _handleConnectionLost(e.toString(), emit);
     }
   }

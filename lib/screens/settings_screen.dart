@@ -8,11 +8,11 @@ import '../blocs/connection/connection_bloc.dart';
 import '../blocs/connection/connection_event.dart';
 import '../blocs/desktop_notes/desktop_notes_bloc.dart';
 import '../blocs/desktop_notes/desktop_notes_event.dart';
-import '../blocs/desktop_notes/desktop_notes_state.dart';
 import '../providers/notes_providers.dart';
 import '../providers/connection_providers.dart';
 import '../widgets/terminal_ip_input.dart';
 import '../widgets/adaptive/platform_utils.dart';
+import '../services/debug_logger.dart';
 
 /// Settings screen for configuring SpaceNotes and OpenCode connections.
 /// There is only ONE connection of each type - no multi-instance support.
@@ -89,7 +89,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       await repository.configure(host: host);
       await repository.connectAndGetInitialData();
     } catch (e) {
-      debugPrint('Failed to connect to SpaceNotes: $e');
+      debugLogger.error('SETTINGS', 'Failed to connect to SpaceNotes: $e');
     } finally {
       if (mounted) {
         setState(() => _isSpaceNotesConnecting = false);
@@ -114,7 +114,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         context.read<ConnectionBloc>().add(ResetConnection());
       }
     } catch (e) {
-      debugPrint('Failed to save OpenCode config: $e');
+      debugLogger.error('SETTINGS', 'Failed to save OpenCode config: $e');
     } finally {
       if (mounted) {
         setState(() => _isOpenCodeConnecting = false);
@@ -135,6 +135,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               _buildSpaceNotesSection(),
               const SizedBox(height: 32),
               _buildOpenCodeSection(),
+              const SizedBox(height: 32),
+              _buildDebugLogsSection(),
             ],
           ),
         ),
@@ -258,6 +260,51 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               ),
               const SizedBox(width: 16),
             ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDebugLogsSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Debug Logs',
+          style: TextStyle(
+            fontFamily: 'FiraCode',
+            fontSize: 16,
+            color: SpaceNotesTheme.text,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const SizedBox(height: 8),
+        const Text(
+          'Export logs to help debug sync issues. Logs are cleared after export.',
+          style: TextStyle(
+            fontFamily: 'FiraCode',
+            fontSize: 12,
+            color: SpaceNotesTheme.textSecondary,
+          ),
+        ),
+        const SizedBox(height: 16),
+        SizedBox(
+          width: double.infinity,
+          child: ElevatedButton.icon(
+            onPressed: () async {
+              await debugLogger.exportAndClear();
+            },
+            icon: const Icon(Icons.upload_file, size: 18),
+            label: const Text('Export & Clear Logs'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: SpaceNotesTheme.inputSurface,
+              foregroundColor: SpaceNotesTheme.text,
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
           ),
         ),
       ],
