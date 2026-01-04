@@ -39,6 +39,7 @@ class _NoteScreenState extends ConsumerState<NoteScreen> {
 
   Timer? _debounceTimer;
   StreamSubscription<stdb.TableUpdateEvent<Note>>? _updateSubscription;
+  StreamSubscription? _clientSubscription;
 
   @override
   void initState() {
@@ -87,6 +88,36 @@ class _NoteScreenState extends ConsumerState<NoteScreen> {
   }
 
   void _setupUpdateListener() {
+    _updateSubscription?.cancel();
+    _updateSubscription = _repo.noteUpdateEvents?.listen((event) {
+      if (_noteId == null || event.newRow.id != _noteId) return;
+
+      if (event.context.isMyTransaction) {
+        _lastSavedContent = event.newRow.content;
+        return;
+      }
+
+      if (event.newRow.content != _currentContent) {
+        debugLogger.sync('External change detected, syncing');
+        _debounceTimer?.cancel();
+        _currentContent = event.newRow.content;
+        _lastSavedContent = event.newRow.content;
+        _quillKey.currentState?.updateContent(event.newRow.content);
+        if (mounted) setState(() {});
+      }
+    });
+
+    _clientSubscription?.cancel();
+    _clientSubscription = _repo.watchClient().listen((client) {
+      if (client != null && _updateSubscription == null) {
+        debugLogger.debug('NOTE', 'Client connected, re-establishing update listener');
+        _setupNoteUpdateListener();
+      }
+    });
+  }
+
+  void _setupNoteUpdateListener() {
+    _updateSubscription?.cancel();
     _updateSubscription = _repo.noteUpdateEvents?.listen((event) {
       if (_noteId == null || event.newRow.id != _noteId) return;
 
@@ -113,6 +144,7 @@ class _NoteScreenState extends ConsumerState<NoteScreen> {
     _debounceTimer?.cancel();
     _saveContent();
     _updateSubscription?.cancel();
+    _clientSubscription?.cancel();
     super.dispose();
   }
 

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import '../blocs/chat/chat_bloc.dart';
@@ -28,8 +29,8 @@ class TerminalMessage extends StatelessWidget {
         if (message.role == 'user') _buildUserMessage(context),
         if (message.role == 'assistant') ...[
           const SizedBox(height: 16),
-          _buildAssistantMessage(),
-          const SizedBox(height: 16), // Space below assistant response
+          _buildAssistantMessage(context),
+          const SizedBox(height: 16),
         ],
       ],
     );
@@ -40,49 +41,47 @@ class TerminalMessage extends StatelessWidget {
         ? message.parts.first.content!
         : '';
 
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (message.sendStatus == MessageSendStatus.failed || message.sendStatus == MessageSendStatus.queued)
-          _buildStatusIcons(context),
-        Expanded(
-          child: Container(
-            decoration: const BoxDecoration(
-              border: Border(
-                right: BorderSide(
-                  color: SpaceNotesTheme.primary,
-                  width: 2,
+    return GestureDetector(
+      onLongPress: () => _copyToClipboard(context, content),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (message.sendStatus == MessageSendStatus.failed || message.sendStatus == MessageSendStatus.queued)
+            _buildStatusIcons(context),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.only(right: 12, top: 8, bottom: 12),
+              child: Text(
+                _safeTextSanitize(content, preserveMarkdown: false),
+                style: SpaceNotesTextStyles.terminal.copyWith(
+                  color: SpaceNotesTheme.textSecondary,
                 ),
+                textAlign: TextAlign.right,
               ),
             ),
-            padding: const EdgeInsets.only(right: 12, top: 8, bottom: 12),
-            child: Text(
-              _safeTextSanitize(content, preserveMarkdown: false),
-              style: SpaceNotesTextStyles.terminal,
-              textAlign: TextAlign.right,
-            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
-  Widget _buildAssistantMessage() {
-    return Container(
-      decoration: const BoxDecoration(
-        border: Border(
-          left: BorderSide(
-            color: SpaceNotesTheme.secondary,
-            width: 2,
-          ),
+  Widget _buildAssistantMessage(BuildContext context) {
+    final hasContent = message.parts.any((p) =>
+      (p.content != null && p.content!.isNotEmpty) || p.type == 'tool'
+    );
+
+    return GestureDetector(
+      onLongPress: () => _copyToClipboard(context, message.content),
+      child: Padding(
+        padding: const EdgeInsets.only(left: 12, top: 8, bottom: 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ...message.parts.map((part) => _buildMessagePart(part)),
+            if (isStreaming && !hasContent)
+              const _BlinkingCursor(),
+          ],
         ),
-      ),
-      padding: const EdgeInsets.only(left: 12, top: 8, bottom: 12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          ...message.parts.map((part) => _buildMessagePart(part)),
-        ],
       ),
     );
   }
@@ -171,14 +170,33 @@ class TerminalMessage extends StatelessWidget {
 
     String state = 'pending';
     final stateValue = part.metadata?['state'];
-    if (stateValue is String) {
+    final statusValue = part.metadata?['status'];
+    if (statusValue is String) {
+      state = statusValue;
+    } else if (statusValue is Map) {
+      state = (statusValue['status'] ?? statusValue['state'] ?? 'pending')?.toString() ?? 'pending';
+    } else if (stateValue is String) {
       state = stateValue;
     } else if (stateValue is Map) {
-      state = (stateValue['status'] ?? stateValue['state'] ?? 'pending') as String;
+      state = (stateValue['status'] ?? stateValue['state'] ?? 'pending')?.toString() ?? 'pending';
     }
 
-    final error = part.metadata?['error'] as String?;
-    final output = part.metadata?['output'] as String?;
+    String? error;
+    final errorVal = part.metadata?['error'];
+    if (errorVal is String) {
+      error = errorVal;
+    } else if (errorVal is Map) {
+      error = errorVal['message'] as String? ?? errorVal.toString();
+    }
+    error ??= part.metadata?['errorMessage'] as String?;
+    error ??= part.metadata?['result']?['error'] as String?;
+
+    if (state == 'error') {
+      print('🔴 [ToolError] state=$state metadata=${part.metadata}');
+    }
+
+    final output = part.metadata?['output'] as String? ??
+                   part.metadata?['result']?['content'] as String?;
 
     String? commandDetails;
 
@@ -294,7 +312,7 @@ class TerminalMessage extends StatelessWidget {
               ),
             ),
           ],
-          if (state == 'completed' && output != null && output.isNotEmpty) ...[
+          if ((state == 'completed' || state == 'error') && output != null && output.isNotEmpty) ...[
             const SizedBox(height: 2),
             Padding(
               padding: const EdgeInsets.only(left: 20),
@@ -325,59 +343,48 @@ class TerminalMessage extends StatelessWidget {
     final reasoningTokens = part.metadata?['reasoning_tokens'] as int?;
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8, top: 4),
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: SpaceNotesTheme.secondary.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color: SpaceNotesTheme.secondary.withValues(alpha: 0.3),
-            width: 1,
-          ),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                const Icon(
-                  Icons.psychology_outlined,
-                  size: 14,
-                  color: SpaceNotesTheme.secondary,
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  'Thinking',
-                  style: SpaceNotesTextStyles.terminal.copyWith(
-                    color: SpaceNotesTheme.secondary,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                if (reasoningTokens != null) ...[
-                  const SizedBox(width: 8),
-                  Text(
-                    '$reasoningTokens tokens',
-                    style: SpaceNotesTextStyles.terminal.copyWith(
-                      color: SpaceNotesTheme.textSecondary,
-                      fontSize: 10,
-                    ),
-                  ),
-                ],
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(
-              _safeTextSanitize(content, preserveMarkdown: false),
-              style: SpaceNotesTextStyles.terminal.copyWith(
-                color: SpaceNotesTheme.text,
-                fontSize: 12,
-                fontStyle: FontStyle.italic,
+      padding: const EdgeInsets.only(bottom: 4, top: 2),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(
+                Icons.psychology_outlined,
+                size: 14,
+                color: SpaceNotesTheme.secondary,
               ),
+              const SizedBox(width: 6),
+              Text(
+                'Thinking',
+                style: SpaceNotesTextStyles.terminal.copyWith(
+                  color: SpaceNotesTheme.secondary,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              if (reasoningTokens != null) ...[
+                const SizedBox(width: 8),
+                Text(
+                  '$reasoningTokens tokens',
+                  style: SpaceNotesTextStyles.terminal.copyWith(
+                    color: SpaceNotesTheme.textSecondary,
+                    fontSize: 10,
+                  ),
+                ),
+              ],
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            _safeTextSanitize(content, preserveMarkdown: false),
+            style: SpaceNotesTextStyles.terminal.copyWith(
+              color: SpaceNotesTheme.textSecondary,
+              fontSize: 12,
+              fontStyle: FontStyle.italic,
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -497,6 +504,13 @@ class TerminalMessage extends StatelessWidget {
     );
   }
 
+  void _copyToClipboard(BuildContext context, String text) {
+    if (text.isEmpty) return;
+
+    Clipboard.setData(ClipboardData(text: text));
+    HapticFeedback.mediumImpact();
+  }
+
   String _safeTextSanitize(String text, {bool preserveMarkdown = true}) {
     try {
       return TextSanitizer.sanitize(text, preserveMarkdown: preserveMarkdown);
@@ -508,15 +522,14 @@ class TerminalMessage extends StatelessWidget {
 
   Widget _buildStatusIcons(BuildContext context) {
     final content = message.parts.isNotEmpty ? message.parts.first.content : null;
-    
+
     if (content == null) return const SizedBox.shrink();
-    
+
     return Padding(
       padding: const EdgeInsets.only(left: 12, top: 4),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Status-specific primary icon
           if (message.sendStatus == MessageSendStatus.failed) ...[
             Tooltip(
               message: 'Failed to send. Tap to retry.',
@@ -559,6 +572,52 @@ class TerminalMessage extends StatelessWidget {
           ],
         ],
       ),
+    );
+  }
+}
+
+class _BlinkingCursor extends StatefulWidget {
+  const _BlinkingCursor();
+
+  @override
+  State<_BlinkingCursor> createState() => _BlinkingCursorState();
+}
+
+class _BlinkingCursorState extends State<_BlinkingCursor> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _animation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 530),
+      vsync: this,
+    )..repeat(reverse: true);
+    _animation = Tween<double>(begin: 0.0, end: 1.0).animate(_controller);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _animation,
+      builder: (context, child) {
+        return Opacity(
+          opacity: _animation.value,
+          child: Text(
+            '█',
+            style: SpaceNotesTextStyles.terminal.copyWith(
+              color: SpaceNotesTheme.primary,
+            ),
+          ),
+        );
+      },
     );
   }
 }
