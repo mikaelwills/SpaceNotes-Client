@@ -1,4 +1,7 @@
 import 'dart:async';
+import 'dart:convert';
+import 'package:collection/collection.dart';
+import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -20,6 +23,12 @@ import '../generated/note.dart';
 import '../generated/folder.dart';
 import 'shared_preferences_token_store.dart';
 import 'package:rxdart/rxdart.dart';
+
+String _contentHash(String content) {
+  final bytes = utf8.encode(content);
+  final digest = sha256.convert(bytes);
+  return digest.toString().substring(0, 16);
+}
 
 /// Notes repository implementation using SpacetimeDB
 class SpacetimeDbNotesRepository {
@@ -48,6 +57,9 @@ class SpacetimeDbNotesRepository {
 
   // Stream subscriptions for cleanup
   final List<StreamSubscription> _subscriptions = [];
+
+  // Track if initial sync is complete to avoid spamming logs
+  bool _initialSyncComplete = false;
 
   SpacetimeDbNotesRepository({
     String? host,
@@ -224,6 +236,8 @@ class SpacetimeDbNotesRepository {
         debugLogger.connection('Operating in offline mode (cached data available)');
       }
 
+      _initialSyncComplete = true;
+
       _registerStreamListeners();
 
       if (isConnected) {
@@ -251,27 +265,36 @@ class SpacetimeDbNotesRepository {
     final folderTable = _client!.folder;
 
     final noteInsertSub = noteTable.insertEventStream.listen((event) {
+      if (!_initialSyncComplete) return;
+      final note = event.row;
+      debugLogger.sync('Received insert: id=${note.id.substring(0, 8)}, path=${note.path}, len=${note.content.length}, hash=${_contentHash(note.content)}');
       _emitCurrentNotes();
     });
     _subscriptions.add(noteInsertSub);
 
-    // Listen to note update event stream - always emit to keep cache fresh
     final noteUpdateSub = noteTable.updateEventStream.listen((event) {
-      _emitCurrentNotes(); // Always emit - UI handles focus protection
+      if (!_initialSyncComplete) return;
+      final note = event.newRow;
+      debugLogger.sync('Received update: id=${note.id.substring(0, 8)}, len=${note.content.length}, hash=${_contentHash(note.content)}');
+      _emitCurrentNotes();
     });
     _subscriptions.add(noteUpdateSub);
 
     final noteDeleteSub = noteTable.deleteEventStream.listen((event) {
+      if (!_initialSyncComplete) return;
+      debugLogger.sync('Note DELETE: ${event.row.path}');
       _emitCurrentNotes();
     });
     _subscriptions.add(noteDeleteSub);
 
     final folderInsertSub = folderTable.insertEventStream.listen((event) {
+      if (!_initialSyncComplete) return;
       _emitCurrentNotes();
     });
     _subscriptions.add(folderInsertSub);
 
     final folderUpdateSub = folderTable.updateEventStream.listen((event) {
+      if (!_initialSyncComplete) return;
       if (!event.context.isMyTransaction) {
         _emitCurrentNotes();
       }
@@ -279,6 +302,7 @@ class SpacetimeDbNotesRepository {
     _subscriptions.add(folderUpdateSub);
 
     final folderDeleteSub = folderTable.deleteEventStream.listen((event) {
+      if (!_initialSyncComplete) return;
       _emitCurrentNotes();
     });
     _subscriptions.add(folderDeleteSub);
@@ -356,6 +380,8 @@ class SpacetimeDbNotesRepository {
       final notes = noteTable.iter().toList();
       final folders = folderTable.iter().toList();
 
+      debugLogger.sync('Emitting ${notes.length} notes, ${folders.length} folders');
+
       notes
           .sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
       folders
@@ -364,6 +390,7 @@ class SpacetimeDbNotesRepository {
       _notesSubject.add(notes);
       _foldersSubject.add(folders);
     } catch (e) {
+      debugLogger.error('SYNC', 'Error emitting notes: $e');
       _notesSubject.addError(e);
       _foldersSubject.addError(e);
     }
@@ -419,13 +446,19 @@ class SpacetimeDbNotesRepository {
   }
 
   Future<String?> createNote(String path, String content) async {
-    debugLogger.save('createNote: $path');
+    debugLogger.save('Creating note: path=$path, len=${content.length}, hash=${_contentHash(content)}');
     try {
       await _ensureConnected();
 
       if (_client == null) {
         debugLogger.error('SAVE', 'Client is null, cannot create note');
         return null;
+      }
+
+      final existingNote = _client!.note.iter().firstWhereOrNull((n) => n.path == path);
+      if (existingNote != null) {
+        debugLogger.save('Note already exists at path: $path, returning existing ID');
+        return existingNote.id;
       }
 
       final id = const Uuid().v4();
@@ -487,6 +520,8 @@ class SpacetimeDbNotesRepository {
 
       final oldNote = _client!.note.find(id);
       if (oldNote == null) return false;
+
+      debugLogger.save('Sending update: id=${id.substring(0, 8)}, len=${content.length}, hash=${_contentHash(content)}');
 
       final now = DateTime.now().millisecondsSinceEpoch;
 
@@ -878,6 +913,7 @@ class SpacetimeDbNotesRepository {
     _connectingFuture = null;
     _generalNotesFolderEnsured = false;
     _streamListenersRegistered = false;
+    _initialSyncComplete = false;
   }
 
   /// Get the current client (for connection state monitoring)

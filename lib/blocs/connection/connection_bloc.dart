@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math' as math;
+import 'package:bloc_concurrency/bloc_concurrency.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../services/opencode_client.dart';
 import '../../services/network_service.dart';
@@ -39,7 +40,7 @@ class ConnectionBloc extends Bloc<ConnectionEvent, ConnectionState> {
     required this.sessionBloc,
     required this.configCubit,
   }) : super(ConnectionInitial()) {
-    on<CheckConnection>(_onCheckConnection);
+    on<CheckConnection>(_onCheckConnection, transformer: droppable());
     on<ConnectionEstablished>(_onConnectionEstablished);
     on<ConnectionLost>(_onConnectionLost);
     on<StartReconnection>(_onStartReconnection);

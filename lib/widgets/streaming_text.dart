@@ -24,17 +24,25 @@ class StreamingText extends StatefulWidget {
   State<StreamingText> createState() => _StreamingTextState();
 }
 
-class _StreamingTextState extends State<StreamingText> {
+class _StreamingTextState extends State<StreamingText> with SingleTickerProviderStateMixin {
   String _displayedText = '';
   String _sanitizedFullText = '';
   Timer? _timer;
   int _currentIndex = 0;
+  late AnimationController _cursorController;
+  late Animation<double> _cursorAnimation;
 
   @override
   void initState() {
     super.initState();
+    _cursorController = AnimationController(
+      duration: const Duration(milliseconds: 530),
+      vsync: this,
+    )..repeat(reverse: true);
+    _cursorAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(_cursorController);
+
     _sanitizedFullText = _safeTextSanitize(widget.text, preserveMarkdown: widget.useMarkdown);
-    
+
     if (widget.isStreaming) {
       _startStreaming();
     } else {
@@ -76,6 +84,7 @@ class _StreamingTextState extends State<StreamingText> {
   @override
   void dispose() {
     _timer?.cancel();
+    _cursorController.dispose();
     super.dispose();
   }
 
@@ -99,6 +108,23 @@ class _StreamingTextState extends State<StreamingText> {
 
   bool _isLowSurrogate(int codeUnit) {
     return codeUnit >= 0xDC00 && codeUnit <= 0xDFFF;
+  }
+
+  Widget _buildBlinkingCursor() {
+    return AnimatedBuilder(
+      animation: _cursorAnimation,
+      builder: (context, child) {
+        return Opacity(
+          opacity: _cursorAnimation.value,
+          child: Text(
+            '▌',
+            style: widget.style?.copyWith(
+              color: SpaceNotesTheme.primary,
+            ) ?? const TextStyle(color: SpaceNotesTheme.primary),
+          ),
+        );
+      },
+    );
   }
 
   @override
@@ -145,36 +171,23 @@ class _StreamingTextState extends State<StreamingText> {
             ),
             selectable: true,
           ),
-          if (widget.isStreaming && _currentIndex < _sanitizedFullText.length)
-            Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: Text(
-                '▊',
-                style: widget.style?.copyWith(
-                  color: widget.style?.color?.withValues(alpha: 0.7),
-                ),
-              ),
-            ),
+          if (widget.isStreaming) _buildBlinkingCursor(),
         ],
       );
     }
 
-    return RichText(
-      text: TextSpan(
-        children: [
-          TextSpan(
-            text: _displayedText,
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        Flexible(
+          child: Text(
+            _displayedText,
             style: widget.style,
           ),
-          if (widget.isStreaming && _currentIndex < _sanitizedFullText.length)
-            TextSpan(
-              text: '▊',
-              style: widget.style?.copyWith(
-                color: widget.style?.color?.withValues(alpha: 0.7),
-              ),
-            ),
-        ],
-      ),
+        ),
+        if (widget.isStreaming) _buildBlinkingCursor(),
+      ],
     );
   }
 

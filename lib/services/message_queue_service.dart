@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'dart:collection';
+import '../blocs/chat/chat_bloc.dart';
+import '../blocs/chat/chat_state.dart';
 import '../blocs/connection/connection_bloc.dart';
 import '../blocs/connection/connection_state.dart';
 import '../blocs/session/session_bloc.dart';
@@ -61,12 +63,11 @@ class MessageQueueService {
   }
   
   /// Initialize ChatBloc listener - called after ChatBloc is created
-  void initChatBlocListener(dynamic chatBloc) {
+  void initChatBlocListener(ChatBloc chatBloc) {
     _chatBlocSubscription = chatBloc.stream.listen((chatState) {
-      // Check if assistant started streaming (ChatReady with isStreaming: true)
-      if (chatState.runtimeType.toString().contains('ChatReady')) {
-        final isStreaming = chatState.isStreaming as bool? ?? false;
-        if (isStreaming) {
+      if (chatState is ChatReady) {
+        if (chatState.phase == ChatFlowPhase.streaming && _pendingMessageTimeouts.isNotEmpty) {
+          debugLogger.queue('SSE streaming detected', 'phase=${chatState.phase}, pending=${_pendingMessageTimeouts.length}');
           _handleStreamingStarted();
         }
       }
@@ -211,7 +212,7 @@ class MessageQueueService {
     debugLogger.queue('HTTP send starting', 'msgId=$messageId, session=$sessionId');
     onStatusChange(MessageSendStatus.sending);
 
-    final timeoutTimer = Timer(const Duration(seconds: 10), () {
+    final timeoutTimer = Timer(const Duration(seconds: 60), () {
       if (_pendingMessageTimeouts.containsKey(messageId)) {
         debugLogger.error('QUEUE', 'Timeout waiting for response', 'msgId=$messageId');
         _markMessageFailed(messageId, 'Timeout - no response from server');
@@ -229,7 +230,13 @@ class MessageQueueService {
     );
 
     httpFuture.then((_) {
-      debugLogger.queue('HTTP send completed, awaiting SSE confirmation', 'msgId=$messageId');
+      debugLogger.queue('HTTP send completed', 'msgId=$messageId');
+      if (_pendingMessageTimeouts.containsKey(messageId)) {
+        _pendingMessageTimeouts[messageId]?.cancel();
+        _pendingMessageTimeouts.remove(messageId);
+        final callback = _pendingCallbacks.remove(messageId);
+        callback?.call(MessageSendStatus.sent);
+      }
     }).catchError((error) {
       debugLogger.error('QUEUE', 'HTTP error', 'msgId=$messageId, error=$error');
       if (_pendingMessageTimeouts.containsKey(messageId)) {

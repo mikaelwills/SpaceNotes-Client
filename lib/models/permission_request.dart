@@ -1,45 +1,46 @@
-/// Permission request from OpenCode server
+/// Permission request from OpenCode server (v1.1.1+)
 ///
 /// Represents a permission request that requires user approval
 /// before OpenCode can perform a potentially dangerous operation.
 class PermissionRequest {
   final String id;
-  final String type;
-  final String? pattern;
+  final String permission;
+  final List<String> patterns;
   final String sessionId;
   final String messageId;
   final String? callId;
-  final String title;
+  final List<String> always;
   final Map<String, dynamic> metadata;
   final DateTime created;
 
   const PermissionRequest({
     required this.id,
-    required this.type,
-    this.pattern,
+    required this.permission,
+    required this.patterns,
     required this.sessionId,
     required this.messageId,
     this.callId,
-    required this.title,
+    required this.always,
     required this.metadata,
     required this.created,
   });
 
   factory PermissionRequest.fromJson(Map<String, dynamic> json) {
-    final timeData = json['time'] as Map<String, dynamic>?;
-    final created = timeData != null && timeData['created'] != null
-        ? DateTime.fromMillisecondsSinceEpoch(timeData['created'] as int)
+    final tool = json['tool'];
+    final timeData = json['time'];
+    final created = timeData is Map && timeData['created'] != null
+        ? DateTime.fromMillisecondsSinceEpoch(timeData['created'] ?? 0)
         : DateTime.now();
 
     return PermissionRequest(
-      id: json['id'] as String,
-      type: json['type'] as String,
-      pattern: json['pattern'] as String?,
-      sessionId: json['sessionID'] as String,
-      messageId: json['messageID'] as String,
-      callId: json['callID'] as String?,
-      title: json['title'] as String,
-      metadata: json['metadata'] as Map<String, dynamic>? ?? {},
+      id: json['id'] ?? '',
+      permission: json['permission'] ?? '',
+      patterns: (json['patterns'] as List?)?.cast<String>() ?? [],
+      sessionId: json['sessionID'] ?? '',
+      messageId: (tool is Map ? tool['messageID'] : null) ?? '',
+      callId: tool is Map ? tool['callID'] : null,
+      always: (json['always'] as List?)?.cast<String>() ?? [],
+      metadata: json['metadata'] ?? {},
       created: created,
     );
   }
@@ -47,12 +48,14 @@ class PermissionRequest {
   Map<String, dynamic> toJson() {
     return {
       'id': id,
-      'type': type,
-      if (pattern != null) 'pattern': pattern,
+      'permission': permission,
+      'patterns': patterns,
       'sessionID': sessionId,
-      'messageID': messageId,
-      if (callId != null) 'callID': callId,
-      'title': title,
+      'tool': {
+        'messageID': messageId,
+        if (callId != null) 'callID': callId,
+      },
+      'always': always,
       'metadata': metadata,
       'time': {
         'created': created.millisecondsSinceEpoch,
@@ -60,37 +63,58 @@ class PermissionRequest {
     };
   }
 
+  /// Get a human-readable title for this permission type
+  String get title {
+    switch (permission) {
+      case 'bash':
+        return 'Shell Command';
+      case 'edit':
+        return 'File Edit';
+      case 'write':
+        return 'File Write';
+      case 'webfetch':
+        return 'Web Request';
+      case 'doom_loop':
+        return 'Loop Protection';
+      case 'external_directory':
+        return 'External Directory';
+      default:
+        return permission;
+    }
+  }
+
   /// Get a human-readable description of what permission is being requested
   String get description {
-    switch (type) {
+    final patternStr = patterns.isNotEmpty ? patterns.join(', ') : 'unknown';
+    switch (permission) {
       case 'bash':
-        return 'Execute shell command: ${pattern ?? 'unknown'}';
+        return 'Execute shell command: $patternStr';
       case 'edit':
-        return 'Edit file: ${pattern ?? 'unknown'}';
+        return 'Edit file: $patternStr';
       case 'write':
-        return 'Write to file: ${pattern ?? 'unknown'}';
+        return 'Write to file: $patternStr';
       case 'webfetch':
-        return 'Fetch from URL: ${pattern ?? 'unknown'}';
+        return 'Fetch from URL: $patternStr';
       case 'doom_loop':
         return 'Continue operation (possible infinite loop detected)';
       case 'external_directory':
-        return 'Access directory outside project: ${pattern ?? 'unknown'}';
+        return 'Access directory outside project: $patternStr';
       default:
-        return title;
+        return '$permission: $patternStr';
     }
   }
 
   /// Returns true if this is a dangerous operation
   bool get isDangerous {
-    if (type == 'bash') {
-      final cmd = pattern?.toLowerCase() ?? '';
+    if (permission == 'bash') {
+      final cmd = patterns.join(' ').toLowerCase();
       return cmd.contains('rm ') ||
           cmd.contains('delete') ||
           cmd.contains('format') ||
           cmd.startsWith('sudo ') ||
           cmd.contains('git push');
     }
-    return type == 'edit' || type == 'external_directory';
+    return permission == 'edit' || permission == 'external_directory';
   }
 }
 

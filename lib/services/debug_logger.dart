@@ -1,7 +1,8 @@
-import 'dart:io';
 import 'package:flutter/foundation.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:share_plus/share_plus.dart' show SharePlus, ShareParams, XFile;
+
+import 'debug_logger_io.dart' if (dart.library.js_interop) 'debug_logger_web.dart' as platform;
+
+export 'debug_logger_io.dart' if (dart.library.js_interop) 'debug_logger_web.dart' show LogFileData;
 
 class DebugLogger {
   static final DebugLogger _instance = DebugLogger._internal();
@@ -10,15 +11,12 @@ class DebugLogger {
     _init();
   }
 
-  File? _logFile;
-  IOSink? _sink;
+  platform.PlatformLogStorage? _storage;
 
   Future<void> _init() async {
     try {
-      final dir = await getApplicationDocumentsDirectory();
-      _logFile = File('${dir.path}/spacenotes_debug.log');
-      _sink = _logFile!.openWrite(mode: FileMode.append);
-      _sink!.writeln('\n=== SESSION: ${DateTime.now().toIso8601String()} ===\n');
+      _storage = platform.createPlatformStorage();
+      await _storage!.initialize();
     } catch (e) {
       debugPrint('Failed to initialize debug logger: $e');
     }
@@ -36,7 +34,7 @@ class DebugLogger {
     final line = details != null
         ? '${_time()} [$level][$category] $msg | $details'
         : '${_time()} [$level][$category] $msg';
-    _sink?.writeln(line);
+    _storage?.writeLine(line);
     if (kDebugMode) debugPrint(line);
   }
 
@@ -59,58 +57,28 @@ class DebugLogger {
   void sseError(String msg, [String? details]) => error('SSE', msg, details);
   void queue(String msg, [String? details]) => info('QUEUE', msg, details);
 
+  Future<List<platform.LogFileData>> getLogFiles() async {
+    if (_storage == null) return [];
+    return await _storage!.getLogFiles();
+  }
+
   Future<void> exportToFile() async {
-    if (_logFile == null) return;
-
-    await _sink?.flush();
-    await _sink?.close();
-    _sink = null;
-
-    final path = _logFile!.path;
-
-    if (await _logFile!.exists()) {
-      await SharePlus.instance.share(
-        ShareParams(
-          files: [XFile(path)],
-          subject: 'SpaceNotes Debug Log',
-        ),
-      );
-    }
-
-    _sink = _logFile!.openWrite(mode: FileMode.append);
+    await _storage?.exportLogs();
   }
 
   Future<String?> getLogs() async {
-    if (_logFile == null) return null;
-    await _sink?.flush();
-    if (await _logFile!.exists()) {
-      return await _logFile!.readAsString();
-    }
-    return null;
+    return await _storage?.getCurrentLogContent();
   }
 
   Future<void> clearLogs() async {
-    if (_logFile == null) return;
-
-    await _sink?.flush();
-    await _sink?.close();
-    _sink = null;
-
-    final path = _logFile!.path;
-    if (await _logFile!.exists()) {
-      await _logFile!.delete();
-    }
-
-    _logFile = File(path);
-    _sink = _logFile!.openWrite(mode: FileMode.append);
-    _sink!.writeln('=== LOG CLEARED: ${DateTime.now().toIso8601String()} ===\n');
+    await _storage?.clearLogs();
   }
 
   Future<void> close() async {
-    await _sink?.flush();
-    await _sink?.close();
-    _sink = null;
+    await _storage?.close();
   }
+
+  bool get isAvailable => _storage?.isAvailable ?? false;
 }
 
 final debugLogger = DebugLogger();

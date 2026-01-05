@@ -7,6 +7,7 @@ import '../screens/settings_screen.dart';
 import '../screens/provider_list_screen.dart';
 import '../screens/home_screen.dart';
 import '../screens/folder_list_view.dart';
+import '../screens/notes_home_view.dart';
 import '../screens/note_screen.dart';
 import '../screens/chat_view.dart';
 import '../widgets/adaptive/adaptive_app_shell.dart';
@@ -74,7 +75,7 @@ GoRouter createAppRouter(ProviderContainer container) {
               name: 'notes',
               pageBuilder: (context, state) => _buildFadeTransitionPage(
                 key: state.pageKey,
-                child: const FolderListView(folderPath: ''),
+                child: const NotesHomeView(),
               ),
             ),
             GoRoute(

@@ -7,11 +7,8 @@ import '../generated/folder.dart';
 import '../generated/note.dart';
 import '../widgets/folder_list_item.dart';
 import '../widgets/note_list_item.dart';
-import '../widgets/recent_notes_grid.dart';
 import '../dialogs/notes_list_dialogs.dart';
 
-/// FolderListView displays folder contents
-/// The bottom input area is provided by the parent HomeScreen shell
 class FolderListView extends ConsumerStatefulWidget {
   final String folderPath;
 
@@ -28,10 +25,8 @@ class _FolderListViewState extends ConsumerState<FolderListView> {
   @override
   void initState() {
     super.initState();
-    // Update the folder path provider when this view is shown
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(currentFolderPathProvider.notifier).state = widget.folderPath;
-      // Clear note path since we're in folder view
       ref.read(currentNotePathProvider.notifier).state = null;
     });
   }
@@ -48,19 +43,13 @@ class _FolderListViewState extends ConsumerState<FolderListView> {
 
   @override
   Widget build(BuildContext context) {
-    final isRootLevel = widget.folderPath.isEmpty;
-    return _buildFoldersList(showRecentNotes: isRootLevel);
-  }
-
-  Widget _buildFoldersList({bool showRecentNotes = false}) {
     final combinedAsync =
         ref.watch(dynamicFolderContentsProvider(widget.folderPath));
 
     return combinedAsync.when(
       loading: () => _buildLoadingState(),
       error: (error, stack) => _buildErrorMessage(error.toString()),
-      data: (data) =>
-          _buildLoadedState(data.folders, data.notes, showRecentNotes),
+      data: (data) => _buildLoadedState(data.folders, data.notes),
     );
   }
 
@@ -97,51 +86,55 @@ class _FolderListViewState extends ConsumerState<FolderListView> {
     );
   }
 
-  Widget _buildLoadedState(
-    List<Folder> folders,
-    List<Note> notes,
-    bool showRecentNotes,
-  ) {
+  Widget _buildLoadedState(List<Folder> folders, List<Note> notes) {
     final searchQuery = ref.watch(folderSearchQueryProvider);
 
     if (searchQuery.trim().isNotEmpty && folders.isEmpty && notes.isEmpty) {
       return _buildNoSearchResultsState(searchQuery);
     }
 
-    if (folders.isEmpty && notes.isEmpty && !showRecentNotes) {
+    if (folders.isEmpty && notes.isEmpty) {
       return _buildEmptyState();
     }
 
     final totalItems = folders.length + notes.length;
+    final isRootLevel = widget.folderPath.isEmpty;
+    final headerOffset = isRootLevel ? 1 : 0;
 
-    return CustomScrollView(
-      slivers: [
-        if (showRecentNotes)
-          const SliverToBoxAdapter(
-            child: RecentNotesGrid(),
-          ),
-        if (totalItems > 0)
-          SliverPadding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 120),
-            sliver: SliverList(
-              delegate: SliverChildBuilderDelegate(
-                (context, index) {
-                  if (index < folders.length) {
-                    return _buildFolderItem(folders[index]);
-                  } else {
-                    return _buildNoteItem(notes[index - folders.length]);
-                  }
-                },
-                childCount: totalItems,
-              ),
+    return ListView.builder(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
+      itemCount: totalItems + headerOffset,
+      itemBuilder: (context, index) {
+        if (isRootLevel && index == 0) {
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.chevron_left,
+                  size: 16,
+                  color: SpaceNotesTheme.textSecondary.withValues(alpha: 0.7),
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  'Recent',
+                  style: TextStyle(
+                    fontFamily: 'FiraCode',
+                    fontSize: 12,
+                    color: SpaceNotesTheme.textSecondary.withValues(alpha: 0.7),
+                  ),
+                ),
+              ],
             ),
-          ),
-        if (totalItems == 0 && showRecentNotes)
-          SliverFillRemaining(
-            hasScrollBody: false,
-            child: _buildEmptyState(),
-          ),
-      ],
+          );
+        }
+        final itemIndex = index - headerOffset;
+        if (itemIndex < folders.length) {
+          return _buildFolderItem(folders[itemIndex]);
+        } else {
+          return _buildNoteItem(notes[itemIndex - folders.length]);
+        }
+      },
     );
   }
 
@@ -210,8 +203,7 @@ class _FolderListViewState extends ConsumerState<FolderListView> {
       },
       onLongPress: () =>
           NotesListDialogs.showFolderContextMenu(context, ref, folder),
-      onMove: () =>
-          NotesListDialogs.showMoveFolderDialog(context, ref, folder),
+      onMove: () => NotesListDialogs.showMoveFolderDialog(context, ref, folder),
       onDelete: () =>
           NotesListDialogs.showDeleteFolderConfirmation(context, ref, folder),
     );
@@ -230,8 +222,7 @@ class _FolderListViewState extends ConsumerState<FolderListView> {
       },
       onLongPress: () =>
           NotesListDialogs.showNoteContextMenu(context, ref, note),
-      onMove: () =>
-          NotesListDialogs.showMoveNoteDialog(context, ref, note),
+      onMove: () => NotesListDialogs.showMoveNoteDialog(context, ref, note),
       onDelete: () =>
           NotesListDialogs.showDeleteNoteConfirmation(context, ref, note),
     );

@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../generated/note.dart';
 import '../theme/spacenotes_theme.dart';
 import '../providers/notes_providers.dart';
+import '../dialogs/notes_list_dialogs.dart';
 
 class RecentNotesGrid extends ConsumerWidget {
   static const double maxCardHeight = 100.0;
@@ -12,31 +14,105 @@ class RecentNotesGrid extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final searchQuery = ref.watch(folderSearchQueryProvider);
-
-    if (searchQuery.trim().isNotEmpty) {
-      return const SizedBox.shrink();
-    }
-
     final recentNotesAsync = ref.watch(recentNotesProvider);
 
     return recentNotesAsync.when(
-      loading: () => const SizedBox.shrink(),
-      error: (_, __) => const SizedBox.shrink(),
+      loading: () => const Center(
+        child: CircularProgressIndicator(
+          valueColor: AlwaysStoppedAnimation<Color>(SpaceNotesTheme.primary),
+        ),
+      ),
+      error: (_, __) => const Center(
+        child: Text(
+          'Failed to load recent notes',
+          style: TextStyle(
+            fontFamily: 'FiraCode',
+            fontSize: 14,
+            color: SpaceNotesTheme.textSecondary,
+          ),
+        ),
+      ),
       data: (notes) {
         if (notes.isEmpty) {
-          return const SizedBox.shrink();
+          return _buildEmptyState();
         }
-
-        return Container(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-          child: _buildStaggeredGrid(context, notes),
-        );
+        return _buildNotesGrid(context, ref, notes);
       },
     );
   }
 
-  Widget _buildStaggeredGrid(BuildContext context, List<Note> notes) {
+  Widget _buildEmptyState() {
+    return const Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.note_outlined,
+            size: 64,
+            color: SpaceNotesTheme.textSecondary,
+          ),
+          SizedBox(height: 24),
+          Text(
+            'No recent notes',
+            style: TextStyle(
+              fontFamily: 'FiraCode',
+              fontSize: 18,
+              color: SpaceNotesTheme.text,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          SizedBox(height: 8),
+          Text(
+            'Swipe right to browse folders',
+            style: TextStyle(
+              fontFamily: 'FiraCode',
+              fontSize: 14,
+              color: SpaceNotesTheme.textSecondary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNotesGrid(BuildContext context, WidgetRef ref, List<Note> notes) {
+    return CustomScrollView(
+      slivers: [
+        SliverPadding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+          sliver: SliverToBoxAdapter(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                Text(
+                  'Folders',
+                  style: TextStyle(
+                    fontFamily: 'FiraCode',
+                    fontSize: 12,
+                    color: SpaceNotesTheme.textSecondary.withValues(alpha: 0.7),
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Icon(
+                  Icons.chevron_right,
+                  size: 16,
+                  color: SpaceNotesTheme.textSecondary.withValues(alpha: 0.7),
+                ),
+              ],
+            ),
+          ),
+        ),
+        SliverPadding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 120),
+          sliver: SliverToBoxAdapter(
+            child: _buildStaggeredGrid(context, ref, notes),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStaggeredGrid(BuildContext context, WidgetRef ref, List<Note> notes) {
     final leftColumn = <Note>[];
     final rightColumn = <Note>[];
 
@@ -60,7 +136,7 @@ class RecentNotesGrid extends ConsumerWidget {
               width: columnWidth,
               child: Column(
                 children: leftColumn
-                    .map((note) => _buildRecentNoteCard(context, note))
+                    .map((note) => _buildRecentNoteCard(context, ref, note))
                     .toList(),
               ),
             ),
@@ -69,7 +145,7 @@ class RecentNotesGrid extends ConsumerWidget {
               width: columnWidth,
               child: Column(
                 children: rightColumn
-                    .map((note) => _buildRecentNoteCard(context, note))
+                    .map((note) => _buildRecentNoteCard(context, ref, note))
                     .toList(),
               ),
             ),
@@ -79,12 +155,16 @@ class RecentNotesGrid extends ConsumerWidget {
     );
   }
 
-  Widget _buildRecentNoteCard(BuildContext context, Note note) {
+  Widget _buildRecentNoteCard(BuildContext context, WidgetRef ref, Note note) {
     return GestureDetector(
       onTap: () {
         final encodedPath =
             note.path.split('/').map(Uri.encodeComponent).join('/');
         context.go('/notes/note/$encodedPath');
+      },
+      onLongPress: () {
+        HapticFeedback.mediumImpact();
+        NotesListDialogs.showNoteContextMenu(context, ref, note);
       },
       child: Container(
         width: double.infinity,

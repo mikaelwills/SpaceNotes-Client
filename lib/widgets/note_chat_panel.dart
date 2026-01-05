@@ -46,7 +46,6 @@ class NoteChatPanel extends StatelessWidget {
               customInput: NoteChatInput(
                 notePath: notePath,
                 onClose: onClose,
-                isDesktop: true,
               ),
               messagePadding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
             ),

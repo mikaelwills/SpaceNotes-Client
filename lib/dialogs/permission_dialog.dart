@@ -117,7 +117,7 @@ class PermissionDialog extends StatelessWidget {
         ],
         const SizedBox(height: 16),
         Text(
-          'Permission Type: ${_formatPermissionType(permission.type)}',
+          'Permission Type: ${_formatPermissionType(permission.permission)}',
           style: const TextStyle(
             color: SpaceNotesTheme.textSecondary,
             fontSize: 12,

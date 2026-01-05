@@ -10,6 +10,8 @@ import '../blocs/chat/chat_bloc.dart';
 import '../blocs/chat/chat_state.dart';
 import '../blocs/session/session_bloc.dart';
 import '../blocs/session/session_event.dart';
+import '../blocs/chat/chat_event.dart';
+import '../dialogs/permission_dialog.dart';
 
 /// ChatView displays the AI chat interface
 /// Can be reused in different contexts (main chat, note chat panel)
@@ -36,6 +38,7 @@ class ChatView extends ConsumerStatefulWidget {
 class _ChatViewState extends ConsumerState<ChatView> {
   ScrollController? _ownScrollController;
   bool _showScrollToBottom = false;
+  bool _autoScrollEnabled = true;
 
   ScrollController get _chatScrollController =>
       widget.scrollController ?? (_ownScrollController ??= ScrollController());
@@ -64,6 +67,16 @@ class _ChatViewState extends ConsumerState<ChatView> {
     });
   }
 
+  Future<void> _showPermissionDialog(BuildContext context, ChatPermissionRequired state) async {
+    final response = await PermissionDialog.show(context, state.permission);
+    if (response != null && context.mounted) {
+      context.read<ChatBloc>().add(RespondToPermission(
+        permissionId: state.permission.id,
+        response: response,
+      ));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDesktop = PlatformUtils.isDesktopLayout(context);
@@ -72,7 +85,13 @@ class _ChatViewState extends ConsumerState<ChatView> {
     return BlocListener<ChatBloc, ChatState>(
       listener: (context, state) {
         if (state is ChatReady && state.isSending) {
+          FocusManager.instance.primaryFocus?.unfocus();
+          _autoScrollEnabled = true;
           _scrollToBottom();
+        } else if (state is ChatReady && state.isStreaming && _autoScrollEnabled) {
+          _scrollToBottom();
+        } else if (state is ChatPermissionRequired) {
+          _showPermissionDialog(context, state);
         }
       },
       child: Stack(
@@ -183,6 +202,9 @@ class _ChatViewState extends ConsumerState<ChatView> {
                     if (_showScrollToBottom == isNearBottom) {
                       setState(() => _showScrollToBottom = !isNearBottom);
                     }
+                    if (notification.dragDetails != null) {
+                      _autoScrollEnabled = isNearBottom;
+                    }
                   }
                   return false;
                 },
@@ -240,6 +262,7 @@ class _ChatViewState extends ConsumerState<ChatView> {
                 ),
                 child: IconButton(
                   onPressed: () {
+                    _autoScrollEnabled = true;
                     _chatScrollController.animateTo(
                       _chatScrollController.position.maxScrollExtent,
                       duration: const Duration(milliseconds: 200),

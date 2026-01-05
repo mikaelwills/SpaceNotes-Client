@@ -304,23 +304,19 @@ class OpenCodeClient {
     }
   }
 
-  /// Respond to a permission request
+  /// Respond to a permission request (v1.1.1+)
   ///
-  /// [sessionId] - The session ID
-  /// [permissionId] - The permission request ID
+  /// [requestId] - The permission request ID
   /// [response] - The user's response (once/always/reject)
   Future<void> respondToPermission(
-    String sessionId,
-    String permissionId,
+    String requestId,
     PermissionResponse response,
   ) async {
     try {
-      final uri = Uri.parse(
-        '$_baseUrl/session/$sessionId/permissions/$permissionId',
-      );
+      final uri = Uri.parse('$_baseUrl/permission/$requestId/reply');
 
       final requestBody = json.encode({
-        'response': response.value,
+        'reply': response.value,
       });
 
       final httpResponse = await _client.post(

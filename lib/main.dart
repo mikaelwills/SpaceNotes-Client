@@ -134,7 +134,6 @@ class _OpenCodeAppState extends State<OpenCodeApp> with WidgetsBindingObserver {
       debugLogger.info('APP', 'App resumed - checking connection health');
       final repo = widget.container.read(notesRepositoryProvider);
       repo.tryReconnect();
-      repo.connectAndGetInitialData();
     }
   }
 

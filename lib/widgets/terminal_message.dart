@@ -28,9 +28,9 @@ class TerminalMessage extends StatelessWidget {
       children: [
         if (message.role == 'user') _buildUserMessage(context),
         if (message.role == 'assistant') ...[
-          const SizedBox(height: 16),
+          const SizedBox(height: 8),
           _buildAssistantMessage(context),
-          const SizedBox(height: 16),
+          const SizedBox(height: 8),
         ],
       ],
     );
@@ -611,7 +611,7 @@ class _BlinkingCursorState extends State<_BlinkingCursor> with SingleTickerProvi
         return Opacity(
           opacity: _animation.value,
           child: Text(
-            '█',
+            '▌',
             style: SpaceNotesTextStyles.terminal.copyWith(
               color: SpaceNotesTheme.primary,
             ),

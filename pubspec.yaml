@@ -40,6 +40,7 @@ dependencies:
   web_socket_channel: ^3.0.3
   flutter_client_sse: ^2.0.0
   flutter_bloc: ^8.1.3 # BLoC state management
+  bloc_concurrency: ^0.2.5 # Event transformers for BLoC
   bloc: ^8.1.2 # Core BLoC library
   provider: ^6.1.1 # MultiProvider for dependency injection
   flutter_riverpod: ^2.6.1 # Reactive state management for SpacetimeDB
@@ -75,6 +76,7 @@ dependencies:
     sdk: flutter
   share_plus: ^12.0.1
   logger: ^2.6.2
+  crypto: ^3.0.7
 
 dev_dependencies:
   flutter_test:

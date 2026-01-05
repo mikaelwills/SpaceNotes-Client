@@ -279,18 +279,18 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
         _handleSessionIdle();
         _emitCurrentState(emit);
         break;
-      case 'permission.updated':
+      case 'permission.asked':
         if (sseEvent.data != null) {
           try {
             final permission = PermissionRequest.fromJson(sseEvent.data!);
-            debugLogger.chat('SSE: permission.updated', 'type=${permission.type}');
+            debugLogger.chat('SSE: permission.asked', 'permission=${permission.permission}');
             emit(ChatPermissionRequired(
               sessionId: sessionBloc.currentSessionId!,
               permission: permission,
               messages: List.from(_messages),
             ));
           } catch (e) {
-            debugLogger.chatError('SSE: permission.updated parse error', e.toString());
+            debugLogger.chatError('SSE: permission.asked parse error', e.toString());
           }
         }
         break;
@@ -503,8 +503,12 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
           final partIndex = updatedParts.indexWhere((p) => p.id == partId);
 
           if (partIndex != -1) {
-            // Update existing part
             final existingPart = updatedParts[partIndex];
+            if (partType == 'tool' || existingPart.type == 'tool') {
+              debugLogger.chatDebug('SSE: tool update by ID', 'partId=$partId status=${partData['status']} error=${partData['error']}');
+            } else {
+              debugLogger.chatDebug('SSE: part update', 'updating part by ID: $partId type=$partType');
+            }
 
             String? newContent;
             if (delta != null && partType == 'text') {
@@ -514,15 +518,22 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
               newContent = partText ?? existingPart.content;
             }
 
+            final mergedMetadata = <String, dynamic>{
+              ...?existingPart.metadata,
+              ...partData,
+            };
+
             updatedParts[partIndex] = MessagePart(
               id: partId ?? existingPart.id,
               type: partType ?? existingPart.type,
               content: newContent,
-              metadata: partData,
+              metadata: mergedMetadata,
             );
           } else {
             if (partType == 'tool') {
               final toolName = partData['tool'] as String?;
+              final toolStatus = partData['status'] ?? partData['state'];
+              debugLogger.chatDebug('SSE: tool event', 'tool=$toolName status=$toolStatus');
 
               final existingToolIndex = toolName != null
                 ? updatedParts.indexWhere((p) =>
@@ -530,14 +541,20 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
                 : updatedParts.indexWhere((p) => p.type == 'tool');
 
               if (existingToolIndex != -1) {
+                debugLogger.chatDebug('SSE: tool update', 'updating existing tool by name at index $existingToolIndex');
+                final existingTool = updatedParts[existingToolIndex];
+                final mergedToolMetadata = <String, dynamic>{
+                  ...?existingTool.metadata,
+                  ...partData,
+                };
                 updatedParts[existingToolIndex] = MessagePart(
-                  id: updatedParts[existingToolIndex].id,
+                  id: existingTool.id,
                   type: 'tool',
-                  content: partText ?? updatedParts[existingToolIndex].content,
-                  metadata: partData.isNotEmpty ? partData : updatedParts[existingToolIndex].metadata,
+                  content: partText ?? existingTool.content,
+                  metadata: mergedToolMetadata,
                 );
-                return true;
               } else {
+                debugLogger.chatDebug('SSE: tool add', 'adding new tool: $toolName');
                 updatedParts.add(MessagePart(
                   id: partId ?? DateTime.now().millisecondsSinceEpoch.toString(),
                   type: 'tool',
@@ -583,7 +600,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
                 id: partId ?? DateTime.now().millisecondsSinceEpoch.toString(),
                 type: partType ?? 'text',
                 content: partText,
-                metadata: partData['time'] as Map<String, dynamic>?,
+                metadata: partData,
               ),
             ],
             isStreaming: true,
@@ -822,7 +839,6 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
 
       debugLogger.chat('Permission: Responding', 'response=${event.response.value}');
       await openCodeClient.respondToPermission(
-        sessionId,
         event.permissionId,
         event.response,
       );

@@ -12,13 +12,11 @@ import 'notes_search_bar.dart';
 class NoteChatInput extends StatefulWidget {
   final String notePath;
   final VoidCallback? onClose;
-  final bool isDesktop;
 
   const NoteChatInput({
     super.key,
     required this.notePath,
     this.onClose,
-    this.isDesktop = false,
   });
 
   @override
@@ -44,6 +42,8 @@ class _NoteChatInputState extends State<NoteChatInput> {
     final message = _controller.text.trim();
     if (message.isEmpty) return;
 
+    FocusScope.of(context).unfocus();
+
     final sessionBloc = context.read<SessionBloc>();
     final chatBloc = context.read<ChatBloc>();
 
@@ -62,11 +62,6 @@ class _NoteChatInputState extends State<NoteChatInput> {
 
   @override
   Widget build(BuildContext context) {
-    final buttonSize = widget.isDesktop ? 36.0 : 48.0;
-    final iconSize = widget.isDesktop ? 20.0 : 24.0;
-    final inputHeight = widget.isDesktop ? 36.0 : 48.0;
-    final borderRadius = widget.isDesktop ? 18.0 : 28.0;
-
     return BlocBuilder<ChatBloc, ChatState>(
       builder: (context, chatState) {
         final isWorking = chatState is ChatReady && chatState.isWorking;
@@ -83,48 +78,44 @@ class _NoteChatInputState extends State<NoteChatInput> {
             ),
           ),
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-          child: SafeArea(
-            top: false,
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Expanded(
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: SpaceNotesTheme.inputSurface,
-                      borderRadius: BorderRadius.circular(borderRadius),
-                    ),
-                    child: NotesSearchBar(
-                      controller: _controller,
-                      height: inputHeight,
-                      hintText: 'Ask about $_noteName...',
-                      onChanged: (_) => setState(() {}),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Container(
-                  width: buttonSize,
-                  height: buttonSize,
-                  decoration: const BoxDecoration(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Expanded(
+                child: Container(
+                  decoration: BoxDecoration(
                     color: SpaceNotesTheme.inputSurface,
-                    shape: BoxShape.circle,
+                    borderRadius: BorderRadius.circular(28),
                   ),
-                  child: IconButton(
-                    onPressed: isWorking
-                        ? () => context.read<ChatBloc>().add(CancelCurrentOperation())
-                        : _sendMessage,
-                    tooltip: isWorking ? 'Cancel' : 'Send to AI',
-                    padding: EdgeInsets.zero,
-                    icon: Icon(
-                      isWorking ? Icons.stop : Icons.arrow_upward,
-                      size: iconSize,
-                      color: SpaceNotesTheme.primary,
-                    ),
+                  child: NotesSearchBar(
+                    controller: _controller,
+                    height: 48,
+                    hintText: 'Ask about $_noteName...',
+                    onChanged: (_) => setState(() {}),
                   ),
                 ),
-              ],
-            ),
+              ),
+              const SizedBox(width: 12),
+              Container(
+                width: 48,
+                height: 48,
+                decoration: const BoxDecoration(
+                  color: SpaceNotesTheme.inputSurface,
+                  shape: BoxShape.circle,
+                ),
+                child: IconButton(
+                  onPressed: isWorking
+                      ? () => context.read<ChatBloc>().add(CancelCurrentOperation())
+                      : _sendMessage,
+                  tooltip: isWorking ? 'Cancel' : 'Send to AI',
+                  icon: Icon(
+                    isWorking ? Icons.stop : Icons.arrow_upward,
+                    size: 24,
+                    color: SpaceNotesTheme.primary,
+                  ),
+                ),
+              ),
+            ],
           ),
         );
       },

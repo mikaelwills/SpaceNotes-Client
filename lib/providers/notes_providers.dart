@@ -224,9 +224,9 @@ final folderSubfoldersProvider = Provider.family
   );
 });
 
-// Provider for recently edited notes (top 5)
+// Provider for recently edited notes (top 20)
 // Reactively updates when notes change in the cache
-final recentNotesProvider = Provider.autoDispose<AsyncValue<List<Note>>>((ref) {
+final recentNotesProvider = Provider<AsyncValue<List<Note>>>((ref) {
   final notesAsync = ref.watch(notesListProvider);
 
   return notesAsync.when(
@@ -237,12 +237,12 @@ final recentNotesProvider = Provider.autoDispose<AsyncValue<List<Note>>>((ref) {
         return const AsyncValue.data([]);
       }
 
-      // Sort by db_updated_at descending
+      // Sort by modifiedTime descending (most recently edited first)
       final sortedNotes = notes.toList();
-      sortedNotes.sort((a, b) => b.dbUpdatedAt.compareTo(a.dbUpdatedAt));
+      sortedNotes.sort((a, b) => b.modifiedTime.compareTo(a.modifiedTime));
 
       // Return top 5
-      return AsyncValue.data(sortedNotes.take(4).toList());
+      return AsyncValue.data(sortedNotes.take(20).toList());
     },
   );
 });

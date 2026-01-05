@@ -283,34 +283,106 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   Future<void> _saveLogsToNotes() async {
-    final content = await debugLogger.getLogs();
-    if (content == null || content.isEmpty) {
+    final logFiles = await debugLogger.getLogFiles();
+    if (logFiles.isEmpty) {
       if (mounted) _showResultDialog('No Logs', 'There are no logs to save.');
       return;
     }
 
-    final now = DateTime.now();
-    final filename = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}_${now.hour.toString().padLeft(2, '0')}-${now.minute.toString().padLeft(2, '0')}';
-    final path = 'Software Development/SpaceNotes/ClientLogs/$filename.md';
+    final description = await _showDescriptionDialog();
+    if (description == null) return;
 
     try {
       final repo = ref.read(notesRepositoryProvider);
-      final noteId = await repo.createNote(path, content);
+      final savedPaths = <String>[];
+
+      final nonEmptyLogs = logFiles.where((l) => l.content.isNotEmpty).toList();
+      final total = nonEmptyLogs.length;
+
+      for (var i = 0; i < nonEmptyLogs.length; i++) {
+        final logFile = nonEmptyLogs[i];
+        final partNum = i + 1;
+        final path = 'Software Development/SpaceNotes/ClientLogs/${logFile.timestamp}.md';
+
+        final header = StringBuffer();
+        if (description.isNotEmpty) {
+          header.writeln('## Issue Description\n');
+          header.writeln(description);
+          header.writeln();
+        }
+        if (total > 1) {
+          header.writeln('**Part $partNum of $total**\n');
+        }
+        if (header.isNotEmpty) {
+          header.writeln('---\n');
+        }
+
+        final contentWithDescription = '$header${logFile.content}';
+        final noteId = await repo.createNote(path, contentWithDescription);
+
+        if (noteId != null) {
+          savedPaths.add(path);
+        }
+      }
 
       if (!mounted) return;
 
-      if (noteId != null) {
+      final allSaved = savedPaths.length == total;
+      if (allSaved && savedPaths.isNotEmpty) {
         await debugLogger.clearLogs();
         if (!mounted) return;
-        _showResultDialog('Success', 'Logs saved to:\n$path');
+        _showResultDialog('Success', 'Saved ${savedPaths.length} log file(s) to ClientLogs/');
+      } else if (savedPaths.isNotEmpty) {
+        if (!mounted) return;
+        _showResultDialog('Partial Save', 'Saved ${savedPaths.length} of $total logs. Local files kept - try again when you have better signal.');
       } else {
         if (!mounted) return;
-        _showResultDialog('Save Failed', 'Could not save logs. Check your connection and try again.');
+        _showResultDialog('Save Failed', 'Could not save logs. Local files kept - try again when you have signal.');
       }
     } catch (e) {
       if (!mounted) return;
       _showResultDialog('Save Failed', 'Could not save logs: $e\n\nCheck your connection and try again.');
     }
+  }
+
+  Future<String?> _showDescriptionDialog() async {
+    final controller = TextEditingController();
+
+    return showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Describe the Issue'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'What happened? This will be added to the top of the log notes.',
+              style: TextStyle(fontSize: 14, color: Colors.grey),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: controller,
+              maxLines: 4,
+              decoration: const InputDecoration(
+                hintText: 'e.g., Chat messages timed out, app froze after opening note...',
+                border: OutlineInputBorder(),
+              ),
+              autofocus: true,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, null),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, controller.text),
+            child: const Text('Save Logs'),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildDebugLogsSection() {
@@ -344,7 +416,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   await debugLogger.exportToFile();
                 },
                 icon: const Icon(Icons.upload_file, size: 18),
-                label: const Text('Export to File'),
+                label: const Text('Export'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: SpaceNotesTheme.inputSurface,
                   foregroundColor: SpaceNotesTheme.text,
@@ -355,15 +427,41 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ),
               ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 8),
             Expanded(
               child: ElevatedButton.icon(
                 onPressed: () => _saveLogsToNotes(),
                 icon: const Icon(Icons.note_add, size: 18),
-                label: const Text('Save to Notes'),
+                label: const Text('To Notes'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: SpaceNotesTheme.inputSurface,
                   foregroundColor: SpaceNotesTheme.text,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: ElevatedButton.icon(
+                onPressed: () async {
+                  await debugLogger.clearLogs();
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Logs cleared'),
+                        duration: Duration(seconds: 1),
+                      ),
+                    );
+                  }
+                },
+                icon: const Icon(Icons.delete_outline, size: 18),
+                label: const Text('Clear'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: SpaceNotesTheme.inputSurface,
+                  foregroundColor: SpaceNotesTheme.error,
                   padding: const EdgeInsets.symmetric(vertical: 12),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),
