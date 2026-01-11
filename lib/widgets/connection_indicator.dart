@@ -131,6 +131,7 @@ class _PulsingHealthBarState extends ConsumerState<_PulsingHealthBar>
       case stdb.ConnectionStatus.connecting:
       case stdb.ConnectionStatus.reconnecting:
         return SpaceNotesTheme.warning;
+      case stdb.ConnectionStatus.authError:
       case stdb.ConnectionStatus.fatalError:
       case stdb.ConnectionStatus.disconnected:
         return SpaceNotesTheme.error;
@@ -147,6 +148,7 @@ class _PulsingHealthBarState extends ConsumerState<_PulsingHealthBar>
       case stdb.ConnectionStatus.connecting:
       case stdb.ConnectionStatus.reconnecting:
         return 0.5;
+      case stdb.ConnectionStatus.authError:
       case stdb.ConnectionStatus.disconnected:
       case stdb.ConnectionStatus.fatalError:
         return 0.0;

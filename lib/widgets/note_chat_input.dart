@@ -66,6 +66,8 @@ class _NoteChatInputState extends State<NoteChatInput> {
       builder: (context, chatState) {
         final isWorking = chatState is ChatReady && chatState.isWorking;
 
+        final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
+
         return Container(
           decoration: const BoxDecoration(
             gradient: LinearGradient(
@@ -77,7 +79,7 @@ class _NoteChatInputState extends State<NoteChatInput> {
               ],
             ),
           ),
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+          padding: EdgeInsets.fromLTRB(16, 8, 16, 16 + keyboardHeight),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
@@ -91,7 +93,7 @@ class _NoteChatInputState extends State<NoteChatInput> {
                     controller: _controller,
                     height: 48,
                     hintText: 'Ask about $_noteName...',
-                    onChanged: (_) => setState(() {}),
+                    onChanged: (_) {},
                   ),
                 ),
               ),

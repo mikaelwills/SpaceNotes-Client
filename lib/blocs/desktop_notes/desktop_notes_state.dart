@@ -8,7 +8,7 @@ class DesktopNotesState extends Equatable {
   const DesktopNotesState({
     this.openNotePaths = const [],
     this.activeNotePath,
-    this.maxOpenNotes = 10,
+    this.maxOpenNotes = 5,
   });
 
   bool get hasOpenNotes => openNotePaths.isNotEmpty;

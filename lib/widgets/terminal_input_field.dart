@@ -162,7 +162,7 @@ class _TerminalInputFieldState extends State<TerminalInputField> {
               const SizedBox(width: 12),
             ],
             Expanded(
-              child: _buildTextField(expands: false, maxLines: null, minLines: 1),
+              child: _buildTextField(expands: false, maxLines: null, minLines: 1, centerVertically: true),
             ),
             if (widget.suffixIcon != null) widget.suffixIcon!,
           ],
@@ -171,7 +171,7 @@ class _TerminalInputFieldState extends State<TerminalInputField> {
     );
   }
 
-  Widget _buildTextField({required bool expands, int? maxLines, int? minLines}) {
+  Widget _buildTextField({required bool expands, int? maxLines, int? minLines, bool centerVertically = false}) {
     const textStyle = TextStyle(
       fontFamily: 'FiraCode',
       fontSize: 14,
@@ -196,10 +196,14 @@ class _TerminalInputFieldState extends State<TerminalInputField> {
       contentPadding: EdgeInsets.zero,
     );
 
+    final verticalAlign = expands || centerVertically
+        ? TextAlignVertical.center
+        : TextAlignVertical.top;
+
     if (widget.validator != null) {
       return TextFormField(
         controller: widget.controller,
-        textAlignVertical: expands ? TextAlignVertical.center : TextAlignVertical.top,
+        textAlignVertical: verticalAlign,
         expands: expands,
         maxLines: maxLines,
         minLines: minLines,
@@ -217,7 +221,7 @@ class _TerminalInputFieldState extends State<TerminalInputField> {
 
     return TextField(
       controller: widget.controller,
-      textAlignVertical: expands ? TextAlignVertical.center : TextAlignVertical.top,
+      textAlignVertical: verticalAlign,
       expands: expands,
       maxLines: maxLines,
       minLines: minLines,

@@ -99,6 +99,11 @@ class SpacetimeDbNotesRepository {
         return;
       }
 
+      if (status == stdb.ConnectionStatus.authError) {
+        debugLogger.warning('CONN', 'Auth error - will clear token on reconnect');
+        resetConnection();
+      }
+
       if (status == stdb.ConnectionStatus.disconnected) {
         if (_client!.hasOfflineStorage) {
           debugLogger.connection('Offline mode: using existing client');
@@ -315,7 +320,22 @@ class SpacetimeDbNotesRepository {
       _syncStateSubject.add(_client!.syncState);
     }
 
+    final connectionStatusSub = _client!.connection.connectionStatus.listen((status) {
+      if (status == stdb.ConnectionStatus.authError) {
+        debugLogger.warning('AUTH', 'Auth error detected - auto-clearing token and reconnecting');
+        _handleAuthError();
+      }
+    });
+    _subscriptions.add(connectionStatusSub);
+
     debugLogger.sync('Stream listeners registered');
+  }
+
+  Future<void> _handleAuthError() async {
+    final storage = _authStorage ?? SharedPreferencesTokenStore();
+    await storage.clearToken();
+    resetConnection();
+    await connectAndGetInitialData();
   }
 
   /// Watch notes list for real-time updates
@@ -868,9 +888,12 @@ class SpacetimeDbNotesRepository {
     } catch (e) {
       debugLogger.warning('CONN', 'Reconnection failed: $e, retrying in 2s');
       Future.delayed(const Duration(seconds: 2), () {
-        if (_client != null &&
-            _client!.connection.status == stdb.ConnectionStatus.disconnected) {
-          tryReconnect();
+        if (_client != null) {
+          final retryStatus = _client!.connection.status;
+          if (retryStatus == stdb.ConnectionStatus.disconnected ||
+              retryStatus == stdb.ConnectionStatus.authError) {
+            tryReconnect();
+          }
         }
       });
     }

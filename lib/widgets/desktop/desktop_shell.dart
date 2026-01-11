@@ -10,7 +10,7 @@ import 'note_tabs.dart';
 import 'sidebar.dart';
 
 final sidebarCollapsedProvider = StateProvider<bool>((ref) => false);
-final sidebarWidthProvider = StateProvider<double>((ref) => 310.0);
+final sidebarWidthProvider = StateProvider<double>((ref) => 450.0);
 
 class DesktopShell extends ConsumerStatefulWidget {
   final Widget child;
@@ -26,7 +26,7 @@ class DesktopShell extends ConsumerStatefulWidget {
 
 class _DesktopShellState extends ConsumerState<DesktopShell> {
   static const double _minSidebarWidth = 200.0;
-  static const double _maxSidebarWidth = 400.0;
+  static const double _maxSidebarWidth = 500.0;
   static const double _collapsedWidth = 48.0;
   static const double _dividerWidth = 1.0;
 

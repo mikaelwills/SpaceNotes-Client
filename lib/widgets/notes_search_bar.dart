@@ -144,6 +144,7 @@ class _NotesSearchBarState extends State<NotesSearchBar> {
   @override
   Widget build(BuildContext context) {
     return Column(
+      mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         TerminalInputField(

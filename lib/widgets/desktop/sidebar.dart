@@ -7,6 +7,7 @@ import '../../blocs/connection/connection_bloc.dart';
 import '../../blocs/connection/connection_state.dart' as conn;
 import '../../blocs/desktop_notes/desktop_notes_bloc.dart';
 import '../../blocs/desktop_notes/desktop_notes_event.dart';
+import '../../blocs/desktop_notes/desktop_notes_state.dart';
 import '../../generated/folder.dart';
 import '../../generated/note.dart';
 import '../../providers/notes_providers.dart';
@@ -891,53 +892,61 @@ class _NoteTreeItem extends ConsumerWidget {
         ? note.name.substring(0, note.name.length - 3)
         : note.name;
 
-    return Draggable<_DraggableData>(
-      data: _DraggableData(
-        isFolder: false,
-        path: note.path,
-        name: note.name,
-      ),
-      feedback: Material(
-        color: Colors.transparent,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          decoration: BoxDecoration(
-            color: SpaceNotesTheme.inputSurface,
-            borderRadius: BorderRadius.circular(4),
-            border: Border.all(
-                color: SpaceNotesTheme.primary.withValues(alpha: 0.5)),
+    return BlocBuilder<DesktopNotesBloc, DesktopNotesState>(
+      buildWhen: (prev, curr) => prev.activeNotePath != curr.activeNotePath,
+      builder: (context, desktopState) {
+        final isOpen = desktopState.activeNotePath == note.path;
+
+        return Draggable<_DraggableData>(
+          data: _DraggableData(
+            isFolder: false,
+            path: note.path,
+            name: note.name,
           ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.description_outlined,
-                  size: 14, color: SpaceNotesTheme.primary),
-              const SizedBox(width: 6),
-              Text(
-                displayName,
-                style: SpaceNotesTextStyles.terminal
-                    .copyWith(fontSize: 12, color: SpaceNotesTheme.text),
+          feedback: Material(
+            color: Colors.transparent,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: SpaceNotesTheme.inputSurface,
+                borderRadius: BorderRadius.circular(4),
+                border: Border.all(
+                    color: SpaceNotesTheme.primary.withValues(alpha: 0.5)),
               ),
-            ],
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.description_outlined,
+                      size: 14, color: SpaceNotesTheme.primary),
+                  const SizedBox(width: 6),
+                  Text(
+                    displayName,
+                    style: SpaceNotesTextStyles.terminal
+                        .copyWith(fontSize: 12, color: SpaceNotesTheme.text),
+                  ),
+                ],
+              ),
+            ),
           ),
-        ),
-      ),
-      childWhenDragging: Opacity(
-        opacity: 0.4,
-        child: _buildTreeRow(context, ref, displayName),
-      ),
-      child: _buildTreeRow(context, ref, displayName),
+          childWhenDragging: Opacity(
+            opacity: 0.4,
+            child: _buildTreeRow(context, ref, displayName, isOpen),
+          ),
+          child: _buildTreeRow(context, ref, displayName, isOpen),
+        );
+      },
     );
   }
 
   Widget _buildTreeRow(
-      BuildContext context, WidgetRef ref, String displayName) {
+      BuildContext context, WidgetRef ref, String displayName, bool isOpen) {
     return _TreeItemRow(
       label: displayName,
       indentLevel: indentLevel,
       hasChildren: false,
       isExpanded: false,
       isFolder: false,
+      isOpen: isOpen,
       onTap: () {
         _openNoteInDesktop(context, note.path);
       },
@@ -973,6 +982,7 @@ class _TreeItemRow extends StatefulWidget {
   final bool isExpanded;
   final bool isFolder;
   final bool isDragOver;
+  final bool isOpen;
   final VoidCallback onTap;
   final VoidCallback? onAddNote;
   final VoidCallback? onDelete;
@@ -987,6 +997,7 @@ class _TreeItemRow extends StatefulWidget {
     required this.isFolder,
     required this.onTap,
     this.isDragOver = false,
+    this.isOpen = false,
     this.onAddNote,
     this.onDelete,
     this.contextMenuItems,
@@ -1083,7 +1094,9 @@ class _TreeItemRowState extends State<_TreeItemRow> {
                             ? Icons.folder_outlined
                             : Icons.description_outlined,
                         size: 16,
-                        color: SpaceNotesTheme.primary.withValues(alpha: 0.7),
+                        color: widget.isOpen
+                            ? SpaceNotesTheme.text
+                            : SpaceNotesTheme.primary.withValues(alpha: 0.7),
                       ),
                       const SizedBox(width: 8),
                       Expanded(
@@ -1091,9 +1104,11 @@ class _TreeItemRowState extends State<_TreeItemRow> {
                           widget.label,
                           style: SpaceNotesTextStyles.terminal.copyWith(
                             fontSize: 14,
-                            color: _isHovered
-                                ? SpaceNotesTheme.primary
-                                : SpaceNotesTheme.text.withValues(alpha: 0.75),
+                            color: widget.isOpen
+                                ? SpaceNotesTheme.text
+                                : _isHovered
+                                    ? SpaceNotesTheme.primary
+                                    : SpaceNotesTheme.text.withValues(alpha: 0.75),
                           ),
                           overflow: TextOverflow.ellipsis,
                         ),
