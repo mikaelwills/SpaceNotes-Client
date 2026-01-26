@@ -66,8 +66,8 @@ class MessageQueueService {
   void initChatBlocListener(ChatBloc chatBloc) {
     _chatBlocSubscription = chatBloc.stream.listen((chatState) {
       if (chatState is ChatReady) {
-        if (chatState.phase == ChatFlowPhase.streaming && _pendingMessageTimeouts.isNotEmpty) {
-          debugLogger.queue('SSE streaming detected', 'phase=${chatState.phase}, pending=${_pendingMessageTimeouts.length}');
+        if (chatState.isStreaming && _pendingMessageTimeouts.isNotEmpty) {
+          debugLogger.queue('SSE streaming detected', 'streaming=${chatState.isStreaming}, pending=${_pendingMessageTimeouts.length}');
           _handleStreamingStarted();
         }
       }

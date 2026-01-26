@@ -22,12 +22,17 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
   final MessageQueueService messageQueueService;
 
   final List<OpenCodeMessage> _messages = [];
-  final Map<String, int> _messageIndex = {}; // messageId -> index mapping
+  final Map<String, int> _messageIndex = {};
   StreamSubscription? _eventSubscription;
-  StreamSubscription? _sessionSubscription; // For temporary subscriptions (e.g., in _onSendChatMessage)
-  StreamSubscription? _permanentSessionSubscription; // For constructor subscription
+  StreamSubscription? _sessionSubscription;
+  StreamSubscription? _permanentSessionSubscription;
 
   static const int _maxMessages = 100;
+  static const Duration _debounceInterval = Duration(milliseconds: 50);
+
+  ChatStatus _chatStatus = const ChatStatus();
+  Timer? _debounceTimer;
+  bool _hasPendingEmit = false;
 
   ChatBloc({
     required this.sessionBloc,
@@ -79,9 +84,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
 
       _messages.clear();
       _messageIndex.clear();
-      _currentPhase = ChatFlowPhase.idle;
-      _pendingMessageId = null;
-      _errorMessage = null;
+      _chatStatus = const ChatStatus();
 
       final messages = await openCodeClient.getSessionMessages(currentSessionId);
       debugLogger.chat('LoadMessages: Fetched ${messages.length} messages');
@@ -94,7 +97,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       _startListening(currentSessionId);
 
       debugLogger.chat('LoadMessages: Ready', 'messageCount=${_messages.length}');
-      emit(ChatReady(sessionId: currentSessionId, messages: List.from(_messages)));
+      emit(_createChatReadyState());
 
     } catch (e) {
       debugLogger.chatError('LoadMessages: Failed', e.toString());
@@ -114,6 +117,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       },
       onError: (error) {
         debugLogger.chatError('SSE: Stream error', error.toString());
+        _updateStatus(isConnected: false);
       },
     );
   }
@@ -128,8 +132,8 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       return;
     }
 
-    if (!currentState.canSend) {
-      debugLogger.chatError('Send: Cannot send in current phase', 'phase=${currentState.phase}');
+    if (!_chatStatus.canSend) {
+      debugLogger.chatError('Send: Cannot send', 'status=$_chatStatus');
       return;
     }
 
@@ -144,12 +148,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       return;
     }
 
-    if (!_tryTransition(ChatFlowPhase.sending)) {
-      debugLogger.chatError('Send: Failed to transition to sending');
-      return;
-    }
-
-    _pendingMessageId = messageId;
+    _updateStatus(isSending: true, pendingMessageId: messageId);
 
     try {
       debugLogger.chat('Send: Created message', 'msgId=$messageId');
@@ -171,20 +170,18 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     } catch (e) {
       debugLogger.chatError('Send: Exception', 'msgId=$messageId, error=$e');
       _updateMessageStatus(messageId, MessageSendStatus.failed);
-      _tryTransition(ChatFlowPhase.failed);
-      _errorMessage = e.toString();
+      _updateStatus(isSending: false, errorMessage: e.toString());
       emit(_createChatReadyState());
     }
   }
 
   String? _addUserMessage(String sessionId, String content) {
     if (sessionId == sessionBloc.currentSessionId) {
-      // Check if we already have a user message with the same content to prevent duplicates
       final existingUserMessages = _messages.where((msg) =>
           msg.role == 'user' &&
           msg.parts.isNotEmpty &&
           msg.parts.first.content == content &&
-          msg.sendStatus != MessageSendStatus.failed); // Don't skip failed messages that are being retried
+          msg.sendStatus != MessageSendStatus.failed);
 
       if (existingUserMessages.isNotEmpty) {
         return existingUserMessages.first.id;
@@ -203,7 +200,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
             content: content,
           ),
         ],
-        sendStatus: MessageSendStatus.sent, // Default to sent
+        sendStatus: MessageSendStatus.sent,
       );
 
       _messages.add(userMessage);
@@ -212,7 +209,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
 
       return messageId;
     }
-    return null; // Session mismatch
+    return null;
   }
 
   Future<void> _onCancelCurrentOperation(
@@ -259,26 +256,31 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
 
               debugLogger.chat('SSE: message.updated', 'msgId=${message.id}, role=${message.role}');
               _updateOrAddMessage(message);
-              _emitCurrentState(emit);
+              _updateStatus(isStreaming: true);
+              _debouncedEmit(emit);
             }
           } catch (e) {
             debugLogger.chatError('SSE: message.updated parse error', e.toString());
           }
         }
         break;
+
       case 'message.part.updated':
         if (sseEvent.data != null) {
           final stateChanged = _handlePartialUpdate(sseEvent);
           if (stateChanged) {
-            _emitCurrentState(emit);
+            _updateStatus(isStreaming: true, isSending: false);
+            _debouncedEmit(emit);
           }
         }
         break;
+
       case 'session.idle':
         debugLogger.chat('SSE: session.idle', 'streaming complete');
         _handleSessionIdle();
         _emitCurrentState(emit);
         break;
+
       case 'permission.asked':
         if (sseEvent.data != null) {
           try {
@@ -294,6 +296,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
           }
         }
         break;
+
       case 'session.status':
         if (sseEvent.data != null) {
           try {
@@ -308,12 +311,28 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
           }
         }
         break;
+
       case 'storage.write':
       case 'session.updated':
+      case 'session.diff':
         break;
+
       default:
-        debugLogger.chatDebug('SSE: Unknown event type', sseEvent.type);
+        debugLogger.chatDebug('SSE: Ignoring event', sseEvent.type);
     }
+  }
+
+  void _debouncedEmit(Emitter<ChatState> emit) {
+    _hasPendingEmit = true;
+    _debounceTimer?.cancel();
+    _debounceTimer = Timer(_debounceInterval, () {
+      if (_hasPendingEmit) {
+        _hasPendingEmit = false;
+        if (sessionBloc.currentSessionId != null) {
+          emit(_createChatReadyState());
+        }
+      }
+    });
   }
 
   void _onClearMessages(
@@ -331,15 +350,10 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     ClearChat event,
     Emitter<ChatState> emit,
   ) {
-    // Clear all chat state and prepare for new session
     _messages.clear();
     _messageIndex.clear();
-    
-    // Cancel any existing event subscription
     _eventSubscription?.cancel();
     _eventSubscription = null;
-    
-    // Emit initial state
     emit(ChatInitial());
   }
 
@@ -378,7 +392,6 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     final failedMessage = _messages[failedMessageIndex];
     final messageId = failedMessage.id;
 
-    // Retry message via MessageQueueService using existing message ID (non-blocking)
     messageQueueService.retryMessage(
       messageId: messageId,
       sessionId: sessionId,
@@ -408,13 +421,9 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     final messageId = queuedMessage.id;
 
     messageQueueService.removeFromQueue(messageId);
-    
-    // Remove the message from local display
     _messages.removeAt(queuedMessageIndex);
-    
-    // Update message index
     _rebuildMessageIndex();
-    
+
     emit(_createChatReadyState());
   }
 
@@ -425,14 +434,13 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     final status = event.status;
 
     if (status == MessageSendStatus.sent) {
-      _tryTransition(ChatFlowPhase.awaitingResponse);
+      _updateStatus(isSending: false);
       emit(_createChatReadyState());
     } else if (status == MessageSendStatus.failed) {
-      _tryTransition(ChatFlowPhase.failed);
-      _errorMessage = 'Message failed to send';
+      _updateStatus(isSending: false, errorMessage: 'Message failed to send');
       emit(_createChatReadyState());
     } else if (status == MessageSendStatus.queued) {
-      _tryTransition(ChatFlowPhase.idle);
+      _updateStatus(isSending: false);
       emit(_createChatReadyState());
     }
   }
@@ -480,25 +488,18 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
         return false;
       }
 
-      if (_currentPhase == ChatFlowPhase.awaitingResponse ||
-          _currentPhase == ChatFlowPhase.sending) {
-        _tryTransition(ChatFlowPhase.streaming);
-      }
-
       final messageId =
           sseEvent.messageId ?? partData['messageID'] ?? partData['messageId'];
       final partId = partData['id'] as String?;
       final partType = partData['type'] as String?;
       final partText = partData['text'] as String?;
-      final delta = partData['delta'] as String?; // Extract delta for streaming
+      final delta = partData['delta'] as String?;
 
       if (messageId != null) {
         final messageIndex = _messageIndex[messageId];
 
         if (messageIndex != null && messageIndex < _messages.length) {
           final currentMessage = _messages[messageIndex];
-
-          // Update or add the part to the message
           final updatedParts = List<MessagePart>.from(currentMessage.parts);
           final partIndex = updatedParts.indexWhere((p) => p.id == partId);
 
@@ -613,6 +614,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       }
       return true;
     } catch (e) {
+      debugLogger.chatError('SSE: part update error', e.toString());
       return false;
     }
   }
@@ -629,7 +631,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       }
     }
 
-    _tryTransition(ChatFlowPhase.idle);
+    _updateStatus(isStreaming: false, isSending: false, clearError: true);
   }
 
   void _handleSessionAborted(String sessionId) {
@@ -644,18 +646,16 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
           _messages[_messages.length - 1] = completedMessage;
         }
       }
-      _tryTransition(ChatFlowPhase.idle);
+      _updateStatus(isStreaming: false, isSending: false);
     }
   }
 
-  /// Smart duplicate detection that blocks exact echoes but allows legitimate responses
   bool _isDuplicateContent(String content, String role) {
     if (content.trim().isEmpty) return false;
 
     final now = DateTime.now();
     final contentLower = content.toLowerCase().trim();
 
-    // 1. Check for same-role duplicates (actual duplicate messages)
     final sameRoleRecentMessages = _messages.where((msg) =>
         msg.role == role && now.difference(msg.created).inSeconds < 30);
 
@@ -667,7 +667,6 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
             .join(' ')
             .trim();
 
-        // Check for exact content match (case insensitive)
         if (messageContent.toLowerCase() == contentLower) {
           debugLogger.chatDebug('Duplicate: same-role detected', 'role=$role');
           return true;
@@ -675,10 +674,9 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       }
     }
 
-    // 2. Check for exact echoes from opposite role (server echoing user input)
     if (role == 'assistant') {
       final recentUserMessages = _messages.where((msg) =>
-          msg.role == 'user' && now.difference(msg.created).inSeconds < 10); // Shorter window for echoes
+          msg.role == 'user' && now.difference(msg.created).inSeconds < 10);
 
       for (final message in recentUserMessages) {
         if (message.parts.isNotEmpty) {
@@ -694,12 +692,10 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
             return true;
           }
 
-          // If assistant message is much longer, it's probably a legitimate response that includes the user's content
           if (contentLower.length > userContent.length * 1.5) {
             continue;
           }
 
-          // Check if it starts with common response patterns (legitimate responses)
           final responsePatterns = [
             'i\'ll help you',
             'i can help',
@@ -711,14 +707,13 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
             'to do this',
           ];
 
-          bool isLegitimateResponse = responsePatterns.any((pattern) => 
+          bool isLegitimateResponse = responsePatterns.any((pattern) =>
               contentLower.startsWith(pattern));
 
           if (isLegitimateResponse) {
             continue;
           }
 
-          // If it contains the user content but has additional meaningful content, allow it
           if (contentLower.contains(userContent) && contentLower.length > userContent.length + 10) {
             continue;
           }
@@ -733,13 +728,11 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     if (_messages.length > _maxMessages) {
       final messagesToRemove = _messages.length - _maxMessages;
 
-      // Remove old messages and update index map
       for (int i = 0; i < messagesToRemove; i++) {
         final removedMessage = _messages.removeAt(0);
         _messageIndex.remove(removedMessage.id);
       }
 
-      // Update remaining message indices
       _messageIndex.clear();
       for (int i = 0; i < _messages.length; i++) {
         _messageIndex[_messages[i].id] = i;
@@ -749,36 +742,29 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     }
   }
 
-  ChatFlowPhase _currentPhase = ChatFlowPhase.idle;
-  String? _pendingMessageId;
-  String? _errorMessage;
-
-  bool _tryTransition(ChatFlowPhase newPhase) {
-    if (_currentPhase == newPhase) {
-      return true;
-    }
-
-    if (ChatTransitions.canTransition(_currentPhase, newPhase)) {
-      debugLogger.chat('Phase transition', '$_currentPhase → $newPhase');
-      _currentPhase = newPhase;
-      if (newPhase == ChatFlowPhase.idle) {
-        _pendingMessageId = null;
-        _errorMessage = null;
-      }
-      return true;
-    }
-
-    debugLogger.chatError('Invalid transition', '$_currentPhase → $newPhase');
-    return false;
+  void _updateStatus({
+    bool? isSending,
+    bool? isStreaming,
+    bool? isConnected,
+    String? pendingMessageId,
+    String? errorMessage,
+    bool clearError = false,
+  }) {
+    _chatStatus = _chatStatus.copyWith(
+      isSending: isSending,
+      isStreaming: isStreaming,
+      isConnected: isConnected,
+      pendingMessageId: pendingMessageId,
+      errorMessage: errorMessage,
+      clearErrorMessage: clearError,
+    );
   }
 
   ChatReady _createChatReadyState() {
     return ChatReady(
       sessionId: sessionBloc.currentSessionId!,
       messages: List.from(_messages),
-      phase: _currentPhase,
-      pendingMessageId: _pendingMessageId,
-      errorMessage: _errorMessage,
+      status: _chatStatus,
     );
   }
 
@@ -790,15 +776,16 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
   }
 
   void _emitCurrentState(Emitter<ChatState> emit) {
+    _debounceTimer?.cancel();
+    _hasPendingEmit = false;
     if (sessionBloc.currentSessionId != null) {
       emit(_createChatReadyState());
     }
   }
 
   void _updateMessageStatus(String messageId, MessageSendStatus status) {
-    // Use O(1) lookup with message index map
     final index = _messageIndex[messageId];
-    
+
     if (index != null && index < _messages.length) {
       final originalMessage = _messages[index];
       _messages[index] = originalMessage.copyWith(sendStatus: status);
@@ -820,9 +807,11 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       },
       onError: (error) {
         debugLogger.chatError('SSE: Stream error after restart', error.toString());
+        _updateStatus(isConnected: false);
       },
     );
 
+    _updateStatus(isConnected: true);
     debugLogger.chat('SSE: Subscription restarted');
   }
 
@@ -860,6 +849,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
 
   @override
   Future<void> close() {
+    _debounceTimer?.cancel();
     _eventSubscription?.cancel();
     _sessionSubscription?.cancel();
     _permanentSessionSubscription?.cancel();

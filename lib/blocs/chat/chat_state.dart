@@ -3,52 +3,47 @@ import '../../models/opencode_message.dart';
 import '../../models/permission_request.dart';
 import '../../models/session_status.dart';
 
-enum ChatFlowPhase {
-  idle,
-  sending,
-  awaitingResponse,
-  streaming,
-  failed,
-  reconnecting,
-}
+class ChatStatus extends Equatable {
+  final bool isSending;
+  final bool isStreaming;
+  final bool isConnected;
+  final String? pendingMessageId;
+  final String? errorMessage;
 
-class ChatTransitions {
-  static const Map<ChatFlowPhase, Set<ChatFlowPhase>> validTransitions = {
-    ChatFlowPhase.idle: {
-      ChatFlowPhase.sending,
-      ChatFlowPhase.reconnecting,
-    },
-    ChatFlowPhase.sending: {
-      ChatFlowPhase.awaitingResponse,
-      ChatFlowPhase.failed,
-      ChatFlowPhase.reconnecting,
-      ChatFlowPhase.streaming,
-    },
-    ChatFlowPhase.awaitingResponse: {
-      ChatFlowPhase.streaming,
-      ChatFlowPhase.failed,
-      ChatFlowPhase.idle,
-      ChatFlowPhase.reconnecting,
-    },
-    ChatFlowPhase.streaming: {
-      ChatFlowPhase.idle,
-      ChatFlowPhase.failed,
-      ChatFlowPhase.reconnecting,
-    },
-    ChatFlowPhase.failed: {
-      ChatFlowPhase.sending,
-      ChatFlowPhase.idle,
-      ChatFlowPhase.reconnecting,
-    },
-    ChatFlowPhase.reconnecting: {
-      ChatFlowPhase.idle,
-      ChatFlowPhase.failed,
-    },
-  };
+  const ChatStatus({
+    this.isSending = false,
+    this.isStreaming = false,
+    this.isConnected = true,
+    this.pendingMessageId,
+    this.errorMessage,
+  });
 
-  static bool canTransition(ChatFlowPhase from, ChatFlowPhase to) {
-    return validTransitions[from]?.contains(to) ?? false;
+  bool get isIdle => !isSending && !isStreaming;
+  bool get isFailed => errorMessage != null;
+  bool get isWorking => isSending || isStreaming;
+  bool get canSend => isIdle && isConnected;
+
+  ChatStatus copyWith({
+    bool? isSending,
+    bool? isStreaming,
+    bool? isConnected,
+    String? pendingMessageId,
+    String? errorMessage,
+    bool clearPendingMessageId = false,
+    bool clearErrorMessage = false,
+  }) {
+    return ChatStatus(
+      isSending: isSending ?? this.isSending,
+      isStreaming: isStreaming ?? this.isStreaming,
+      isConnected: isConnected ?? this.isConnected,
+      pendingMessageId:
+          clearPendingMessageId ? null : (pendingMessageId ?? this.pendingMessageId),
+      errorMessage: clearErrorMessage ? null : (errorMessage ?? this.errorMessage),
+    );
   }
+
+  @override
+  List<Object?> get props => [isSending, isStreaming, isConnected, pendingMessageId, errorMessage];
 }
 
 abstract class ChatState extends Equatable {
@@ -65,62 +60,50 @@ class ChatConnecting extends ChatState {}
 class ChatReady extends ChatState {
   final String sessionId;
   final List<OpenCodeMessage> messages;
-  final ChatFlowPhase phase;
+  final ChatStatus status;
   final bool isReconnectionRefresh;
   final SessionStatus? sessionStatus;
-  final String? pendingMessageId;
-  final String? errorMessage;
 
   const ChatReady({
     required this.sessionId,
     this.messages = const [],
-    this.phase = ChatFlowPhase.idle,
+    this.status = const ChatStatus(),
     this.isReconnectionRefresh = false,
     this.sessionStatus,
-    this.pendingMessageId,
-    this.errorMessage,
   });
 
-  bool get isIdle => phase == ChatFlowPhase.idle;
-  bool get isSending => phase == ChatFlowPhase.sending;
-  bool get isAwaitingResponse => phase == ChatFlowPhase.awaitingResponse;
-  bool get isStreaming => phase == ChatFlowPhase.streaming;
-  bool get isFailed => phase == ChatFlowPhase.failed;
-  bool get isReconnecting => phase == ChatFlowPhase.reconnecting;
-
-  bool get isWorking => isSending || isAwaitingResponse || isStreaming;
-  bool get canSend => isIdle || isFailed;
+  bool get isIdle => status.isIdle;
+  bool get isSending => status.isSending;
+  bool get isStreaming => status.isStreaming;
+  bool get isFailed => status.isFailed;
+  bool get isConnected => status.isConnected;
+  bool get isWorking => status.isWorking;
+  bool get canSend => status.canSend;
+  String? get pendingMessageId => status.pendingMessageId;
+  String? get errorMessage => status.errorMessage;
 
   @override
   List<Object?> get props => [
         sessionId,
         messages,
-        phase,
+        status,
         isReconnectionRefresh,
         sessionStatus,
-        pendingMessageId,
-        errorMessage,
       ];
 
   ChatReady copyWith({
     String? sessionId,
     List<OpenCodeMessage>? messages,
-    ChatFlowPhase? phase,
+    ChatStatus? status,
     bool? isReconnectionRefresh,
     SessionStatus? sessionStatus,
-    String? pendingMessageId,
-    String? errorMessage,
-    bool clearPendingMessageId = false,
-    bool clearErrorMessage = false,
   }) {
     return ChatReady(
       sessionId: sessionId ?? this.sessionId,
       messages: messages ?? this.messages,
-      phase: phase ?? this.phase,
+      status: status ?? this.status,
       isReconnectionRefresh: isReconnectionRefresh ?? this.isReconnectionRefresh,
       sessionStatus: sessionStatus ?? this.sessionStatus,
-      pendingMessageId: clearPendingMessageId ? null : (pendingMessageId ?? this.pendingMessageId),
-      errorMessage: clearErrorMessage ? null : (errorMessage ?? this.errorMessage),
     );
   }
 }
