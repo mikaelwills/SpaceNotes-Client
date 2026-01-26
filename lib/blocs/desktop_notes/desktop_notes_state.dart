@@ -1,31 +1,31 @@
 import 'package:equatable/equatable.dart';
 
 class DesktopNotesState extends Equatable {
-  final List<String> openNotePaths;
-  final String? activeNotePath;
+  final List<String> openNoteIds;
+  final String? activeNoteId;
   final int maxOpenNotes;
 
   const DesktopNotesState({
-    this.openNotePaths = const [],
-    this.activeNotePath,
+    this.openNoteIds = const [],
+    this.activeNoteId,
     this.maxOpenNotes = 5,
   });
 
-  bool get hasOpenNotes => openNotePaths.isNotEmpty;
+  bool get hasOpenNotes => openNoteIds.isNotEmpty;
 
   DesktopNotesState copyWith({
-    List<String>? openNotePaths,
-    String? activeNotePath,
+    List<String>? openNoteIds,
+    String? activeNoteId,
     bool clearActiveNote = false,
     int? maxOpenNotes,
   }) {
     return DesktopNotesState(
-      openNotePaths: openNotePaths ?? this.openNotePaths,
-      activeNotePath: clearActiveNote ? null : (activeNotePath ?? this.activeNotePath),
+      openNoteIds: openNoteIds ?? this.openNoteIds,
+      activeNoteId: clearActiveNote ? null : (activeNoteId ?? this.activeNoteId),
       maxOpenNotes: maxOpenNotes ?? this.maxOpenNotes,
     );
   }
 
   @override
-  List<Object?> get props => [openNotePaths, activeNotePath, maxOpenNotes];
+  List<Object?> get props => [openNoteIds, activeNoteId, maxOpenNotes];
 }

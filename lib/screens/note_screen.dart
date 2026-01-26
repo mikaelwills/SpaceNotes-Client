@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:collection/collection.dart';
 import 'package:spacetimedb_dart_sdk/spacetimedb_dart_sdk.dart' as stdb;
@@ -9,17 +8,15 @@ import '../providers/notes_providers.dart';
 import '../widgets/quill_note_editor.dart';
 import '../widgets/note_bottom_bar.dart';
 import '../widgets/note_chat_panel.dart';
-import '../blocs/desktop_notes/desktop_notes_bloc.dart';
-import '../blocs/desktop_notes/desktop_notes_event.dart';
 import '../widgets/adaptive/platform_utils.dart';
 import '../services/debug_logger.dart';
 
 class NoteScreen extends ConsumerStatefulWidget {
-  final String notePath;
+  final String noteId;
 
   const NoteScreen({
     super.key,
-    required this.notePath,
+    required this.noteId,
   });
 
   @override
@@ -29,7 +26,6 @@ class NoteScreen extends ConsumerStatefulWidget {
 class _NoteScreenState extends ConsumerState<NoteScreen> {
   final GlobalKey<QuillNoteEditorState> _quillKey = GlobalKey();
 
-  String? _noteId;
   String _currentPath = '';
   String _currentContent = '';
   String _lastSavedContent = '';
@@ -44,45 +40,43 @@ class _NoteScreenState extends ConsumerState<NoteScreen> {
   @override
   void initState() {
     super.initState();
-    _initNote(widget.notePath);
+    _initNote();
   }
 
   @override
   void didUpdateWidget(NoteScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.notePath != widget.notePath) {
+    if (oldWidget.noteId != widget.noteId) {
       _saveContent();
-      _initNote(widget.notePath);
+      _initNote();
     }
   }
 
   String get _noteName => _currentPath.split('/').last;
 
-  void _initNote(String path) {
+  void _initNote() {
     _debounceTimer?.cancel();
     _updateSubscription?.cancel();
 
-    _currentPath = path;
-    _noteId = null;
-
     final note = ref.read(notesListProvider).valueOrNull
-        ?.firstWhereOrNull((n) => n.path == path);
+        ?.firstWhereOrNull((n) => n.id == widget.noteId);
 
     if (note != null) {
-      _noteId = note.id;
+      _currentPath = note.path;
       _currentContent = note.content;
       _lastSavedContent = note.content;
       debugLogger.info('NOTE', 'Opened: $_noteName (${note.content.length} chars)');
     } else {
+      _currentPath = '';
       _currentContent = '';
       _lastSavedContent = '';
-      debugLogger.info('NOTE', 'Opened new: $_noteName');
+      debugLogger.info('NOTE', 'Note not found: ${widget.noteId}');
     }
 
     _setupUpdateListener();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(currentNotePathProvider.notifier).state = path;
+      ref.read(currentNotePathProvider.notifier).state = _currentPath;
       if (mounted) setState(() {});
     });
   }
@@ -90,7 +84,12 @@ class _NoteScreenState extends ConsumerState<NoteScreen> {
   void _setupUpdateListener() {
     _updateSubscription?.cancel();
     _updateSubscription = _repo.noteUpdateEvents?.listen((event) {
-      if (_noteId == null || event.newRow.id != _noteId) return;
+      if (event.newRow.id != widget.noteId) return;
+
+      if (event.newRow.path != _currentPath) {
+        _currentPath = event.newRow.path;
+        ref.read(currentNotePathProvider.notifier).state = _currentPath;
+      }
 
       if (event.context.isMyTransaction) {
         _lastSavedContent = event.newRow.content;
@@ -119,7 +118,12 @@ class _NoteScreenState extends ConsumerState<NoteScreen> {
   void _setupNoteUpdateListener() {
     _updateSubscription?.cancel();
     _updateSubscription = _repo.noteUpdateEvents?.listen((event) {
-      if (_noteId == null || event.newRow.id != _noteId) return;
+      if (event.newRow.id != widget.noteId) return;
+
+      if (event.newRow.path != _currentPath) {
+        _currentPath = event.newRow.path;
+        ref.read(currentNotePathProvider.notifier).state = _currentPath;
+      }
 
       if (event.context.isMyTransaction) {
         _lastSavedContent = event.newRow.content;
@@ -151,11 +155,7 @@ class _NoteScreenState extends ConsumerState<NoteScreen> {
   @override
   Widget build(BuildContext context) {
     final note = ref.watch(notesListProvider).valueOrNull
-        ?.firstWhereOrNull((n) => _noteId != null ? n.id == _noteId : n.path == _currentPath);
-
-    if (note != null && _noteId == null) {
-      _noteId = note.id;
-    }
+        ?.firstWhereOrNull((n) => n.id == widget.noteId);
 
     if (note != null && note.path != _currentPath) {
       _currentPath = note.path;
@@ -194,7 +194,9 @@ class _NoteScreenState extends ConsumerState<NoteScreen> {
                 child: NoteBottomBar(
                   notePath: _currentPath,
                   quillKey: _quillKey,
-                  onChatTap: () => setState(() => _isChatOpen = !_isChatOpen),
+                  onChatTap: () => setState(() {
+                    _isChatOpen = !_isChatOpen;
+                  }),
                 ),
               ),
             ],
@@ -285,11 +287,10 @@ class _NoteScreenState extends ConsumerState<NoteScreen> {
 
   Future<void> _saveContent() async {
     if (_currentContent == _lastSavedContent) return;
-    if (_noteId == null) return;
 
     try {
       debugLogger.save('$_noteName: ${_currentContent.length} chars');
-      await _repo.updateNote(_noteId!, _currentContent);
+      await _repo.updateNote(widget.noteId, _currentContent);
       _lastSavedContent = _currentContent;
     } catch (e) {
       debugLogger.error('SAVE', '$_noteName failed: $e');
@@ -297,8 +298,6 @@ class _NoteScreenState extends ConsumerState<NoteScreen> {
   }
 
   Future<void> _autoRenameIfUntitled() async {
-    if (_noteId == null) return;
-
     final fileName = _currentPath.split('/').last.replaceAll('.md', '');
     if (!fileName.toLowerCase().contains('untitled')) return;
 
@@ -327,12 +326,10 @@ class _NoteScreenState extends ConsumerState<NoteScreen> {
     if (newPath == _currentPath) return;
 
     debugLogger.save('Auto-rename: $newPath');
-    final success = await _repo.renameNote(_noteId!, newPath);
+    final success = await _repo.renameNote(widget.noteId, newPath);
 
     if (success && mounted) {
-      final oldPath = _currentPath;
       _currentPath = newPath;
-      context.read<DesktopNotesBloc?>()?.add(UpdateNotePath(oldPath, newPath));
     }
   }
 }

@@ -1,18 +1,18 @@
 abstract class DesktopNotesEvent {}
 
 class OpenNote extends DesktopNotesEvent {
-  final String notePath;
-  OpenNote(this.notePath);
+  final String noteId;
+  OpenNote(this.noteId);
 }
 
 class CloseNote extends DesktopNotesEvent {
-  final String notePath;
-  CloseNote(this.notePath);
+  final String noteId;
+  CloseNote(this.noteId);
 }
 
 class SetActiveNote extends DesktopNotesEvent {
-  final String notePath;
-  SetActiveNote(this.notePath);
+  final String noteId;
+  SetActiveNote(this.noteId);
 }
 
 class SetMaxOpenNotes extends DesktopNotesEvent {
@@ -21,9 +21,3 @@ class SetMaxOpenNotes extends DesktopNotesEvent {
 }
 
 class CloseAllNotes extends DesktopNotesEvent {}
-
-class UpdateNotePath extends DesktopNotesEvent {
-  final String oldPath;
-  final String newPath;
-  UpdateNotePath(this.oldPath, this.newPath);
-}

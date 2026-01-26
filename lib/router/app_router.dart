@@ -115,20 +115,13 @@ GoRouter createAppRouter(ProviderContainer container) {
               },
             ),
             GoRoute(
-              path: '/notes/note/:path(.*)',
+              path: '/notes/note/:id',
               name: 'note',
               pageBuilder: (context, state) {
-                final encodedPath = state.pathParameters['path']!;
-                String path;
-                try {
-                  path = Uri.decodeComponent(encodedPath);
-                } catch (e) {
-                  print('⚠️ URI decode failed for: $encodedPath, using as-is');
-                  path = encodedPath;
-                }
+                final noteId = state.pathParameters['id']!;
                 return _buildFadeTransitionPage(
                   key: state.pageKey,
-                  child: NoteScreen(notePath: path),
+                  child: NoteScreen(noteId: noteId),
                 );
               },
             ),

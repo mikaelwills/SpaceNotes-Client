@@ -18,8 +18,8 @@ import 'desktop_shell.dart';
 final expandedFoldersProvider = StateProvider<Set<String>>((ref) => {});
 final searchFocusRequestProvider = StateProvider<int>((ref) => 0);
 
-void _openNoteInDesktop(BuildContext context, String notePath) {
-  context.read<DesktopNotesBloc>().add(OpenNote(notePath));
+void _openNoteInDesktop(BuildContext context, String noteId) {
+  context.read<DesktopNotesBloc>().add(OpenNote(noteId));
   final location = GoRouterState.of(context).uri.toString();
   if (location == '/notes/chat' || location == '/settings') {
     context.go('/notes');
@@ -478,7 +478,7 @@ class _FolderTreeItemState extends ConsumerState<_FolderTreeItem> {
         final notePath = '${folder.path}/Untitled-$timestamp.md';
         final noteId = await repo.createNote(notePath, '');
         if (noteId != null && context.mounted) {
-          _openNoteInDesktop(context, notePath);
+          _openNoteInDesktop(context, noteId);
         }
         break;
       case 'new_folder':
@@ -873,14 +873,11 @@ class _NoteTreeItem extends ConsumerWidget {
               ? note.path.substring(0, note.path.lastIndexOf('/'))
               : '';
           final newPath = folderPath.isEmpty ? newName : '$folderPath/$newName';
-          final success = await repo.moveNote(note.path, newPath);
-          if (success && context.mounted) {
-            context.read<DesktopNotesBloc>().add(UpdateNotePath(note.path, newPath));
-          }
+          await repo.moveNote(note.path, newPath);
         }
         break;
       case 'delete':
-        context.read<DesktopNotesBloc>().add(CloseNote(note.path));
+        context.read<DesktopNotesBloc>().add(CloseNote(note.id));
         repo.deleteNote(note.id);
         break;
     }
@@ -893,9 +890,9 @@ class _NoteTreeItem extends ConsumerWidget {
         : note.name;
 
     return BlocBuilder<DesktopNotesBloc, DesktopNotesState>(
-      buildWhen: (prev, curr) => prev.activeNotePath != curr.activeNotePath,
+      buildWhen: (prev, curr) => prev.activeNoteId != curr.activeNoteId,
       builder: (context, desktopState) {
-        final isOpen = desktopState.activeNotePath == note.path;
+        final isOpen = desktopState.activeNoteId == note.id;
 
         return Draggable<_DraggableData>(
           data: _DraggableData(
@@ -948,7 +945,7 @@ class _NoteTreeItem extends ConsumerWidget {
       isFolder: false,
       isOpen: isOpen,
       onTap: () {
-        _openNoteInDesktop(context, note.path);
+        _openNoteInDesktop(context, note.id);
       },
       onDelete: () => _handleNoteAction(context, ref, note, 'delete'),
       contextMenuItems: [
@@ -1271,7 +1268,7 @@ class _SidebarFooter extends ConsumerWidget {
     final notePath = 'All Notes/Untitled-$timestamp.md';
     final noteId = await repo.createNote(notePath, '');
     if (noteId != null && context.mounted) {
-      _openNoteInDesktop(context, notePath);
+      _openNoteInDesktop(context, noteId);
     }
   }
 
@@ -1374,6 +1371,15 @@ class _SidebarFooter extends ConsumerWidget {
                 constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
               );
             },
+          ),
+          const Spacer(),
+          IconButton(
+            icon: const Icon(Icons.settings, size: 18),
+            color: SpaceNotesTheme.textSecondary,
+            onPressed: () => context.go('/settings'),
+            tooltip: 'Settings',
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
           ),
         ],
       ),

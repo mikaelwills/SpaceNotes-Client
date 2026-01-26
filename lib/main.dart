@@ -27,6 +27,7 @@ import 'services/web_config_service.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  await debugLogger.ensureInitialized();
   debugLogger.info('APP', 'SpaceNotes starting');
 
   SdkLogger.onLog = (level, msg) => debugLogger.log(level, 'SDK', msg);
@@ -169,7 +170,6 @@ class _OpenCodeAppState extends State<OpenCodeApp> with WidgetsBindingObserver {
                 messageQueueService: context.read<MessageQueueService>(),
               );
 
-              // Initialize the MessageQueueService's ChatBloc listener
               context
                   .read<MessageQueueService>()
                   .initChatBlocListener(chatBloc);

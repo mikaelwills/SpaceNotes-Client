@@ -42,16 +42,17 @@ void main() {
         authStorage: InMemoryTokenStore(),
       );
 
+      late String noteId;
       await tester.runAsync(() async {
         await uiRepository.connectAndGetInitialData();
-        await uiRepository.createNote(testPath, '# Focus Test\n\nStart.');
+        noteId = (await uiRepository.createNote(testPath, '# Focus Test\n\nStart.'))!;
         await Future.delayed(const Duration(seconds: 2));
       });
 
       await tester.pumpWidget(
         ProviderScope(
           overrides: [notesRepositoryProvider.overrideWithValue(uiRepository)],
-          child: MaterialApp(home: Scaffold(body: NoteScreen(notePath: testPath))),
+          child: MaterialApp(home: Scaffold(body: NoteScreen(noteId: noteId))),
         ),
       );
       await tester.pump(const Duration(seconds: 1));
@@ -93,16 +94,17 @@ void main() {
         authStorage: InMemoryTokenStore(),
       );
 
+      late String noteId;
       await tester.runAsync(() async {
         await uiRepository.connectAndGetInitialData();
-        await uiRepository.createNote(testPath, '# Save Test\n\nInit.');
+        noteId = (await uiRepository.createNote(testPath, '# Save Test\n\nInit.'))!;
         await Future.delayed(const Duration(seconds: 2));
       });
 
       await tester.pumpWidget(
         ProviderScope(
           overrides: [notesRepositoryProvider.overrideWithValue(uiRepository)],
-          child: MaterialApp(home: Scaffold(body: NoteScreen(notePath: testPath))),
+          child: MaterialApp(home: Scaffold(body: NoteScreen(noteId: noteId))),
         ),
       );
       await tester.pump(const Duration(seconds: 1));

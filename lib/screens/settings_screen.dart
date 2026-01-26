@@ -32,11 +32,20 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   bool _isSpaceNotesConnecting = false;
   bool _isOpenCodeConnecting = false;
+  int _logFileCount = 0;
 
   @override
   void initState() {
     super.initState();
     _loadCurrentConfig();
+    _loadLogFileCount();
+  }
+
+  Future<void> _loadLogFileCount() async {
+    final files = await debugLogger.getLogFiles();
+    if (mounted) {
+      setState(() => _logFileCount = files.length);
+    }
   }
 
   @override
@@ -124,20 +133,22 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 500),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              _buildSpaceNotesSection(),
-              const SizedBox(height: 32),
-              _buildOpenCodeSection(),
-              const SizedBox(height: 32),
-              _buildDebugLogsSection(),
-            ],
+    return SingleChildScrollView(
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 500),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                _buildSpaceNotesSection(),
+                const SizedBox(height: 32),
+                _buildOpenCodeSection(),
+                const SizedBox(height: 32),
+                _buildDebugLogsSection(),
+              ],
+            ),
           ),
         ),
       ),
@@ -330,6 +341,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       final allSaved = savedPaths.length == total;
       if (allSaved && savedPaths.isNotEmpty) {
         await debugLogger.clearLogs();
+        await _loadLogFileCount();
         if (!mounted) return;
         _showResultDialog('Success', 'Saved ${savedPaths.length} log file(s) to ClientLogs/');
       } else if (savedPaths.isNotEmpty) {
@@ -389,9 +401,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Debug Logs',
-          style: TextStyle(
+        Text(
+          'Debug Logs ($_logFileCount)',
+          style: const TextStyle(
             fontFamily: 'FiraCode',
             fontSize: 16,
             color: SpaceNotesTheme.text,
@@ -448,6 +460,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               child: ElevatedButton.icon(
                 onPressed: () async {
                   await debugLogger.clearLogs();
+                  await _loadLogFileCount();
                   if (mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(

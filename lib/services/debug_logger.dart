@@ -7,11 +7,15 @@ export 'debug_logger_io.dart' if (dart.library.js_interop) 'debug_logger_web.dar
 class DebugLogger {
   static final DebugLogger _instance = DebugLogger._internal();
   factory DebugLogger() => _instance;
-  DebugLogger._internal() {
-    _init();
-  }
+  DebugLogger._internal();
 
   platform.PlatformLogStorage? _storage;
+  Future<void>? _initFuture;
+
+  Future<void> ensureInitialized() async {
+    _initFuture ??= _init();
+    await _initFuture;
+  }
 
   Future<void> _init() async {
     try {

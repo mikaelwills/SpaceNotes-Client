@@ -40,14 +40,11 @@ class MobileNavBar extends ConsumerWidget {
     }
   }
 
-  String _extractNotePathFromLocation(String location) {
-    // Route is /notes/note/:path(.*) - path spans from index 2 onwards
+  String _extractNoteIdFromLocation(String location) {
     final uri = Uri.parse(location);
     final pathSegments = uri.pathSegments;
     if (pathSegments.length >= 3 && pathSegments[1] == 'note') {
-      // Join all segments after "note" to reconstruct the full path
-      final notePathSegments = pathSegments.sublist(2);
-      return notePathSegments.map(_safeDecodeUri).join('/');
+      return pathSegments[2];
     }
     return '';
   }
@@ -91,16 +88,29 @@ class MobileNavBar extends ConsumerWidget {
               ],
 
               if (isOnNote) ...[
-                GestureDetector(
-                  onTap: () => _navigateBackFromNote(context, _extractNotePathFromLocation(currentLocation)),
-                  child: const Icon(Icons.arrow_back, color: SpaceNotesTheme.text),
-                ),
+                Builder(builder: (context) {
+                  final noteId = _extractNoteIdFromLocation(currentLocation);
+                  final note = ref.watch(notesListProvider).valueOrNull
+                      ?.firstWhereOrNull((n) => n.id == noteId);
+                  final notePath = note?.path ?? '';
+                  return GestureDetector(
+                    onTap: () => _navigateBackFromNote(context, notePath),
+                    child: const Icon(Icons.arrow_back, color: SpaceNotesTheme.text),
+                  );
+                }),
                 const SizedBox(width: 16),
                 Expanded(
-                  child: _EditableNoteName(
-                    notePath: _extractNotePathFromLocation(currentLocation),
-                    currentName: _extractNoteName(currentLocation),
-                  ),
+                  child: Builder(builder: (context) {
+                    final noteId = _extractNoteIdFromLocation(currentLocation);
+                    final note = ref.watch(notesListProvider).valueOrNull
+                        ?.firstWhereOrNull((n) => n.id == noteId);
+                    final notePath = note?.path ?? '';
+                    final noteName = notePath.split('/').last.replaceAll('.md', '');
+                    return _EditableNoteName(
+                      notePath: notePath,
+                      currentName: noteName,
+                    );
+                  }),
                 ),
                 const SizedBox(width: 16),
               ],
@@ -222,20 +232,6 @@ class MobileNavBar extends ConsumerWidget {
     }
 
     return 'Folder';
-  }
-
-  String _extractNoteName(String location) {
-    final uri = Uri.parse(location);
-    final pathSegments = uri.pathSegments;
-
-    if (pathSegments.length >= 3 && pathSegments[1] == 'note') {
-      final notePathSegments = pathSegments.sublist(2);
-      final fileName = _safeDecodeUri(notePathSegments.last);
-      final noteName = fileName.replaceAll('.md', '');
-      return noteName;
-    }
-
-    return 'Note';
   }
 
 }
@@ -412,11 +408,6 @@ class _EditableNoteNameState extends ConsumerState<_EditableNoteName> {
 
     if (success) {
       _lastRenamedTo = newName;
-      if (mounted) {
-        final encodedNewPath =
-            newPath.split('/').map(Uri.encodeComponent).join('/');
-        context.go('/notes/note/$encodedNewPath');
-      }
     }
   }
 }

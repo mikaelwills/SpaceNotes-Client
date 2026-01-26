@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:collection/collection.dart';
 
+import '../../providers/notes_providers.dart';
 import '../../theme/spacenotes_theme.dart';
 import '../connection_indicator.dart';
 import '../sync_state_indicator.dart';
@@ -115,11 +117,15 @@ class _DesktopTopBar extends ConsumerWidget {
 
   const _DesktopTopBar({this.showTabs = false});
 
-  String _getBreadcrumb(String location) {
+  String _getBreadcrumb(String location, WidgetRef ref) {
     if (location.startsWith('/notes/note/')) {
-      final encodedPath = location.substring('/notes/note/'.length);
-      final decodedPath = Uri.decodeComponent(encodedPath);
-      return '/$decodedPath';
+      final noteId = location.substring('/notes/note/'.length);
+      final note = ref.watch(notesListProvider).valueOrNull
+          ?.firstWhereOrNull((n) => n.id == noteId);
+      if (note != null) {
+        return '/${note.path}';
+      }
+      return '/';
     }
     if (location.startsWith('/notes/folder/')) {
       final encodedPath = location.substring('/notes/folder/'.length);
@@ -142,7 +148,7 @@ class _DesktopTopBar extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final location = GoRouterState.of(context).uri.toString();
-    final breadcrumb = _getBreadcrumb(location);
+    final breadcrumb = _getBreadcrumb(location, ref);
     final showBack = _shouldShowBackButton(location);
 
     return Container(

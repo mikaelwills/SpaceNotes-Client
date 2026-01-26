@@ -102,6 +102,11 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
       return const SizedBox.shrink();
     }
 
+    final location = GoRouterState.of(context).uri.toString();
+    if (location == '/notes/sessions' || location == '/settings') {
+      return const SizedBox.shrink();
+    }
+
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
       child: Row(
@@ -302,9 +307,8 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
       final noteId = await repo.createNote(notePath, '');
       debugPrint('[MobileBottomInputBar] repo.createNote returned: $noteId');
       if (noteId != null && mounted) {
-        final encodedPath = notePath.split('/').map(Uri.encodeComponent).join('/');
-        debugPrint('[MobileBottomInputBar] Navigating to /notes/note/$encodedPath');
-        context.go('/notes/note/$encodedPath');
+        debugPrint('[MobileBottomInputBar] Navigating to /notes/note/$noteId');
+        context.go('/notes/note/$noteId');
       } else {
         debugPrint('[MobileBottomInputBar] noteId is null or widget not mounted');
       }

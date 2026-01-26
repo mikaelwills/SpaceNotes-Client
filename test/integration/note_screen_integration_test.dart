@@ -66,7 +66,7 @@ void main() {
             container: container,
             child: MaterialApp(
               home: Scaffold(
-                body: NoteScreen(notePath: testPath),
+                body: NoteScreen(noteId: createdNoteId!),
               ),
             ),
           ),
@@ -158,7 +158,7 @@ void main() {
             container: container,
             child: MaterialApp(
               home: Scaffold(
-                body: NoteScreen(notePath: testPath),
+                body: NoteScreen(noteId: createdNoteId!),
               ),
             ),
           ),
@@ -240,7 +240,7 @@ void main() {
             container: container,
             child: MaterialApp(
               home: Scaffold(
-                body: NoteScreen(notePath: testPath),
+                body: NoteScreen(noteId: createdNoteId!),
               ),
             ),
           ),
@@ -325,7 +325,7 @@ void main() {
             container: container,
             child: MaterialApp(
               home: Scaffold(
-                body: NoteScreen(notePath: testPath),
+                body: NoteScreen(noteId: createdNoteId!),
               ),
             ),
           ),
@@ -417,7 +417,7 @@ void main() {
             container: container,
             child: MaterialApp(
               home: Scaffold(
-                body: NoteScreen(notePath: initialPath),
+                body: NoteScreen(noteId: initialPath),
               ),
             ),
           ),

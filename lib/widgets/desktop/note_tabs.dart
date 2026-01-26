@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:collection/collection.dart';
 import '../../blocs/desktop_notes/desktop_notes_bloc.dart';
 import '../../blocs/desktop_notes/desktop_notes_event.dart';
 import '../../blocs/desktop_notes/desktop_notes_state.dart';
+import '../../providers/notes_providers.dart';
 import '../../theme/spacenotes_theme.dart';
 
 class NoteTabs extends StatelessWidget {
@@ -18,13 +21,13 @@ class NoteTabs extends StatelessWidget {
 
         return ListView.builder(
           scrollDirection: Axis.horizontal,
-          itemCount: state.openNotePaths.length,
+          itemCount: state.openNoteIds.length,
           padding: EdgeInsets.zero,
           itemBuilder: (context, index) {
-            final notePath = state.openNotePaths[index];
-            final isActive = notePath == state.activeNotePath;
+            final noteId = state.openNoteIds[index];
+            final isActive = noteId == state.activeNoteId;
             return _NoteTab(
-              notePath: notePath,
+              noteId: noteId,
               isActive: isActive,
             );
           },
@@ -34,24 +37,28 @@ class NoteTabs extends StatelessWidget {
   }
 }
 
-class _NoteTab extends StatefulWidget {
-  final String notePath;
+class _NoteTab extends ConsumerStatefulWidget {
+  final String noteId;
   final bool isActive;
 
   const _NoteTab({
-    required this.notePath,
+    required this.noteId,
     required this.isActive,
   });
 
   @override
-  State<_NoteTab> createState() => _NoteTabState();
+  ConsumerState<_NoteTab> createState() => _NoteTabState();
 }
 
-class _NoteTabState extends State<_NoteTab> {
+class _NoteTabState extends ConsumerState<_NoteTab> {
   bool _isHovered = false;
 
   String get _displayName {
-    final name = widget.notePath.split('/').last;
+    final notes = ref.watch(notesListProvider).valueOrNull;
+    final note = notes?.firstWhereOrNull((n) => n.id == widget.noteId);
+    if (note == null) return 'Loading...';
+
+    final name = note.path.split('/').last;
     if (name.endsWith('.md')) {
       return name.substring(0, name.length - 3);
     }
@@ -65,7 +72,7 @@ class _NoteTabState extends State<_NoteTab> {
       onExit: (_) => setState(() => _isHovered = false),
       child: GestureDetector(
         onTap: () {
-          context.read<DesktopNotesBloc>().add(SetActiveNote(widget.notePath));
+          context.read<DesktopNotesBloc>().add(SetActiveNote(widget.noteId));
         },
         child: Container(
           margin: const EdgeInsets.symmetric(horizontal: 2),
@@ -101,7 +108,7 @@ class _NoteTabState extends State<_NoteTab> {
               if (_isHovered || widget.isActive)
                 GestureDetector(
                   onTap: () {
-                    context.read<DesktopNotesBloc>().add(CloseNote(widget.notePath));
+                    context.read<DesktopNotesBloc>().add(CloseNote(widget.noteId));
                   },
                   child: const Padding(
                     padding: EdgeInsets.all(2),

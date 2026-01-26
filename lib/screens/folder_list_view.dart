@@ -216,9 +216,7 @@ class _FolderListViewState extends ConsumerState<FolderListView> {
       onTap: () {
         FocusManager.instance.primaryFocus?.unfocus();
         ref.read(folderSearchQueryProvider.notifier).state = '';
-        final encodedPath =
-            note.path.split('/').map(Uri.encodeComponent).join('/');
-        context.go('/notes/note/$encodedPath');
+        context.go('/notes/note/${note.id}');
       },
       onLongPress: () =>
           NotesListDialogs.showNoteContextMenu(context, ref, note),
@@ -246,9 +244,7 @@ class _FolderListViewState extends ConsumerState<FolderListView> {
     final repo = ref.read(notesRepositoryProvider);
     final noteId = await repo.createNote(notePath, '');
     if (noteId != null && mounted) {
-      final encodedPath =
-          notePath.split('/').map(Uri.encodeComponent).join('/');
-      context.go('/notes/note/$encodedPath');
+      context.go('/notes/note/$noteId');
     }
   }
 }

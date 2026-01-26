@@ -9,104 +9,84 @@ class DesktopNotesBloc extends Bloc<DesktopNotesEvent, DesktopNotesState> {
     on<SetActiveNote>(_onSetActiveNote);
     on<SetMaxOpenNotes>(_onSetMaxOpenNotes);
     on<CloseAllNotes>(_onCloseAllNotes);
-    on<UpdateNotePath>(_onUpdateNotePath);
   }
 
   void _onOpenNote(OpenNote event, Emitter<DesktopNotesState> emit) {
-    final currentPaths = List<String>.from(state.openNotePaths);
+    final currentIds = List<String>.from(state.openNoteIds);
 
-    if (currentPaths.contains(event.notePath)) {
-      emit(state.copyWith(activeNotePath: event.notePath));
+    if (currentIds.contains(event.noteId)) {
+      emit(state.copyWith(activeNoteId: event.noteId));
       return;
     }
 
-    currentPaths.add(event.notePath);
+    currentIds.add(event.noteId);
 
-    if (currentPaths.length > state.maxOpenNotes) {
-      currentPaths.removeAt(0);
+    if (currentIds.length > state.maxOpenNotes) {
+      currentIds.removeAt(0);
     }
 
     emit(state.copyWith(
-      openNotePaths: currentPaths,
-      activeNotePath: event.notePath,
+      openNoteIds: currentIds,
+      activeNoteId: event.noteId,
     ));
   }
 
   void _onCloseNote(CloseNote event, Emitter<DesktopNotesState> emit) {
-    final currentPaths = List<String>.from(state.openNotePaths);
-    final closingIndex = currentPaths.indexOf(event.notePath);
+    final currentIds = List<String>.from(state.openNoteIds);
+    final closingIndex = currentIds.indexOf(event.noteId);
 
     if (closingIndex == -1) return;
 
-    currentPaths.remove(event.notePath);
+    currentIds.remove(event.noteId);
 
-    String? newActivePath = state.activeNotePath;
-    if (state.activeNotePath == event.notePath) {
-      if (currentPaths.isEmpty) {
-        newActivePath = null;
-      } else if (closingIndex >= currentPaths.length) {
-        newActivePath = currentPaths.last;
+    String? newActiveId = state.activeNoteId;
+    if (state.activeNoteId == event.noteId) {
+      if (currentIds.isEmpty) {
+        newActiveId = null;
+      } else if (closingIndex >= currentIds.length) {
+        newActiveId = currentIds.last;
       } else {
-        newActivePath = currentPaths[closingIndex];
+        newActiveId = currentIds[closingIndex];
       }
     }
 
     emit(state.copyWith(
-      openNotePaths: currentPaths,
-      activeNotePath: newActivePath,
-      clearActiveNote: newActivePath == null,
+      openNoteIds: currentIds,
+      activeNoteId: newActiveId,
+      clearActiveNote: newActiveId == null,
     ));
   }
 
   void _onSetActiveNote(SetActiveNote event, Emitter<DesktopNotesState> emit) {
-    if (state.openNotePaths.contains(event.notePath)) {
-      emit(state.copyWith(activeNotePath: event.notePath));
+    if (state.openNoteIds.contains(event.noteId)) {
+      emit(state.copyWith(activeNoteId: event.noteId));
     }
   }
 
   void _onSetMaxOpenNotes(SetMaxOpenNotes event, Emitter<DesktopNotesState> emit) {
-    final currentPaths = List<String>.from(state.openNotePaths);
+    final currentIds = List<String>.from(state.openNoteIds);
 
-    while (currentPaths.length > event.maxNotes) {
-      currentPaths.removeAt(0);
+    while (currentIds.length > event.maxNotes) {
+      currentIds.removeAt(0);
     }
 
-    String? newActivePath = state.activeNotePath;
-    if (newActivePath != null && !currentPaths.contains(newActivePath)) {
-      newActivePath = currentPaths.isNotEmpty ? currentPaths.last : null;
+    String? newActiveId = state.activeNoteId;
+    if (newActiveId != null && !currentIds.contains(newActiveId)) {
+      newActiveId = currentIds.isNotEmpty ? currentIds.last : null;
     }
 
     emit(state.copyWith(
-      openNotePaths: currentPaths,
-      activeNotePath: newActivePath,
-      clearActiveNote: newActivePath == null,
+      openNoteIds: currentIds,
+      activeNoteId: newActiveId,
+      clearActiveNote: newActiveId == null,
       maxOpenNotes: event.maxNotes,
     ));
   }
 
   void _onCloseAllNotes(CloseAllNotes event, Emitter<DesktopNotesState> emit) {
     emit(state.copyWith(
-      openNotePaths: [],
+      openNoteIds: [],
       clearActiveNote: true,
-    ));
-  }
-
-  void _onUpdateNotePath(UpdateNotePath event, Emitter<DesktopNotesState> emit) {
-    final currentPaths = List<String>.from(state.openNotePaths);
-    final index = currentPaths.indexOf(event.oldPath);
-
-    if (index == -1) return;
-
-    currentPaths[index] = event.newPath;
-
-    String? newActivePath = state.activeNotePath;
-    if (state.activeNotePath == event.oldPath) {
-      newActivePath = event.newPath;
-    }
-
-    emit(state.copyWith(
-      openNotePaths: currentPaths,
-      activeNotePath: newActivePath,
     ));
   }
 }

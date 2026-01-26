@@ -158,9 +158,7 @@ class RecentNotesGrid extends ConsumerWidget {
   Widget _buildRecentNoteCard(BuildContext context, WidgetRef ref, Note note) {
     return GestureDetector(
       onTap: () {
-        final encodedPath =
-            note.path.split('/').map(Uri.encodeComponent).join('/');
-        context.go('/notes/note/$encodedPath');
+        context.go('/notes/note/${note.id}');
       },
       onLongPress: () {
         HapticFeedback.mediumImpact();

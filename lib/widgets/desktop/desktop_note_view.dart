@@ -12,7 +12,7 @@ class DesktopNoteView extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocBuilder<DesktopNotesBloc, DesktopNotesState>(
       builder: (context, state) {
-        if (!state.hasOpenNotes || state.activeNotePath == null) {
+        if (!state.hasOpenNotes || state.activeNoteId == null) {
           return Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -36,8 +36,8 @@ class DesktopNoteView extends StatelessWidget {
         }
 
         return NoteScreen(
-          key: ValueKey(state.activeNotePath),
-          notePath: state.activeNotePath!,
+          key: ValueKey(state.activeNoteId),
+          noteId: state.activeNoteId!,
         );
       },
     );
