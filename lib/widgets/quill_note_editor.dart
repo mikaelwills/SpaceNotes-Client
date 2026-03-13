@@ -5,6 +5,7 @@ import 'package:markdown/markdown.dart' as md;
 import 'package:markdown_quill/markdown_quill.dart';
 import '../theme/spacenotes_theme.dart';
 import '../services/debug_logger.dart';
+import 'mobile_context_menu.dart';
 
 class _KeepEmptyLineBlockSyntax extends md.BlockSyntax {
   @override
@@ -182,6 +183,7 @@ class QuillNoteEditorState extends State<QuillNoteEditor> {
       behavior: ScrollConfiguration.of(context).copyWith(scrollbars: false),
       child: SingleChildScrollView(
         child: TextField(
+          contextMenuBuilder: SpaceNotesContextMenu.buildForTextField,
           controller: _rawController,
           focusNode: _rawFocusNode,
           maxLines: null,
@@ -221,6 +223,7 @@ class QuillNoteEditorState extends State<QuillNoteEditor> {
         controller: _controller,
         focusNode: _focusNode,
       config: QuillEditorConfig(
+        contextMenuBuilder: SpaceNotesContextMenu.buildForQuill,
         padding: const EdgeInsets.all(16),
         placeholder: 'Start writing...',
         embedBuilders: [
