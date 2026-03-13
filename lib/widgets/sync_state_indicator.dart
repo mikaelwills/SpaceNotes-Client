@@ -3,12 +3,33 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:spacetimedb_dart_sdk/spacetimedb_dart_sdk.dart' show SyncState;
 import '../providers/notes_providers.dart';
 import '../theme/spacenotes_theme.dart';
+import '../services/debug_logger.dart';
 
-class SyncStateIndicator extends ConsumerWidget {
+class SyncStateIndicator extends ConsumerStatefulWidget {
   const SyncStateIndicator({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<SyncStateIndicator> createState() => _SyncStateIndicatorState();
+}
+
+class _SyncStateIndicatorState extends ConsumerState<SyncStateIndicator> {
+  SyncState? _lastLoggedState;
+
+  void _logStateChange(SyncState state, String source) {
+    if (_lastLoggedState == null ||
+        _lastLoggedState!.isSyncing != state.isSyncing ||
+        _lastLoggedState!.pendingCount != state.pendingCount ||
+        _lastLoggedState!.hasError != state.hasError) {
+      debugLogger.debug(
+        'SYNC_UI',
+        '$source: isSyncing=${state.isSyncing}, pending=${state.pendingCount}, hasError=${state.hasError}',
+      );
+      _lastLoggedState = state;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final repo = ref.watch(notesRepositoryProvider);
 
     return StreamBuilder<SyncState>(
@@ -16,6 +37,8 @@ class SyncStateIndicator extends ConsumerWidget {
       initialData: repo.currentSyncState,
       builder: (context, snapshot) {
         final state = snapshot.data ?? const SyncState();
+
+        _logStateChange(state, snapshot.connectionState.name);
 
         if (!repo.hasOfflineStorage) {
           return const SizedBox.shrink();

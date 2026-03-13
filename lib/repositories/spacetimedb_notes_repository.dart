@@ -314,10 +314,19 @@ class SpacetimeDbNotesRepository {
 
     if (_client!.hasOfflineStorage) {
       final syncStateSub = _client!.onSyncStateChanged.listen((state) {
+        debugLogger.debug(
+          'SYNC_SDK',
+          'SDK sync state changed: isSyncing=${state.isSyncing}, pending=${state.pendingCount}, hasError=${state.hasError}',
+        );
         _syncStateSubject.add(state);
       });
       _subscriptions.add(syncStateSub);
-      _syncStateSubject.add(_client!.syncState);
+      final initialState = _client!.syncState;
+      debugLogger.debug(
+        'SYNC_SDK',
+        'Initial sync state: isSyncing=${initialState.isSyncing}, pending=${initialState.pendingCount}, hasError=${initialState.hasError}',
+      );
+      _syncStateSubject.add(initialState);
     }
 
     final connectionStatusSub = _client!.connection.connectionStatus.listen((status) {

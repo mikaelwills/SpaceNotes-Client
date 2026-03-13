@@ -238,9 +238,11 @@ class MessageQueueService {
         callback?.call(MessageSendStatus.sent);
       }
     }).catchError((error) {
-      debugLogger.error('QUEUE', 'HTTP error', 'msgId=$messageId, error=$error');
       if (_pendingMessageTimeouts.containsKey(messageId)) {
+        debugLogger.error('QUEUE', 'HTTP error', 'msgId=$messageId, error=$error');
         _markMessageFailed(messageId, 'HTTP error: ${error.runtimeType}: $error');
+      } else {
+        debugLogger.debug('QUEUE', 'HTTP timeout after SSE confirm (safe to ignore): msgId=$messageId');
       }
     });
   }
