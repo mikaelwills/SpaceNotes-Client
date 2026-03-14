@@ -147,6 +147,15 @@ class _NoteScreenState extends ConsumerState<NoteScreen> {
     debugLogger.info('NOTE', 'Dispose: $_noteName${hasPending ? " (saving pending)" : ""}');
     _debounceTimer?.cancel();
     _saveContent();
+    final fileName = _currentPath.split('/').last.replaceAll('.md', '');
+    if (fileName.toLowerCase().startsWith('untitled') && _currentContent.length >= 10) {
+      debugLogger.info('NOTE', 'Dispose trigger: requesting title for $fileName');
+      _repo.titleService?.triggerImmediate(
+        widget.noteId,
+        content: _currentContent,
+        path: _currentPath,
+      );
+    }
     _updateSubscription?.cancel();
     _clientSubscription?.cancel();
     super.dispose();
@@ -171,7 +180,7 @@ class _NoteScreenState extends ConsumerState<NoteScreen> {
           setState(() => _isChatOpen = false);
           return;
         }
-        _saveAndExit();
+        await _saveAndExit();
       },
       child: isDesktop ? _buildDesktopLayout(note) : _buildMobileLayout(note),
     );
@@ -277,11 +286,18 @@ class _NoteScreenState extends ConsumerState<NoteScreen> {
     );
   }
 
-  void _saveAndExit() {
+  Future<void> _saveAndExit() async {
     debugLogger.info('NOTE', 'Exit: $_noteName');
     _debounceTimer?.cancel();
-    _saveContent();
-    _autoRenameIfUntitled();
+    await _saveContent();
+    final fileName = _currentPath.split('/').last.replaceAll('.md', '');
+    if (fileName.toLowerCase().startsWith('untitled')) {
+      _repo.titleService?.triggerImmediate(
+        widget.noteId,
+        content: _currentContent,
+        path: _currentPath,
+      );
+    }
     if (mounted) Navigator.of(context).pop();
   }
 
@@ -297,39 +313,4 @@ class _NoteScreenState extends ConsumerState<NoteScreen> {
     }
   }
 
-  Future<void> _autoRenameIfUntitled() async {
-    final fileName = _currentPath.split('/').last.replaceAll('.md', '');
-    if (!fileName.toLowerCase().contains('untitled')) return;
-
-    final firstLine = _currentContent
-        .split('\n')
-        .map((l) => l.trim())
-        .firstWhereOrNull((l) => l.isNotEmpty && l != '#');
-
-    if (firstLine == null) return;
-
-    var newName = firstLine.replaceAll(RegExp(r'^#+\s*'), '').trim();
-    if (newName.isEmpty) {
-      newName = _currentContent.replaceAll('\n', ' ').replaceAll(RegExp(r'^#+\s*'), '').trim();
-      if (newName.length > 50) newName = newName.substring(0, 50);
-    }
-
-    if (newName.isEmpty || newName.toLowerCase() == 'untitled') return;
-
-    newName = newName.replaceAll(RegExp(r'[<>:"/\\|?*]'), '');
-
-    final folderPath = _currentPath.contains('/')
-        ? _currentPath.substring(0, _currentPath.lastIndexOf('/') + 1)
-        : '';
-    final newPath = '$folderPath$newName.md';
-
-    if (newPath == _currentPath) return;
-
-    debugLogger.save('Auto-rename: $newPath');
-    final success = await _repo.renameNote(widget.noteId, newPath);
-
-    if (success && mounted) {
-      _currentPath = newPath;
-    }
-  }
 }

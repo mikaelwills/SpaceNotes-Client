@@ -126,9 +126,9 @@ class SSEService {
   OpenCodeEvent? _tryFastTextExtraction(String rawData) {
     try {
       // Quick check if this is a text streaming event
-      if (!rawData.contains('"type":"message.part.updated"') || 
-          !rawData.contains('"text":')) {
-        return null; // Not a text streaming event, use full parsing
+      if (!rawData.contains('"type":"message.part.updated"') ||
+          (!rawData.contains('"text":') && !rawData.contains('"delta":'))) {
+        return null;
       }
       
       // Extract key fields using regex for performance
@@ -144,19 +144,24 @@ class SSEService {
       final sessionId = sessionIdMatch.group(1)!;
       final messageId = messageIdMatch.group(1)!;
       
-      // Extract text content efficiently
       final textMatch = RegExp(r'"text":"([^"]*(?:\\.[^"]*)*)"').firstMatch(rawData);
+      final deltaMatch = RegExp(r'"delta":"([^"]*(?:\\.[^"]*)*)"').firstMatch(rawData);
       final partIdMatch = RegExp(r'"part":\s*\{[^}]*"id":"([^"]+)"').firstMatch(rawData);
       final partTypeMatch = RegExp(r'"part":\s*\{[^}]*"type":"([^"]+)"').firstMatch(rawData);
-      
-      if (textMatch != null && partIdMatch != null) {
-        final text = textMatch.group(1)?.replaceAll('\\"', '"') ?? '';
+
+      if ((textMatch != null || deltaMatch != null) && partIdMatch != null) {
+        final text = textMatch?.group(1)?.replaceAll('\\"', '"');
+        final delta = deltaMatch?.group(1)?.replaceAll('\\"', '"');
         final partId = partIdMatch.group(1)!;
         final partType = partTypeMatch?.group(1) ?? 'text';
-        
-        // Fast path extraction successful - no logging needed for performance
-        
-        // Create optimized event data structure
+
+        final partData = <String, dynamic>{
+          'id': partId,
+          'type': partType,
+        };
+        if (text != null) partData['text'] = text;
+        if (delta != null) partData['delta'] = delta;
+
         return OpenCodeEvent(
           type: type,
           sessionId: sessionId,
@@ -164,11 +169,7 @@ class SSEService {
           timestamp: DateTime.now(),
           data: {
             'properties': {
-              'part': {
-                'id': partId,
-                'type': partType,
-                'text': text,
-              }
+              'part': partData,
             }
           },
         );

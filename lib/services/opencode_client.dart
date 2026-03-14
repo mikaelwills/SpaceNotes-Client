@@ -267,6 +267,59 @@ class OpenCodeClient {
     }
   }
 
+  Future<void> sendMessageAsync(
+    String sessionId,
+    String message, {
+    String? agent,
+    String? imageBase64,
+    String? imageMimeType,
+    String? system,
+  }) async {
+    try {
+      final uri = Uri.parse('$_baseUrl/session/$sessionId/prompt_async');
+      final List<Map<String, dynamic>> parts = [
+        {'type': 'text', 'text': message}
+      ];
+
+      if (imageBase64 != null && imageMimeType != null) {
+        parts.add({
+          'type': 'file',
+          'mime': imageMimeType,
+          'url': 'data:$imageMimeType;base64,$imageBase64',
+        });
+      }
+
+      final Map<String, dynamic> body = {
+        'parts': parts,
+      };
+      if (system != null) {
+        body['system'] = system;
+      }
+      if (_providerID != null && _modelID != null) {
+        body['model'] = {
+          'providerID': _providerID,
+          'modelID': _modelID,
+        };
+      }
+      if (_availableAgents.isNotEmpty) {
+        body['agent'] = _availableAgents.first;
+      }
+      final requestBody = json.encode(body);
+
+      final response = await _client.post(
+        uri,
+        headers: {'Content-Type': 'application/json'},
+        body: requestBody,
+      ).timeout(const Duration(seconds: 10));
+
+      if (response.statusCode != 200 && response.statusCode != 204) {
+        throw Exception('Failed to send async message: ${response.statusCode}');
+      }
+    } catch (e) {
+      rethrow;
+    }
+  }
+
   Future<void> abortSession(String sessionId) async {
     try {
       final uri = Uri.parse('$_baseUrl/session/$sessionId/abort');

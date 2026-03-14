@@ -7,6 +7,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:spacetimedb_dart_sdk/spacetimedb_dart_sdk.dart' as stdb;
 import '../services/debug_logger.dart';
+import '../services/title_generation_service.dart';
 import 'package:spacetimedb_dart_sdk/spacetimedb_dart_sdk.dart'
     show
         ConnectionConfig,
@@ -37,6 +38,12 @@ class SpacetimeDbNotesRepository {
   String? _database;
   stdb.AuthTokenStore? _authStorage;
   OfflineStorage? _offlineStorage;
+  TitleGenerationService? _titleService;
+  TitleGenerationService? get titleService => _titleService;
+
+  void setTitleService(TitleGenerationService service) {
+    _titleService = service;
+  }
 
   // Client
   SpacetimeDbClient? _client;
@@ -578,6 +585,8 @@ class SpacetimeDbNotesRepository {
           OptimisticChange.update('note', oldNote.toJson(), newNote.toJson())
         ],
       );
+
+      _titleService?.onNoteSaved(id, content, oldNote.path);
 
       return true;
     } catch (e) {

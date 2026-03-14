@@ -270,7 +270,7 @@ class SessionBloc extends Bloc<SessionEvent, SessionState> {
     }
 
     try {
-      await openCodeClient.sendMessage(
+      await openCodeClient.sendMessageAsync(
         sessionId,
         message,
         agent: effectiveAgent,

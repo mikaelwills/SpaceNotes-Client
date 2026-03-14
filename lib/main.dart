@@ -14,6 +14,7 @@ import 'services/debug_logger.dart';
 import 'services/opencode_client.dart';
 import 'services/sse_service.dart';
 import 'services/message_queue_service.dart';
+import 'services/title_generation_service.dart';
 import 'blocs/connection/connection_bloc.dart';
 import 'blocs/session/session_bloc.dart';
 import 'blocs/session_list/session_list_bloc.dart';
@@ -79,6 +80,14 @@ void main() async {
     await WebConfigService.tryAutoConfigureFromServer(repo);
   }
 
+  final sseService = SSEService(configCubit: configCubit);
+  final titleService = TitleGenerationService(
+    openCodeClient: openCodeClient,
+    sseService: sseService,
+  );
+  titleService.setRepository(repo);
+  repo.setTitleService(titleService);
+
   runApp(UncontrolledProviderScope(
     container: container,
     child: OpenCodeApp(
@@ -87,6 +96,8 @@ void main() async {
       sessionBloc: sessionBloc,
       connectionBloc: connectionBloc,
       container: container,
+      sseService: sseService,
+      titleService: titleService,
     ),
   ));
 }
@@ -97,6 +108,8 @@ class OpenCodeApp extends StatefulWidget {
   final SessionBloc sessionBloc;
   final ConnectionBloc connectionBloc;
   final ProviderContainer container;
+  final SSEService sseService;
+  final TitleGenerationService titleService;
 
   const OpenCodeApp({
     super.key,
@@ -105,6 +118,8 @@ class OpenCodeApp extends StatefulWidget {
     required this.sessionBloc,
     required this.connectionBloc,
     required this.container,
+    required this.sseService,
+    required this.titleService,
   });
 
   @override
@@ -143,7 +158,8 @@ class _OpenCodeAppState extends State<OpenCodeApp> with WidgetsBindingObserver {
     return MultiProvider(
       providers: [
         Provider<OpenCodeClient>.value(value: widget.openCodeClient),
-        Provider<SSEService>(create: (_) => SSEService(configCubit: widget.configCubit)),
+        Provider<SSEService>.value(value: widget.sseService),
+        Provider<TitleGenerationService>.value(value: widget.titleService),
       ],
       child: MultiBlocProvider(
         providers: [
