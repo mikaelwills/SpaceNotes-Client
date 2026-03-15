@@ -145,12 +145,25 @@ class MobileNavBar extends ConsumerWidget {
                 const Spacer(),
               ],
 
-              if (!isOnNote && !currentLocation.startsWith('/notes/chat') && currentLocation != '/notes/sessions' && currentLocation != '/settings') ...[
+              if (!isOnNote && !currentLocation.startsWith('/notes/chat') && currentLocation != '/notes/sessions' && currentLocation != '/settings' && currentLocation != '/notes/users') ...[
                 GestureDetector(
                   onTap: () => context.go("/notes/chat"),
                   child: const Icon(Icons.chat_bubble_outline, color: SpaceNotesTheme.text),
                 ),
                 const SizedBox(width: 16),
+                GestureDetector(
+                  onTap: () => context.go("/notes/users"),
+                  child: const Icon(Icons.people_outline, color: SpaceNotesTheme.text),
+                ),
+                const SizedBox(width: 16),
+              ],
+
+              if (currentLocation == '/notes/users') ...[
+                GestureDetector(
+                  onTap: () => context.go("/notes"),
+                  child: const Icon(Icons.arrow_back, color: SpaceNotesTheme.text),
+                ),
+                const Spacer(),
               ],
 
               if (!currentLocation.startsWith('/notes/folder/') &&

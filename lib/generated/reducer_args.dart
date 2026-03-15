@@ -2,6 +2,28 @@
 
 import 'package:spacetimedb_dart_sdk/spacetimedb_dart_sdk.dart';
 
+/// Arguments for the accept_call reducer
+class AcceptCallArgs {
+  final Int64 sessionId;
+  AcceptCallArgs({required this.sessionId, });
+}
+
+/// Decoder for accept_call reducer arguments
+class AcceptCallArgsDecoder implements ReducerArgDecoder<AcceptCallArgs> {
+  @override
+  AcceptCallArgs? decode(BsatnDecoder decoder) {
+    try {
+      final sessionId = decoder.readU64();
+
+      return AcceptCallArgs(
+        sessionId: sessionId,
+      );
+    } catch (e) {
+      return null; // Deserialization failed
+    }
+  }
+}
+
 /// Arguments for the append_to_note reducer
 class AppendToNoteArgs {
   final String path;
@@ -167,6 +189,28 @@ class DeleteNoteArgsDecoder implements ReducerArgDecoder<DeleteNoteArgs> {
   }
 }
 
+/// Arguments for the end_call reducer
+class EndCallArgs {
+  final Int64 sessionId;
+  EndCallArgs({required this.sessionId, });
+}
+
+/// Decoder for end_call reducer arguments
+class EndCallArgsDecoder implements ReducerArgDecoder<EndCallArgs> {
+  @override
+  EndCallArgs? decode(BsatnDecoder decoder) {
+    try {
+      final sessionId = decoder.readU64();
+
+      return EndCallArgs(
+        sessionId: sessionId,
+      );
+    } catch (e) {
+      return null; // Deserialization failed
+    }
+  }
+}
+
 /// Arguments for the find_replace_in_note reducer
 class FindReplaceInNoteArgs {
   final String path;
@@ -213,63 +257,6 @@ class GetRecentNotesArgsDecoder implements ReducerArgDecoder<GetRecentNotesArgs>
 
       return GetRecentNotesArgs(
         limit: limit,
-      );
-    } catch (e) {
-      return null; // Deserialization failed
-    }
-  }
-}
-
-/// Arguments for the identity_connected reducer
-class IdentityConnectedArgs {
-  IdentityConnectedArgs();
-}
-
-/// Decoder for identity_connected reducer arguments
-class IdentityConnectedArgsDecoder implements ReducerArgDecoder<IdentityConnectedArgs> {
-  @override
-  IdentityConnectedArgs? decode(BsatnDecoder decoder) {
-    try {
-
-      return IdentityConnectedArgs(
-      );
-    } catch (e) {
-      return null; // Deserialization failed
-    }
-  }
-}
-
-/// Arguments for the identity_disconnected reducer
-class IdentityDisconnectedArgs {
-  IdentityDisconnectedArgs();
-}
-
-/// Decoder for identity_disconnected reducer arguments
-class IdentityDisconnectedArgsDecoder implements ReducerArgDecoder<IdentityDisconnectedArgs> {
-  @override
-  IdentityDisconnectedArgs? decode(BsatnDecoder decoder) {
-    try {
-
-      return IdentityDisconnectedArgs(
-      );
-    } catch (e) {
-      return null; // Deserialization failed
-    }
-  }
-}
-
-/// Arguments for the init reducer
-class InitArgs {
-  InitArgs();
-}
-
-/// Decoder for init reducer arguments
-class InitArgsDecoder implements ReducerArgDecoder<InitArgs> {
-  @override
-  InitArgs? decode(BsatnDecoder decoder) {
-    try {
-
-      return InitArgs(
       );
     } catch (e) {
       return null; // Deserialization failed
@@ -370,6 +357,106 @@ class RenameNoteArgsDecoder implements ReducerArgDecoder<RenameNoteArgs> {
       return RenameNoteArgs(
         id: id,
         newPath: newPath,
+      );
+    } catch (e) {
+      return null; // Deserialization failed
+    }
+  }
+}
+
+/// Arguments for the request_call reducer
+class RequestCallArgs {
+  final Identity callee;
+  RequestCallArgs({required this.callee, });
+}
+
+/// Decoder for request_call reducer arguments
+class RequestCallArgsDecoder implements ReducerArgDecoder<RequestCallArgs> {
+  @override
+  RequestCallArgs? decode(BsatnDecoder decoder) {
+    try {
+      final callee = decoder.readIdentity();
+
+      return RequestCallArgs(
+        callee: callee,
+      );
+    } catch (e) {
+      return null; // Deserialization failed
+    }
+  }
+}
+
+/// Arguments for the send_audio_frame reducer
+class SendAudioFrameArgs {
+  final Int64 sessionId;
+  final int seq;
+  final List<int> pcm;
+  SendAudioFrameArgs({required this.sessionId, required this.seq, required this.pcm, });
+}
+
+/// Decoder for send_audio_frame reducer arguments
+class SendAudioFrameArgsDecoder implements ReducerArgDecoder<SendAudioFrameArgs> {
+  @override
+  SendAudioFrameArgs? decode(BsatnDecoder decoder) {
+    try {
+      final sessionId = decoder.readU64();
+      final seq = decoder.readU32();
+      final pcm = decoder.readByteArray();
+
+      return SendAudioFrameArgs(
+        sessionId: sessionId,
+        seq: seq,
+        pcm: pcm,
+      );
+    } catch (e) {
+      return null; // Deserialization failed
+    }
+  }
+}
+
+/// Arguments for the send_video_frame reducer
+class SendVideoFrameArgs {
+  final Int64 sessionId;
+  final int seq;
+  final List<int> jpeg;
+  SendVideoFrameArgs({required this.sessionId, required this.seq, required this.jpeg, });
+}
+
+/// Decoder for send_video_frame reducer arguments
+class SendVideoFrameArgsDecoder implements ReducerArgDecoder<SendVideoFrameArgs> {
+  @override
+  SendVideoFrameArgs? decode(BsatnDecoder decoder) {
+    try {
+      final sessionId = decoder.readU64();
+      final seq = decoder.readU32();
+      final jpeg = decoder.readByteArray();
+
+      return SendVideoFrameArgs(
+        sessionId: sessionId,
+        seq: seq,
+        jpeg: jpeg,
+      );
+    } catch (e) {
+      return null; // Deserialization failed
+    }
+  }
+}
+
+/// Arguments for the set_display_name reducer
+class SetDisplayNameArgs {
+  final String name;
+  SetDisplayNameArgs({required this.name, });
+}
+
+/// Decoder for set_display_name reducer arguments
+class SetDisplayNameArgsDecoder implements ReducerArgDecoder<SetDisplayNameArgs> {
+  @override
+  SetDisplayNameArgs? decode(BsatnDecoder decoder) {
+    try {
+      final name = decoder.readString();
+
+      return SetDisplayNameArgs(
+        name: name,
       );
     } catch (e) {
       return null; // Deserialization failed

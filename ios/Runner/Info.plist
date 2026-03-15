@@ -45,6 +45,10 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>SpaceNotes uses the camera for video calls</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>SpaceNotes uses the microphone for voice and video calls</string>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsArbitraryLoads</key>

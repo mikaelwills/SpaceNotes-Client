@@ -17,6 +17,29 @@ class Reducers {
 
   Reducers(this._reducerCaller, this._reducerEmitter);
 
+  /// Call the accept_call reducer
+  ///
+  /// Returns [TransactionResult] with execution metadata:
+  /// - `result.isSuccess` - Check if reducer committed
+  /// - `result.energyConsumed` - Energy used (null for lightweight responses)
+  /// - `result.executionDuration` - How long it took (null for lightweight responses)
+  ///
+  /// Pass [optimisticChanges] to immediately update the local cache for offline-first UX.
+  /// Changes are rolled back if the server rejects them.
+  ///
+  /// Throws [ReducerException] if the reducer fails or runs out of energy.
+  /// Throws [TimeoutException] if the reducer doesn't complete within the timeout.
+  Future<TransactionResult> acceptCall({
+    required Int64 sessionId,
+    List<OptimisticChange>? optimisticChanges,
+    bool isEventTable = false,
+  }) async {
+    final encoder = BsatnEncoder();
+    encoder.writeU64(sessionId);
+
+    return await _reducerCaller.call('accept_call', encoder.toBytes(), optimisticChanges: optimisticChanges, isEventTable: isEventTable);
+  }
+
   /// Call the append_to_note reducer
   ///
   /// Returns [TransactionResult] with execution metadata:
@@ -33,12 +56,13 @@ class Reducers {
     required String path,
     required String content,
     List<OptimisticChange>? optimisticChanges,
+    bool isEventTable = false,
   }) async {
     final encoder = BsatnEncoder();
     encoder.writeString(path);
     encoder.writeString(content);
 
-    return await _reducerCaller.call('append_to_note', encoder.toBytes(), optimisticChanges: optimisticChanges);
+    return await _reducerCaller.call('append_to_note', encoder.toBytes(), optimisticChanges: optimisticChanges, isEventTable: isEventTable);
   }
 
   /// Call the clear_all reducer
@@ -53,10 +77,10 @@ class Reducers {
   ///
   /// Throws [ReducerException] if the reducer fails or runs out of energy.
   /// Throws [TimeoutException] if the reducer doesn't complete within the timeout.
-  Future<TransactionResult> clearAll({List<OptimisticChange>? optimisticChanges}) async {
+  Future<TransactionResult> clearAll({List<OptimisticChange>? optimisticChanges, bool isEventTable = false}) async {
     final encoder = BsatnEncoder();
 
-    return await _reducerCaller.call('clear_all', encoder.toBytes(), optimisticChanges: optimisticChanges);
+    return await _reducerCaller.call('clear_all', encoder.toBytes(), optimisticChanges: optimisticChanges, isEventTable: isEventTable);
   }
 
   /// Call the create_folder reducer
@@ -76,13 +100,14 @@ class Reducers {
     required String name,
     required int depth,
     List<OptimisticChange>? optimisticChanges,
+    bool isEventTable = false,
   }) async {
     final encoder = BsatnEncoder();
     encoder.writeString(path);
     encoder.writeString(name);
     encoder.writeU32(depth);
 
-    return await _reducerCaller.call('create_folder', encoder.toBytes(), optimisticChanges: optimisticChanges);
+    return await _reducerCaller.call('create_folder', encoder.toBytes(), optimisticChanges: optimisticChanges, isEventTable: isEventTable);
   }
 
   /// Call the create_note reducer
@@ -109,6 +134,7 @@ class Reducers {
     required Int64 createdTime,
     required Int64 modifiedTime,
     List<OptimisticChange>? optimisticChanges,
+    bool isEventTable = false,
   }) async {
     final encoder = BsatnEncoder();
     encoder.writeString(id);
@@ -122,7 +148,7 @@ class Reducers {
     encoder.writeU64(createdTime);
     encoder.writeU64(modifiedTime);
 
-    return await _reducerCaller.call('create_note', encoder.toBytes(), optimisticChanges: optimisticChanges);
+    return await _reducerCaller.call('create_note', encoder.toBytes(), optimisticChanges: optimisticChanges, isEventTable: isEventTable);
   }
 
   /// Call the delete_folder reducer
@@ -140,11 +166,12 @@ class Reducers {
   Future<TransactionResult> deleteFolder({
     required String path,
     List<OptimisticChange>? optimisticChanges,
+    bool isEventTable = false,
   }) async {
     final encoder = BsatnEncoder();
     encoder.writeString(path);
 
-    return await _reducerCaller.call('delete_folder', encoder.toBytes(), optimisticChanges: optimisticChanges);
+    return await _reducerCaller.call('delete_folder', encoder.toBytes(), optimisticChanges: optimisticChanges, isEventTable: isEventTable);
   }
 
   /// Call the delete_note reducer
@@ -162,11 +189,35 @@ class Reducers {
   Future<TransactionResult> deleteNote({
     required String id,
     List<OptimisticChange>? optimisticChanges,
+    bool isEventTable = false,
   }) async {
     final encoder = BsatnEncoder();
     encoder.writeString(id);
 
-    return await _reducerCaller.call('delete_note', encoder.toBytes(), optimisticChanges: optimisticChanges);
+    return await _reducerCaller.call('delete_note', encoder.toBytes(), optimisticChanges: optimisticChanges, isEventTable: isEventTable);
+  }
+
+  /// Call the end_call reducer
+  ///
+  /// Returns [TransactionResult] with execution metadata:
+  /// - `result.isSuccess` - Check if reducer committed
+  /// - `result.energyConsumed` - Energy used (null for lightweight responses)
+  /// - `result.executionDuration` - How long it took (null for lightweight responses)
+  ///
+  /// Pass [optimisticChanges] to immediately update the local cache for offline-first UX.
+  /// Changes are rolled back if the server rejects them.
+  ///
+  /// Throws [ReducerException] if the reducer fails or runs out of energy.
+  /// Throws [TimeoutException] if the reducer doesn't complete within the timeout.
+  Future<TransactionResult> endCall({
+    required Int64 sessionId,
+    List<OptimisticChange>? optimisticChanges,
+    bool isEventTable = false,
+  }) async {
+    final encoder = BsatnEncoder();
+    encoder.writeU64(sessionId);
+
+    return await _reducerCaller.call('end_call', encoder.toBytes(), optimisticChanges: optimisticChanges, isEventTable: isEventTable);
   }
 
   /// Call the find_replace_in_note reducer
@@ -187,6 +238,7 @@ class Reducers {
     required String newText,
     required bool replaceAll,
     List<OptimisticChange>? optimisticChanges,
+    bool isEventTable = false,
   }) async {
     final encoder = BsatnEncoder();
     encoder.writeString(path);
@@ -194,7 +246,7 @@ class Reducers {
     encoder.writeString(newText);
     encoder.writeBool(replaceAll);
 
-    return await _reducerCaller.call('find_replace_in_note', encoder.toBytes(), optimisticChanges: optimisticChanges);
+    return await _reducerCaller.call('find_replace_in_note', encoder.toBytes(), optimisticChanges: optimisticChanges, isEventTable: isEventTable);
   }
 
   /// Call the get_recent_notes reducer
@@ -212,65 +264,12 @@ class Reducers {
   Future<TransactionResult> getRecentNotes({
     required int limit,
     List<OptimisticChange>? optimisticChanges,
+    bool isEventTable = false,
   }) async {
     final encoder = BsatnEncoder();
     encoder.writeU32(limit);
 
-    return await _reducerCaller.call('get_recent_notes', encoder.toBytes(), optimisticChanges: optimisticChanges);
-  }
-
-  /// Call the identity_connected reducer
-  ///
-  /// Returns [TransactionResult] with execution metadata:
-  /// - `result.isSuccess` - Check if reducer committed
-  /// - `result.energyConsumed` - Energy used (null for lightweight responses)
-  /// - `result.executionDuration` - How long it took (null for lightweight responses)
-  ///
-  /// Pass [optimisticChanges] to immediately update the local cache for offline-first UX.
-  /// Changes are rolled back if the server rejects them.
-  ///
-  /// Throws [ReducerException] if the reducer fails or runs out of energy.
-  /// Throws [TimeoutException] if the reducer doesn't complete within the timeout.
-  Future<TransactionResult> identityConnected({List<OptimisticChange>? optimisticChanges}) async {
-    final encoder = BsatnEncoder();
-
-    return await _reducerCaller.call('identity_connected', encoder.toBytes(), optimisticChanges: optimisticChanges);
-  }
-
-  /// Call the identity_disconnected reducer
-  ///
-  /// Returns [TransactionResult] with execution metadata:
-  /// - `result.isSuccess` - Check if reducer committed
-  /// - `result.energyConsumed` - Energy used (null for lightweight responses)
-  /// - `result.executionDuration` - How long it took (null for lightweight responses)
-  ///
-  /// Pass [optimisticChanges] to immediately update the local cache for offline-first UX.
-  /// Changes are rolled back if the server rejects them.
-  ///
-  /// Throws [ReducerException] if the reducer fails or runs out of energy.
-  /// Throws [TimeoutException] if the reducer doesn't complete within the timeout.
-  Future<TransactionResult> identityDisconnected({List<OptimisticChange>? optimisticChanges}) async {
-    final encoder = BsatnEncoder();
-
-    return await _reducerCaller.call('identity_disconnected', encoder.toBytes(), optimisticChanges: optimisticChanges);
-  }
-
-  /// Call the init reducer
-  ///
-  /// Returns [TransactionResult] with execution metadata:
-  /// - `result.isSuccess` - Check if reducer committed
-  /// - `result.energyConsumed` - Energy used (null for lightweight responses)
-  /// - `result.executionDuration` - How long it took (null for lightweight responses)
-  ///
-  /// Pass [optimisticChanges] to immediately update the local cache for offline-first UX.
-  /// Changes are rolled back if the server rejects them.
-  ///
-  /// Throws [ReducerException] if the reducer fails or runs out of energy.
-  /// Throws [TimeoutException] if the reducer doesn't complete within the timeout.
-  Future<TransactionResult> init({List<OptimisticChange>? optimisticChanges}) async {
-    final encoder = BsatnEncoder();
-
-    return await _reducerCaller.call('init', encoder.toBytes(), optimisticChanges: optimisticChanges);
+    return await _reducerCaller.call('get_recent_notes', encoder.toBytes(), optimisticChanges: optimisticChanges, isEventTable: isEventTable);
   }
 
   /// Call the move_folder reducer
@@ -289,12 +288,13 @@ class Reducers {
     required String oldPath,
     required String newPath,
     List<OptimisticChange>? optimisticChanges,
+    bool isEventTable = false,
   }) async {
     final encoder = BsatnEncoder();
     encoder.writeString(oldPath);
     encoder.writeString(newPath);
 
-    return await _reducerCaller.call('move_folder', encoder.toBytes(), optimisticChanges: optimisticChanges);
+    return await _reducerCaller.call('move_folder', encoder.toBytes(), optimisticChanges: optimisticChanges, isEventTable: isEventTable);
   }
 
   /// Call the move_note reducer
@@ -313,12 +313,13 @@ class Reducers {
     required String oldPath,
     required String newPath,
     List<OptimisticChange>? optimisticChanges,
+    bool isEventTable = false,
   }) async {
     final encoder = BsatnEncoder();
     encoder.writeString(oldPath);
     encoder.writeString(newPath);
 
-    return await _reducerCaller.call('move_note', encoder.toBytes(), optimisticChanges: optimisticChanges);
+    return await _reducerCaller.call('move_note', encoder.toBytes(), optimisticChanges: optimisticChanges, isEventTable: isEventTable);
   }
 
   /// Call the prepend_to_note reducer
@@ -337,12 +338,13 @@ class Reducers {
     required String path,
     required String content,
     List<OptimisticChange>? optimisticChanges,
+    bool isEventTable = false,
   }) async {
     final encoder = BsatnEncoder();
     encoder.writeString(path);
     encoder.writeString(content);
 
-    return await _reducerCaller.call('prepend_to_note', encoder.toBytes(), optimisticChanges: optimisticChanges);
+    return await _reducerCaller.call('prepend_to_note', encoder.toBytes(), optimisticChanges: optimisticChanges, isEventTable: isEventTable);
   }
 
   /// Call the rename_note reducer
@@ -361,12 +363,113 @@ class Reducers {
     required String id,
     required String newPath,
     List<OptimisticChange>? optimisticChanges,
+    bool isEventTable = false,
   }) async {
     final encoder = BsatnEncoder();
     encoder.writeString(id);
     encoder.writeString(newPath);
 
-    return await _reducerCaller.call('rename_note', encoder.toBytes(), optimisticChanges: optimisticChanges);
+    return await _reducerCaller.call('rename_note', encoder.toBytes(), optimisticChanges: optimisticChanges, isEventTable: isEventTable);
+  }
+
+  /// Call the request_call reducer
+  ///
+  /// Returns [TransactionResult] with execution metadata:
+  /// - `result.isSuccess` - Check if reducer committed
+  /// - `result.energyConsumed` - Energy used (null for lightweight responses)
+  /// - `result.executionDuration` - How long it took (null for lightweight responses)
+  ///
+  /// Pass [optimisticChanges] to immediately update the local cache for offline-first UX.
+  /// Changes are rolled back if the server rejects them.
+  ///
+  /// Throws [ReducerException] if the reducer fails or runs out of energy.
+  /// Throws [TimeoutException] if the reducer doesn't complete within the timeout.
+  Future<TransactionResult> requestCall({
+    required Identity callee,
+    List<OptimisticChange>? optimisticChanges,
+    bool isEventTable = false,
+  }) async {
+    final encoder = BsatnEncoder();
+    encoder.writeIdentity(callee);
+
+    return await _reducerCaller.call('request_call', encoder.toBytes(), optimisticChanges: optimisticChanges, isEventTable: isEventTable);
+  }
+
+  /// Call the send_audio_frame reducer
+  ///
+  /// Returns [TransactionResult] with execution metadata:
+  /// - `result.isSuccess` - Check if reducer committed
+  /// - `result.energyConsumed` - Energy used (null for lightweight responses)
+  /// - `result.executionDuration` - How long it took (null for lightweight responses)
+  ///
+  /// Pass [optimisticChanges] to immediately update the local cache for offline-first UX.
+  /// Changes are rolled back if the server rejects them.
+  ///
+  /// Throws [ReducerException] if the reducer fails or runs out of energy.
+  /// Throws [TimeoutException] if the reducer doesn't complete within the timeout.
+  Future<TransactionResult> sendAudioFrame({
+    required Int64 sessionId,
+    required int seq,
+    required List<int> pcm,
+    List<OptimisticChange>? optimisticChanges,
+    bool isEventTable = false,
+  }) async {
+    final encoder = BsatnEncoder();
+    encoder.writeU64(sessionId);
+    encoder.writeU32(seq);
+    encoder.writeByteArray(pcm);
+
+    return await _reducerCaller.call('send_audio_frame', encoder.toBytes(), optimisticChanges: optimisticChanges, isEventTable: isEventTable);
+  }
+
+  /// Call the send_video_frame reducer
+  ///
+  /// Returns [TransactionResult] with execution metadata:
+  /// - `result.isSuccess` - Check if reducer committed
+  /// - `result.energyConsumed` - Energy used (null for lightweight responses)
+  /// - `result.executionDuration` - How long it took (null for lightweight responses)
+  ///
+  /// Pass [optimisticChanges] to immediately update the local cache for offline-first UX.
+  /// Changes are rolled back if the server rejects them.
+  ///
+  /// Throws [ReducerException] if the reducer fails or runs out of energy.
+  /// Throws [TimeoutException] if the reducer doesn't complete within the timeout.
+  Future<TransactionResult> sendVideoFrame({
+    required Int64 sessionId,
+    required int seq,
+    required List<int> jpeg,
+    List<OptimisticChange>? optimisticChanges,
+    bool isEventTable = false,
+  }) async {
+    final encoder = BsatnEncoder();
+    encoder.writeU64(sessionId);
+    encoder.writeU32(seq);
+    encoder.writeByteArray(jpeg);
+
+    return await _reducerCaller.call('send_video_frame', encoder.toBytes(), optimisticChanges: optimisticChanges, isEventTable: isEventTable);
+  }
+
+  /// Call the set_display_name reducer
+  ///
+  /// Returns [TransactionResult] with execution metadata:
+  /// - `result.isSuccess` - Check if reducer committed
+  /// - `result.energyConsumed` - Energy used (null for lightweight responses)
+  /// - `result.executionDuration` - How long it took (null for lightweight responses)
+  ///
+  /// Pass [optimisticChanges] to immediately update the local cache for offline-first UX.
+  /// Changes are rolled back if the server rejects them.
+  ///
+  /// Throws [ReducerException] if the reducer fails or runs out of energy.
+  /// Throws [TimeoutException] if the reducer doesn't complete within the timeout.
+  Future<TransactionResult> setDisplayName({
+    required String name,
+    List<OptimisticChange>? optimisticChanges,
+    bool isEventTable = false,
+  }) async {
+    final encoder = BsatnEncoder();
+    encoder.writeString(name);
+
+    return await _reducerCaller.call('set_display_name', encoder.toBytes(), optimisticChanges: optimisticChanges, isEventTable: isEventTable);
   }
 
   /// Call the update_note_content reducer
@@ -388,6 +491,7 @@ class Reducers {
     required Int64 size,
     required Int64 modifiedTime,
     List<OptimisticChange>? optimisticChanges,
+    bool isEventTable = false,
   }) async {
     final encoder = BsatnEncoder();
     encoder.writeString(id);
@@ -396,7 +500,7 @@ class Reducers {
     encoder.writeU64(size);
     encoder.writeU64(modifiedTime);
 
-    return await _reducerCaller.call('update_note_content', encoder.toBytes(), optimisticChanges: optimisticChanges);
+    return await _reducerCaller.call('update_note_content', encoder.toBytes(), optimisticChanges: optimisticChanges, isEventTable: isEventTable);
   }
 
   /// Call the update_note_path reducer
@@ -415,12 +519,13 @@ class Reducers {
     required String id,
     required String newPath,
     List<OptimisticChange>? optimisticChanges,
+    bool isEventTable = false,
   }) async {
     final encoder = BsatnEncoder();
     encoder.writeString(id);
     encoder.writeString(newPath);
 
-    return await _reducerCaller.call('update_note_path', encoder.toBytes(), optimisticChanges: optimisticChanges);
+    return await _reducerCaller.call('update_note_path', encoder.toBytes(), optimisticChanges: optimisticChanges, isEventTable: isEventTable);
   }
 
   /// Call the upsert_folder reducer
@@ -440,13 +545,14 @@ class Reducers {
     required String name,
     required int depth,
     List<OptimisticChange>? optimisticChanges,
+    bool isEventTable = false,
   }) async {
     final encoder = BsatnEncoder();
     encoder.writeString(path);
     encoder.writeString(name);
     encoder.writeU32(depth);
 
-    return await _reducerCaller.call('upsert_folder', encoder.toBytes(), optimisticChanges: optimisticChanges);
+    return await _reducerCaller.call('upsert_folder', encoder.toBytes(), optimisticChanges: optimisticChanges, isEventTable: isEventTable);
   }
 
   /// Call the upsert_note reducer
@@ -473,6 +579,7 @@ class Reducers {
     required Int64 createdTime,
     required Int64 modifiedTime,
     List<OptimisticChange>? optimisticChanges,
+    bool isEventTable = false,
   }) async {
     final encoder = BsatnEncoder();
     encoder.writeString(id);
@@ -486,7 +593,22 @@ class Reducers {
     encoder.writeU64(createdTime);
     encoder.writeU64(modifiedTime);
 
-    return await _reducerCaller.call('upsert_note', encoder.toBytes(), optimisticChanges: optimisticChanges);
+    return await _reducerCaller.call('upsert_note', encoder.toBytes(), optimisticChanges: optimisticChanges, isEventTable: isEventTable);
+  }
+
+  StreamSubscription<void> onAcceptCall(void Function(EventContext ctx, Int64 sessionId) callback) {
+    return _reducerEmitter.on('accept_call').listen((EventContext ctx) {
+      // Pattern match to extract ReducerEvent
+      final event = ctx.event;
+      if (event is! ReducerEvent) return;
+
+      // Type guard - ensures args is correct type
+      final args = event.reducerArgs;
+      if (args is! AcceptCallArgs) return;
+
+      // Extract fields from strongly-typed object - NO CASTING
+      callback(ctx, args.sessionId);
+    });
   }
 
   StreamSubscription<void> onAppendToNote(void Function(EventContext ctx, String path, String content) callback) {
@@ -579,6 +701,21 @@ class Reducers {
     });
   }
 
+  StreamSubscription<void> onEndCall(void Function(EventContext ctx, Int64 sessionId) callback) {
+    return _reducerEmitter.on('end_call').listen((EventContext ctx) {
+      // Pattern match to extract ReducerEvent
+      final event = ctx.event;
+      if (event is! ReducerEvent) return;
+
+      // Type guard - ensures args is correct type
+      final args = event.reducerArgs;
+      if (args is! EndCallArgs) return;
+
+      // Extract fields from strongly-typed object - NO CASTING
+      callback(ctx, args.sessionId);
+    });
+  }
+
   StreamSubscription<void> onFindReplaceInNote(void Function(EventContext ctx, String path, String oldText, String newText, bool replaceAll) callback) {
     return _reducerEmitter.on('find_replace_in_note').listen((EventContext ctx) {
       // Pattern match to extract ReducerEvent
@@ -606,51 +743,6 @@ class Reducers {
 
       // Extract fields from strongly-typed object - NO CASTING
       callback(ctx, args.limit);
-    });
-  }
-
-  StreamSubscription<void> onIdentityConnected(void Function(EventContext ctx) callback) {
-    return _reducerEmitter.on('identity_connected').listen((EventContext ctx) {
-      // Pattern match to extract ReducerEvent
-      final event = ctx.event;
-      if (event is! ReducerEvent) return;
-
-      // Type guard - ensures args is correct type
-      final args = event.reducerArgs;
-      if (args is! IdentityConnectedArgs) return;
-
-      // Extract fields from strongly-typed object - NO CASTING
-      callback(ctx);
-    });
-  }
-
-  StreamSubscription<void> onIdentityDisconnected(void Function(EventContext ctx) callback) {
-    return _reducerEmitter.on('identity_disconnected').listen((EventContext ctx) {
-      // Pattern match to extract ReducerEvent
-      final event = ctx.event;
-      if (event is! ReducerEvent) return;
-
-      // Type guard - ensures args is correct type
-      final args = event.reducerArgs;
-      if (args is! IdentityDisconnectedArgs) return;
-
-      // Extract fields from strongly-typed object - NO CASTING
-      callback(ctx);
-    });
-  }
-
-  StreamSubscription<void> onInit(void Function(EventContext ctx) callback) {
-    return _reducerEmitter.on('init').listen((EventContext ctx) {
-      // Pattern match to extract ReducerEvent
-      final event = ctx.event;
-      if (event is! ReducerEvent) return;
-
-      // Type guard - ensures args is correct type
-      final args = event.reducerArgs;
-      if (args is! InitArgs) return;
-
-      // Extract fields from strongly-typed object - NO CASTING
-      callback(ctx);
     });
   }
 
@@ -711,6 +803,66 @@ class Reducers {
 
       // Extract fields from strongly-typed object - NO CASTING
       callback(ctx, args.id, args.newPath);
+    });
+  }
+
+  StreamSubscription<void> onRequestCall(void Function(EventContext ctx, Identity callee) callback) {
+    return _reducerEmitter.on('request_call').listen((EventContext ctx) {
+      // Pattern match to extract ReducerEvent
+      final event = ctx.event;
+      if (event is! ReducerEvent) return;
+
+      // Type guard - ensures args is correct type
+      final args = event.reducerArgs;
+      if (args is! RequestCallArgs) return;
+
+      // Extract fields from strongly-typed object - NO CASTING
+      callback(ctx, args.callee);
+    });
+  }
+
+  StreamSubscription<void> onSendAudioFrame(void Function(EventContext ctx, Int64 sessionId, int seq, List<int> pcm) callback) {
+    return _reducerEmitter.on('send_audio_frame').listen((EventContext ctx) {
+      // Pattern match to extract ReducerEvent
+      final event = ctx.event;
+      if (event is! ReducerEvent) return;
+
+      // Type guard - ensures args is correct type
+      final args = event.reducerArgs;
+      if (args is! SendAudioFrameArgs) return;
+
+      // Extract fields from strongly-typed object - NO CASTING
+      callback(ctx, args.sessionId, args.seq, args.pcm);
+    });
+  }
+
+  StreamSubscription<void> onSendVideoFrame(void Function(EventContext ctx, Int64 sessionId, int seq, List<int> jpeg) callback) {
+    return _reducerEmitter.on('send_video_frame').listen((EventContext ctx) {
+      // Pattern match to extract ReducerEvent
+      final event = ctx.event;
+      if (event is! ReducerEvent) return;
+
+      // Type guard - ensures args is correct type
+      final args = event.reducerArgs;
+      if (args is! SendVideoFrameArgs) return;
+
+      // Extract fields from strongly-typed object - NO CASTING
+      callback(ctx, args.sessionId, args.seq, args.jpeg);
+    });
+  }
+
+  StreamSubscription<void> onSetDisplayName(void Function(EventContext ctx, String name) callback) {
+    return _reducerEmitter.on('set_display_name').listen((EventContext ctx) {
+      // Pattern match to extract ReducerEvent
+      final event = ctx.event;
+      if (event is! ReducerEvent) return;
+
+      // Type guard - ensures args is correct type
+      final args = event.reducerArgs;
+      if (args is! SetDisplayNameArgs) return;
+
+      // Extract fields from strongly-typed object - NO CASTING
+      callback(ctx, args.name);
     });
   }
 

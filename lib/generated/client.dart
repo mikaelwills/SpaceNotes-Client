@@ -5,8 +5,12 @@ import 'dart:async';
 import 'package:spacetimedb_dart_sdk/spacetimedb_dart_sdk.dart';
 import 'reducers.dart';
 import 'reducer_args.dart';
-import 'folder.dart';
+import 'call_session.dart';
+import 'connected_user.dart';
 import 'note.dart';
+import 'audio_frame.dart';
+import 'folder.dart';
+import 'video_frame.dart';
 
 class SpacetimeDbClient {
   final SpacetimeDbConnection connection;
@@ -56,12 +60,28 @@ class SpacetimeDbClient {
   /// Stream of individual mutation sync results
   Stream<MutationSyncResult> get onMutationSyncResult => subscriptions.onMutationSyncResult;
 
-  TableCache<Folder> get folder {
-    return subscriptions.cache.getTableByTypedName<Folder>('folder');
+  TableCache<CallSession> get callSession {
+    return subscriptions.cache.getTableByTypedName<CallSession>('call_session');
+  }
+
+  TableCache<ConnectedUser> get connectedUser {
+    return subscriptions.cache.getTableByTypedName<ConnectedUser>('connected_user');
   }
 
   TableCache<Note> get note {
     return subscriptions.cache.getTableByTypedName<Note>('note');
+  }
+
+  TableCache<AudioFrame> get audioFrame {
+    return subscriptions.cache.getTableByTypedName<AudioFrame>('audio_frame');
+  }
+
+  TableCache<Folder> get folder {
+    return subscriptions.cache.getTableByTypedName<Folder>('folder');
+  }
+
+  TableCache<VideoFrame> get videoFrame {
+    return subscriptions.cache.getTableByTypedName<VideoFrame>('video_frame');
   }
 
   SpacetimeDbClient._({
@@ -104,27 +124,34 @@ class SpacetimeDbClient {
     final subscriptionManager = SubscriptionManager(connection, offlineStorage: offlineStorage);
 
     // Auto-register table decoders
-    subscriptionManager.cache.registerDecoder<Folder>('folder', FolderDecoder());
+    subscriptionManager.cache.registerDecoder<CallSession>('call_session', CallSessionDecoder());
+    subscriptionManager.cache.registerDecoder<ConnectedUser>('connected_user', ConnectedUserDecoder());
     subscriptionManager.cache.registerDecoder<Note>('note', NoteDecoder());
+    subscriptionManager.cache.registerDecoder<AudioFrame>('audio_frame', AudioFrameDecoder(), isEvent: true);
+    subscriptionManager.cache.registerDecoder<Folder>('folder', FolderDecoder());
+    subscriptionManager.cache.registerDecoder<VideoFrame>('video_frame', VideoFrameDecoder(), isEvent: true);
 
     // Auto-register view decoders
 
     // Auto-register reducer argument decoders
+    subscriptionManager.reducerRegistry.registerDecoder('accept_call', AcceptCallArgsDecoder());
     subscriptionManager.reducerRegistry.registerDecoder('append_to_note', AppendToNoteArgsDecoder());
     subscriptionManager.reducerRegistry.registerDecoder('clear_all', ClearAllArgsDecoder());
     subscriptionManager.reducerRegistry.registerDecoder('create_folder', CreateFolderArgsDecoder());
     subscriptionManager.reducerRegistry.registerDecoder('create_note', CreateNoteArgsDecoder());
     subscriptionManager.reducerRegistry.registerDecoder('delete_folder', DeleteFolderArgsDecoder());
     subscriptionManager.reducerRegistry.registerDecoder('delete_note', DeleteNoteArgsDecoder());
+    subscriptionManager.reducerRegistry.registerDecoder('end_call', EndCallArgsDecoder());
     subscriptionManager.reducerRegistry.registerDecoder('find_replace_in_note', FindReplaceInNoteArgsDecoder());
     subscriptionManager.reducerRegistry.registerDecoder('get_recent_notes', GetRecentNotesArgsDecoder());
-    subscriptionManager.reducerRegistry.registerDecoder('identity_connected', IdentityConnectedArgsDecoder());
-    subscriptionManager.reducerRegistry.registerDecoder('identity_disconnected', IdentityDisconnectedArgsDecoder());
-    subscriptionManager.reducerRegistry.registerDecoder('init', InitArgsDecoder());
     subscriptionManager.reducerRegistry.registerDecoder('move_folder', MoveFolderArgsDecoder());
     subscriptionManager.reducerRegistry.registerDecoder('move_note', MoveNoteArgsDecoder());
     subscriptionManager.reducerRegistry.registerDecoder('prepend_to_note', PrependToNoteArgsDecoder());
     subscriptionManager.reducerRegistry.registerDecoder('rename_note', RenameNoteArgsDecoder());
+    subscriptionManager.reducerRegistry.registerDecoder('request_call', RequestCallArgsDecoder());
+    subscriptionManager.reducerRegistry.registerDecoder('send_audio_frame', SendAudioFrameArgsDecoder());
+    subscriptionManager.reducerRegistry.registerDecoder('send_video_frame', SendVideoFrameArgsDecoder());
+    subscriptionManager.reducerRegistry.registerDecoder('set_display_name', SetDisplayNameArgsDecoder());
     subscriptionManager.reducerRegistry.registerDecoder('update_note_content', UpdateNoteContentArgsDecoder());
     subscriptionManager.reducerRegistry.registerDecoder('update_note_path', UpdateNotePathArgsDecoder());
     subscriptionManager.reducerRegistry.registerDecoder('upsert_folder', UpsertFolderArgsDecoder());
@@ -155,9 +182,6 @@ class SpacetimeDbClient {
       if (initialSubscriptions != null && initialSubscriptions.isNotEmpty) {
         await subscriptionManager.subscribe(initialSubscriptions).timeout(subscriptionTimeout);
       }
-    } on SpacetimeDbAuthException {
-      // Auth exceptions must always be rethrown so app can handle recovery
-      rethrow;
     } catch (e) {
       if (offlineStorage != null) {
         // Offline mode: connection failed but we have cached data, continue in offline mode

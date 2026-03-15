@@ -180,7 +180,11 @@ class SpacetimeDbNotesRepository {
             ssl: false,
             initialSubscriptions: [
               'SELECT * FROM note',
-              'SELECT * FROM folder'
+              'SELECT * FROM folder',
+              'SELECT * FROM call_session',
+              'SELECT * FROM connected_user',
+              'SELECT * FROM video_frame',
+              'SELECT * FROM audio_frame',
             ],
             subscriptionTimeout: const Duration(seconds: 10),
             config: const ConnectionConfig(
@@ -209,7 +213,11 @@ class SpacetimeDbNotesRepository {
             ssl: false,
             initialSubscriptions: [
               'SELECT * FROM note',
-              'SELECT * FROM folder'
+              'SELECT * FROM folder',
+              'SELECT * FROM call_session',
+              'SELECT * FROM connected_user',
+              'SELECT * FROM video_frame',
+              'SELECT * FROM audio_frame',
             ],
             subscriptionTimeout: const Duration(seconds: 10),
             config: const ConnectionConfig(

@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:spacetimedb_dart_sdk/spacetimedb_dart_sdk.dart' show Int64;
+import '../screens/call_screen.dart';
 import '../screens/connect_screen.dart';
+import '../screens/online_users_screen.dart';
 import '../screens/sessions_screen.dart';
 import '../screens/settings_screen.dart';
 import '../screens/provider_list_screen.dart';
@@ -122,6 +125,25 @@ GoRouter createAppRouter(ProviderContainer container) {
                 return _buildFadeTransitionPage(
                   key: state.pageKey,
                   child: NoteScreen(noteId: noteId),
+                );
+              },
+            ),
+            GoRoute(
+              path: '/notes/users',
+              name: 'online-users',
+              pageBuilder: (context, state) => _buildFadeTransitionPage(
+                key: state.pageKey,
+                child: const OnlineUsersScreen(),
+              ),
+            ),
+            GoRoute(
+              path: '/notes/call/:sessionId',
+              name: 'call',
+              pageBuilder: (context, state) {
+                final sessionId = Int64(int.parse(state.pathParameters['sessionId']!));
+                return _buildFadeTransitionPage(
+                  key: state.pageKey,
+                  child: CallScreen(sessionId: sessionId),
                 );
               },
             ),
