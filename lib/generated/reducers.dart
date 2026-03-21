@@ -437,14 +437,18 @@ class Reducers {
   Future<TransactionResult> sendVideoFrame({
     required Int64 sessionId,
     required int seq,
-    required List<int> jpeg,
+    required int codec,
+    required bool isKeyframe,
+    required List<int> data,
     List<OptimisticChange>? optimisticChanges,
     bool isEventTable = false,
   }) async {
     final encoder = BsatnEncoder();
     encoder.writeU64(sessionId);
     encoder.writeU32(seq);
-    encoder.writeByteArray(jpeg);
+    encoder.writeU8(codec);
+    encoder.writeBool(isKeyframe);
+    encoder.writeByteArray(data);
 
     return await _reducerCaller.call('send_video_frame', encoder.toBytes(), optimisticChanges: optimisticChanges, isEventTable: isEventTable);
   }
@@ -836,7 +840,7 @@ class Reducers {
     });
   }
 
-  StreamSubscription<void> onSendVideoFrame(void Function(EventContext ctx, Int64 sessionId, int seq, List<int> jpeg) callback) {
+  StreamSubscription<void> onSendVideoFrame(void Function(EventContext ctx, Int64 sessionId, int seq, int codec, bool isKeyframe, List<int> data) callback) {
     return _reducerEmitter.on('send_video_frame').listen((EventContext ctx) {
       // Pattern match to extract ReducerEvent
       final event = ctx.event;
@@ -847,7 +851,7 @@ class Reducers {
       if (args is! SendVideoFrameArgs) return;
 
       // Extract fields from strongly-typed object - NO CASTING
-      callback(ctx, args.sessionId, args.seq, args.jpeg);
+      callback(ctx, args.sessionId, args.seq, args.codec, args.isKeyframe, args.data);
     });
   }
 

@@ -6,20 +6,26 @@ class VideoFrame {
   final Int64 sessionId;
   final Identity from;
   final int seq;
-  final List<int> jpeg;
+  final int codec;
+  final bool isKeyframe;
+  final List<int> data;
 
   VideoFrame({
     required this.sessionId,
     required this.from,
     required this.seq,
-    required this.jpeg,
+    required this.codec,
+    required this.isKeyframe,
+    required this.data,
   });
 
   void encodeBsatn(BsatnEncoder encoder) {
     encoder.writeU64(sessionId);
     encoder.writeIdentity(from);
     encoder.writeU32(seq);
-    encoder.writeByteArray(jpeg);
+    encoder.writeU8(codec);
+    encoder.writeBool(isKeyframe);
+    encoder.writeByteArray(data);
   }
 
   static VideoFrame decodeBsatn(BsatnDecoder decoder) {
@@ -27,7 +33,9 @@ class VideoFrame {
       sessionId: decoder.readU64(),
       from: decoder.readIdentity(),
       seq: decoder.readU32(),
-      jpeg: decoder.readByteArray(),
+      codec: decoder.readU8(),
+      isKeyframe: decoder.readBool(),
+      data: decoder.readByteArray(),
     );
   }
 
@@ -36,7 +44,9 @@ class VideoFrame {
       'sessionId': sessionId.toInt(),
       'from': from.toJson(),
       'seq': seq,
-      'jpeg': jpeg,
+      'codec': codec,
+      'isKeyframe': isKeyframe,
+      'data': data,
     };
   }
 
@@ -45,7 +55,9 @@ class VideoFrame {
       sessionId: Int64((json['sessionId'] as int?) ?? 0),
       from: Identity.fromJson(json['from'] as String),
       seq: (json['seq'] as int?) ?? 0,
-      jpeg: (json['jpeg'] as List?)?.cast<int>() ?? [],
+      codec: (json['codec'] as int?) ?? 0,
+      isKeyframe: (json['isKeyframe'] as bool?) ?? false,
+      data: (json['data'] as List?)?.cast<int>() ?? [],
     );
   }
 

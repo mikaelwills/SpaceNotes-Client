@@ -4,23 +4,61 @@ import 'dart:typed_data';
 import 'package:web/web.dart' as web;
 import 'video_capture.dart';
 
+@JS('SpaceNotesCodecs.startEncoder')
+external void _jsStartEncoder(int width, int height, int fps, int keyframeInterval, JSFunction onFrame);
+
+@JS('SpaceNotesCodecs.stopEncoder')
+external void _jsStopEncoder();
+
+@JS('SpaceNotesCodecs.startDecoder')
+external void _jsStartDecoder(String canvasId);
+
+@JS('SpaceNotesCodecs.decodeFrame')
+external void _jsDecodeFrame(JSUint8Array data, bool isKeyframe);
+
+@JS('SpaceNotesCodecs.stopDecoder')
+external void _jsStopDecoder();
+
 class WebVideoCaptureService implements VideoCaptureService {
-  final _frameController = StreamController<Uint8List>.broadcast();
+  final _frameController = StreamController<CapturedFrame>.broadcast();
   bool _isCapturing = false;
   Timer? _captureTimer;
   web.HTMLVideoElement? _video;
   web.HTMLCanvasElement? _canvas;
   FrameTimingCallback? _onFrameTiming;
+  String _codecMode = 'jpeg';
 
   @override
-  Stream<Uint8List> get frameStream => _frameController.stream;
+  Stream<CapturedFrame> get frameStream => _frameController.stream;
 
   @override
   bool get isCapturing => _isCapturing;
 
   @override
-  Future<void> start({int fps = 10, int width = 320, int height = 240, FrameTimingCallback? onFrameTiming}) async {
+  Future<void> start({int fps = 10, int width = 320, int height = 240, String codec = 'jpeg', FrameTimingCallback? onFrameTiming}) async {
     _onFrameTiming = onFrameTiming;
+    _codecMode = codec;
+    _isCapturing = true;
+
+    if (codec == 'h264') {
+      _startH264(width, height, fps);
+    } else {
+      _startJpeg(width, height, fps);
+    }
+  }
+
+  void _startH264(int width, int height, int fps) {
+    final onFrame = ((JSUint8Array jsData, bool isKeyframe, int size) {
+      if (!_isCapturing) return;
+      final data = jsData.toDart;
+      _onFrameTiming?.call(totalMs: 0, sizeBytes: data.length);
+      _frameController.add(CapturedFrame(data: Uint8List.fromList(data), codec: 1, isKeyframe: isKeyframe));
+    }).toJS;
+
+    _jsStartEncoder(width, height, fps, fps, onFrame);
+  }
+
+  void _startJpeg(int width, int height, int fps) async {
     _video = web.HTMLVideoElement();
     _canvas = web.HTMLCanvasElement()
       ..width = width
@@ -37,14 +75,13 @@ class WebVideoCaptureService implements VideoCaptureService {
     _video!.srcObject = stream;
     await _video!.play().toDart;
 
-    _isCapturing = true;
     _captureTimer = Timer.periodic(
       Duration(milliseconds: (1000 / fps).round()),
-      (_) => _capture(),
+      (_) => _captureJpeg(),
     );
   }
 
-  Future<void> _capture() async {
+  Future<void> _captureJpeg() async {
     if (!_isCapturing || _video == null || _canvas == null) return;
 
     final sw = Stopwatch()..start();
@@ -70,21 +107,26 @@ class WebVideoCaptureService implements VideoCaptureService {
     final totalMs = sw.elapsedMilliseconds;
     _onFrameTiming?.call(totalMs: totalMs, sizeBytes: bytes.length);
 
-    _frameController.add(bytes);
+    _frameController.add(CapturedFrame(data: bytes, codec: 0, isKeyframe: true));
   }
 
   @override
   void stop() {
     _isCapturing = false;
-    _captureTimer?.cancel();
-    _captureTimer = null;
 
-    final stream = _video?.srcObject;
-    if (stream != null) {
-      final ms = stream as web.MediaStream;
-      final tracks = ms.getTracks().toDart;
-      for (final track in tracks) {
-        track.stop();
+    if (_codecMode == 'h264') {
+      _jsStopEncoder();
+    } else {
+      _captureTimer?.cancel();
+      _captureTimer = null;
+
+      final stream = _video?.srcObject;
+      if (stream != null) {
+        final ms = stream as web.MediaStream;
+        final tracks = ms.getTracks().toDart;
+        for (final track in tracks) {
+          track.stop();
+        }
       }
     }
   }

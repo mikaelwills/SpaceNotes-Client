@@ -418,8 +418,10 @@ class SendAudioFrameArgsDecoder implements ReducerArgDecoder<SendAudioFrameArgs>
 class SendVideoFrameArgs {
   final Int64 sessionId;
   final int seq;
-  final List<int> jpeg;
-  SendVideoFrameArgs({required this.sessionId, required this.seq, required this.jpeg, });
+  final int codec;
+  final bool isKeyframe;
+  final List<int> data;
+  SendVideoFrameArgs({required this.sessionId, required this.seq, required this.codec, required this.isKeyframe, required this.data, });
 }
 
 /// Decoder for send_video_frame reducer arguments
@@ -429,12 +431,16 @@ class SendVideoFrameArgsDecoder implements ReducerArgDecoder<SendVideoFrameArgs>
     try {
       final sessionId = decoder.readU64();
       final seq = decoder.readU32();
-      final jpeg = decoder.readByteArray();
+      final codec = decoder.readU8();
+      final isKeyframe = decoder.readBool();
+      final data = decoder.readByteArray();
 
       return SendVideoFrameArgs(
         sessionId: sessionId,
         seq: seq,
-        jpeg: jpeg,
+        codec: codec,
+        isKeyframe: isKeyframe,
+        data: data,
       );
     } catch (e) {
       return null; // Deserialization failed

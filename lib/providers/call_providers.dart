@@ -15,36 +15,31 @@ final activeCallSessionProvider = StreamProvider<CallSession?>((ref) {
 
     final controller = StreamController<CallSession?>();
 
+    CallSession? lastEmitted;
+
     void emit() {
       final myIdentity = client.identity;
       if (myIdentity == null) {
         controller.add(null);
         return;
       }
-      final allSessions = client.callSession.iter().toList();
-      debugLogger.info('CALL_SESSION', 'All sessions: ${allSessions.map((s) => 'id=${s.sessionId} state=${s.state.runtimeType}').toList()}');
-      final sessions = allSessions.where((s) {
+      final sessions = client.callSession.iter().where((s) {
         final isParticipant = s.caller == myIdentity || s.callee == myIdentity;
         final isActive = s.state is! CallStateEnded;
         return isParticipant && isActive;
       }).toList();
-      debugLogger.info('CALL_SESSION', 'Active for me: ${sessions.length}');
-      controller.add(sessions.isEmpty ? null : sessions.first);
+      final session = sessions.isEmpty ? null : sessions.first;
+      if (session?.sessionId != lastEmitted?.sessionId || session?.state.runtimeType != lastEmitted?.state.runtimeType) {
+        debugLogger.info('CALL_SESSION', 'Active session: ${session != null ? "id=${session.sessionId} state=${session.state.runtimeType}" : "none"}');
+        lastEmitted = session;
+      }
+      controller.add(session);
     }
 
     final subs = <StreamSubscription>[];
-    subs.add(client.callSession.insertEventStream.listen((_) {
-      debugLogger.info('CALL_SESSION', 'Insert event received');
-      emit();
-    }));
-    subs.add(client.callSession.updateEventStream.listen((_) {
-      debugLogger.info('CALL_SESSION', 'Update event received');
-      emit();
-    }));
-    subs.add(client.callSession.deleteEventStream.listen((_) {
-      debugLogger.info('CALL_SESSION', 'Delete event received');
-      emit();
-    }));
+    subs.add(client.callSession.insertEventStream.listen((_) => emit()));
+    subs.add(client.callSession.updateEventStream.listen((_) => emit()));
+    subs.add(client.callSession.deleteEventStream.listen((_) => emit()));
 
     emit();
 
@@ -63,45 +58,34 @@ final activeCallSessionProvider = StreamProvider<CallSession?>((ref) {
 });
 
 final incomingCallProvider = StreamProvider<CallSession?>((ref) {
-  debugLogger.info('INCOMING_CALL', 'Provider created');
   final repository = ref.watch(notesRepositoryProvider);
   return repository.watchClient().distinct().asyncExpand((client) {
-    if (client == null) {
-      debugLogger.info('INCOMING_CALL', 'Client is null');
-      return Stream.value(null);
-    }
+    if (client == null) return Stream.value(null);
 
-    debugLogger.info('INCOMING_CALL', 'Client ready, setting up listeners');
     final controller = StreamController<CallSession?>();
+    bool hadIncoming = false;
 
     void emit() {
       final myIdentity = client.identity;
       if (myIdentity == null) {
-        debugLogger.info('INCOMING_CALL', 'Identity is null');
         controller.add(null);
         return;
       }
-      final allSessions = client.callSession.iter().toList();
-      final ringing = allSessions.where((s) {
+      final ringing = client.callSession.iter().where((s) {
         return s.callee == myIdentity && s.state is CallStateRinging;
       }).toList();
-      debugLogger.info('INCOMING_CALL', 'Total sessions=${allSessions.length}, ringing for me=${ringing.length}');
+      final hasIncoming = ringing.isNotEmpty;
+      if (hasIncoming != hadIncoming) {
+        debugLogger.info('INCOMING_CALL', hasIncoming ? 'Ringing: id=${ringing.first.sessionId}' : 'No incoming calls');
+        hadIncoming = hasIncoming;
+      }
       controller.add(ringing.isEmpty ? null : ringing.first);
     }
 
     final subs = <StreamSubscription>[];
-    subs.add(client.callSession.insertEventStream.listen((_) {
-      debugLogger.info('INCOMING_CALL', 'Insert event');
-      emit();
-    }));
-    subs.add(client.callSession.updateEventStream.listen((_) {
-      debugLogger.info('INCOMING_CALL', 'Update event');
-      emit();
-    }));
-    subs.add(client.callSession.deleteEventStream.listen((_) {
-      debugLogger.info('INCOMING_CALL', 'Delete event');
-      emit();
-    }));
+    subs.add(client.callSession.insertEventStream.listen((_) => emit()));
+    subs.add(client.callSession.updateEventStream.listen((_) => emit()));
+    subs.add(client.callSession.deleteEventStream.listen((_) => emit()));
 
     emit();
 
@@ -110,7 +94,6 @@ final incomingCallProvider = StreamProvider<CallSession?>((ref) {
     });
 
     controller.onCancel = () {
-      debugLogger.info('INCOMING_CALL', 'Provider cancelled');
       for (final sub in subs) {
         sub.cancel();
       }
@@ -120,25 +103,55 @@ final incomingCallProvider = StreamProvider<CallSession?>((ref) {
   });
 });
 
-final remoteVideoFrameProvider = StreamProvider.autoDispose<Uint8List?>((ref) {
+class ReceivedVideoFrame {
+  final Uint8List data;
+  final int codec;
+  final bool isKeyframe;
+  final int seq;
+
+  ReceivedVideoFrame({required this.data, required this.codec, required this.isKeyframe, required this.seq});
+}
+
+final remoteVideoFrameProvider = StreamProvider.autoDispose<ReceivedVideoFrame?>((ref) {
   final repository = ref.watch(notesRepositoryProvider);
   return repository.watchClient().asyncExpand((client) {
     if (client == null) return Stream.value(null);
 
-    final controller = StreamController<Uint8List?>();
+    final controller = StreamController<ReceivedVideoFrame?>();
     final myIdentity = client.identity;
-    debugLogger.info('VIDEO_RX', 'Listening for video frames, myIdentity=${myIdentity?.toAbbreviated}');
+    debugLogger.info('VIDEO_RX', 'Listening for video frames');
 
     int frameCount = 0;
+    bool emitting = false;
+    ReceivedVideoFrame? pendingFrame;
+
+    void tryEmit(ReceivedVideoFrame frame) {
+      if (emitting) {
+        pendingFrame = frame;
+        return;
+      }
+      emitting = true;
+      controller.add(frame);
+      Future.microtask(() {
+        emitting = false;
+        if (pendingFrame != null) {
+          final next = pendingFrame!;
+          pendingFrame = null;
+          tryEmit(next);
+        }
+      });
+    }
+
     final sub = client.videoFrame.insertEventStream.listen((event) {
       final frame = event.row;
       frameCount++;
-      if (frameCount <= 5 || frameCount % 30 == 0) {
-        debugLogger.info('VIDEO_RX', 'Frame #$frameCount from=${frame.from.toAbbreviated}, mine=${myIdentity?.toAbbreviated}, isRemote=${frame.from != myIdentity}, size=${frame.jpeg.length}');
+      if (frameCount <= 3 || frameCount % 300 == 0) {
+        final codecName = frame.codec == 0 ? 'JPEG' : 'H264';
+        debugLogger.info('VIDEO_RX', 'Frame #$frameCount, codec=$codecName, keyframe=${frame.isKeyframe}, size=${frame.data.length ~/ 1024}KB');
       }
       if (myIdentity != null && frame.from != myIdentity) {
-        ref.read(callServiceProvider).videoStats?.recordReceive(seq: frame.seq, sizeBytes: frame.jpeg.length);
-        controller.add(Uint8List.fromList(frame.jpeg));
+        ref.read(callServiceProvider).videoStats?.recordReceive(seq: frame.seq, sizeBytes: frame.data.length);
+        tryEmit(ReceivedVideoFrame(data: Uint8List.fromList(frame.data), codec: frame.codec, isKeyframe: frame.isKeyframe, seq: frame.seq));
       }
     });
 

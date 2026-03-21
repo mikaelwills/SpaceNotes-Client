@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:spacetimedb_dart_sdk/spacetimedb_dart_sdk.dart' show Int64;
 import '../screens/call_screen.dart';
+import '../screens/incoming_call_screen.dart';
 import '../screens/connect_screen.dart';
 import '../screens/online_users_screen.dart';
 import '../screens/sessions_screen.dart';
@@ -38,6 +39,25 @@ GoRouter createAppRouter(ProviderContainer container) {
       return null;
     },
     routes: [
+    GoRoute(
+      path: '/incoming-call',
+      name: 'incoming-call',
+      pageBuilder: (context, state) => _buildFadeTransitionPage(
+        key: state.pageKey,
+        child: const IncomingCallScreen(),
+      ),
+    ),
+    GoRoute(
+      path: '/call/:sessionId',
+      name: 'call',
+      pageBuilder: (context, state) {
+        final sessionId = Int64(int.parse(state.pathParameters['sessionId']!));
+        return _buildFadeTransitionPage(
+          key: state.pageKey,
+          child: CallScreen(sessionId: sessionId),
+        );
+      },
+    ),
     // Adaptive shell (mobile: nav bar + bottom bar, desktop: sidebar + content)
     ShellRoute(
       builder: (context, state, child) => AdaptiveAppShell(child: child),
@@ -135,17 +155,6 @@ GoRouter createAppRouter(ProviderContainer container) {
                 key: state.pageKey,
                 child: const OnlineUsersScreen(),
               ),
-            ),
-            GoRoute(
-              path: '/notes/call/:sessionId',
-              name: 'call',
-              pageBuilder: (context, state) {
-                final sessionId = Int64(int.parse(state.pathParameters['sessionId']!));
-                return _buildFadeTransitionPage(
-                  key: state.pageKey,
-                  child: CallScreen(sessionId: sessionId),
-                );
-              },
             ),
           ],
         ),

@@ -1,4 +1,6 @@
 PODS:
+  - audio_streamer (4.3.0):
+    - Flutter
   - camera_avfoundation (0.0.1):
     - Flutter
   - connectivity_plus (0.0.1):
@@ -40,6 +42,8 @@ PODS:
   - Flutter (1.0.0)
   - flutter_keyboard_visibility_temp_fork (0.0.1):
     - Flutter
+  - flutter_pcm_sound (0.0.1):
+    - Flutter
   - flutter_secure_storage (6.0.0):
     - Flutter
   - image_picker_ios (0.0.1):
@@ -47,6 +51,8 @@ PODS:
   - path_provider_foundation (0.0.1):
     - Flutter
     - FlutterMacOS
+  - permission_handler_apple (9.3.0):
+    - Flutter
   - quill_native_bridge_ios (0.0.1):
     - Flutter
   - SDWebImage (5.21.5):
@@ -62,14 +68,17 @@ PODS:
     - Flutter
 
 DEPENDENCIES:
+  - audio_streamer (from `.symlinks/plugins/audio_streamer/ios`)
   - camera_avfoundation (from `.symlinks/plugins/camera_avfoundation/ios`)
   - connectivity_plus (from `.symlinks/plugins/connectivity_plus/ios`)
   - file_picker (from `.symlinks/plugins/file_picker/ios`)
   - Flutter (from `Flutter`)
   - flutter_keyboard_visibility_temp_fork (from `.symlinks/plugins/flutter_keyboard_visibility_temp_fork/ios`)
+  - flutter_pcm_sound (from `.symlinks/plugins/flutter_pcm_sound/ios`)
   - flutter_secure_storage (from `.symlinks/plugins/flutter_secure_storage/ios`)
   - image_picker_ios (from `.symlinks/plugins/image_picker_ios/ios`)
   - path_provider_foundation (from `.symlinks/plugins/path_provider_foundation/darwin`)
+  - permission_handler_apple (from `.symlinks/plugins/permission_handler_apple/ios`)
   - quill_native_bridge_ios (from `.symlinks/plugins/quill_native_bridge_ios/ios`)
   - share_plus (from `.symlinks/plugins/share_plus/ios`)
   - shared_preferences_foundation (from `.symlinks/plugins/shared_preferences_foundation/darwin`)
@@ -83,6 +92,8 @@ SPEC REPOS:
     - SwiftyGif
 
 EXTERNAL SOURCES:
+  audio_streamer:
+    :path: ".symlinks/plugins/audio_streamer/ios"
   camera_avfoundation:
     :path: ".symlinks/plugins/camera_avfoundation/ios"
   connectivity_plus:
@@ -93,12 +104,16 @@ EXTERNAL SOURCES:
     :path: Flutter
   flutter_keyboard_visibility_temp_fork:
     :path: ".symlinks/plugins/flutter_keyboard_visibility_temp_fork/ios"
+  flutter_pcm_sound:
+    :path: ".symlinks/plugins/flutter_pcm_sound/ios"
   flutter_secure_storage:
     :path: ".symlinks/plugins/flutter_secure_storage/ios"
   image_picker_ios:
     :path: ".symlinks/plugins/image_picker_ios/ios"
   path_provider_foundation:
     :path: ".symlinks/plugins/path_provider_foundation/darwin"
+  permission_handler_apple:
+    :path: ".symlinks/plugins/permission_handler_apple/ios"
   quill_native_bridge_ios:
     :path: ".symlinks/plugins/quill_native_bridge_ios/ios"
   share_plus:
@@ -109,6 +124,7 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/url_launcher_ios/ios"
 
 SPEC CHECKSUMS:
+  audio_streamer: 7a5aa15f0b48a7a0cb44eb23b5bbfcbfc2eb8171
   camera_avfoundation: 281867ff09f1da66f031a184ecfbc6f2e625c9f5
   connectivity_plus: 2a701ffec2c0ae28a48cf7540e279787e77c447d
   DKImagePickerController: 946cec48c7873164274ecc4624d19e3da4c1ef3c
@@ -116,9 +132,11 @@ SPEC CHECKSUMS:
   file_picker: b159e0c068aef54932bb15dc9fd1571818edaf49
   Flutter: cabc95a1d2626b1b06e7179b784ebcf0c0cde467
   flutter_keyboard_visibility_temp_fork: 8a8809c4129e31d25fca77446e0f3fd548122ced
+  flutter_pcm_sound: de0572ca4f99091cc2abfcc31601b8a4ddd33c0e
   flutter_secure_storage: d33dac7ae2ea08509be337e775f6b59f1ff45f12
   image_picker_ios: 4f2f91b01abdb52842a8e277617df877e40f905b
   path_provider_foundation: 2b6b4c569c0fb62ec74538f866245ac84301af46
+  permission_handler_apple: 9878588469a2b0d0fc1e048d9f43605f92e6cec2
   quill_native_bridge_ios: 2b01d585fcc73d0f5eed78c0bd244ee564b06f5a
   SDWebImage: e9c98383c7572d713c1a0d7dd2783b10599b9838
   share_plus: 8b6f8b3447e494cca5317c8c3073de39b3600d1f

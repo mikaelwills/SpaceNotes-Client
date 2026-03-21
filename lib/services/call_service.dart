@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'dart:typed_data';
 import 'package:spacetimedb_dart_sdk/spacetimedb_dart_sdk.dart';
 import '../generated/client.dart';
+import 'audio_service.dart';
 import 'debug_logger.dart';
 import 'video_capture.dart';
 import 'video_capture_factory.dart';
@@ -13,6 +15,7 @@ class CallService {
   int _videoSeq = 0;
   Int64? _activeSessionId;
   VideoStats? videoStats;
+  AudioService? audioService;
 
   VideoCaptureService? get captureService => _captureService;
   bool get isCapturing => _captureService?.isCapturing ?? false;
@@ -21,35 +24,54 @@ class CallService {
     _client = client;
   }
 
-  Future<void> startCapture(Int64 sessionId, {int fps = 10, int width = 320, int height = 240}) async {
+  Future<void> startCapture(Int64 sessionId, {int fps = 10, int width = 320, int height = 240, String codec = 'h264'}) async {
     _activeSessionId = sessionId;
     _videoSeq = 0;
     videoStats = VideoStats();
 
     _captureService = createVideoCaptureService();
+
+    final txStart = DateTime.now();
+    _frameSub = _captureService!.frameStream.listen((frame) {
+      if (_client == null || _activeSessionId == null) return;
+      _videoSeq++;
+      if (_videoSeq % 300 == 0) {
+        final elapsed = DateTime.now().difference(txStart).inMilliseconds / 1000.0;
+        debugLogger.info('VIDEO_TX', 'Frame #$_videoSeq | fps: ${(_videoSeq / elapsed).toStringAsFixed(1)} | size: ${frame.data.length ~/ 1024}KB');
+      }
+      videoStats?.recordSend(seq: _videoSeq, sizeBytes: frame.data.length);
+      _client!.reducers.sendVideoFrame(
+        sessionId: _activeSessionId!,
+        seq: _videoSeq,
+        codec: frame.codec,
+        isKeyframe: frame.isKeyframe,
+        data: frame.data.toList(),
+        isEventTable: true,
+      );
+    });
+
     await _captureService!.start(
       fps: fps,
       width: width,
       height: height,
+      codec: codec,
       onFrameTiming: ({required int totalMs, int? yuvMs, int? encodeMs, required int sizeBytes}) {
         videoStats?.recordCapture(totalMs: totalMs, yuvMs: yuvMs, encodeMs: encodeMs, sizeBytes: sizeBytes);
       },
     );
 
-    _frameSub = _captureService!.frameStream.listen((jpeg) {
+    audioService = AudioService();
+    audioService!.onAudioChunk = (Uint8List pcm, int seq) {
       if (_client == null || _activeSessionId == null) return;
-      _videoSeq++;
-      if (_videoSeq <= 5 || _videoSeq % 30 == 0) {
-        debugLogger.info('VIDEO_TX', 'Sending frame #$_videoSeq, size=${jpeg.length}, session=$_activeSessionId');
-      }
-      videoStats?.recordSend(seq: _videoSeq, sizeBytes: jpeg.length);
-      _client!.reducers.sendVideoFrame(
+      _client!.reducers.sendAudioFrame(
         sessionId: _activeSessionId!,
-        seq: _videoSeq,
-        jpeg: jpeg.toList(),
+        seq: seq,
+        pcm: pcm.toList(),
         isEventTable: true,
       );
-    });
+    };
+    await audioService!.startCapture();
+    await audioService!.startPlayback();
 
     debugLogger.info('CALL', 'Started capture at ${fps}fps ${width}x$height for session $sessionId');
   }
@@ -58,6 +80,10 @@ class CallService {
     _frameSub?.cancel();
     _frameSub = null;
     _captureService?.stop();
+    _captureService?.dispose();
+    _captureService = null;
+    audioService?.dispose();
+    audioService = null;
     _activeSessionId = null;
     videoStats = null;
     debugLogger.info('CALL', 'Stopped capture');

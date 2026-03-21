@@ -7,11 +7,9 @@ import 'debug_logger.dart';
 
 class MobileVideoCaptureService implements VideoCaptureService {
   CameraController? _camera;
-  final _frameController = StreamController<Uint8List>.broadcast();
+  final _frameController = StreamController<CapturedFrame>.broadcast();
   bool _isCapturing = false;
   int _targetFps = 10;
-  int _targetWidth = 640;
-  int _targetHeight = 480;
   DateTime _lastFrame = DateTime.now();
   int _frameCount = 0;
   FrameTimingCallback? _onFrameTiming;
@@ -19,7 +17,7 @@ class MobileVideoCaptureService implements VideoCaptureService {
   CameraController? get cameraController => _camera;
 
   @override
-  Stream<Uint8List> get frameStream => _frameController.stream;
+  Stream<CapturedFrame> get frameStream => _frameController.stream;
 
   @override
   bool get isCapturing => _isCapturing;
@@ -33,7 +31,7 @@ class MobileVideoCaptureService implements VideoCaptureService {
   }
 
   @override
-  Future<void> start({int fps = 10, int width = 320, int height = 240, FrameTimingCallback? onFrameTiming}) async {
+  Future<void> start({int fps = 10, int width = 320, int height = 240, String codec = 'jpeg', FrameTimingCallback? onFrameTiming}) async {
     _targetFps = fps;
     _onFrameTiming = onFrameTiming;
     final cameras = await availableCameras();
@@ -84,12 +82,12 @@ class MobileVideoCaptureService implements VideoCaptureService {
       final encodeMs = totalMs - yuvMs;
 
       _frameCount++;
-      if (_frameCount % 30 == 0) {
+      if (_frameCount <= 2 || _frameCount % 300 == 0) {
         debugLogger.info('CAPTURE', 'YUV: ${yuvMs}ms, JPEG: ${encodeMs}ms, Total: ${totalMs}ms, Size: ${jpeg.length ~/ 1024}KB');
       }
 
       _onFrameTiming?.call(totalMs: totalMs, yuvMs: yuvMs, encodeMs: encodeMs, sizeBytes: jpeg.length);
-      _frameController.add(jpeg);
+      _frameController.add(CapturedFrame(data: jpeg, codec: 0, isKeyframe: true));
     } catch (e) {
       debugLogger.error('CAPTURE', 'Frame encode error: $e');
     }

@@ -1,15 +1,21 @@
 import 'dart:typed_data';
+import 'dart:ui' as ui;
 import 'package:camera/camera.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:spacetimedb_dart_sdk/spacetimedb_dart_sdk.dart';
 import '../generated/call_session.dart';
 import '../generated/call_state.dart';
 import '../providers/call_providers.dart';
 import '../providers/notes_providers.dart';
+import '../services/call_service.dart';
 import '../services/debug_logger.dart';
+import '../services/h264_decoder_service.dart';
+import '../services/web_h264_decoder_export.dart';
 import '../services/video_capture_mobile.dart';
+import '../widgets/web_h264_view.dart';
 import '../theme/spacenotes_theme.dart';
 import '../services/video_stats.dart';
 import '../widgets/video_stats_overlay.dart';
@@ -26,11 +32,20 @@ class CallScreen extends ConsumerStatefulWidget {
 class _CallScreenState extends ConsumerState<CallScreen> {
   bool _captureStarted = false;
   bool _popping = false;
+  bool _muted = false;
+
+  CallService? _callService;
+
+  @override
+  void initState() {
+    super.initState();
+    _callService = ref.read(callServiceProvider);
+  }
 
   @override
   void dispose() {
     debugLogger.info('CALL_SCREEN', 'dispose() called, stopping capture');
-    ref.read(callServiceProvider).stopCapture();
+    _callService?.stopCapture();
     super.dispose();
   }
 
@@ -41,7 +56,7 @@ class _CallScreenState extends ConsumerState<CallScreen> {
     final callService = ref.read(callServiceProvider);
     final repo = ref.read(notesRepositoryProvider);
     callService.setClient(repo.client);
-    await callService.startCapture(widget.sessionId, fps: 30, width: 1920, height: 1080);
+    await callService.startCapture(widget.sessionId, fps: 25, width: 2560, height: 1440);
     if (mounted) setState(() {});
   }
 
@@ -49,35 +64,45 @@ class _CallScreenState extends ConsumerState<CallScreen> {
   Widget build(BuildContext context) {
     final sessionAsync = ref.watch(activeCallSessionProvider);
 
-    return sessionAsync.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => Center(
-        child: Text('Error: $e', style: const TextStyle(color: SpaceNotesTheme.error)),
-      ),
-      data: (session) {
-        if (session == null || session.state is CallStateEnded) {
-          if (!_popping) {
-            _popping = true;
-            debugLogger.info('CALL_SCREEN', 'Session ended/null, popping');
-            ref.read(callServiceProvider).stopCapture();
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (mounted && Navigator.canPop(context)) {
-                Navigator.of(context).pop();
-              }
-            });
+    return Scaffold(
+      backgroundColor: SpaceNotesTheme.background,
+      body: sessionAsync.when(
+        loading: () => const Center(child: CircularProgressIndicator(color: SpaceNotesTheme.primary)),
+        error: (e, _) => Center(
+          child: Text('Error: $e', style: const TextStyle(color: SpaceNotesTheme.error)),
+        ),
+        data: (session) {
+          if (session == null || session.state is CallStateEnded) {
+            if (!_popping) {
+              _popping = true;
+              debugLogger.info('CALL_SCREEN', 'Session ended/null, popping');
+              _callService?.stopCapture();
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (mounted) {
+                  GoRouter.of(context).go('/notes');
+                }
+              });
+            }
+            return const Center(
+              child: Text('Call ended', style: TextStyle(color: SpaceNotesTheme.textSecondary)),
+            );
           }
-          return const Center(
-            child: Text('Call ended', style: TextStyle(color: SpaceNotesTheme.textSecondary)),
-          );
-        }
 
         if (session.state is CallStateActive && !_captureStarted) {
           _startCapture();
         }
 
         final remoteFrame = ref.watch(remoteVideoFrameProvider);
+        final remoteAudio = ref.watch(remoteAudioFrameProvider);
 
         final callService = ref.read(callServiceProvider);
+
+        if (session.state is CallStateActive) {
+          final audioData = remoteAudio.valueOrNull;
+          if (audioData != null && callService.audioService != null) {
+            callService.audioService!.feedRemoteAudio(audioData);
+          }
+        }
 
         return Stack(
           children: [
@@ -87,7 +112,12 @@ class _CallScreenState extends ConsumerState<CallScreen> {
             if (session.state is CallStateActive)
               _LocalPreview(callService: callService),
             if (session.state is CallStateActive)
-              _CallControls(onEnd: () => _endCall(session)),
+              _CallControls(
+                onEnd: () => _endCall(session),
+                onFlipCamera: () => _flipCamera(),
+                isMuted: _muted,
+                onToggleMute: () => _toggleMute(),
+              ),
             if (session.state is CallStateActive)
               Positioned(
                 top: 16,
@@ -97,26 +127,118 @@ class _CallScreenState extends ConsumerState<CallScreen> {
           ],
         );
       },
+      ),
     );
   }
 
+  Future<void> _flipCamera() async {
+    final capture = _callService?.captureService;
+    if (capture == null) return;
+    try {
+      await (capture as dynamic).switchCamera();
+      if (mounted) setState(() {});
+    } catch (_) {}
+  }
+
+  void _toggleMute() {
+    _callService?.audioService?.toggleMute();
+    setState(() => _muted = _callService?.audioService?.isMuted ?? false);
+  }
+
   void _endCall(CallSession session) {
-    final callService = ref.read(callServiceProvider);
-    final repo = ref.read(notesRepositoryProvider);
-    callService.setClient(repo.client);
-    callService.endCall(session.sessionId);
+    _callService?.setClient(ref.read(notesRepositoryProvider).client);
+    _callService?.endCall(session.sessionId);
   }
 }
 
-class _RemoteVideo extends StatelessWidget {
-  final AsyncValue<Uint8List?> remoteFrame;
+class _RemoteVideo extends StatefulWidget {
+  final AsyncValue<ReceivedVideoFrame?> remoteFrame;
   final VideoStats? videoStats;
 
   const _RemoteVideo({required this.remoteFrame, this.videoStats});
 
   @override
+  State<_RemoteVideo> createState() => _RemoteVideoState();
+}
+
+class _RemoteVideoState extends State<_RemoteVideo> {
+  ui.Image? _decodedImage;
+  Uint8List? _lastBytes;
+  bool _decoding = false;
+  H264DecoderService? _h264NativeDecoder;
+  WebH264Decoder? _h264WebDecoder;
+  bool _usingH264 = false;
+  bool _decoderStarting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (!kIsWeb) {
+      _h264NativeDecoder = H264DecoderService();
+      _h264NativeDecoder!.start().then((_) {
+        if (mounted) setState(() => _usingH264 = true);
+      });
+    }
+  }
+
+  @override
+  void didUpdateWidget(_RemoteVideo oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final frame = widget.remoteFrame.valueOrNull;
+    if (frame == null || frame.data == _lastBytes) return;
+    _lastBytes = frame.data;
+
+    if (frame.codec == 0) {
+      if (!_decoding) _decodeJpeg(frame.data);
+    } else if (frame.codec == 1) {
+      _feedH264Frame(frame);
+    }
+  }
+
+  void _feedH264Frame(ReceivedVideoFrame frame) {
+    if (kIsWeb) {
+      _h264WebDecoder ??= WebH264Decoder();
+      if (!_h264WebDecoder!.isStarted) {
+        _h264WebDecoder!.start();
+        if (mounted) setState(() => _usingH264 = true);
+      }
+      _h264WebDecoder!.feedFrame(frame.data, frame.seq, frame.isKeyframe);
+    } else {
+      if (_h264NativeDecoder != null && _h264NativeDecoder!.isStarted) {
+        _h264NativeDecoder!.feedFrame(frame.data, frame.seq, frame.isKeyframe);
+      }
+    }
+    widget.videoStats?.recordDisplay();
+  }
+
+  void _decodeJpeg(Uint8List bytes) {
+    _decoding = true;
+    ui.decodeImageFromList(bytes, (ui.Image image) {
+      if (!mounted) {
+        image.dispose();
+        return;
+      }
+      final old = _decodedImage;
+      setState(() {
+        _decodedImage = image;
+        _decoding = false;
+      });
+      widget.videoStats?.recordDisplay();
+      old?.dispose();
+    });
+  }
+
+  @override
+  void dispose() {
+    _decodedImage?.dispose();
+    _h264NativeDecoder?.stop();
+    _h264WebDecoder?.stop();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return remoteFrame.when(
+    return widget.remoteFrame.when(
       loading: () => Container(
         color: SpaceNotesTheme.background,
         child: const Center(
@@ -124,8 +246,8 @@ class _RemoteVideo extends StatelessWidget {
         ),
       ),
       error: (_, __) => Container(color: SpaceNotesTheme.background),
-      data: (frameData) {
-        if (frameData == null) {
+      data: (frame) {
+        if (frame == null && _decodedImage == null && !_usingH264) {
           return Container(
             color: SpaceNotesTheme.background,
             child: const Center(
@@ -140,14 +262,32 @@ class _RemoteVideo extends StatelessWidget {
             ),
           );
         }
-        videoStats?.recordDisplay();
-        return SizedBox.expand(
-          child: Image.memory(
-            frameData,
-            fit: BoxFit.cover,
-            gaplessPlayback: true,
-          ),
-        );
+        if (_usingH264) {
+          if (kIsWeb) {
+            return const SizedBox.expand(child: WebH264View());
+          }
+          if (_h264NativeDecoder != null && _h264NativeDecoder!.textureId >= 0) {
+            return SizedBox.expand(
+              child: FittedBox(
+                fit: BoxFit.cover,
+                child: SizedBox(
+                  width: 1440,
+                  height: 2560,
+                  child: Texture(textureId: _h264NativeDecoder!.textureId),
+                ),
+              ),
+            );
+          }
+        }
+        if (_decodedImage != null) {
+          return SizedBox.expand(
+            child: RawImage(
+              image: _decodedImage,
+              fit: BoxFit.cover,
+            ),
+          );
+        }
+        return Container(color: SpaceNotesTheme.background);
       },
     );
   }
@@ -255,11 +395,40 @@ class _LocalPreview extends StatelessWidget {
     }
 
     final capture = callService.captureService;
-    if (capture == null || capture is! MobileVideoCaptureService) {
-      return const SizedBox.shrink();
+    if (capture == null) return const SizedBox.shrink();
+
+    int textureId = -1;
+    try {
+      textureId = (capture as dynamic).previewTextureId as int;
+    } catch (_) {}
+
+    if (textureId >= 0) {
+      return Positioned(
+        top: 16,
+        right: 16,
+        child: Container(
+          width: 120,
+          height: 160,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: FittedBox(
+            fit: BoxFit.cover,
+            child: SizedBox(
+              width: 1080,
+              height: 1920,
+              child: Texture(textureId: textureId),
+            ),
+          ),
+        ),
+      );
     }
 
-    final controller = capture.cameraController;
+    CameraController? controller;
+    if (capture is MobileVideoCaptureService) {
+      controller = capture.cameraController;
+    }
     if (controller == null || !controller.value.isInitialized) {
       return Positioned(
         top: 16,
@@ -296,8 +465,11 @@ class _LocalPreview extends StatelessWidget {
 
 class _CallControls extends StatelessWidget {
   final VoidCallback onEnd;
+  final VoidCallback? onFlipCamera;
+  final bool isMuted;
+  final VoidCallback? onToggleMute;
 
-  const _CallControls({required this.onEnd});
+  const _CallControls({required this.onEnd, this.onFlipCamera, this.isMuted = false, this.onToggleMute});
 
   @override
   Widget build(BuildContext context) {
@@ -305,11 +477,27 @@ class _CallControls extends StatelessWidget {
       bottom: 48,
       left: 0,
       right: 0,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          _CircleButton(icon: Icons.call_end, color: SpaceNotesTheme.error, size: 64, onTap: onEnd),
-        ],
+      child: SafeArea(
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: [
+            if (!kIsWeb && onFlipCamera != null)
+              _CircleButton(icon: Icons.flip_camera_ios, color: SpaceNotesTheme.inputSurface, size: 52, onTap: onFlipCamera!)
+            else
+              const SizedBox(width: 52),
+            if (onToggleMute != null)
+              _CircleButton(
+                icon: isMuted ? Icons.mic_off : Icons.mic,
+                color: isMuted ? SpaceNotesTheme.warning : SpaceNotesTheme.inputSurface,
+                size: 52,
+                onTap: onToggleMute!,
+              )
+            else
+              const SizedBox(width: 52),
+            _CircleButton(icon: Icons.call_end, color: SpaceNotesTheme.error, size: 64, onTap: onEnd),
+            const SizedBox(width: 52),
+          ],
+        ),
       ),
     );
   }

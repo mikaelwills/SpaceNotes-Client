@@ -8,6 +8,8 @@ import UIKit
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
     GeneratedPluginRegistrant.register(with: self)
+    NativeVideoEncoderPlugin.register(with: self.registrar(forPlugin: "NativeVideoEncoderPlugin")!)
+    NativeH264DecoderPlugin.register(with: self.registrar(forPlugin: "NativeH264DecoderPlugin")!)
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
 }

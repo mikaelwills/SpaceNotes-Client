@@ -5,12 +5,13 @@ import 'dart:async';
 import 'package:spacetimedb_dart_sdk/spacetimedb_dart_sdk.dart';
 import 'reducers.dart';
 import 'reducer_args.dart';
-import 'call_session.dart';
-import 'connected_user.dart';
-import 'note.dart';
-import 'audio_frame.dart';
-import 'folder.dart';
+import 'user_profile.dart';
 import 'video_frame.dart';
+import 'connected_user.dart';
+import 'audio_frame.dart';
+import 'call_session.dart';
+import 'folder.dart';
+import 'note.dart';
 
 class SpacetimeDbClient {
   final SpacetimeDbConnection connection;
@@ -60,28 +61,32 @@ class SpacetimeDbClient {
   /// Stream of individual mutation sync results
   Stream<MutationSyncResult> get onMutationSyncResult => subscriptions.onMutationSyncResult;
 
-  TableCache<CallSession> get callSession {
-    return subscriptions.cache.getTableByTypedName<CallSession>('call_session');
+  TableCache<UserProfile> get userProfile {
+    return subscriptions.cache.getTableByTypedName<UserProfile>('user_profile');
+  }
+
+  TableCache<VideoFrame> get videoFrame {
+    return subscriptions.cache.getTableByTypedName<VideoFrame>('video_frame');
   }
 
   TableCache<ConnectedUser> get connectedUser {
     return subscriptions.cache.getTableByTypedName<ConnectedUser>('connected_user');
   }
 
-  TableCache<Note> get note {
-    return subscriptions.cache.getTableByTypedName<Note>('note');
-  }
-
   TableCache<AudioFrame> get audioFrame {
     return subscriptions.cache.getTableByTypedName<AudioFrame>('audio_frame');
+  }
+
+  TableCache<CallSession> get callSession {
+    return subscriptions.cache.getTableByTypedName<CallSession>('call_session');
   }
 
   TableCache<Folder> get folder {
     return subscriptions.cache.getTableByTypedName<Folder>('folder');
   }
 
-  TableCache<VideoFrame> get videoFrame {
-    return subscriptions.cache.getTableByTypedName<VideoFrame>('video_frame');
+  TableCache<Note> get note {
+    return subscriptions.cache.getTableByTypedName<Note>('note');
   }
 
   SpacetimeDbClient._({
@@ -124,12 +129,13 @@ class SpacetimeDbClient {
     final subscriptionManager = SubscriptionManager(connection, offlineStorage: offlineStorage);
 
     // Auto-register table decoders
-    subscriptionManager.cache.registerDecoder<CallSession>('call_session', CallSessionDecoder());
-    subscriptionManager.cache.registerDecoder<ConnectedUser>('connected_user', ConnectedUserDecoder());
-    subscriptionManager.cache.registerDecoder<Note>('note', NoteDecoder());
-    subscriptionManager.cache.registerDecoder<AudioFrame>('audio_frame', AudioFrameDecoder(), isEvent: true);
-    subscriptionManager.cache.registerDecoder<Folder>('folder', FolderDecoder());
+    subscriptionManager.cache.registerDecoder<UserProfile>('user_profile', UserProfileDecoder());
     subscriptionManager.cache.registerDecoder<VideoFrame>('video_frame', VideoFrameDecoder(), isEvent: true);
+    subscriptionManager.cache.registerDecoder<ConnectedUser>('connected_user', ConnectedUserDecoder());
+    subscriptionManager.cache.registerDecoder<AudioFrame>('audio_frame', AudioFrameDecoder(), isEvent: true);
+    subscriptionManager.cache.registerDecoder<CallSession>('call_session', CallSessionDecoder());
+    subscriptionManager.cache.registerDecoder<Folder>('folder', FolderDecoder());
+    subscriptionManager.cache.registerDecoder<Note>('note', NoteDecoder());
 
     // Auto-register view decoders
 
