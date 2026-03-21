@@ -1,36 +1,22 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../blocs/connection/connection_bloc.dart';
-import '../blocs/connection/connection_state.dart' as conn;
+import 'package:get_it/get_it.dart';
+import '../blocs/chat/chat_bloc.dart';
+import '../blocs/chat/chat_state.dart';
 import 'notes_providers.dart';
 
-final connectionBlocProvider = Provider<ConnectionBloc>((ref) {
-  throw UnimplementedError('connectionBlocProvider must be overridden');
-});
-
-final openCodeConnectionProvider = StreamProvider<bool>((ref) {
-  final bloc = ref.watch(connectionBlocProvider);
+final chatConnectedProvider = StreamProvider<bool>((ref) {
+  final chatBloc = GetIt.I<ChatBloc>();
 
   Stream<bool> stateStream() async* {
-    yield bloc.state is conn.Connected;
-    await for (final state in bloc.stream) {
-      yield state is conn.Connected;
+    yield chatBloc.state is ChatReady && (chatBloc.state as ChatReady).isConnected;
+    await for (final state in chatBloc.stream) {
+      if (state is ChatReady) {
+        yield state.isConnected;
+      }
     }
   }
 
   return stateStream().distinct().asBroadcastStream();
-});
-
-final openCodeConnectionStateProvider = StreamProvider<conn.ConnectionState>((ref) {
-  final bloc = ref.watch(connectionBlocProvider);
-
-  Stream<conn.ConnectionState> stateStream() async* {
-    yield bloc.state;
-    await for (final state in bloc.stream) {
-      yield state;
-    }
-  }
-
-  return stateStream().asBroadcastStream();
 });
 
 final spacetimeConnectedProvider = Provider<bool>((ref) {
@@ -39,7 +25,7 @@ final spacetimeConnectedProvider = Provider<bool>((ref) {
 });
 
 final isFullyConnectedProvider = Provider<bool>((ref) {
-  final openCode = ref.watch(openCodeConnectionProvider).valueOrNull ?? false;
+  final chat = ref.watch(chatConnectedProvider).valueOrNull ?? false;
   final spacetime = ref.watch(spacetimeConnectedProvider);
-  return openCode && spacetime;
+  return chat && spacetime;
 });

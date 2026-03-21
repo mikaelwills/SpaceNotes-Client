@@ -4,7 +4,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../theme/spacenotes_theme.dart';
-import '../../providers/connection_providers.dart';
 import '../../blocs/chat/chat_bloc.dart';
 import '../../blocs/chat/chat_event.dart';
 import '../../blocs/chat/chat_state.dart';
@@ -82,13 +81,6 @@ class _DesktopChatInputState extends ConsumerState<DesktopChatInput> {
 
   @override
   Widget build(BuildContext context) {
-    final isOpenCodeConnected =
-        ref.watch(openCodeConnectionProvider).valueOrNull ?? false;
-
-    if (!isOpenCodeConnected) {
-      return const SizedBox.shrink();
-    }
-
     return BlocBuilder<ChatBloc, ChatState>(
       builder: (context, chatState) {
         final isWorking = chatState is ChatReady && chatState.isWorking;

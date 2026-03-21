@@ -4,18 +4,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart' hide Provider;
 import '../theme/spacenotes_theme.dart';
 import '../blocs/config/config_cubit.dart';
 import '../blocs/config/config_state.dart';
-import '../blocs/connection/connection_bloc.dart';
-import '../blocs/connection/connection_event.dart';
 import '../blocs/desktop_notes/desktop_notes_bloc.dart';
 import '../blocs/desktop_notes/desktop_notes_event.dart';
 import '../providers/notes_providers.dart';
 import '../providers/connection_providers.dart';
-import '../widgets/terminal_ip_input.dart';
 import '../widgets/adaptive/platform_utils.dart';
 import '../services/debug_logger.dart';
 
-/// Settings screen for configuring SpaceNotes and OpenCode connections.
-/// There is only ONE connection of each type - no multi-instance support.
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
 
@@ -24,14 +19,10 @@ class SettingsScreen extends ConsumerStatefulWidget {
 }
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
-  final _spaceNotesIpController = TextEditingController();
-  final _spaceNotesPortController = TextEditingController();
-  final _openCodeIpController = TextEditingController();
-  final _openCodePortController = TextEditingController();
+  final _serverIpController = TextEditingController();
   final _maxNotesController = TextEditingController();
 
-  bool _isSpaceNotesConnecting = false;
-  bool _isOpenCodeConnecting = false;
+  bool _isConnecting = false;
   int _logFileCount = 0;
 
   @override
@@ -50,83 +41,41 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   @override
   void dispose() {
-    _spaceNotesIpController.dispose();
-    _spaceNotesPortController.dispose();
-    _openCodeIpController.dispose();
-    _openCodePortController.dispose();
+    _serverIpController.dispose();
     _maxNotesController.dispose();
     super.dispose();
   }
 
   void _loadCurrentConfig() {
-    // Load SpaceNotes host from repository
-    final repository = ref.read(notesRepositoryProvider);
-    final host = repository.host ?? '';
-    if (host.contains(':')) {
-      final parts = host.split(':');
-      _spaceNotesIpController.text = parts[0];
-      _spaceNotesPortController.text = parts.length > 1 ? parts[1] : '5050';
-    } else {
-      _spaceNotesIpController.text = host;
-      _spaceNotesPortController.text = '5050';
-    }
-
-    // Load OpenCode config from ConfigCubit
     final configState = context.read<ConfigCubit>().state;
     if (configState is ConfigLoaded) {
-      _openCodeIpController.text =
+      _serverIpController.text =
           configState.serverIp == '0.0.0.0' ? '' : configState.serverIp;
-      _openCodePortController.text = configState.port.toString();
     }
 
-    // Load max open notes from DesktopNotesBloc
     final desktopNotesState = context.read<DesktopNotesBloc>().state;
     _maxNotesController.text = desktopNotesState.maxOpenNotes.toString();
   }
 
-  Future<void> _saveSpaceNotesConfig() async {
-    final ip = _spaceNotesIpController.text.trim();
-    final port = _spaceNotesPortController.text.trim();
+  Future<void> _saveServerConfig() async {
+    final ip = _serverIpController.text.trim();
     if (ip.isEmpty) return;
 
-    final host = port.isNotEmpty ? '$ip:$port' : '$ip:5050';
-
-    setState(() => _isSpaceNotesConnecting = true);
-
-    try {
-      final repository = ref.read(notesRepositoryProvider);
-      await repository.configure(host: host);
-      await repository.connectAndGetInitialData();
-    } catch (e) {
-      debugLogger.error('SETTINGS', 'Failed to connect to SpaceNotes: $e');
-    } finally {
-      if (mounted) {
-        setState(() => _isSpaceNotesConnecting = false);
-      }
-    }
-  }
-
-  Future<void> _saveOpenCodeConfig() async {
-    final ip = _openCodeIpController.text.trim();
-    final portText = _openCodePortController.text.trim();
-    if (ip.isEmpty) return;
-
-    final port = int.tryParse(portText) ?? 5053;
-
-    setState(() => _isOpenCodeConnecting = true);
+    setState(() => _isConnecting = true);
 
     try {
       final configCubit = context.read<ConfigCubit>();
-      await configCubit.updateServer(ip, port: port);
+      await configCubit.updateServer(ip);
 
-      if (mounted) {
-        context.read<ConnectionBloc>().add(ResetConnection());
-      }
+      final repository = ref.read(notesRepositoryProvider);
+      await repository.configure(host: '$ip:${ConfigLoaded.spacetimeDbPort}');
+      await repository.connectAndGetInitialData();
+
     } catch (e) {
-      debugLogger.error('SETTINGS', 'Failed to save OpenCode config: $e');
+      debugLogger.error('SETTINGS', 'Failed to connect: $e');
     } finally {
       if (mounted) {
-        setState(() => _isOpenCodeConnecting = false);
+        setState(() => _isConnecting = false);
       }
     }
   }
@@ -142,9 +91,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                _buildSpaceNotesSection(),
-                const SizedBox(height: 32),
-                _buildOpenCodeSection(),
+                _buildServerSection(),
+                if (PlatformUtils.isDesktopLayout(context)) ...[
+                  const SizedBox(height: 32),
+                  _buildMaxOpenNotesSection(),
+                ],
                 const SizedBox(height: 32),
                 _buildDebugLogsSection(),
               ],
@@ -155,14 +106,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
-  Widget _buildSpaceNotesSection() {
-    final isConnected = ref.watch(spacetimeConnectedProvider);
+  Widget _buildServerSection() {
+    final isSpacetimeConnected = ref.watch(spacetimeConnectedProvider);
+    final isChatConnected = ref.watch(chatConnectedProvider).valueOrNull ?? false;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          'SpaceNotes Server',
+          'Server',
           style: TextStyle(
             fontFamily: 'FiraCode',
             fontSize: 16,
@@ -170,51 +122,100 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             fontWeight: FontWeight.w500,
           ),
         ),
+        const SizedBox(height: 8),
+        const Text(
+          'All services run on this IP. '
+          'SpaceNotes :${ConfigLoaded.spacetimeDbPort}  '
+          'OpenCode :${ConfigLoaded.openCodePort}  '
+          'Claude Code :${ConfigLoaded.claudeCodePort}',
+          style: const TextStyle(
+            fontFamily: 'FiraCode',
+            fontSize: 11,
+            color: SpaceNotesTheme.textSecondary,
+          ),
+        ),
         const SizedBox(height: 16),
-        TerminalIPInput(
-          ipController: _spaceNotesIpController,
-          portController: _spaceNotesPortController,
-          ipHint: 'IP Address',
-          portHint: '5050',
-          isConnecting: _isSpaceNotesConnecting,
-          isConnected: isConnected,
-          onConnect: _saveSpaceNotesConfig,
+        Row(
+          children: [
+            Expanded(
+              child: Container(
+                height: 44,
+                decoration: BoxDecoration(
+                  color: SpaceNotesTheme.inputSurface,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: TextField(
+                  controller: _serverIpController,
+                  style: SpaceNotesTextStyles.terminal.copyWith(fontSize: 14),
+                  decoration: InputDecoration(
+                    hintText: 'IP Address',
+                    hintStyle: SpaceNotesTextStyles.terminal.copyWith(
+                      fontSize: 14,
+                      color: SpaceNotesTheme.textSecondary,
+                    ),
+                    border: InputBorder.none,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  ),
+                  onSubmitted: (_) => _saveServerConfig(),
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            SizedBox(
+              height: 44,
+              child: ElevatedButton(
+                onPressed: _isConnecting ? null : _saveServerConfig,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: SpaceNotesTheme.inputSurface,
+                  foregroundColor: SpaceNotesTheme.text,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                child: _isConnecting
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Text('Connect'),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            _connectionDot(isSpacetimeConnected, 'SpaceNotes'),
+            const SizedBox(width: 16),
+            _connectionDot(isChatConnected, 'Claude Code'),
+          ],
         ),
       ],
     );
   }
 
-  Widget _buildOpenCodeSection() {
-    final isConnected =
-        ref.watch(openCodeConnectionProvider).valueOrNull ?? false;
-    final isDesktop = PlatformUtils.isDesktopLayout(context);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _connectionDot(bool connected, String label) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        const Text(
-          'OpenCode Server',
-          style: TextStyle(
-            fontFamily: 'FiraCode',
-            fontSize: 16,
-            color: SpaceNotesTheme.text,
-            fontWeight: FontWeight.w500,
+        Container(
+          width: 8,
+          height: 8,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: connected ? SpaceNotesTheme.success : SpaceNotesTheme.error,
           ),
         ),
-        const SizedBox(height: 16),
-        TerminalIPInput(
-          ipController: _openCodeIpController,
-          portController: _openCodePortController,
-          ipHint: 'IP Address',
-          portHint: '5053',
-          isConnecting: _isOpenCodeConnecting,
-          isConnected: isConnected,
-          onConnect: _saveOpenCodeConfig,
+        const SizedBox(width: 6),
+        Text(
+          label,
+          style: const TextStyle(
+            fontFamily: 'FiraCode',
+            fontSize: 11,
+            color: SpaceNotesTheme.textSecondary,
+          ),
         ),
-        if (isDesktop) ...[
-          const SizedBox(height: 24),
-          _buildMaxOpenNotesSection(),
-        ],
       ],
     );
   }

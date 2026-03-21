@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../theme/spacenotes_theme.dart';
+import '../blocs/config/config_cubit.dart';
+import '../blocs/config/config_state.dart';
 import '../providers/notes_providers.dart';
-import '../widgets/terminal_ip_input.dart';
 
-/// Screen shown when no SpaceNotes server is configured.
 class ConnectScreen extends ConsumerStatefulWidget {
   const ConnectScreen({super.key});
 
@@ -15,26 +16,17 @@ class ConnectScreen extends ConsumerStatefulWidget {
 
 class _ConnectScreenState extends ConsumerState<ConnectScreen> {
   final TextEditingController _ipController = TextEditingController();
-  final TextEditingController _portController = TextEditingController();
   bool _isConnecting = false;
   String? _errorMessage;
 
   @override
-  void initState() {
-    super.initState();
-    _portController.text = '5050';
-  }
-
-  @override
   void dispose() {
     _ipController.dispose();
-    _portController.dispose();
     super.dispose();
   }
 
   Future<void> _connect() async {
     final ip = _ipController.text.trim();
-    final port = _portController.text.trim();
 
     if (ip.isEmpty) {
       setState(() {
@@ -43,28 +35,26 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
       return;
     }
 
-    final host = port.isNotEmpty ? '$ip:$port' : '$ip:5050';
-
     setState(() {
       _isConnecting = true;
       _errorMessage = null;
     });
 
     try {
-      final repository = ref.read(notesRepositoryProvider);
+      final configCubit = context.read<ConfigCubit>();
+      await configCubit.updateServer(ip);
 
-      // Configure and connect
-      await repository.configure(host: host);
+      final repository = ref.read(notesRepositoryProvider);
+      await repository.configure(host: '$ip:${ConfigLoaded.spacetimeDbPort}');
       await repository.connectAndGetInitialData();
 
-      // Check if connected
       final isConfigured = await repository.isConfigured();
 
       if (mounted && isConfigured) {
         context.go('/notes');
       } else {
         setState(() {
-          _errorMessage = 'Failed to connect to SpaceNotes server';
+          _errorMessage = 'Failed to connect to server';
           _isConnecting = false;
         });
       }
@@ -95,16 +85,27 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
               ),
             ),
             const SizedBox(height: 32),
-            TerminalIPInput(
-              ipController: _ipController,
-              portController: _portController,
-              ipHint: 'IP Address',
-              portHint: '5050',
-              isConnecting: _isConnecting,
-              isConnected: false,
-              onConnect: _connect,
-              maxWidth: 350,
-              showConnectButton: false,
+            Container(
+              constraints: const BoxConstraints(maxWidth: 350),
+              height: 44,
+              decoration: BoxDecoration(
+                color: SpaceNotesTheme.inputSurface,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: TextField(
+                controller: _ipController,
+                style: SpaceNotesTextStyles.terminal.copyWith(fontSize: 14),
+                decoration: InputDecoration(
+                  hintText: 'Server IP Address',
+                  hintStyle: SpaceNotesTextStyles.terminal.copyWith(
+                    fontSize: 14,
+                    color: SpaceNotesTheme.textSecondary,
+                  ),
+                  border: InputBorder.none,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                ),
+                onSubmitted: (_) => _connect(),
+              ),
             ),
             const SizedBox(height: 24),
             if (_errorMessage != null) ...[

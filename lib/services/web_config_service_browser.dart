@@ -48,18 +48,13 @@ class WebConfigService {
   static Future<void> tryAutoConfigureOpenCode(ConfigCubit configCubit) async {
     try {
       final currentHost = web.window.location.hostname;
-      final config = await _fetchConfig();
 
-      if (config != null) {
-        final port = config['opencode_port'] as int?;
-
-        if (port != null && currentHost.isNotEmpty) {
-          print('Auto-configured OpenCode from server: $currentHost:$port');
-          await configCubit.updateServer(currentHost, port: port);
-        }
+      if (currentHost.isNotEmpty) {
+        print('Auto-configured server IP from browser: $currentHost');
+        await configCubit.updateServer(currentHost);
       }
     } catch (e) {
-      print('Could not auto-configure OpenCode: $e');
+      print('Could not auto-configure server: $e');
     }
   }
 }

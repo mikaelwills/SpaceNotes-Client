@@ -4,23 +4,14 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart' hide Provider;
+import 'package:get_it/get_it.dart';
 import 'package:spacenotes_client/providers/notes_providers.dart';
-import 'package:spacenotes_client/providers/connection_providers.dart';
 import 'package:spacetimedb_dart_sdk/spacetimedb_dart_sdk.dart' show SdkLogger;
-import 'package:provider/provider.dart';
 
 import 'theme/spacenotes_theme.dart';
 import 'services/debug_logger.dart';
-import 'services/opencode_client.dart';
-import 'services/sse_service.dart';
-import 'services/message_queue_service.dart';
-import 'services/title_generation_service.dart';
-import 'blocs/connection/connection_bloc.dart';
-import 'blocs/session/session_bloc.dart';
-import 'blocs/session_list/session_list_bloc.dart';
 import 'blocs/chat/chat_bloc.dart';
 import 'blocs/config/config_cubit.dart';
-import 'blocs/config/config_state.dart';
 import 'blocs/desktop_notes/desktop_notes_bloc.dart';
 import 'router/app_router.dart';
 import 'services/web_config_service.dart';
@@ -33,45 +24,18 @@ void main() async {
 
   SdkLogger.onLog = (level, msg) => debugLogger.log(level, 'SDK', msg);
 
-  // Create and initialize ConfigCubit
   final configCubit = ConfigCubit();
   await configCubit.initialize();
+  GetIt.I.registerSingleton<ConfigCubit>(configCubit);
 
-  // Try to auto-configure OpenCode from server config (web only)
+  final chatBloc = ChatBloc();
+  GetIt.I.registerSingleton<ChatBloc>(chatBloc);
+
   if (kIsWeb) {
     await WebConfigService.tryAutoConfigureOpenCode(configCubit);
   }
 
-  // Create OpenCodeClient with ConfigCubit
-  final openCodeClient = OpenCodeClient(configCubit: configCubit);
-
-  // Apply saved provider/model settings if available
-  final configState = configCubit.state;
-  if (configState is ConfigLoaded &&
-      configState.selectedProviderID != null &&
-      configState.selectedModelID != null) {
-    openCodeClient.setProvider(
-        configState.selectedProviderID!, configState.selectedModelID!);
-  }
-
-  // Create SessionBloc (session loading is handled by ConnectionBloc after connection)
-  final sessionBloc = SessionBloc(
-    openCodeClient: openCodeClient,
-    configCubit: configCubit,
-  );
-
-  // Create ConnectionBloc
-  final connectionBloc = ConnectionBloc(
-    openCodeClient: openCodeClient,
-    sessionBloc: sessionBloc,
-    configCubit: configCubit,
-  );
-
-  final container = ProviderContainer(
-    overrides: [
-      connectionBlocProvider.overrideWith((ref) => connectionBloc),
-    ],
-  );
+  final container = ProviderContainer();
 
   final repo = container.read(notesRepositoryProvider);
   await repo.loadSavedConfig();
@@ -80,53 +44,33 @@ void main() async {
     await WebConfigService.tryAutoConfigureFromServer(repo);
   }
 
-  final sseService = SSEService(configCubit: configCubit);
-  final titleService = TitleGenerationService(
-    openCodeClient: openCodeClient,
-    sseService: sseService,
-  );
-  titleService.setRepository(repo);
-  repo.setTitleService(titleService);
-
   runApp(UncontrolledProviderScope(
     container: container,
-    child: OpenCodeApp(
-      openCodeClient: openCodeClient,
+    child: SpaceNotesApp(
       configCubit: configCubit,
-      sessionBloc: sessionBloc,
-      connectionBloc: connectionBloc,
+      chatBloc: chatBloc,
       container: container,
-      sseService: sseService,
-      titleService: titleService,
     ),
   ));
 }
 
-class OpenCodeApp extends StatefulWidget {
-  final OpenCodeClient openCodeClient;
+class SpaceNotesApp extends StatefulWidget {
   final ConfigCubit configCubit;
-  final SessionBloc sessionBloc;
-  final ConnectionBloc connectionBloc;
+  final ChatBloc chatBloc;
   final ProviderContainer container;
-  final SSEService sseService;
-  final TitleGenerationService titleService;
 
-  const OpenCodeApp({
+  const SpaceNotesApp({
     super.key,
-    required this.openCodeClient,
     required this.configCubit,
-    required this.sessionBloc,
-    required this.connectionBloc,
+    required this.chatBloc,
     required this.container,
-    required this.sseService,
-    required this.titleService,
   });
 
   @override
-  State<OpenCodeApp> createState() => _OpenCodeAppState();
+  State<SpaceNotesApp> createState() => _SpaceNotesAppState();
 }
 
-class _OpenCodeAppState extends State<OpenCodeApp> with WidgetsBindingObserver {
+class _SpaceNotesAppState extends State<SpaceNotesApp> with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
@@ -155,66 +99,31 @@ class _OpenCodeAppState extends State<OpenCodeApp> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
-    return MultiProvider(
+    return MultiBlocProvider(
       providers: [
-        Provider<OpenCodeClient>.value(value: widget.openCodeClient),
-        Provider<SSEService>.value(value: widget.sseService),
-        Provider<TitleGenerationService>.value(value: widget.titleService),
+        BlocProvider<ConfigCubit>.value(value: widget.configCubit),
+        BlocProvider<ChatBloc>.value(value: widget.chatBloc),
+        BlocProvider<DesktopNotesBloc>(
+          create: (_) => DesktopNotesBloc(),
+        ),
       ],
-      child: MultiBlocProvider(
-        providers: [
-          BlocProvider<ConfigCubit>.value(value: widget.configCubit),
-          BlocProvider<SessionBloc>.value(value: widget.sessionBloc),
-          BlocProvider<SessionListBloc>(
-            create: (context) => SessionListBloc(
-              openCodeClient: context.read<OpenCodeClient>(),
-            ),
-          ),
-          BlocProvider<ConnectionBloc>.value(value: widget.connectionBloc),
-          Provider<MessageQueueService>(
-            create: (context) => MessageQueueService(
-              connectionBloc: context.read<ConnectionBloc>(),
-              sessionBloc: widget.sessionBloc,
-            ),
-          ),
-          BlocProvider<ChatBloc>(
-            create: (context) {
-              final chatBloc = ChatBloc(
-                sessionBloc: widget.sessionBloc,
-                sseService: context.read<SSEService>(),
-                openCodeClient: context.read<OpenCodeClient>(),
-                messageQueueService: context.read<MessageQueueService>(),
-              );
-
-              context
-                  .read<MessageQueueService>()
-                  .initChatBlocListener(chatBloc);
-
-              return chatBloc;
-            },
-          ),
-          BlocProvider<DesktopNotesBloc>(
-            create: (context) => DesktopNotesBloc(),
-          ),
-        ],
-        child: Container(
-          color: SpaceNotesTheme.background,
-          child: SafeArea(
-            child: MaterialApp.router(
-              title: 'SpaceNotes',
-              theme: SpaceNotesTheme.themeData,
-              routerConfig: createAppRouter(widget.container),
-              debugShowCheckedModeBanner: false,
-              localizationsDelegates: const [
-                GlobalMaterialLocalizations.delegate,
-                GlobalWidgetsLocalizations.delegate,
-                GlobalCupertinoLocalizations.delegate,
-                FlutterQuillLocalizations.delegate,
-              ],
-              supportedLocales: const [
-                Locale('en'),
-              ],
-            ),
+      child: Container(
+        color: SpaceNotesTheme.background,
+        child: SafeArea(
+          child: MaterialApp.router(
+            title: 'SpaceNotes',
+            theme: SpaceNotesTheme.themeData,
+            routerConfig: createAppRouter(widget.container),
+            debugShowCheckedModeBanner: false,
+            localizationsDelegates: const [
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+              FlutterQuillLocalizations.delegate,
+            ],
+            supportedLocales: const [
+              Locale('en'),
+            ],
           ),
         ),
       ),

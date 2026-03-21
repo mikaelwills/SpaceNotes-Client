@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image/image.dart' as image_lib;
 import 'package:image_picker/image_picker.dart';
 import '../theme/spacenotes_theme.dart';
 import '../providers/notes_providers.dart';
@@ -128,7 +129,7 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
   }
 
   Widget _buildSearchBar(bool isChat) {
-    final isOpenCodeConnected = ref.watch(openCodeConnectionProvider).valueOrNull ?? false;
+    final isChatConnected = ref.watch(chatConnectedProvider).valueOrNull ?? false;
 
     return Expanded(
       child: Container(
@@ -145,7 +146,7 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
             setState(() => _isSearchFocused = focused);
           },
           onSubmitted: _onSendToAi,
-          showImagePicker: isOpenCodeConnected,
+          showImagePicker: isChatConnected,
           onImagePickerTap: _onPickImage,
           hasImageAttached: _pendingImageBase64 != null,
           onClearImage: () {
@@ -160,12 +161,7 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
   }
 
   Widget _buildRightButtons(bool isChat, bool isWorking, String folderPath) {
-    final isOpenCodeConnected = ref.watch(openCodeConnectionProvider).valueOrNull ?? false;
-
     if (isChat) {
-      if (!isOpenCodeConnected) {
-        return const SizedBox.shrink();
-      }
       return isWorking
           ? _buildCircularButton(
               onPressed: () =>
@@ -178,7 +174,7 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
               tooltip: 'Send to AI',
               icon: Icons.arrow_upward,
             );
-    } else if ((_isSearchFocused || _searchController.text.isNotEmpty) && isOpenCodeConnected) {
+    } else if (_isSearchFocused || _searchController.text.isNotEmpty) {
       return _buildCircularButton(
         onPressed: _onSendToAi,
         tooltip: 'Send to AI',
@@ -267,14 +263,13 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
 
   Future<void> _onPickImage() async {
     try {
-      final XFile? image = await _imagePicker.pickImage(source: ImageSource.gallery);
+      final image = await _imagePicker.pickImage(source: ImageSource.gallery);
       if (image == null) return;
 
-      final bytes = await compute(_readFileBytes, image.path);
-      final base64 = base64Encode(bytes);
+      var bytes = await compute(_readFileBytes, image.path);
 
       final extension = image.path.split('.').last.toLowerCase();
-      final mimeType = switch (extension) {
+      var mimeType = switch (extension) {
         'jpg' || 'jpeg' => 'image/jpeg',
         'png' => 'image/png',
         'gif' => 'image/gif',
@@ -282,13 +277,35 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
         _ => 'image/jpeg',
       };
 
+      if (bytes.length > 4 * 1024 * 1024) {
+        bytes = await compute(_compressImage, bytes);
+        mimeType = 'image/jpeg';
+      }
+
       setState(() {
-        _pendingImageBase64 = base64;
+        _pendingImageBase64 = base64Encode(bytes);
         _pendingImageMimeType = mimeType;
       });
     } catch (e) {
       debugPrint('[MobileBottomInputBar] Error picking image: $e');
     }
+  }
+
+  static Uint8List _compressImage(Uint8List bytes) {
+    final img = image_lib.decodeImage(bytes);
+    if (img == null) return bytes;
+
+    var resized = img;
+    if (img.width > 2048 || img.height > 2048) {
+      resized = image_lib.copyResize(img, width: img.width > img.height ? 2048 : -1, height: img.height >= img.width ? 2048 : -1);
+    }
+
+    for (final quality in [90, 80, 70, 60]) {
+      final jpeg = Uint8List.fromList(image_lib.encodeJpg(resized, quality: quality));
+      if (jpeg.length <= 4 * 1024 * 1024) return jpeg;
+    }
+
+    return Uint8List.fromList(image_lib.encodeJpg(resized, quality: 50));
   }
 
   Future<void> _createQuickNote(String folderPath) async {

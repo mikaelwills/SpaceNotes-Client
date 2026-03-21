@@ -48,6 +48,7 @@ class SpacetimeDbNotesRepository {
   // Client
   SpacetimeDbClient? _client;
   Future<void>? _connectingFuture;
+  Timer? _emitDebounceTimer;
 
   // Stream for reactive updates
   final _notesSubject = BehaviorSubject<List<Note>>.seeded([]);
@@ -95,6 +96,7 @@ class SpacetimeDbNotesRepository {
   Future<void> _ensureConnected() async {
     if (_client != null) {
       final status = _client!.connection.status;
+      debugLogger.connection('_ensureConnected: client exists, status=$status');
 
       if (status == stdb.ConnectionStatus.connected) {
         return;
@@ -161,6 +163,8 @@ class SpacetimeDbNotesRepository {
 
   Future<void> _connect() async {
     try {
+      debugLogger.connection('_connect() called');
+      debugLogger.connection('CONNECT STACK: ${StackTrace.current.toString().split('\n').take(5).join(' | ')}');
       debugLogger.connection('Connecting to SpacetimeDB', 'host=$_host, db=$_database');
 
       final storage = _authStorage ?? SharedPreferencesTokenStore();
@@ -286,44 +290,39 @@ class SpacetimeDbNotesRepository {
 
     final noteInsertSub = noteTable.insertEventStream.listen((event) {
       if (!_initialSyncComplete) return;
-      final note = event.row;
-      debugLogger.sync('Received insert: id=${note.id.substring(0, 8)}, path=${note.path}, len=${note.content.length}, hash=${_contentHash(note.content)}');
-      _emitCurrentNotes();
+      _emitCurrentNotesDebounced();
     });
     _subscriptions.add(noteInsertSub);
 
     final noteUpdateSub = noteTable.updateEventStream.listen((event) {
       if (!_initialSyncComplete) return;
-      final note = event.newRow;
-      debugLogger.sync('Received update: id=${note.id.substring(0, 8)}, len=${note.content.length}, hash=${_contentHash(note.content)}');
-      _emitCurrentNotes();
+      _emitCurrentNotesDebounced();
     });
     _subscriptions.add(noteUpdateSub);
 
     final noteDeleteSub = noteTable.deleteEventStream.listen((event) {
       if (!_initialSyncComplete) return;
-      debugLogger.sync('Note DELETE: ${event.row.path}');
-      _emitCurrentNotes();
+      _emitCurrentNotesDebounced();
     });
     _subscriptions.add(noteDeleteSub);
 
     final folderInsertSub = folderTable.insertEventStream.listen((event) {
       if (!_initialSyncComplete) return;
-      _emitCurrentNotes();
+      _emitCurrentNotesDebounced();
     });
     _subscriptions.add(folderInsertSub);
 
     final folderUpdateSub = folderTable.updateEventStream.listen((event) {
       if (!_initialSyncComplete) return;
       if (!event.context.isMyTransaction) {
-        _emitCurrentNotes();
+        _emitCurrentNotesDebounced();
       }
     });
     _subscriptions.add(folderUpdateSub);
 
     final folderDeleteSub = folderTable.deleteEventStream.listen((event) {
       if (!_initialSyncComplete) return;
-      _emitCurrentNotes();
+      _emitCurrentNotesDebounced();
     });
     _subscriptions.add(folderDeleteSub);
 
@@ -438,6 +437,13 @@ class SpacetimeDbNotesRepository {
       _notesSubject.addError(e);
       _foldersSubject.addError(e);
     }
+  }
+
+  void _emitCurrentNotesDebounced() {
+    _emitDebounceTimer?.cancel();
+    _emitDebounceTimer = Timer(const Duration(milliseconds: 100), () {
+      _emitCurrentNotes();
+    });
   }
 
   Future<bool> isConfigured() async {
@@ -884,6 +890,7 @@ class SpacetimeDbNotesRepository {
   /// and emits the initial cache data to the stream
   Future<void> connectAndGetInitialData() async {
     debugLogger.connection('connectAndGetInitialData() called');
+    debugLogger.connection('STACK TRACE: ${StackTrace.current.toString().split('\n').take(5).join(' | ')}');
     await _ensureConnected();
     _emitCurrentNotes();
   }
@@ -943,6 +950,7 @@ class SpacetimeDbNotesRepository {
   /// Reset the repository connection (used when switching instances)
   void resetConnection() {
     debugLogger.connection('Resetting connection');
+    debugLogger.connection('RESET STACK: ${StackTrace.current.toString().split('\n').take(5).join(' | ')}');
 
     for (final sub in _subscriptions) {
       sub.cancel();

@@ -24,7 +24,7 @@ class NoteBottomBar extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isDesktop = PlatformUtils.isDesktopLayout(context);
-    final isOpenCodeConnected = ref.watch(openCodeConnectionProvider).valueOrNull ?? false;
+    final isChatConnected = ref.watch(chatConnectedProvider).valueOrNull ?? false;
     final buttonSize = isDesktop ? 36.0 : 48.0;
     final iconSize = isDesktop ? 20.0 : 24.0;
 
@@ -74,7 +74,7 @@ class NoteBottomBar extends ConsumerWidget {
               size: buttonSize,
               iconSize: iconSize,
             ),
-            if (isOpenCodeConnected) ...[
+            if (isChatConnected) ...[
               const SizedBox(width: 8),
               _buildCircularButton(
                 onPressed: onChatTap,

@@ -8,8 +8,6 @@ import '../widgets/connection_status_row.dart';
 import '../widgets/terminal_message.dart';
 import '../blocs/chat/chat_bloc.dart';
 import '../blocs/chat/chat_state.dart';
-import '../blocs/session/session_bloc.dart';
-import '../blocs/session/session_event.dart';
 import '../blocs/chat/chat_event.dart';
 import '../dialogs/permission_dialog.dart';
 
@@ -161,7 +159,7 @@ class _ChatViewState extends ConsumerState<ChatView> {
                 const SizedBox(height: 16),
                 TextButton(
                   onPressed: () {
-                    context.read<SessionBloc>().add(LoadStoredSession());
+                    context.read<ChatBloc>().add(LoadMessagesForCurrentSession());
                   },
                   child: const Text('Retry', style: TextStyle(color: SpaceNotesTheme.primary)),
                 ),

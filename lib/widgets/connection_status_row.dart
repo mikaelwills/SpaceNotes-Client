@@ -1,11 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
-import 'package:spacenotes_client/blocs/chat/chat_bloc.dart';
-import 'package:spacenotes_client/blocs/chat/chat_state.dart';
 import '../theme/spacenotes_theme.dart';
-import '../blocs/connection/connection_bloc.dart';
-import '../blocs/connection/connection_state.dart' as connection_states;
+import '../blocs/chat/chat_bloc.dart';
+import '../blocs/chat/chat_state.dart';
 
 class ConnectionStatusRow extends StatefulWidget {
   const ConnectionStatusRow({super.key});
@@ -42,85 +39,53 @@ class _ConnectionStatusRowState extends State<ConnectionStatusRow>
     super.dispose();
   }
 
-
-
   @override
   Widget build(BuildContext context) {
-    final connectionBloc = context.read<ConnectionBloc>();
-    final openCodeClient = connectionBloc.openCodeClient;
-    final modelName = openCodeClient.modelDisplayName;
+    return BlocBuilder<ChatBloc, ChatState>(
+      builder: (context, chatState) {
+        final isConnected = chatState is ChatReady && chatState.isConnected;
+        final isWorking = chatState is ChatReady && chatState.isWorking;
 
-    return BlocBuilder<ConnectionBloc, connection_states.ConnectionState>(
-      builder: (context, connectionState) {
         return Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-          child: BlocBuilder<ChatBloc, ChatState>(
-            builder: (context, chatState) {
-              final isWorking = chatState is ChatReady && chatState.isWorking;
-              final sessionStatus = chatState is ChatReady ? chatState.sessionStatus : null;
-
-              return Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
                 children: [
-                  Row(
-                    children: [
-                      _buildConnectionIndicator(connectionState),
-                      const SizedBox(width: 8),
-                      GestureDetector(
-                        onTap: () => context.go('/provider-list'),
-                        child: Text(
-                          modelName,
-                          style: SpaceNotesTextStyles.terminal.copyWith(
-                            fontSize: 13,
-                            color: SpaceNotesTheme.text,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ),
-                    ],
+                  _buildConnectionIndicator(isConnected),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Claude Code',
+                    style: SpaceNotesTextStyles.terminal.copyWith(
+                      fontSize: 13,
+                      color: SpaceNotesTheme.text,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
-                  if (sessionStatus != null && sessionStatus.isRetrying) ...[
-                    Text(
-                      sessionStatus.displayMessage,
-                      style: SpaceNotesTextStyles.terminal.copyWith(
-                        fontSize: 11,
-                        color: SpaceNotesTheme.warning,
-                        fontWeight: FontWeight.w400,
-                      ),
-                    ),
-                  ] else if (isWorking) ...[
-                    SizedBox(
-                      width: 70,
-                      child: AnimatedDots(
-                        textStyle: SpaceNotesTextStyles.terminal.copyWith(
-                          fontSize: 11,
-                          color: SpaceNotesTheme.textSecondary,
-                          fontWeight: FontWeight.w400,
-                        ),
-                      ),
-                    ),
-                  ],
                 ],
-              );
-            },
+              ),
+              if (isWorking) ...[
+                SizedBox(
+                  width: 70,
+                  child: AnimatedDots(
+                    textStyle: SpaceNotesTextStyles.terminal.copyWith(
+                      fontSize: 11,
+                      color: SpaceNotesTheme.textSecondary,
+                      fontWeight: FontWeight.w400,
+                    ),
+                  ),
+                ),
+              ],
+            ],
           ),
         );
       },
     );
   }
 
-  Widget _buildConnectionIndicator(connection_states.ConnectionState state) {
-    Color color;
-    bool shouldPulse = false;
-
-    if (state is connection_states.Connected) {
-      color = SpaceNotesTheme.success;
-      shouldPulse = true;
-    } else if (state is connection_states.Reconnecting) {
-      color = SpaceNotesTheme.warning;
-    } else {
-      color = SpaceNotesTheme.error;
-    }
+  Widget _buildConnectionIndicator(bool isConnected) {
+    final color = isConnected ? SpaceNotesTheme.success : SpaceNotesTheme.error;
 
     Widget dot = Container(
       width: 8,
@@ -131,7 +96,7 @@ class _ConnectionStatusRowState extends State<ConnectionStatusRow>
       ),
     );
 
-    if (shouldPulse) {
+    if (isConnected) {
       return AnimatedBuilder(
         animation: _pulseAnimation,
         builder: (context, child) {

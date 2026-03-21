@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../theme/spacenotes_theme.dart';
-import '../blocs/session/session_bloc.dart';
-import '../blocs/session/session_event.dart';
-import '../blocs/session/session_state.dart';
 import '../blocs/chat/chat_bloc.dart';
 import '../blocs/chat/chat_event.dart';
 import '../blocs/chat/chat_state.dart';
@@ -25,7 +22,6 @@ class NoteChatInput extends StatefulWidget {
 
 class _NoteChatInputState extends State<NoteChatInput> {
   final TextEditingController _controller = TextEditingController();
-  bool _sessionCreated = false;
 
   @override
   void dispose() {
@@ -38,25 +34,14 @@ class _NoteChatInputState extends State<NoteChatInput> {
     return name.length > 20 ? '${name.substring(0, 20)}...' : name;
   }
 
-  Future<void> _sendMessage() async {
+  void _sendMessage() {
     final message = _controller.text.trim();
     if (message.isEmpty) return;
 
     FocusScope.of(context).unfocus();
 
-    final sessionBloc = context.read<SessionBloc>();
-    final chatBloc = context.read<ChatBloc>();
-
-    if (!_sessionCreated) {
-      sessionBloc.add(const CreateSession());
-      _sessionCreated = true;
-
-      await sessionBloc.stream.firstWhere((state) => state is SessionLoaded);
-      await chatBloc.stream.firstWhere((state) => state is ChatReady);
-    }
-
     final prefixedMessage = '[Viewing note: ${widget.notePath}]\n\n$message';
-    chatBloc.add(SendChatMessage(prefixedMessage));
+    context.read<ChatBloc>().add(SendChatMessage(prefixedMessage));
     _controller.clear();
   }
 

@@ -1,0 +1,217 @@
+import 'dart:async';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:get_it/get_it.dart';
+import '../services/debug_logger.dart';
+import '../services/fakechat_service.dart';
+import '../blocs/chat/chat_event.dart';
+import '../blocs/chat/chat_state.dart';
+import '../blocs/config/config_cubit.dart';
+import '../blocs/config/config_state.dart';
+import '../models/opencode_message.dart';
+import '../models/message_part.dart';
+import 'chat_interface.dart';
+
+class ClaudeCodeChatInterface implements ChatInterface {
+  final FakechatService _fakechat = FakechatService();
+
+  final List<OpenCodeMessage> _messages = [];
+  final Map<String, int> _messageIndex = {};
+  StreamSubscription? _wsSubscription;
+
+  static const int _maxMessages = 100;
+  static const String _sessionId = 'claude-code';
+
+  ChatStatus _chatStatus = const ChatStatus();
+  void Function(ChatEvent)? _addEvent;
+
+  @override
+  List<OpenCodeMessage> get messages => _messages;
+
+  @override
+  ChatStatus get chatStatus => _chatStatus;
+
+  @override
+  void setAddEvent(void Function(ChatEvent) addEvent) {
+    _addEvent = addEvent;
+  }
+
+  @override
+  Future<void> initialize() async {
+    final configCubit = GetIt.I<ConfigCubit>();
+    final configState = configCubit.state;
+    final wsUrl = configState is ConfigLoaded
+        ? configState.claudeCodeWsUrl
+        : 'ws://0.0.0.0:${ConfigLoaded.claudeCodePort}/ws';
+
+    debugLogger.info('CC', 'Connecting to WebSocket', wsUrl);
+
+    _wsSubscription?.cancel();
+
+    final stream = _fakechat.connect(wsUrl);
+    _chatStatus = _chatStatus.copyWith(isConnected: true);
+
+    _wsSubscription = stream.listen(
+      (event) {
+
+        switch (event.type) {
+          case FakechatEventType.msg:
+            if (event.from == 'assistant') {
+              final message = OpenCodeMessage(
+                id: event.id,
+                sessionId: _sessionId,
+                role: 'assistant',
+                created: event.ts != null
+                    ? DateTime.fromMillisecondsSinceEpoch(event.ts!)
+                    : DateTime.now(),
+                completed: DateTime.now(),
+                parts: [
+                  MessagePart(
+                    id: '${event.id}-p0',
+                    type: 'text',
+                    content: event.text ?? '',
+                  ),
+                ],
+                isStreaming: false,
+              );
+
+              _messages.add(message);
+              _messageIndex[message.id] = _messages.length - 1;
+              _enforceMessageLimit();
+              _chatStatus = _chatStatus.copyWith(
+                  isSending: false, isStreaming: false, clearErrorMessage: true);
+              _addEvent?.call(RefreshChatStateEvent());
+            }
+            break;
+
+          case FakechatEventType.edit:
+            if (event.text != null) {
+              final idx = _messageIndex[event.id];
+              if (idx != null && idx < _messages.length) {
+                final existing = _messages[idx];
+                _messages[idx] = existing.copyWith(
+                  parts: [
+                    MessagePart(
+                      id: existing.parts.isNotEmpty ? existing.parts.first.id : event.id,
+                      type: 'text',
+                      content: event.text,
+                    ),
+                  ],
+                );
+                _addEvent?.call(RefreshChatStateEvent());
+              }
+            }
+            break;
+        }
+      },
+      onError: (error) {
+        debugLogger.error('CC', 'WebSocket error', error.toString());
+        _chatStatus = _chatStatus.copyWith(isConnected: false);
+        _addEvent?.call(RefreshChatStateEvent());
+      },
+      onDone: () {
+        debugLogger.info('CC', 'WebSocket closed');
+        _chatStatus = _chatStatus.copyWith(isConnected: false);
+        _addEvent?.call(RefreshChatStateEvent());
+      },
+    );
+  }
+
+  @override
+  Future<void> onLoadMessages(Emitter<ChatState> emit) async {
+    emit(_createReadyState());
+  }
+
+  @override
+  Future<void> onSendMessage(SendChatMessage event, Emitter<ChatState> emit) async {
+
+    final messageId = DateTime.now().millisecondsSinceEpoch.toString();
+    final userMessage = OpenCodeMessage(
+      id: messageId,
+      sessionId: _sessionId,
+      role: 'user',
+      created: DateTime.now(),
+      completed: DateTime.now(),
+      parts: [
+        MessagePart(
+          id: '$messageId-p0',
+          type: 'text',
+          content: event.message,
+        ),
+      ],
+      sendStatus: MessageSendStatus.sent,
+    );
+
+    _messages.add(userMessage);
+    _messageIndex[userMessage.id] = _messages.length - 1;
+    _enforceMessageLimit();
+
+    _chatStatus = _chatStatus.copyWith(isSending: true);
+    emit(_createReadyState());
+
+    _fakechat.sendMessage(event.message);
+  }
+
+  @override
+  Future<void> onCancelOperation(Emitter<ChatState> emit) async {}
+
+  @override
+  void onClearMessages(Emitter<ChatState> emit) {
+    _messages.clear();
+    _messageIndex.clear();
+    emit(_createReadyState());
+  }
+
+  @override
+  void onClearChat(Emitter<ChatState> emit) {
+    _messages.clear();
+    _messageIndex.clear();
+    emit(ChatInitial());
+  }
+
+  @override
+  Future<void> onRetryMessage(RetryMessage event, Emitter<ChatState> emit) async {
+    _fakechat.sendMessage(event.messageContent);
+  }
+
+  @override
+  void onDeleteQueuedMessage(DeleteQueuedMessage event, Emitter<ChatState> emit) {}
+
+  @override
+  void onMessageStatusChanged(MessageStatusChanged event, Emitter<ChatState> emit) {}
+
+  @override
+  Future<void> onRespondToPermission(RespondToPermission event, Emitter<ChatState> emit) async {}
+
+  @override
+  void onRefreshState(Emitter<ChatState> emit) {
+    emit(_createReadyState());
+  }
+
+  ChatReady _createReadyState() {
+    return ChatReady(
+      sessionId: _sessionId,
+      messages: List.from(_messages),
+      status: _chatStatus,
+    );
+  }
+
+  void _enforceMessageLimit() {
+    if (_messages.length > _maxMessages) {
+      final toRemove = _messages.length - _maxMessages;
+      for (int i = 0; i < toRemove; i++) {
+        final removed = _messages.removeAt(0);
+        _messageIndex.remove(removed.id);
+      }
+      _messageIndex.clear();
+      for (int i = 0; i < _messages.length; i++) {
+        _messageIndex[_messages[i].id] = i;
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _wsSubscription?.cancel();
+    _fakechat.dispose();
+  }
+}

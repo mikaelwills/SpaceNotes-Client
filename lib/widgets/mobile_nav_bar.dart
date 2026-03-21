@@ -7,12 +7,6 @@ import 'package:collection/collection.dart';
 import '../theme/spacenotes_theme.dart';
 import '../blocs/chat/chat_bloc.dart';
 import '../blocs/chat/chat_event.dart';
-import '../blocs/session/session_bloc.dart';
-import '../blocs/session/session_event.dart';
-import '../blocs/connection/connection_bloc.dart';
-import '../blocs/connection/connection_state.dart' as connection_states;
-import '../blocs/config/config_cubit.dart';
-import '../blocs/config/config_state.dart';
 import '../providers/notes_providers.dart';
 import 'connection_indicator.dart';
 import 'sync_state_indicator.dart';
@@ -22,10 +16,6 @@ class MobileNavBar extends ConsumerWidget {
 
   void _onNewSessionPressed(BuildContext context) {
     context.read<ChatBloc>().add(ClearChat());
-    final configState = context.read<ConfigCubit>().state;
-    final defaultAgent =
-        configState is ConfigLoaded ? configState.defaultAgent : null;
-    context.read<SessionBloc>().add(CreateSession(agent: defaultAgent));
   }
 
   bool _isOnNoteScreen(String location) {
@@ -54,9 +44,7 @@ class MobileNavBar extends ConsumerWidget {
     final currentLocation = GoRouterState.of(context).uri.toString();
     final isOnNote = _isOnNoteScreen(currentLocation);
 
-    return BlocBuilder<ConnectionBloc, connection_states.ConnectionState>(
-      builder: (context, connectionState) {
-        return Container(
+    return Container(
           height: 60,
           padding: const EdgeInsets.symmetric(horizontal: 20),
           decoration: const BoxDecoration(
@@ -184,8 +172,6 @@ class MobileNavBar extends ConsumerWidget {
             ],
           ),
         );
-      },
-    );
   }
 
   void _navigateBackFromNote(BuildContext context, String notePath) {

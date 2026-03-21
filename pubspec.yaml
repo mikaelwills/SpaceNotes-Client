@@ -48,6 +48,7 @@ dependencies:
   flutter_markdown: ^0.6.18 # Markdown rendering (server-provided)
   connectivity_plus: ^6.1.0 # Network connectivity monitoring
   equatable: ^2.0.5 # Value equality for BLoC states
+  get_it: ^8.0.3 # Service locator for dependency injection
   shared_preferences: ^2.2.2 # Persistent storage for settings
   path_provider: ^2.1.2 # Access to app directories for offline storage
 
@@ -79,6 +80,8 @@ dependencies:
   crypto: ^3.0.7
   camera: ^0.11.1
   image: ^4.3.0
+  audio_streamer: ^4.3.0
+  flutter_pcm_sound: ^3.3.3
 
 dev_dependencies:
   flutter_test:
