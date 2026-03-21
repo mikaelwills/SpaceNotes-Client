@@ -28,6 +28,9 @@ class TitleGenerationService {
   final Map<String, String> _notePaths = {};
   StreamSubscription<OpenCodeEvent>? _sseSubscription;
   String _accumulatedText = '';
+  String? _firstMessageId;
+  bool _seenAssistantMessage = false;
+  Timer? _timeoutTimer;
 
   TitleGenerationService({
     required OpenCodeClient openCodeClient,
@@ -49,7 +52,7 @@ class TitleGenerationService {
     _notePaths[noteId] = path;
 
     _debounceTimers[noteId]?.cancel();
-    _debounceTimers[noteId] = Timer(const Duration(seconds: 4), () {
+    _debounceTimers[noteId] = Timer(const Duration(seconds: 1), () {
       _debounceTimers.remove(noteId);
       _fireGenerateTitle(noteId);
     });
@@ -97,6 +100,8 @@ class TitleGenerationService {
 
       _ensureSSEListener();
 
+      _resetState();
+
       _pendingNotes[noteId] = _PendingTitle(
         noteId: noteId,
         currentPath: currentPath,
@@ -115,6 +120,9 @@ class TitleGenerationService {
         system: 'You are a filename generator. Reply with ONLY a short descriptive filename. '
             'No file extension, no quotes, no explanation, no markdown. Just the filename text.',
       );
+
+      _timeoutTimer?.cancel();
+      _timeoutTimer = Timer(const Duration(seconds: 15), _abortPending);
 
       debugLogger.info('TITLE', 'Requested title for: $fileName');
     } catch (e) {
@@ -168,6 +176,18 @@ class TitleGenerationService {
     final partType = part['type'] as String?;
     if (partType != 'text') return;
 
+    final msgId = event.messageId;
+    if (msgId == null) return;
+
+    if (_firstMessageId == null) {
+      _firstMessageId = msgId;
+      return;
+    }
+
+    if (msgId == _firstMessageId) return;
+
+    _seenAssistantMessage = true;
+
     final text = part['text'] as String?;
     final delta = part['delta'] as String?;
 
@@ -179,15 +199,25 @@ class TitleGenerationService {
   }
 
   void _handleSessionIdle() {
-    if (_accumulatedText.isEmpty || _pendingNotes.isEmpty) {
-      _accumulatedText = '';
+    _timeoutTimer?.cancel();
+
+    if (_accumulatedText.isEmpty || _pendingNotes.isEmpty || !_seenAssistantMessage) {
+      _resetState();
+      _pendingNotes.clear();
       return;
     }
 
     final title = _cleanTitle(_accumulatedText);
-    _accumulatedText = '';
+    _resetState();
 
     if (title.isEmpty) return;
+
+    final lower = title.toLowerCase();
+    if (lower.contains('generate') && lower.contains('filename')) {
+      debugLogger.error('TITLE', 'Prompt leak detected, aborting');
+      _pendingNotes.clear();
+      return;
+    }
 
     final entry = _pendingNotes.entries.first;
     final pending = entry.value;
@@ -195,6 +225,18 @@ class TitleGenerationService {
     _completedNotes.add(entry.key);
 
     _applyTitle(pending, title);
+  }
+
+  void _resetState() {
+    _accumulatedText = '';
+    _firstMessageId = null;
+    _seenAssistantMessage = false;
+  }
+
+  void _abortPending() {
+    debugLogger.error('TITLE', 'Timeout: no valid response, aborting');
+    _pendingNotes.clear();
+    _resetState();
   }
 
   String _cleanTitle(String raw) {
@@ -234,6 +276,7 @@ class TitleGenerationService {
   }
 
   void dispose() {
+    _timeoutTimer?.cancel();
     _sseSubscription?.cancel();
     for (final timer in _debounceTimers.values) {
       timer.cancel();
@@ -243,6 +286,6 @@ class TitleGenerationService {
     _completedNotes.clear();
     _noteContents.clear();
     _notePaths.clear();
-    _accumulatedText = '';
+    _resetState();
   }
 }

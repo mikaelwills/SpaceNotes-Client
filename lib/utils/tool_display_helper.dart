@@ -121,11 +121,27 @@ class ToolDisplayHelper {
     // Search operations - show pattern
     final pattern = input['pattern'] as String?;
     if (pattern != null && pattern.isNotEmpty) {
-      // Truncate long patterns
-      final displayPattern = pattern.length > 20 
-          ? '${pattern.substring(0, 20)}...' 
+      final displayPattern = pattern.length > 30
+          ? '${pattern.substring(0, 30)}...'
           : pattern;
       return 'search "$displayPattern"';
+    }
+
+    // Query operations (MCP tools like search_notes)
+    final query = input['query'] as String?;
+    if (query != null && query.isNotEmpty) {
+      final displayQuery = query.length > 30
+          ? '${query.substring(0, 30)}...'
+          : query;
+      final cleanToolName = _formatToolName(toolName);
+      return '$cleanToolName "$displayQuery"';
+    }
+
+    // Folder path operations
+    final folderPath = input['folder_path'] as String?;
+    if (folderPath != null && folderPath.isNotEmpty) {
+      final cleanToolName = _formatToolName(toolName);
+      return '$cleanToolName $folderPath';
     }
 
     return null;

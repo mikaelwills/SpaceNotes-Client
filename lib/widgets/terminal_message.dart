@@ -212,12 +212,27 @@ class TerminalMessage extends StatelessWidget {
     if (input != null) {
       if (input['command'] != null) {
         commandDetails = input['command'] as String;
-      }
-      else if (input['path'] != null || input['filePath'] != null) {
+      } else if (input['query'] != null) {
+        commandDetails = '"${input['query']}"';
+      } else if (input['path'] != null || input['filePath'] != null) {
         commandDetails = (input['path'] ?? input['filePath']) as String;
-      }
-      else if (input['pattern'] != null) {
-        commandDetails = input['pattern'] as String;
+      } else if (input['pattern'] != null) {
+        commandDetails = '"${input['pattern']}"';
+      } else if (input['folder_path'] != null) {
+        commandDetails = input['folder_path'] as String;
+      } else if (input['id'] != null) {
+        commandDetails = input['id'] as String;
+      } else if (input['old_string'] != null) {
+        final old = input['old_string'] as String;
+        commandDetails = '"${old.length > 40 ? '${old.substring(0, 40)}...' : old}"';
+      } else {
+        final keys = input.keys.where((k) => k != 'type').toList();
+        if (keys.length == 1) {
+          final val = input[keys.first];
+          if (val is String && val.length <= 60) {
+            commandDetails = val;
+          }
+        }
       }
     }
 

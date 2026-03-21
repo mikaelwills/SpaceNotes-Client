@@ -101,11 +101,7 @@ class OpenCodeClient {
           final parts = modelString.split('/');
           _providerID = parts[0];
           _modelID = parts[1];
-        } else {
-          throw Exception('Invalid model format in config: $modelString');
         }
-      } else {
-        throw Exception('Failed to get providers: ${response.statusCode}');
       }
     } catch (e) {
       if (e.toString().contains('No route to host') || e.toString().contains('Connection failed')) {
@@ -114,8 +110,6 @@ class OpenCodeClient {
             '2. OpenCode server is running at $_baseUrl\n'
             '3. Network connectivity is available');
       }
-
-      throw Exception('Failed to get providers: $e');
     }
   }
 
