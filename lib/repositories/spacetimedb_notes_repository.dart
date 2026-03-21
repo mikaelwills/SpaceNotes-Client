@@ -163,8 +163,6 @@ class SpacetimeDbNotesRepository {
 
   Future<void> _connect() async {
     try {
-      debugLogger.connection('_connect() called');
-      debugLogger.connection('CONNECT STACK: ${StackTrace.current.toString().split('\n').take(5).join(' | ')}');
       debugLogger.connection('Connecting to SpacetimeDB', 'host=$_host, db=$_database');
 
       final storage = _authStorage ?? SharedPreferencesTokenStore();
@@ -890,7 +888,6 @@ class SpacetimeDbNotesRepository {
   /// and emits the initial cache data to the stream
   Future<void> connectAndGetInitialData() async {
     debugLogger.connection('connectAndGetInitialData() called');
-    debugLogger.connection('STACK TRACE: ${StackTrace.current.toString().split('\n').take(5).join(' | ')}');
     await _ensureConnected();
     _emitCurrentNotes();
   }
@@ -950,7 +947,6 @@ class SpacetimeDbNotesRepository {
   /// Reset the repository connection (used when switching instances)
   void resetConnection() {
     debugLogger.connection('Resetting connection');
-    debugLogger.connection('RESET STACK: ${StackTrace.current.toString().split('\n').take(5).join(' | ')}');
 
     for (final sub in _subscriptions) {
       sub.cancel();
