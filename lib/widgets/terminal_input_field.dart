@@ -44,29 +44,6 @@ class TerminalInputField extends StatefulWidget {
 }
 
 class _TerminalInputFieldState extends State<TerminalInputField> {
-  bool _isMultiline = false;
-
-  @override
-  void initState() {
-    super.initState();
-    widget.controller?.addListener(_checkMultiline);
-    _checkMultiline();
-  }
-
-  @override
-  void dispose() {
-    widget.controller?.removeListener(_checkMultiline);
-    super.dispose();
-  }
-
-  void _checkMultiline() {
-    final text = widget.controller?.text ?? '';
-    final hasNewline = text.contains('\n');
-    if (hasNewline != _isMultiline) {
-      setState(() => _isMultiline = hasNewline);
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     if (widget.dynamicHeight) {
@@ -107,44 +84,10 @@ class _TerminalInputFieldState extends State<TerminalInputField> {
   }
 
   Widget _buildDynamicHeight() {
-    if (_isMultiline) {
-      return GestureDetector(
-        onTap: () => widget.focusNode?.requestFocus(),
-        child: Container(
-          constraints: BoxConstraints(
-            minHeight: widget.minHeight ?? 48,
-            maxHeight: 200,
-          ),
-          decoration: BoxDecoration(
-            border: widget.showBorders
-                ? const Border(
-                    left: BorderSide(color: SpaceNotesTheme.primary, width: 2),
-                    right: BorderSide(color: SpaceNotesTheme.primary, width: 2),
-                  )
-                : null,
-          ),
-          padding: const EdgeInsets.fromLTRB(12, 12, 12, 18),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (widget.prefixIcon != null) ...[
-                widget.prefixIcon!,
-                const SizedBox(width: 12),
-              ],
-              Expanded(
-                child: _buildTextField(expands: false, maxLines: null, minLines: 1),
-              ),
-              if (widget.suffixIcon != null) widget.suffixIcon!,
-            ],
-          ),
-        ),
-      );
-    }
-
     return GestureDetector(
       onTap: () => widget.focusNode?.requestFocus(),
       child: Container(
-        height: widget.minHeight ?? 48,
+        constraints: BoxConstraints(minHeight: widget.minHeight ?? 48),
         decoration: BoxDecoration(
           border: widget.showBorders
               ? const Border(
@@ -153,18 +96,19 @@ class _TerminalInputFieldState extends State<TerminalInputField> {
                 )
               : null,
         ),
-        padding: const EdgeInsets.only(left: 20, right: 12),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
+        padding: const EdgeInsets.fromLTRB(20, 14, 12, 10),
+        child: Stack(
           children: [
-            if (widget.prefixIcon != null) ...[
-              widget.prefixIcon!,
-              const SizedBox(width: 12),
-            ],
-            Expanded(
-              child: _buildTextField(expands: false, maxLines: null, minLines: 1, centerVertically: true),
+            Padding(
+              padding: EdgeInsets.only(right: widget.suffixIcon != null ? 80 : 0),
+              child: _buildTextField(expands: false, maxLines: 8, minLines: 1),
             ),
-            if (widget.suffixIcon != null) widget.suffixIcon!,
+            if (widget.suffixIcon != null)
+              Positioned(
+                right: 0,
+                bottom: 0,
+                child: widget.suffixIcon!,
+              ),
           ],
         ),
       ),

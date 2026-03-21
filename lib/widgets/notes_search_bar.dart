@@ -47,13 +47,19 @@ class _NotesSearchBarState extends State<NotesSearchBar> {
     super.initState();
     _focusNode = FocusNode();
     _focusNode.addListener(_onFocusChange);
+    widget.controller.addListener(_onTextChanged);
   }
 
   @override
   void dispose() {
+    widget.controller.removeListener(_onTextChanged);
     _focusNode.removeListener(_onFocusChange);
     _focusNode.dispose();
     super.dispose();
+  }
+
+  void _onTextChanged() {
+    setState(() {});
   }
 
   void _onFocusChange() {

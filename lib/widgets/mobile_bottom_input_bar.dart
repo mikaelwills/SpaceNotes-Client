@@ -113,19 +113,12 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          _buildBackButton(viewType, folderPath),
-          if (viewType == HomeViewType.chat || folderPath.isNotEmpty)
-            const SizedBox(width: 12),
           _buildSearchBar(isChat),
           const SizedBox(width: 12),
           _buildRightButtons(isChat, isWorking, folderPath),
         ],
       ),
     );
-  }
-
-  Widget _buildBackButton(HomeViewType viewType, String folderPath) {
-    return const SizedBox.shrink();
   }
 
   Widget _buildSearchBar(bool isChat) {
@@ -135,7 +128,7 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
       child: Container(
         decoration: BoxDecoration(
           color: SpaceNotesTheme.inputSurface,
-          borderRadius: BorderRadius.circular(28),
+          borderRadius: BorderRadius.circular(14),
         ),
         child: NotesSearchBar(
           controller: _searchController,
