@@ -249,6 +249,7 @@ class _NoteScreenState extends ConsumerState<NoteScreen> {
       isScrollControlled: true,
       useRootNavigator: true,
       backgroundColor: Colors.transparent,
+      barrierColor: Colors.black.withValues(alpha: 0.15),
       builder: (context) => NoteChatPanel(
         notePath: _currentPath,
         onClose: () => Navigator.of(context).pop(),

@@ -60,11 +60,11 @@ class NoteChatPanel extends StatelessWidget {
       onTap: onClose,
       behavior: HitTestBehavior.opaque,
       child: DraggableScrollableSheet(
-        initialChildSize: 0.75,
-        minChildSize: 0.3,
+        initialChildSize: 0.2,
+        minChildSize: 0.15,
         maxChildSize: 0.9,
         snap: true,
-        snapSizes: const [0.5, 0.9],
+        snapSizes: const [0.4, 0.75, 0.9],
         builder: (context, scrollController) {
           return GestureDetector(
             onTap: () {},
