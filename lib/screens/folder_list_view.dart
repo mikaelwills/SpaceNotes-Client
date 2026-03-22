@@ -8,6 +8,7 @@ import '../generated/note.dart';
 import '../widgets/folder_list_item.dart';
 import '../widgets/note_list_item.dart';
 import '../dialogs/notes_list_dialogs.dart';
+import '../widgets/keyboard_dismiss_on_scroll.dart';
 
 class FolderListView extends ConsumerStatefulWidget {
   final String folderPath;
@@ -101,7 +102,8 @@ class _FolderListViewState extends ConsumerState<FolderListView> {
     final isRootLevel = widget.folderPath.isEmpty;
     final headerOffset = isRootLevel ? 1 : 0;
 
-    return ListView.builder(
+    return KeyboardDismissOnScroll(
+      child: ListView.builder(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
       itemCount: totalItems + headerOffset,
       itemBuilder: (context, index) {
@@ -135,6 +137,7 @@ class _FolderListViewState extends ConsumerState<FolderListView> {
           return _buildNoteItem(notes[itemIndex - folders.length]);
         }
       },
+    ),
     );
   }
 

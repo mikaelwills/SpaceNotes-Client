@@ -6,6 +6,7 @@ import '../generated/note.dart';
 import '../theme/spacenotes_theme.dart';
 import '../providers/notes_providers.dart';
 import '../dialogs/notes_list_dialogs.dart';
+import 'keyboard_dismiss_on_scroll.dart';
 
 class RecentNotesGrid extends ConsumerWidget {
   static const double maxCardHeight = 100.0;
@@ -76,7 +77,8 @@ class RecentNotesGrid extends ConsumerWidget {
   }
 
   Widget _buildNotesGrid(BuildContext context, WidgetRef ref, List<Note> notes) {
-    return CustomScrollView(
+    return KeyboardDismissOnScroll(
+      child: CustomScrollView(
       slivers: [
         SliverPadding(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
@@ -109,6 +111,7 @@ class RecentNotesGrid extends ConsumerWidget {
           ),
         ),
       ],
+    ),
     );
   }
 

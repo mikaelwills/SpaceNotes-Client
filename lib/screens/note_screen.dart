@@ -10,6 +10,7 @@ import '../widgets/note_bottom_bar.dart';
 import '../widgets/note_chat_panel.dart';
 import '../widgets/adaptive/platform_utils.dart';
 import '../services/debug_logger.dart';
+import '../widgets/keyboard_dismiss_on_scroll.dart';
 
 class NoteScreen extends ConsumerStatefulWidget {
   final String noteId;
@@ -264,12 +265,7 @@ class _NoteScreenState extends ConsumerState<NoteScreen> {
       _lastSavedContent = note.content;
     }
 
-    return Listener(
-      onPointerMove: (event) {
-        if (event.delta.dy > 3) {
-          FocusManager.instance.primaryFocus?.unfocus();
-        }
-      },
+    return KeyboardDismissOnScroll(
       child: QuillNoteEditor(
         key: _quillKey,
         initialContent: content,

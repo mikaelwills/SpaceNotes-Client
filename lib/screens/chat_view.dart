@@ -10,6 +10,7 @@ import '../blocs/chat/chat_bloc.dart';
 import '../blocs/chat/chat_state.dart';
 import '../blocs/chat/chat_event.dart';
 import '../dialogs/permission_dialog.dart';
+import '../widgets/keyboard_dismiss_on_scroll.dart';
 
 /// ChatView displays the AI chat interface
 /// Can be reused in different contexts (main chat, note chat panel)
@@ -186,12 +187,7 @@ class _ChatViewState extends ConsumerState<ChatView> {
 
         return Stack(
           children: [
-            Listener(
-              onPointerMove: (event) {
-                if (event.delta.dy > 3) {
-                  FocusManager.instance.primaryFocus?.unfocus();
-                }
-              },
+            KeyboardDismissOnScroll(
               child: NotificationListener<ScrollNotification>(
                 onNotification: (notification) {
                   if (notification is ScrollUpdateNotification) {
