@@ -101,6 +101,7 @@ class _CallScreenState extends ConsumerState<CallScreen> {
             final audioData = next.valueOrNull;
             if (audioData != null && callService.audioService != null) {
               callService.audioService!.feedRemoteAudio(audioData);
+              callService.videoStats?.audioLatencyMs = callService.audioService!.audioLatencyMs.average;
             }
           });
         }

@@ -108,6 +108,8 @@ class _VideoStatsOverlayState extends State<VideoStatsOverlay> {
                 _row('Display', '${s.avgDisplayLatencyMs.toStringAsFixed(0)}ms', s.avgDisplayLatencyMs > 30),
                 _row('Size', '${s.avgReceiveKB.toStringAsFixed(0)} KB', false),
                 _row('Drops', '${s.droppedFrames}', s.droppedFrames > 0),
+                if (s.audioLatencyMs != null && s.audioLatencyMs! > 0)
+                  _row('Audio', '${s.audioLatencyMs!.toStringAsFixed(0)}ms', s.audioLatencyMs! > 200),
                 _dim('Recv ${s.totalReceived}'),
               ],
             ),

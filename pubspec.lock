@@ -41,14 +41,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.11.0"
-  audio_streamer:
-    dependency: "direct main"
-    description:
-      name: audio_streamer
-      sha256: aed4bc55f57d65953b16344f5848239e1c9bd058cf5a6c23d7b4173f337d4ea8
-      url: "https://pub.dev"
-    source: hosted
-    version: "4.3.0"
   bloc:
     dependency: "direct main"
     description:
@@ -539,14 +531,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.6.23"
-  flutter_pcm_sound:
-    dependency: "direct main"
-    description:
-      name: flutter_pcm_sound
-      sha256: "15c6894da8195122001375084d51449bd77849579c93fca2800c00b615699dc0"
-      url: "https://pub.dev"
-    source: hosted
-    version: "3.3.3"
   flutter_plugin_android_lifecycle:
     dependency: transitive
     description:

@@ -80,8 +80,6 @@ dependencies:
   crypto: ^3.0.7
   camera: ^0.11.1
   image: ^4.3.0
-  audio_streamer: ^4.3.0
-  flutter_pcm_sound: ^3.3.3
   permission_handler: ^12.0.1
 
 dev_dependencies:

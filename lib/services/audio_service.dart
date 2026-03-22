@@ -1,29 +1,23 @@
-import 'dart:async';
 import 'dart:typed_data';
-import 'package:audio_streamer/audio_streamer.dart';
-import 'package:flutter_pcm_sound/flutter_pcm_sound.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:permission_handler/permission_handler.dart';
 import 'debug_logger.dart';
+import 'video_stats.dart';
 
-const int kAudioSampleRate = 16000;
-const int kChunkDurationMs = 20;
-const int kSamplesPerChunk = kAudioSampleRate * kChunkDurationMs ~/ 1000;
+const int kTimestampBytes = 8;
 
 class AudioService {
-  final AudioStreamer _streamer = AudioStreamer();
-  StreamSubscription? _captureSub;
+  static const _captureControl = MethodChannel('spacenotes/native_audio_control');
+  static const _captureChannel = BasicMessageChannel<ByteData>('spacenotes/native_audio', BinaryCodec());
+  static const _playbackControl = MethodChannel('spacenotes/native_audio_playback_control');
+  static const _playbackChannel = BasicMessageChannel<ByteData>('spacenotes/native_audio_playback', BinaryCodec());
+
   bool _muted = false;
   bool _capturing = false;
   bool _playbackStarted = false;
   int _audioSeq = 0;
-
-  double? _actualSampleRate;
-  double _resamplePhase = 0.0;
-  List<double> _resampleCarry = [];
-  List<double> _preResampleBuffer = [];
-
-  final List<double> _captureBuffer = [];
+  final audioLatencyMs = RollingBuffer(50);
 
   void Function(Uint8List pcmChunk, int seq)? onAudioChunk;
 
@@ -34,11 +28,6 @@ class AudioService {
     if (_capturing || kIsWeb) return;
     _capturing = true;
     _audioSeq = 0;
-    _captureBuffer.clear();
-    _actualSampleRate = null;
-    _resamplePhase = 0.0;
-    _resampleCarry = [];
-    _preResampleBuffer = [];
 
     final micStatus = await Permission.microphone.request();
     debugLogger.info('AUDIO_TX', 'Mic permission: $micStatus');
@@ -48,119 +37,29 @@ class AudioService {
       return;
     }
 
-    _streamer.sampleRate = kAudioSampleRate;
-
-    bool requestedRate = false;
-
-    _captureSub = _streamer.audioStream.listen(
-      (List<double> samples) {
-        if (!requestedRate) {
-          requestedRate = true;
-          _streamer.actualSampleRate.then((actual) {
-            _actualSampleRate = actual.toDouble();
-            debugLogger.info('AUDIO_TX', 'Capture started, actual=${actual}Hz, needsResample=${_actualSampleRate != kAudioSampleRate}');
-            if (_preResampleBuffer.isNotEmpty) {
-              final resampled = _resampleToTarget(_preResampleBuffer);
-              _captureBuffer.addAll(resampled);
-              _preResampleBuffer = [];
-              _drainBuffer();
-            }
-          });
-        }
-
-        if (_muted) return;
-
-        if (_actualSampleRate == null) {
-          _preResampleBuffer.addAll(samples);
-          return;
-        }
-
-        final resampled = _resampleToTarget(samples);
-        _captureBuffer.addAll(resampled);
-        _drainBuffer();
-      },
-      onError: (Object error) {
-        debugLogger.info('AUDIO_TX', 'Capture error: $error');
-      },
-      cancelOnError: false,
-    );
-  }
-
-  List<double> _resampleToTarget(List<double> input) {
-    final inputRate = _actualSampleRate!;
-    if ((inputRate - kAudioSampleRate).abs() < 1.0) return input;
-
-    final ratio = inputRate / kAudioSampleRate;
-    final source = [..._resampleCarry, ...input];
-    final maxOutput = ((source.length - _resamplePhase) / ratio).floor();
-    if (maxOutput <= 0) {
-      _resampleCarry = source;
-      return [];
-    }
-
-    final output = List<double>.filled(maxOutput, 0.0);
-    double pos = _resamplePhase;
-
-    for (int i = 0; i < maxOutput; i++) {
-      final idx = pos.floor();
-      final frac = pos - idx;
-      if (idx + 1 < source.length) {
-        output[i] = source[idx] * (1.0 - frac) + source[idx + 1] * frac;
-      } else if (idx < source.length) {
-        output[i] = source[idx];
-      }
-      pos += ratio;
-    }
-
-    final consumed = pos.floor();
-    _resamplePhase = pos - consumed;
-    _resampleCarry = consumed < source.length ? source.sublist(consumed) : [];
-
-    return output;
-  }
-
-  void _drainBuffer() {
-    while (_captureBuffer.length >= kSamplesPerChunk) {
-      final chunk = _captureBuffer.sublist(0, kSamplesPerChunk);
-      _captureBuffer.removeRange(0, kSamplesPerChunk);
-
-      final pcm = _doublesToPcm16(chunk);
+    _captureChannel.setMessageHandler((ByteData? message) async {
+      if (message == null || _muted) return ByteData(0);
+      final pcm = message.buffer.asUint8List(message.offsetInBytes, message.lengthInBytes);
       _audioSeq++;
       if (_audioSeq <= 3 || _audioSeq % 250 == 0) {
-        debugLogger.info('AUDIO_TX', 'Chunk #$_audioSeq | ${pcm.length}B | buffer=${_captureBuffer.length}');
+        debugLogger.info('AUDIO_TX', 'Chunk #$_audioSeq | ${pcm.length}B');
       }
-      onAudioChunk?.call(pcm, _audioSeq);
-    }
-  }
+      final stamped = ByteData(kTimestampBytes + pcm.length);
+      stamped.setInt64(0, DateTime.now().millisecondsSinceEpoch, Endian.little);
+      stamped.buffer.asUint8List().setRange(kTimestampBytes, kTimestampBytes + pcm.length, pcm);
+      onAudioChunk?.call(stamped.buffer.asUint8List(), _audioSeq);
+      return ByteData(0);
+    });
 
-  Uint8List _doublesToPcm16(List<double> samples) {
-    final bytes = ByteData(samples.length * 2);
-    for (int i = 0; i < samples.length; i++) {
-      final clamped = samples[i].clamp(-1.0, 1.0);
-      final int16 = (clamped * 32767).toInt();
-      bytes.setInt16(i * 2, int16, Endian.little);
-    }
-    return bytes.buffer.asUint8List();
+    await _captureControl.invokeMethod('start');
+    debugLogger.info('AUDIO_TX', 'Native capture started');
   }
 
   Future<void> startPlayback() async {
     if (_playbackStarted || kIsWeb) return;
-
-    try {
-      await FlutterPcmSound.setup(
-        sampleRate: kAudioSampleRate,
-        channelCount: 1,
-        iosAudioCategory: IosAudioCategory.playAndRecord,
-      );
-      await FlutterPcmSound.setFeedThreshold(kSamplesPerChunk * 2);
-      FlutterPcmSound.setFeedCallback((_) {});
-      FlutterPcmSound.start();
-      _playbackStarted = true;
-      debugLogger.info('AUDIO_RX', 'Playback started at ${kAudioSampleRate}Hz');
-    } catch (e) {
-      debugLogger.info('AUDIO_RX', 'Playback setup failed: $e');
-      _playbackStarted = false;
-    }
+    _playbackStarted = true;
+    await _playbackControl.invokeMethod('start');
+    debugLogger.info('AUDIO_RX', 'Native playback started');
   }
 
   int _feedCount = 0;
@@ -168,20 +67,20 @@ class AudioService {
   void feedRemoteAudio(Uint8List pcm) {
     if (!_playbackStarted || kIsWeb) return;
     _feedCount++;
-    if (_feedCount <= 3 || _feedCount % 250 == 0) {
-      debugLogger.info('AUDIO_RX', 'Feed #$_feedCount | ${pcm.length}B');
-    }
-    final int16List = _pcmBytesToInt16List(pcm);
-    FlutterPcmSound.feed(PcmArrayInt16.fromList(int16List));
-  }
 
-  List<int> _pcmBytesToInt16List(Uint8List bytes) {
-    final bd = ByteData.sublistView(bytes);
-    final result = <int>[];
-    for (int i = 0; i + 1 < bytes.length; i += 2) {
-      result.add(bd.getInt16(i, Endian.little));
+    if (pcm.length > kTimestampBytes) {
+      final bd = ByteData.sublistView(pcm);
+      final sentMs = bd.getInt64(0, Endian.little);
+      final latency = DateTime.now().millisecondsSinceEpoch - sentMs;
+      audioLatencyMs.add(latency.toDouble());
+
+      if (_feedCount <= 3 || _feedCount % 250 == 0) {
+        debugLogger.info('AUDIO_RX', 'Feed #$_feedCount | ${pcm.length}B | latency=${latency}ms');
+      }
+
+      final audioOnly = pcm.sublist(kTimestampBytes);
+      _playbackChannel.send(ByteData.sublistView(audioOnly));
     }
-    return result;
   }
 
   void toggleMute() {
@@ -190,18 +89,15 @@ class AudioService {
   }
 
   void stopCapture() {
-    _captureSub?.cancel();
-    _captureSub = null;
+    _captureChannel.setMessageHandler(null);
+    _captureControl.invokeMethod('stop');
     _capturing = false;
-    _captureBuffer.clear();
-    _preResampleBuffer = [];
-    _resampleCarry = [];
     debugLogger.info('AUDIO_TX', 'Capture stopped');
   }
 
   void stopPlayback() {
     if (_playbackStarted) {
-      FlutterPcmSound.release();
+      _playbackControl.invokeMethod('stop');
       _playbackStarted = false;
       debugLogger.info('AUDIO_RX', 'Playback stopped');
     }

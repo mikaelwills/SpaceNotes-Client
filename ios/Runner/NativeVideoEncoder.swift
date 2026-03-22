@@ -53,20 +53,18 @@ class NativeVideoEncoder: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate
             textureId = registry.register(self)
         }
 
-        if codec == "h264" {
-            setupH264Encoder(width: width, height: height, fps: fps, bitrate: 10_000_000)
-        }
-
         let session = AVCaptureSession()
 
-        let preset = presetForSize(width: width, height: height)
-        if session.canSetSessionPreset(preset) {
-            session.sessionPreset = preset
-        } else {
-            session.sessionPreset = .high
+        guard let device = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: currentPosition) else { return }
+
+        guard let input = try? AVCaptureDeviceInput(device: device) else { return }
+        if session.canAddInput(input) {
+            session.addInput(input)
         }
 
-        guard let device = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: currentPosition) else { return }
+        let preset = bestPreset(for: session, targetWidth: width, targetHeight: height)
+        session.sessionPreset = preset
+        NSLog("[NATIVE_CAPTURE] Using preset: \(preset.rawValue) for \(width)x\(height) on \(currentPosition == .front ? "front" : "back") camera")
 
         do {
             try device.lockForConfiguration()
@@ -74,11 +72,6 @@ class NativeVideoEncoder: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate
             device.activeVideoMaxFrameDuration = CMTimeMake(value: 1, timescale: Int32(fps))
             device.unlockForConfiguration()
         } catch {}
-
-        guard let input = try? AVCaptureDeviceInput(device: device) else { return }
-        if session.canAddInput(input) {
-            session.addInput(input)
-        }
 
         let output = AVCaptureVideoDataOutput()
         output.videoSettings = [
@@ -141,6 +134,12 @@ class NativeVideoEncoder: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate
             DispatchQueue.main.async {
                 registry.textureFrameAvailable(self.textureId)
             }
+        }
+
+        if codecMode == "h264" && compressionSession == nil {
+            let actualWidth = CVPixelBufferGetWidth(pixelBuffer)
+            let actualHeight = CVPixelBufferGetHeight(pixelBuffer)
+            setupH264Encoder(width: actualWidth, height: actualHeight, fps: Int(targetFps), bitrate: 10_000_000)
         }
 
         let timestamp = CMSampleBufferGetPresentationTimeStamp(sampleBuffer)
@@ -269,13 +268,25 @@ class NativeVideoEncoder: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate
         onFrame?(EncodedFrame(data: output, codec: 1, isKeyframe: isKeyframe, encodeMicros: encodeMicros))
     }
 
-    private func presetForSize(width: Int, height: Int) -> AVCaptureSession.Preset {
-        let pixels = width * height
-        if pixels >= 3840 * 2160 { return .hd4K3840x2160 }
-        if pixels >= 2560 * 1440 { return .hd4K3840x2160 }
-        if pixels >= 1920 * 1080 { return .hd1920x1080 }
-        if pixels >= 1280 * 720 { return .hd1280x720 }
-        if pixels >= 640 * 480 { return .vga640x480 }
-        return .low
+    private func bestPreset(for session: AVCaptureSession, targetWidth: Int, targetHeight: Int) -> AVCaptureSession.Preset {
+        let pixels = targetWidth * targetHeight
+        let candidates: [(AVCaptureSession.Preset, Int)] = [
+            (.hd4K3840x2160, 3840 * 2160),
+            (.hd1920x1080, 1920 * 1080),
+            (.hd1280x720, 1280 * 720),
+            (.vga640x480, 640 * 480),
+            (.low, 0),
+        ]
+        for (preset, presetPixels) in candidates {
+            if presetPixels <= pixels && session.canSetSessionPreset(preset) {
+                return preset
+            }
+        }
+        for (preset, _) in candidates.reversed() {
+            if session.canSetSessionPreset(preset) {
+                return preset
+            }
+        }
+        return .high
     }
 }

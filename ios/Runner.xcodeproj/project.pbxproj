@@ -20,6 +20,10 @@
 		A37A44FBAFE9B786F76DAA34 /* NativeVideoEncoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2EAFA519B919D224D88D930 /* NativeVideoEncoder.swift */; };
 		B095D24F87F5E68E94A26475 /* Pods_RunnerTests.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 57D513C594757F06E199678B /* Pods_RunnerTests.framework */; };
 		EAA6C300FF88322E117A0423 /* NativeH264Decoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBD638C175E73051FB629831 /* NativeH264Decoder.swift */; };
+		AA11BB01NATIVE_AUDIO00001 /* NativeAudioCapture.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA11BB02NATIVE_AUDIO00002 /* NativeAudioCapture.swift */; };
+		AA11BB03NATIVE_AUDIO00003 /* NativeAudioCapturePlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA11BB04NATIVE_AUDIO00004 /* NativeAudioCapturePlugin.swift */; };
+		AA11BB05NATIVE_AUDIO00005 /* NativeAudioPlayback.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA11BB06NATIVE_AUDIO00006 /* NativeAudioPlayback.swift */; };
+		AA11BB07NATIVE_AUDIO00007 /* NativeAudioPlaybackPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA11BB08NATIVE_AUDIO00008 /* NativeAudioPlaybackPlugin.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -70,6 +74,10 @@
 		C2EAFA519B919D224D88D930 /* NativeVideoEncoder.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = NativeVideoEncoder.swift; sourceTree = "<group>"; };
 		C615528E7038E42BBEEA0366 /* Pods_Runner.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_Runner.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		DBD638C175E73051FB629831 /* NativeH264Decoder.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = NativeH264Decoder.swift; sourceTree = "<group>"; };
+		AA11BB02NATIVE_AUDIO00002 /* NativeAudioCapture.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = NativeAudioCapture.swift; sourceTree = "<group>"; };
+		AA11BB04NATIVE_AUDIO00004 /* NativeAudioCapturePlugin.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = NativeAudioCapturePlugin.swift; sourceTree = "<group>"; };
+		AA11BB06NATIVE_AUDIO00006 /* NativeAudioPlayback.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = NativeAudioPlayback.swift; sourceTree = "<group>"; };
+		AA11BB08NATIVE_AUDIO00008 /* NativeAudioPlaybackPlugin.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = NativeAudioPlaybackPlugin.swift; sourceTree = "<group>"; };
 		EA6755EDB7753BEA78C9AAA6 /* Pods-Runner.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.release.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.release.xcconfig"; sourceTree = "<group>"; };
 		EB44CCDD1B71F5F7DC0B0639 /* NativeVideoEncoderPlugin.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = NativeVideoEncoderPlugin.swift; sourceTree = "<group>"; };
 		F64F1058E27018D562F44E90 /* Pods-Runner.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.debug.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.debug.xcconfig"; sourceTree = "<group>"; };
@@ -171,6 +179,10 @@
 				74858FAD1ED2DC5600515810 /* Runner-Bridging-Header.h */,
 				C2EAFA519B919D224D88D930 /* NativeVideoEncoder.swift */,
 				EB44CCDD1B71F5F7DC0B0639 /* NativeVideoEncoderPlugin.swift */,
+				AA11BB02NATIVE_AUDIO00002 /* NativeAudioCapture.swift */,
+				AA11BB04NATIVE_AUDIO00004 /* NativeAudioCapturePlugin.swift */,
+				AA11BB06NATIVE_AUDIO00006 /* NativeAudioPlayback.swift */,
+				AA11BB08NATIVE_AUDIO00008 /* NativeAudioPlaybackPlugin.swift */,
 				DBD638C175E73051FB629831 /* NativeH264Decoder.swift */,
 				75F83C9330C497F0AF5A251A /* NativeH264DecoderPlugin.swift */,
 			);
@@ -411,6 +423,10 @@
 				1498D2341E8E89220040F4C2 /* GeneratedPluginRegistrant.m in Sources */,
 				A37A44FBAFE9B786F76DAA34 /* NativeVideoEncoder.swift in Sources */,
 				67DE849BFFEDDB5FC7D75994 /* NativeVideoEncoderPlugin.swift in Sources */,
+				AA11BB01NATIVE_AUDIO00001 /* NativeAudioCapture.swift in Sources */,
+				AA11BB03NATIVE_AUDIO00003 /* NativeAudioCapturePlugin.swift in Sources */,
+				AA11BB05NATIVE_AUDIO00005 /* NativeAudioPlayback.swift in Sources */,
+				AA11BB07NATIVE_AUDIO00007 /* NativeAudioPlaybackPlugin.swift in Sources */,
 				EAA6C300FF88322E117A0423 /* NativeH264Decoder.swift in Sources */,
 				5AFADE3622B9F5BA81BFB70D /* NativeH264DecoderPlugin.swift in Sources */,
 			);

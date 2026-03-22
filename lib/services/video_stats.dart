@@ -92,6 +92,8 @@ class VideoStats {
     }
   }
 
+  double? audioLatencyMs;
+
   VideoStatsSnapshot snapshot() {
     return VideoStatsSnapshot(
       sendFps: sendFps.fps,
@@ -105,6 +107,7 @@ class VideoStats {
       droppedFrames: droppedFrames,
       totalSent: totalSent,
       totalReceived: totalReceived,
+      audioLatencyMs: audioLatencyMs,
     );
   }
 }
@@ -121,6 +124,7 @@ class VideoStatsSnapshot {
   final int droppedFrames;
   final int totalSent;
   final int totalReceived;
+  final double? audioLatencyMs;
 
   const VideoStatsSnapshot({
     required this.sendFps,
@@ -134,5 +138,6 @@ class VideoStatsSnapshot {
     required this.droppedFrames,
     required this.totalSent,
     required this.totalReceived,
+    this.audioLatencyMs,
   });
 }
