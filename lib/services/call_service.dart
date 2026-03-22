@@ -70,8 +70,8 @@ class CallService {
         isEventTable: true,
       );
     };
-    await audioService!.startCapture();
     await audioService!.startPlayback();
+    await audioService!.startCapture();
 
     debugLogger.info('CALL', 'Started capture at ${fps}fps ${width}x$height for session $sessionId');
   }

@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:audio_streamer/audio_streamer.dart';
 import 'package:flutter_pcm_sound/flutter_pcm_sound.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:permission_handler/permission_handler.dart';
 import 'debug_logger.dart';
 
 const int kAudioSampleRate = 16000;
@@ -17,6 +18,11 @@ class AudioService {
   bool _playbackStarted = false;
   int _audioSeq = 0;
 
+  double? _actualSampleRate;
+  double _resamplePhase = 0.0;
+  List<double> _resampleCarry = [];
+  List<double> _preResampleBuffer = [];
+
   final List<double> _captureBuffer = [];
 
   void Function(Uint8List pcmChunk, int seq)? onAudioChunk;
@@ -29,13 +35,48 @@ class AudioService {
     _capturing = true;
     _audioSeq = 0;
     _captureBuffer.clear();
+    _actualSampleRate = null;
+    _resamplePhase = 0.0;
+    _resampleCarry = [];
+    _preResampleBuffer = [];
+
+    final micStatus = await Permission.microphone.request();
+    debugLogger.info('AUDIO_TX', 'Mic permission: $micStatus');
+    if (!micStatus.isGranted) {
+      debugLogger.info('AUDIO_TX', 'Mic permission denied, skipping capture');
+      _capturing = false;
+      return;
+    }
 
     _streamer.sampleRate = kAudioSampleRate;
 
+    bool requestedRate = false;
+
     _captureSub = _streamer.audioStream.listen(
       (List<double> samples) {
+        if (!requestedRate) {
+          requestedRate = true;
+          _streamer.actualSampleRate.then((actual) {
+            _actualSampleRate = actual.toDouble();
+            debugLogger.info('AUDIO_TX', 'Capture started, actual=${actual}Hz, needsResample=${_actualSampleRate != kAudioSampleRate}');
+            if (_preResampleBuffer.isNotEmpty) {
+              final resampled = _resampleToTarget(_preResampleBuffer);
+              _captureBuffer.addAll(resampled);
+              _preResampleBuffer = [];
+              _drainBuffer();
+            }
+          });
+        }
+
         if (_muted) return;
-        _captureBuffer.addAll(samples);
+
+        if (_actualSampleRate == null) {
+          _preResampleBuffer.addAll(samples);
+          return;
+        }
+
+        final resampled = _resampleToTarget(samples);
+        _captureBuffer.addAll(resampled);
         _drainBuffer();
       },
       onError: (Object error) {
@@ -43,9 +84,39 @@ class AudioService {
       },
       cancelOnError: false,
     );
+  }
 
-    final actual = await _streamer.actualSampleRate;
-    debugLogger.info('AUDIO_TX', 'Capture started, requested=${kAudioSampleRate}Hz actual=${actual}Hz');
+  List<double> _resampleToTarget(List<double> input) {
+    final inputRate = _actualSampleRate!;
+    if ((inputRate - kAudioSampleRate).abs() < 1.0) return input;
+
+    final ratio = inputRate / kAudioSampleRate;
+    final source = [..._resampleCarry, ...input];
+    final maxOutput = ((source.length - _resamplePhase) / ratio).floor();
+    if (maxOutput <= 0) {
+      _resampleCarry = source;
+      return [];
+    }
+
+    final output = List<double>.filled(maxOutput, 0.0);
+    double pos = _resamplePhase;
+
+    for (int i = 0; i < maxOutput; i++) {
+      final idx = pos.floor();
+      final frac = pos - idx;
+      if (idx + 1 < source.length) {
+        output[i] = source[idx] * (1.0 - frac) + source[idx + 1] * frac;
+      } else if (idx < source.length) {
+        output[i] = source[idx];
+      }
+      pos += ratio;
+    }
+
+    final consumed = pos.floor();
+    _resamplePhase = pos - consumed;
+    _resampleCarry = consumed < source.length ? source.sublist(consumed) : [];
+
+    return output;
   }
 
   void _drainBuffer() {
@@ -55,6 +126,9 @@ class AudioService {
 
       final pcm = _doublesToPcm16(chunk);
       _audioSeq++;
+      if (_audioSeq <= 3 || _audioSeq % 250 == 0) {
+        debugLogger.info('AUDIO_TX', 'Chunk #$_audioSeq | ${pcm.length}B | buffer=${_captureBuffer.length}');
+      }
       onAudioChunk?.call(pcm, _audioSeq);
     }
   }
@@ -71,18 +145,32 @@ class AudioService {
 
   Future<void> startPlayback() async {
     if (_playbackStarted || kIsWeb) return;
-    _playbackStarted = true;
 
-    await FlutterPcmSound.setup(sampleRate: kAudioSampleRate, channelCount: 1);
-    await FlutterPcmSound.setFeedThreshold(kSamplesPerChunk * 2);
-    FlutterPcmSound.setFeedCallback((_) {});
-    FlutterPcmSound.start();
-
-    debugLogger.info('AUDIO_RX', 'Playback started at ${kAudioSampleRate}Hz');
+    try {
+      await FlutterPcmSound.setup(
+        sampleRate: kAudioSampleRate,
+        channelCount: 1,
+        iosAudioCategory: IosAudioCategory.playAndRecord,
+      );
+      await FlutterPcmSound.setFeedThreshold(kSamplesPerChunk * 2);
+      FlutterPcmSound.setFeedCallback((_) {});
+      FlutterPcmSound.start();
+      _playbackStarted = true;
+      debugLogger.info('AUDIO_RX', 'Playback started at ${kAudioSampleRate}Hz');
+    } catch (e) {
+      debugLogger.info('AUDIO_RX', 'Playback setup failed: $e');
+      _playbackStarted = false;
+    }
   }
+
+  int _feedCount = 0;
 
   void feedRemoteAudio(Uint8List pcm) {
     if (!_playbackStarted || kIsWeb) return;
+    _feedCount++;
+    if (_feedCount <= 3 || _feedCount % 250 == 0) {
+      debugLogger.info('AUDIO_RX', 'Feed #$_feedCount | ${pcm.length}B');
+    }
     final int16List = _pcmBytesToInt16List(pcm);
     FlutterPcmSound.feed(PcmArrayInt16.fromList(int16List));
   }
@@ -106,6 +194,8 @@ class AudioService {
     _captureSub = null;
     _capturing = false;
     _captureBuffer.clear();
+    _preResampleBuffer = [];
+    _resampleCarry = [];
     debugLogger.info('AUDIO_TX', 'Capture stopped');
   }
 

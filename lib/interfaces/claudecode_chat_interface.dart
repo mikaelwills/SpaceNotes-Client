@@ -17,6 +17,7 @@ class ClaudeCodeChatInterface implements ChatInterface {
   final List<OpenCodeMessage> _messages = [];
   final Map<String, int> _messageIndex = {};
   StreamSubscription? _wsSubscription;
+  StreamSubscription? _configSubscription;
 
   static const int _maxMessages = 100;
   static const String _sessionId = 'claude-code';
@@ -35,24 +36,43 @@ class ClaudeCodeChatInterface implements ChatInterface {
     _addEvent = addEvent;
   }
 
+  String? _currentWsUrl;
+
   @override
   Future<void> initialize() async {
     final configCubit = GetIt.I<ConfigCubit>();
+
+    _configSubscription?.cancel();
+    _configSubscription = configCubit.stream.listen((state) {
+      if (state is ConfigLoaded) {
+        final newUrl = state.claudeCodeWsUrl;
+        if (newUrl != _currentWsUrl) {
+          debugLogger.info('CC', 'Config changed, reconnecting', newUrl);
+          _connectToWebSocket(newUrl);
+        }
+      }
+    });
+
     final configState = configCubit.state;
     final wsUrl = configState is ConfigLoaded
         ? configState.claudeCodeWsUrl
         : 'ws://0.0.0.0:${ConfigLoaded.claudeCodePort}/ws';
 
+    _connectToWebSocket(wsUrl);
+  }
+
+  void _connectToWebSocket(String wsUrl) {
+    _currentWsUrl = wsUrl;
     debugLogger.info('CC', 'Connecting to WebSocket', wsUrl);
 
     _wsSubscription?.cancel();
+    _fakechat.restartConnection();
 
     final stream = _fakechat.connect(wsUrl);
     _chatStatus = _chatStatus.copyWith(isConnected: true);
 
     _wsSubscription = stream.listen(
       (event) {
-
         switch (event.type) {
           case FakechatEventType.msg:
             if (event.from == 'assistant') {
@@ -211,6 +231,7 @@ class ClaudeCodeChatInterface implements ChatInterface {
 
   @override
   void dispose() {
+    _configSubscription?.cancel();
     _wsSubscription?.cancel();
     _fakechat.dispose();
   }

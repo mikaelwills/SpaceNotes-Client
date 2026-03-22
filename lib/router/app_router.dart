@@ -15,12 +15,28 @@ import '../screens/notes_home_view.dart';
 import '../screens/note_screen.dart';
 import '../screens/chat_view.dart';
 import '../widgets/adaptive/adaptive_app_shell.dart';
+import '../providers/call_providers.dart';
 import '../providers/notes_providers.dart';
+import '../services/debug_logger.dart';
 
 final RouteObserver<ModalRoute<void>> routeObserver = RouteObserver<ModalRoute<void>>();
 
 GoRouter createAppRouter(ProviderContainer container) {
-  return GoRouter(
+  bool navigatedToIncoming = false;
+
+  container.listen(incomingCallProvider, (prev, next) {
+    next.whenData((session) {
+      if (session != null && !navigatedToIncoming) {
+        navigatedToIncoming = true;
+        debugLogger.info('INCOMING_CALL', 'Navigating to incoming call screen');
+        _router?.go('/incoming-call');
+      } else if (session == null) {
+        navigatedToIncoming = false;
+      }
+    });
+  });
+
+  _router = GoRouter(
     initialLocation: '/notes',
     observers: [routeObserver],
     redirect: (context, state) {
@@ -167,7 +183,11 @@ GoRouter createAppRouter(ProviderContainer container) {
       ),
     ),
   );
+
+  return _router!;
 }
+
+GoRouter? _router;
 
 CustomTransitionPage<void> _buildFadeTransitionPage({
   required LocalKey key,

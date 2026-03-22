@@ -93,15 +93,16 @@ class _CallScreenState extends ConsumerState<CallScreen> {
         }
 
         final remoteFrame = ref.watch(remoteVideoFrameProvider);
-        final remoteAudio = ref.watch(remoteAudioFrameProvider);
 
         final callService = ref.read(callServiceProvider);
 
         if (session.state is CallStateActive) {
-          final audioData = remoteAudio.valueOrNull;
-          if (audioData != null && callService.audioService != null) {
-            callService.audioService!.feedRemoteAudio(audioData);
-          }
+          ref.listen(remoteAudioFrameProvider, (prev, next) {
+            final audioData = next.valueOrNull;
+            if (audioData != null && callService.audioService != null) {
+              callService.audioService!.feedRemoteAudio(audioData);
+            }
+          });
         }
 
         return Stack(

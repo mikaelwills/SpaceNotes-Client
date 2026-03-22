@@ -1014,7 +1014,7 @@ packages:
     source: hosted
     version: "2.3.0"
   permission_handler:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: permission_handler
       sha256: bc917da36261b00137bbc8896bf1482169cd76f866282368948f032c8c1caae1
