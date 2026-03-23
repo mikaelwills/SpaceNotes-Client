@@ -237,11 +237,9 @@ final recentNotesProvider = Provider<AsyncValue<List<Note>>>((ref) {
         return const AsyncValue.data([]);
       }
 
-      // Sort by modifiedTime descending (most recently edited first)
       final sortedNotes = notes.toList();
       sortedNotes.sort((a, b) => b.modifiedTime.compareTo(a.modifiedTime));
 
-      // Return top 5
       return AsyncValue.data(sortedNotes.take(20).toList());
     },
   );

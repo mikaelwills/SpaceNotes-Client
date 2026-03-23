@@ -125,12 +125,14 @@ class ClaudeCodeChatInterface implements ChatInterface {
       },
       onError: (error) {
         debugLogger.error('CC', 'WebSocket error', error.toString());
-        _chatStatus = _chatStatus.copyWith(isConnected: false);
+        _chatStatus = _chatStatus.copyWith(
+            isConnected: false, isSending: false, isStreaming: false);
         _addEvent?.call(RefreshChatStateEvent());
       },
       onDone: () {
         debugLogger.info('CC', 'WebSocket closed');
-        _chatStatus = _chatStatus.copyWith(isConnected: false);
+        _chatStatus = _chatStatus.copyWith(
+            isConnected: false, isSending: false, isStreaming: false);
         _addEvent?.call(RefreshChatStateEvent());
       },
     );
@@ -172,7 +174,12 @@ class ClaudeCodeChatInterface implements ChatInterface {
   }
 
   @override
-  Future<void> onCancelOperation(Emitter<ChatState> emit) async {}
+  Future<void> onCancelOperation(Emitter<ChatState> emit) async {
+    debugLogger.info('CC', 'Cancel operation requested');
+    _chatStatus = _chatStatus.copyWith(
+        isSending: false, isStreaming: false, clearErrorMessage: true);
+    emit(_createReadyState());
+  }
 
   @override
   void onClearMessages(Emitter<ChatState> emit) {
