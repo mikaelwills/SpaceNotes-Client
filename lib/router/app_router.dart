@@ -6,7 +6,6 @@ import '../screens/call_screen.dart';
 import '../screens/incoming_call_screen.dart';
 import '../screens/connect_screen.dart';
 import '../screens/online_users_screen.dart';
-import '../screens/sessions_screen.dart';
 import '../screens/settings_screen.dart';
 import '../screens/provider_list_screen.dart';
 import '../screens/home_screen.dart';
@@ -123,14 +122,6 @@ GoRouter createAppRouter(ProviderContainer container) {
               pageBuilder: (context, state) => _buildFadeTransitionPage(
                 key: state.pageKey,
                 child: const ChatView(),
-              ),
-            ),
-            GoRoute(
-              path: '/notes/sessions',
-              name: 'sessions',
-              pageBuilder: (context, state) => _buildFadeTransitionPage(
-                key: state.pageKey,
-                child: const SessionsScreen(),
               ),
             ),
             GoRoute(

@@ -104,7 +104,7 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
     }
 
     final location = GoRouterState.of(context).uri.toString();
-    if (location == '/notes/sessions' || location == '/settings') {
+    if (location == '/settings') {
       return const SizedBox.shrink();
     }
 
