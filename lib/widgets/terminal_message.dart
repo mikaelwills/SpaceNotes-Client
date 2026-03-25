@@ -114,6 +114,10 @@ class TerminalMessage extends StatelessWidget {
       (p.content != null && p.content!.isNotEmpty) || p.type == 'tool'
     );
 
+    final prefix = _sourceLabel != null
+        ? '$_formattedTime $_sourceLabel '
+        : '$_formattedTime ';
+
     return GestureDetector(
       onLongPress: () => _copyToClipboard(context, message.content),
       child: Padding(
@@ -121,38 +125,12 @@ class TerminalMessage extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                Text(
-                  _formattedTime,
-                  style: SpaceNotesTextStyles.terminal.copyWith(
-                    color: SpaceNotesTheme.textSecondary.withValues(alpha: 0.5),
-                    fontSize: 10,
-                  ),
-                ),
-                if (_sourceLabel != null) ...[
-                  const SizedBox(width: 6),
-                  Container(
-                    width: 5,
-                    height: 5,
-                    decoration: BoxDecoration(
-                      color: _sourceLabelColor,
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    _sourceLabel!,
-                    style: SpaceNotesTextStyles.terminal.copyWith(
-                      color: _sourceLabelColor,
-                      fontSize: 10,
-                    ),
-                  ),
-                ],
-              ],
-            ),
-            const SizedBox(height: 4),
-            ...message.parts.map((part) => _buildMessagePart(part)),
+            ...message.parts.asMap().entries.map((entry) {
+              if (entry.key == 0 && entry.value.type == 'text') {
+                return _buildPrefixedTextPart(entry.value, prefix);
+              }
+              return _buildMessagePart(entry.value);
+            }),
             if (isStreaming && !hasContent)
               const _BlinkingCursor(),
           ],
@@ -180,6 +158,56 @@ class TerminalMessage extends StatelessWidget {
       default:
         return _buildTextPart(part);
     }
+  }
+
+  Widget _buildPrefixedTextPart(MessagePart part, String prefix) {
+    if (part.content == null || part.content!.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    final prefixedContent = '$prefix${part.content!}';
+    final isLastPart = message.parts.last == part;
+    final shouldStream = isStreaming && isLastPart && message.role == 'assistant';
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: shouldStream
+          ? StreamingText(
+              text: _safeTextSanitize(prefixedContent, preserveMarkdown: true),
+              style: SpaceNotesTextStyles.terminal,
+              isStreaming: true,
+              useMarkdown: true,
+            )
+          : MarkdownBody(
+              data: _safeTextSanitize(prefixedContent, preserveMarkdown: true),
+              styleSheet: MarkdownStyleSheet(
+                p: SpaceNotesTextStyles.terminal,
+                code: SpaceNotesTextStyles.code,
+                codeblockDecoration: BoxDecoration(
+                  color: SpaceNotesTheme.surface,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                codeblockPadding: const EdgeInsets.all(8),
+                blockquote: SpaceNotesTextStyles.terminal.copyWith(
+                  color: SpaceNotesTheme.textSecondary,
+                ),
+                blockquoteDecoration: const BoxDecoration(
+                  border: Border(
+                    left: BorderSide(
+                      color: SpaceNotesTheme.textSecondary,
+                      width: 2,
+                    ),
+                  ),
+                ),
+                h1: SpaceNotesTextStyles.terminal.copyWith(fontSize: 20, fontWeight: FontWeight.bold),
+                h2: SpaceNotesTextStyles.terminal.copyWith(fontSize: 18, fontWeight: FontWeight.bold),
+                h3: SpaceNotesTextStyles.terminal.copyWith(fontSize: 16, fontWeight: FontWeight.bold),
+                listBullet: SpaceNotesTextStyles.terminal,
+                listIndent: 16,
+              ),
+              selectable: false,
+            ),
+    );
   }
 
   Widget _buildTextPart(MessagePart part) {
