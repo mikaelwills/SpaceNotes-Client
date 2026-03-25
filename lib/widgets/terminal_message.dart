@@ -223,13 +223,16 @@ class TerminalMessage extends StatelessWidget {
     }
     final isLastPart = message.parts.last == part;
     final shouldStream = isStreaming && isLastPart && message.role == 'assistant';
+    final contentColor = (message.sourceType == 'worker' || message.sourceType == 'webhook')
+        ? const Color(0xFF999999)
+        : SpaceNotesTheme.text;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 4),
       child: shouldStream
           ? StreamingText(
               text: _safeTextSanitize(content, preserveMarkdown: true),
-              style: SpaceNotesTextStyles.terminal,
+              style: SpaceNotesTextStyles.terminal.copyWith(color: contentColor),
               isStreaming: true,
               useMarkdown: true,
             )
@@ -237,7 +240,7 @@ class TerminalMessage extends StatelessWidget {
               data: _safeTextSanitize(content, preserveMarkdown: true),
               styleSheet: MarkdownStyleSheet(
                 p: SpaceNotesTextStyles.terminal.copyWith(
-                  color: const Color(0xFF999999),
+                  color: contentColor,
                 ),
                 code: SpaceNotesTextStyles.code,
                 codeblockDecoration: BoxDecoration(
