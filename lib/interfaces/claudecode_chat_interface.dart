@@ -2,7 +2,7 @@ import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
 import '../services/debug_logger.dart';
-import '../services/fakechat_service.dart';
+import '../services/space_channel_service.dart';
 import '../blocs/chat/chat_event.dart';
 import '../blocs/chat/chat_state.dart';
 import '../blocs/config/config_cubit.dart';
@@ -12,7 +12,7 @@ import '../models/message_part.dart';
 import 'chat_interface.dart';
 
 class ClaudeCodeChatInterface implements ChatInterface {
-  final FakechatService _fakechat = FakechatService();
+  final SpaceChannelService _spaceChannel = SpaceChannelService();
 
   final List<OpenCodeMessage> _messages = [];
   final Map<String, int> _messageIndex = {};
@@ -66,15 +66,15 @@ class ClaudeCodeChatInterface implements ChatInterface {
     debugLogger.info('CC', 'Connecting to WebSocket', wsUrl);
 
     _wsSubscription?.cancel();
-    _fakechat.restartConnection();
+    _spaceChannel.restartConnection();
 
-    final stream = _fakechat.connect(wsUrl);
+    final stream = _spaceChannel.connect(wsUrl);
     _chatStatus = _chatStatus.copyWith(isConnected: true);
 
     _wsSubscription = stream.listen(
       (event) {
         switch (event.type) {
-          case FakechatEventType.msg:
+          case SpaceChannelEventType.msg:
             if (event.from == 'assistant') {
               final message = OpenCodeMessage(
                 id: event.id,
@@ -103,7 +103,7 @@ class ClaudeCodeChatInterface implements ChatInterface {
             }
             break;
 
-          case FakechatEventType.edit:
+          case SpaceChannelEventType.edit:
             if (event.text != null) {
               final idx = _messageIndex[event.id];
               if (idx != null && idx < _messages.length) {
@@ -170,7 +170,7 @@ class ClaudeCodeChatInterface implements ChatInterface {
     _chatStatus = _chatStatus.copyWith(isSending: true);
     emit(_createReadyState());
 
-    _fakechat.sendMessage(event.message);
+    _spaceChannel.sendMessage(event.message);
   }
 
   @override
@@ -197,7 +197,7 @@ class ClaudeCodeChatInterface implements ChatInterface {
 
   @override
   Future<void> onRetryMessage(RetryMessage event, Emitter<ChatState> emit) async {
-    _fakechat.sendMessage(event.messageContent);
+    _spaceChannel.sendMessage(event.messageContent);
   }
 
   @override
@@ -240,6 +240,6 @@ class ClaudeCodeChatInterface implements ChatInterface {
   void dispose() {
     _configSubscription?.cancel();
     _wsSubscription?.cancel();
-    _fakechat.dispose();
+    _spaceChannel.dispose();
   }
 }

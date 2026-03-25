@@ -3,18 +3,18 @@ import 'dart:convert';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import 'debug_logger.dart';
 
-enum FakechatEventType { msg, edit }
+enum SpaceChannelEventType { msg, edit }
 
-class FakechatEvent {
-  final FakechatEventType type;
+class SpaceChannelEvent {
+  final SpaceChannelEventType type;
   final String id;
   final String? from;
   final String? text;
   final int? ts;
   final String? replyTo;
-  final FakechatFile? file;
+  final SpaceChannelFile? file;
 
-  const FakechatEvent({
+  const SpaceChannelEvent({
     required this.type,
     required this.id,
     this.from,
@@ -24,39 +24,39 @@ class FakechatEvent {
     this.file,
   });
 
-  factory FakechatEvent.fromJson(Map<String, dynamic> json) {
+  factory SpaceChannelEvent.fromJson(Map<String, dynamic> json) {
     final typeStr = json['type'] as String? ?? 'msg';
-    return FakechatEvent(
-      type: typeStr == 'edit' ? FakechatEventType.edit : FakechatEventType.msg,
+    return SpaceChannelEvent(
+      type: typeStr == 'edit' ? SpaceChannelEventType.edit : SpaceChannelEventType.msg,
       id: json['id'] as String,
       from: json['from'] as String?,
       text: json['text'] as String?,
       ts: json['ts'] as int?,
       replyTo: json['replyTo'] as String?,
       file: json['file'] != null
-          ? FakechatFile.fromJson(json['file'] as Map<String, dynamic>)
+          ? SpaceChannelFile.fromJson(json['file'] as Map<String, dynamic>)
           : null,
     );
   }
 }
 
-class FakechatFile {
+class SpaceChannelFile {
   final String url;
   final String name;
 
-  const FakechatFile({required this.url, required this.name});
+  const SpaceChannelFile({required this.url, required this.name});
 
-  factory FakechatFile.fromJson(Map<String, dynamic> json) {
-    return FakechatFile(
+  factory SpaceChannelFile.fromJson(Map<String, dynamic> json) {
+    return SpaceChannelFile(
       url: json['url'] as String,
       name: json['name'] as String,
     );
   }
 }
 
-class FakechatService {
+class SpaceChannelService {
   WebSocketChannel? _channel;
-  StreamController<FakechatEvent>? _eventController;
+  StreamController<SpaceChannelEvent>? _eventController;
   StreamSubscription? _subscription;
   Timer? _reconnectTimer;
   bool _isConnected = false;
@@ -67,14 +67,14 @@ class FakechatService {
   bool get isConnected => _isConnected;
   bool get isActive => _eventController != null && !_eventController!.isClosed;
 
-  Stream<FakechatEvent> connect(String url) {
+  Stream<SpaceChannelEvent> connect(String url) {
     _url = url;
 
     if (_eventController != null && !_eventController!.isClosed) {
       return _eventController!.stream;
     }
 
-    _eventController = StreamController<FakechatEvent>.broadcast();
+    _eventController = StreamController<SpaceChannelEvent>.broadcast();
     _connectWebSocket();
     return _eventController!.stream;
   }
@@ -102,7 +102,7 @@ class FakechatService {
         (raw) {
           try {
             final json = jsonDecode(raw as String) as Map<String, dynamic>;
-            final event = FakechatEvent.fromJson(json);
+            final event = SpaceChannelEvent.fromJson(json);
             if (_eventController?.isClosed == false) {
               _eventController!.add(event);
             }
@@ -152,7 +152,7 @@ class FakechatService {
 
     final id = 'u${DateTime.now().millisecondsSinceEpoch}-${++_seq}';
     debugLogger.info('WS', 'Sending', 'id=$id, text=${text.length > 50 ? text.substring(0, 50) : text}');
-    _channel!.sink.add(jsonEncode({'id': id, 'text': text}));
+    _channel!.sink.add(jsonEncode({'type': 'chat', 'id': id, 'text': text}));
   }
 
   void restartConnection() {
