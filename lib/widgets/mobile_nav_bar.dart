@@ -118,7 +118,7 @@ class MobileNavBar extends ConsumerWidget {
                 const SizedBox(width: 20),
               ],
 
-              if (!isOnNote && !currentLocation.startsWith('/notes/chat') && currentLocation != '/settings' && currentLocation != '/notes/users') ...[
+              if (!isOnNote && !currentLocation.startsWith('/notes/chat') && currentLocation != '/settings' && currentLocation != '/notes/users' && currentLocation != '/notes/workers') ...[
                 GestureDetector(
                   onTap: () => context.go("/notes/chat"),
                   child: const Icon(Icons.chat_bubble_outline, color: SpaceNotesTheme.text),
@@ -129,9 +129,14 @@ class MobileNavBar extends ConsumerWidget {
                   child: const Icon(Icons.people_outline, color: SpaceNotesTheme.text),
                 ),
                 const SizedBox(width: 16),
+                GestureDetector(
+                  onTap: () => context.go("/notes/workers"),
+                  child: const Icon(Icons.smart_toy_outlined, color: SpaceNotesTheme.text),
+                ),
+                const SizedBox(width: 16),
               ],
 
-              if (currentLocation == '/notes/users') ...[
+              if (currentLocation == '/notes/users' || currentLocation == '/notes/workers') ...[
                 GestureDetector(
                   onTap: () => context.go("/notes"),
                   child: const Icon(Icons.arrow_back, color: SpaceNotesTheme.text),

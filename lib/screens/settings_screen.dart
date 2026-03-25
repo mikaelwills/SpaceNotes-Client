@@ -128,7 +128,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           'SpaceNotes :${ConfigLoaded.spacetimeDbPort}  '
           'Space :${ConfigLoaded.spacePort}  '
           'Claude Code :${ConfigLoaded.claudeCodePort}',
-          style: const TextStyle(
+          style: TextStyle(
             fontFamily: 'FiraCode',
             fontSize: 11,
             color: SpaceNotesTheme.textSecondary,

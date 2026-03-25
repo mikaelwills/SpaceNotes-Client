@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:web_socket_channel/web_socket_channel.dart';
+import '../models/tool_event.dart';
 import 'debug_logger.dart';
 
 enum SpaceChannelEventType { msg, edit }
@@ -96,17 +97,30 @@ class SpaceChannelFile {
 }
 
 class SpaceChannelService {
+  static const int _maxToolEventsPerSession = 50;
+
   WebSocketChannel? _channel;
   StreamController<SpaceChannelEvent>? _eventController;
+  StreamController<ToolEvent>? _toolEventController;
   StreamSubscription? _subscription;
   Timer? _reconnectTimer;
   bool _isConnected = false;
   int _reconnectAttempts = 0;
   String? _url;
   int _seq = 0;
+  final Map<String, List<ToolEvent>> _toolEventsBySession = {};
 
   bool get isConnected => _isConnected;
   bool get isActive => _eventController != null && !_eventController!.isClosed;
+
+  Stream<ToolEvent> get toolEvents {
+    _toolEventController ??= StreamController<ToolEvent>.broadcast();
+    return _toolEventController!.stream;
+  }
+
+  List<ToolEvent> getToolEventsForSession(String session) {
+    return List.unmodifiable(_toolEventsBySession[session] ?? []);
+  }
 
   Stream<SpaceChannelEvent> connect(String url) {
     _url = url;
@@ -141,15 +155,7 @@ class SpaceChannelService {
 
       _subscription = _channel!.stream.listen(
         (raw) {
-          try {
-            final json = jsonDecode(raw as String) as Map<String, dynamic>;
-            final event = SpaceChannelEvent.fromJson(json);
-            if (_eventController?.isClosed == false) {
-              _eventController!.add(event);
-            }
-          } catch (e) {
-            debugLogger.error('WS', 'Parse error', e.toString());
-          }
+          handleRawMessage(raw as String);
         },
         onError: (error) {
           debugLogger.error('WS', 'Stream error', error.toString());
@@ -196,6 +202,41 @@ class SpaceChannelService {
     _channel!.sink.add(jsonEncode({'type': 'chat', 'id': id, 'text': text}));
   }
 
+  void handleRawMessage(String raw) {
+    try {
+      final json = jsonDecode(raw) as Map<String, dynamic>;
+      final typeStr = json['type'] as String? ?? '';
+
+      if (typeStr == 'tool_event') {
+        _handleToolEvent(json);
+        return;
+      }
+
+      final event = SpaceChannelEvent.fromJson(json);
+      if (_eventController?.isClosed == false) {
+        _eventController!.add(event);
+      }
+    } catch (e) {
+      debugLogger.error('WS', 'Parse error', e.toString());
+    }
+  }
+
+  void _handleToolEvent(Map<String, dynamic> json) {
+    final toolEvent = ToolEvent.fromJson(json);
+    debugLogger.info('WS', 'Tool event', 'tool=${toolEvent.tool}, session=${toolEvent.session}');
+
+    final session = toolEvent.session;
+    final events = _toolEventsBySession.putIfAbsent(session, () => []);
+    events.add(toolEvent);
+    if (events.length > _maxToolEventsPerSession) {
+      events.removeRange(0, events.length - _maxToolEventsPerSession);
+    }
+
+    if (_toolEventController?.isClosed == false) {
+      _toolEventController!.add(toolEvent);
+    }
+  }
+
   void restartConnection() {
     debugLogger.info('WS', 'Restart: Cleaning up');
     _reconnectTimer?.cancel();
@@ -210,6 +251,7 @@ class SpaceChannelService {
     _reconnectAttempts = 0;
     _eventController = null;
     _channel = null;
+    _toolEventsBySession.clear();
   }
 
   void dispose() {
@@ -217,6 +259,7 @@ class SpaceChannelService {
     _subscription?.cancel();
     _channel?.sink.close();
     _eventController?.close();
+    _toolEventController?.close();
     _isConnected = false;
   }
 }

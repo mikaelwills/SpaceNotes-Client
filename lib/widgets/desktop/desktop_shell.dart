@@ -93,19 +93,20 @@ class _DesktopContentArea extends StatelessWidget {
     final isChat = location.startsWith('/notes/chat');
     final isSettings = location.startsWith('/settings');
     final isConnect = location.startsWith('/connect');
+    final isWorkers = location.startsWith('/notes/workers');
 
     return Column(
       children: [
-        _DesktopTopBar(showTabs: !isChat && !isSettings && !isConnect),
+        _DesktopTopBar(showTabs: !isChat && !isSettings && !isConnect && !isWorkers),
         Expanded(
-          child: _buildContent(context, isChat, isSettings, isConnect),
+          child: _buildContent(context, isChat, isSettings, isConnect, isWorkers),
         ),
       ],
     );
   }
 
-  Widget _buildContent(BuildContext context, bool isChat, bool isSettings, bool isConnect) {
-    if (isChat || isSettings || isConnect) {
+  Widget _buildContent(BuildContext context, bool isChat, bool isSettings, bool isConnect, bool isWorkers) {
+    if (isChat || isSettings || isConnect || isWorkers) {
       return child;
     }
     return const DesktopNoteView();
@@ -142,7 +143,7 @@ class _DesktopTopBar extends ConsumerWidget {
   }
 
   bool _shouldShowBackButton(String location) {
-    return location == '/notes/chat' || location == '/settings';
+    return location == '/notes/chat' || location == '/settings' || location == '/notes/workers';
   }
 
   @override

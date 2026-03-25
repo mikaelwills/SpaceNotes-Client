@@ -1186,6 +1186,11 @@ class _CollapsedSidebar extends ConsumerWidget {
             onTap: () => context.go('/notes/chat'),
           ),
           _CollapsedIconButton(
+            icon: Icons.smart_toy_outlined,
+            tooltip: 'Workers',
+            onTap: () => context.go('/notes/workers'),
+          ),
+          _CollapsedIconButton(
             icon: Icons.search,
             tooltip: 'Search',
             onTap: () {
@@ -1353,6 +1358,14 @@ class _SidebarFooter extends ConsumerWidget {
             color: SpaceNotesTheme.textSecondary,
             onPressed: () => context.go('/notes/chat'),
             tooltip: 'AI Chat',
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+          ),
+          IconButton(
+            icon: const Icon(Icons.smart_toy_outlined, size: 18),
+            color: SpaceNotesTheme.textSecondary,
+            onPressed: () => context.go('/notes/workers'),
+            tooltip: 'Workers',
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
           ),

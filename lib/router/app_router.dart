@@ -13,6 +13,7 @@ import '../screens/folder_list_view.dart';
 import '../screens/notes_home_view.dart';
 import '../screens/note_screen.dart';
 import '../screens/chat_view.dart';
+import '../screens/worker_dashboard.dart';
 import '../widgets/adaptive/adaptive_app_shell.dart';
 import '../providers/call_providers.dart';
 import '../providers/notes_providers.dart';
@@ -161,6 +162,14 @@ GoRouter createAppRouter(ProviderContainer container) {
               pageBuilder: (context, state) => _buildFadeTransitionPage(
                 key: state.pageKey,
                 child: const OnlineUsersScreen(),
+              ),
+            ),
+            GoRoute(
+              path: '/notes/workers',
+              name: 'workers',
+              pageBuilder: (context, state) => _buildFadeTransitionPage(
+                key: state.pageKey,
+                child: const WorkerDashboard(),
               ),
             ),
           ],

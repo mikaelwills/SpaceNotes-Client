@@ -29,8 +29,6 @@ class TerminalMessage extends StatelessWidget {
         if (message.role == 'user') _buildUserMessage(context),
         if (message.role == 'assistant') ...[
           const SizedBox(height: 8),
-          if (_sourceLabel != null)
-            _buildSourceLabel(),
           _buildAssistantMessage(context),
           const SizedBox(height: 8),
         ],
@@ -42,19 +40,6 @@ class TerminalMessage extends StatelessWidget {
     final h = message.created.hour.toString().padLeft(2, '0');
     final m = message.created.minute.toString().padLeft(2, '0');
     return '$h:$m';
-  }
-
-  Widget _buildTimestamp({double topPadding = 10}) {
-    return Padding(
-      padding: EdgeInsets.only(top: topPadding, left: 4),
-      child: Text(
-        _formattedTime,
-        style: SpaceNotesTextStyles.terminal.copyWith(
-          color: SpaceNotesTheme.textSecondary.withValues(alpha: 0.5),
-          fontSize: 10,
-        ),
-      ),
-    );
   }
 
   String? get _sourceLabel {
@@ -72,19 +57,6 @@ class TerminalMessage extends StatelessWidget {
       default:
         return null;
     }
-  }
-
-  Widget _buildSourceLabel() {
-    return Padding(
-      padding: const EdgeInsets.only(left: 12, bottom: 4),
-      child: Text(
-        _sourceLabel!,
-        style: SpaceNotesTextStyles.terminal.copyWith(
-          color: SpaceNotesTheme.textSecondary,
-          fontSize: 10,
-        ),
-      ),
-    );
   }
 
   Widget _buildUserMessage(BuildContext context) {
@@ -111,7 +83,16 @@ class TerminalMessage extends StatelessWidget {
               ),
             ),
           ),
-          _buildTimestamp(),
+          Padding(
+            padding: const EdgeInsets.only(top: 10, right: 4),
+            child: Text(
+              _formattedTime,
+              style: SpaceNotesTextStyles.terminal.copyWith(
+                color: SpaceNotesTheme.textSecondary.withValues(alpha: 0.5),
+                fontSize: 10,
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -124,24 +105,38 @@ class TerminalMessage extends StatelessWidget {
 
     return GestureDetector(
       onLongPress: () => _copyToClipboard(context, message.content),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildTimestamp(),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.only(left: 8, top: 8, bottom: 12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  ...message.parts.map((part) => _buildMessagePart(part)),
-                  if (isStreaming && !hasContent)
-                    const _BlinkingCursor(),
+      child: Padding(
+        padding: const EdgeInsets.only(left: 4, top: 8, bottom: 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Text(
+                  _formattedTime,
+                  style: SpaceNotesTextStyles.terminal.copyWith(
+                    color: SpaceNotesTheme.textSecondary.withValues(alpha: 0.5),
+                    fontSize: 10,
+                  ),
+                ),
+                if (_sourceLabel != null) ...[
+                  const SizedBox(width: 6),
+                  Text(
+                    _sourceLabel!,
+                    style: SpaceNotesTextStyles.terminal.copyWith(
+                      color: SpaceNotesTheme.textSecondary,
+                      fontSize: 10,
+                    ),
+                  ),
                 ],
-              ),
+              ],
             ),
-          ),
-        ],
+            const SizedBox(height: 4),
+            ...message.parts.map((part) => _buildMessagePart(part)),
+            if (isStreaming && !hasContent)
+              const _BlinkingCursor(),
+          ],
+        ),
       ),
     );
   }
