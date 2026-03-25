@@ -2,31 +2,31 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
 
-/// Integration tests for OpenCode response parsing
+/// Integration tests for Space response parsing
 ///
 /// Run in record mode to capture real server responses:
-/// RECORD_MODE=true dart test/integration/opencode_response_parsing_test.dart
+/// RECORD_MODE=true dart test/integration/space_response_parsing_test.dart
 ///
 /// Run specific test by number (1-7):
-/// RECORD_MODE=true TEST_NUMBER=7 dart test/integration/opencode_response_parsing_test.dart
+/// RECORD_MODE=true TEST_NUMBER=7 dart test/integration/space_response_parsing_test.dart
 ///
 /// Run in validation mode (default):
-/// dart test/integration/opencode_response_parsing_test.dart
+/// dart test/integration/space_response_parsing_test.dart
 
 final bool kRecordMode = Platform.environment['RECORD_MODE'] == 'true';
 final String? kTestNumber = Platform.environment['TEST_NUMBER'];
 
 void main() async {
-  print('🚀 OpenCode Response Parsing Integration Tests\n');
+  print('🚀 Space Response Parsing Integration Tests\n');
 
   if (kRecordMode) {
-    print('📹 RECORD MODE: Responses will be saved to test/fixtures/opencode_responses/\n');
+    print('📹 RECORD MODE: Responses will be saved to test/fixtures/space_responses/\n');
   }
 
   final client = http.Client();
-  final baseUrl = Platform.environment['OPENCODE_URL'] ?? 'http://localhost:4096';
+  final baseUrl = Platform.environment['SPACE_URL'] ?? 'http://localhost:4096';
 
-  print('Connecting to OpenCode server at $baseUrl...');
+  print('Connecting to Space server at $baseUrl...');
 
   String? sessionId;
   String? providerID;
@@ -120,7 +120,7 @@ void main() async {
         ).timeout(
           const Duration(seconds: 30),
           onTimeout: () {
-            throw Exception('Request timed out after 30 seconds - OpenCode server not responding');
+            throw Exception('Request timed out after 30 seconds - Space server not responding');
           },
         );
 
@@ -147,7 +147,7 @@ void main() async {
 
           if (hasError) {
             print('❌ Server returned error: $errorMsg');
-            print('   This indicates an OpenCode server bug, not a parsing issue\n');
+            print('   This indicates an Space server bug, not a parsing issue\n');
 
             // Still save the fixture to document the error format
             if (kRecordMode) {
@@ -189,12 +189,12 @@ void main() async {
     print('Total: ${testQueries.length}');
 
     if (kRecordMode && passed > 0) {
-      print('\n💾 Fixtures saved to: test/fixtures/opencode_responses/');
+      print('\n💾 Fixtures saved to: test/fixtures/space_responses/');
     }
 
   } catch (e) {
     print('\n❌ Fatal error: $e');
-    print('Make sure OpenCode server is running and accessible at $baseUrl');
+    print('Make sure Space server is running and accessible at $baseUrl');
     exit(1);
   } finally {
     // Cleanup
@@ -285,7 +285,7 @@ void _analyzeResponse(String testName, Map<String, dynamic> response) {
 
 /// Save response as JSON fixture
 Future<void> _saveFixture(String filename, Map<String, dynamic> response) async {
-  final fixturesDir = Directory('test/fixtures/opencode_responses');
+  final fixturesDir = Directory('test/fixtures/space_responses');
   if (!await fixturesDir.exists()) {
     await fixturesDir.create(recursive: true);
   }

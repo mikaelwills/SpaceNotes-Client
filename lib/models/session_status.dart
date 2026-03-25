@@ -1,4 +1,4 @@
-/// Session status from OpenCode
+/// Session status from Space server
 enum SessionStatusType {
   idle,
   busy,

@@ -3,7 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../utils/session_validator.dart';
 import '../theme/spacenotes_theme.dart';
 import '../models/provider.dart' as provider_models;
-import '../services/opencode_client.dart';
+import '../services/space_client.dart';
 import '../blocs/config/config_cubit.dart';
 import '../blocs/config/config_state.dart';
 
@@ -38,8 +38,8 @@ class _ProviderListScreenState extends State<ProviderListScreen> {
 
   Future<void> _fetchProviders() async {
     try {
-      final openCodeClient = context.read<OpenCodeClient>();
-      final providersResponse = await openCodeClient.getAvailableProviders();
+      final spaceClient = context.read<SpaceClient>();
+      final providersResponse = await spaceClient.getAvailableProviders();
       
       if (mounted) {
         setState(() {
@@ -62,14 +62,14 @@ class _ProviderListScreenState extends State<ProviderListScreen> {
     if (!mounted) return;
 
     final configCubit = context.read<ConfigCubit>();
-    final openCodeClient = context.read<OpenCodeClient>();
+    final spaceClient = context.read<SpaceClient>();
 
     try {
       // Update ConfigCubit
       await configCubit.updateProvider(providerID, modelID);
 
-      // Update OpenCodeClient
-      openCodeClient.setProvider(providerID, modelID);
+      // Update SpaceClient
+      spaceClient.setProvider(providerID, modelID);
 
       if (mounted) {
         // Navigate back to chat

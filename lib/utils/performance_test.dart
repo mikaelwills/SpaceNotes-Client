@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import '../services/performance_tracker.dart';
-import '../models/opencode_event.dart';
+import '../models/space_event.dart';
 
 class PerformanceTest {
   static const int _testIterations = 100;
@@ -20,7 +20,7 @@ class PerformanceTest {
         'part': {
           'id': 'part-789',
           'type': 'text',
-          'text': 'This is a sample streaming text that would be received from the server during a typical OpenCode session.',
+          'text': 'This is a sample streaming text that would be received from the server during a typical Space session.',
         }
       }
     };
@@ -32,7 +32,7 @@ class PerformanceTest {
     stopwatch.start();
     for (int i = 0; i < _testIterations; i++) {
       final decoded = json.decode(jsonString);
-      final event = OpenCodeEvent.fromJson(decoded);
+      final event = SpaceEvent.fromJson(decoded);
       // Simulate processing
       final _ = event.type;
     }
@@ -153,7 +153,7 @@ class PerformanceTest {
     final report = PerformanceTracker.generateReport();
     
     return '''
-OpenCode Mobile Phase 1 Optimization Baseline Report
+Space Mobile Phase 1 Optimization Baseline Report
 ====================================================
 
 Performance Metrics:

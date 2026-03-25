@@ -45,7 +45,7 @@ class WebConfigService {
     }
   }
 
-  static Future<void> tryAutoConfigureOpenCode(ConfigCubit configCubit) async {
+  static Future<void> tryAutoConfigureSpace(ConfigCubit configCubit) async {
     try {
       final currentHost = web.window.location.hostname;
 

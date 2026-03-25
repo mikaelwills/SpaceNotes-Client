@@ -32,7 +32,7 @@ void main() async {
   GetIt.I.registerSingleton<ChatBloc>(chatBloc);
 
   if (kIsWeb) {
-    await WebConfigService.tryAutoConfigureOpenCode(configCubit);
+    await WebConfigService.tryAutoConfigureSpace(configCubit);
   }
 
   final container = ProviderContainer();

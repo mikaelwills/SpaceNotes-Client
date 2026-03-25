@@ -9,12 +9,12 @@ void main() async {
   print('This test verifies that message.updated events with empty parts');
   print('do not overwrite streamed content from message.part.updated events.\n');
 
-  final baseUrl = Platform.environment['OPENCODE_URL'] ?? 'http://100.84.184.121:4096';
+  final baseUrl = Platform.environment['SPACE_URL'] ?? 'http://100.84.184.121:4096';
   final client = http.Client();
   String? sessionId;
 
   try {
-    print('📡 Connecting to OpenCode server at $baseUrl...');
+    print('📡 Connecting to Space server at $baseUrl...');
 
     final configResponse = await client.get(
       Uri.parse('$baseUrl/config'),

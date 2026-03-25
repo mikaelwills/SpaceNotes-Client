@@ -1,7 +1,7 @@
-/// Permission request from OpenCode server (v1.1.1+)
+/// Permission request from Space server (v1.1.1+)
 ///
 /// Represents a permission request that requires user approval
-/// before OpenCode can perform a potentially dangerous operation.
+/// before Space server can perform a potentially dangerous operation.
 class PermissionRequest {
   final String id;
   final String permission;

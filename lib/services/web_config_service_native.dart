@@ -3,5 +3,5 @@ import '../blocs/config/config_cubit.dart';
 
 class WebConfigService {
   static Future<void> tryAutoConfigureFromServer(SpacetimeDbNotesRepository repo) async {}
-  static Future<void> tryAutoConfigureOpenCode(ConfigCubit configCubit) async {}
+  static Future<void> tryAutoConfigureSpace(ConfigCubit configCubit) async {}
 }

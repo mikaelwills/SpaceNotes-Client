@@ -1,13 +1,13 @@
 import 'package:equatable/equatable.dart';
 
-class OpenCodeEvent extends Equatable {
+class SpaceEvent extends Equatable {
   final String type;
   final String? sessionId;
   final String? messageId;
   final Map<String, dynamic>? data;
   final DateTime timestamp;
 
-  const OpenCodeEvent({
+  const SpaceEvent({
     required this.type,
     this.sessionId,
     this.messageId,
@@ -15,7 +15,7 @@ class OpenCodeEvent extends Equatable {
     required this.timestamp,
   });
 
-  factory OpenCodeEvent.fromJson(Map<String, dynamic> json) {
+  factory SpaceEvent.fromJson(Map<String, dynamic> json) {
     
     final eventType = json['type'] as String;
     String? sessionId;
@@ -75,7 +75,7 @@ class OpenCodeEvent extends Equatable {
       }
     }
     
-    return OpenCodeEvent(
+    return SpaceEvent(
       type: eventType,
       sessionId: sessionId,
       messageId: messageId,

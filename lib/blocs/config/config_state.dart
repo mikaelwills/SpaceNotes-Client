@@ -1,6 +1,6 @@
 import 'package:equatable/equatable.dart';
 
-enum BackendType { opencode, claudecode }
+enum BackendType { space, claudecode }
 
 abstract class ConfigState extends Equatable {
   const ConfigState();
@@ -11,7 +11,7 @@ abstract class ConfigState extends Equatable {
 
 class ConfigLoaded extends ConfigState {
   static const int spacetimeDbPort = 5050;
-  static const int openCodePort = 5053;
+  static const int spacePort = 5053;
   static const int claudeCodePort = 5054;
 
   final String serverIp;
@@ -25,10 +25,10 @@ class ConfigLoaded extends ConfigState {
     this.selectedProviderID,
     this.selectedModelID,
     this.defaultAgent,
-    this.backendType = BackendType.opencode,
+    this.backendType = BackendType.space,
   });
 
-  String get baseUrl => 'http://$serverIp:$openCodePort';
+  String get baseUrl => 'http://$serverIp:$spacePort';
   String get spacetimeDbHost => '$serverIp:$spacetimeDbPort';
   String get claudeCodeWsUrl => 'ws://$serverIp:$claudeCodePort/ws';
 

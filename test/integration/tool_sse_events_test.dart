@@ -7,14 +7,14 @@ void main() async {
   print('🔧 Tool SSE Events Test');
   print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
   print('This test captures SSE events during tool execution to understand');
-  print('what events OpenCode sends when tools start vs complete.\n');
+  print('what events Space sends when tools start vs complete.\n');
 
-  final baseUrl = Platform.environment['OPENCODE_URL'] ?? 'http://100.84.184.121:5053';
+  final baseUrl = Platform.environment['SPACE_URL'] ?? 'http://100.84.184.121:5053';
   final client = http.Client();
   String? sessionId;
 
   try {
-    print('📡 Connecting to OpenCode server at $baseUrl...');
+    print('📡 Connecting to Space server at $baseUrl...');
 
     final configResponse = await client.get(
       Uri.parse('$baseUrl/config'),
@@ -176,7 +176,7 @@ void main() async {
 
     if (toolEvents.isEmpty) {
       print('❌ No tool events were captured!');
-      print('   This means OpenCode might not send tool events via SSE,');
+      print('   This means Space might not send tool events via SSE,');
       print('   or the query did not trigger a tool call.\n');
     } else {
       print('✅ Tool events captured!\n');
@@ -198,10 +198,10 @@ void main() async {
       print('');
 
       if (states.contains('running') || states.contains('pending')) {
-        print('✅ OpenCode DOES send "running" state events!');
+        print('✅ Space DOES send "running" state events!');
         print('   We should see tools appear before they complete.');
       } else {
-        print('⚠️  OpenCode only sends completed tool events.');
+        print('⚠️  Space only sends completed tool events.');
         print('   Tools will only appear after execution finishes.');
         print('   The "Working..." indicator is needed for feedback.');
       }
@@ -217,7 +217,7 @@ void main() async {
       print('');
     }
 
-    final fixturesDir = Directory('test/fixtures/opencode_responses');
+    final fixturesDir = Directory('test/fixtures/space_responses');
     if (!await fixturesDir.exists()) {
       await fixturesDir.create(recursive: true);
     }
@@ -228,7 +228,7 @@ void main() async {
       'tool_events': toolEvents,
       'all_events': allEvents,
     }));
-    print('\n💾 Full event log saved to: test/fixtures/opencode_responses/tool_sse_events.json');
+    print('\n💾 Full event log saved to: test/fixtures/space_responses/tool_sse_events.json');
 
   } catch (e) {
     print('\n❌ Test failed with error: $e');

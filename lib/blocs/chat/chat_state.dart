@@ -1,5 +1,5 @@
 import 'package:equatable/equatable.dart';
-import '../../models/opencode_message.dart';
+import '../../models/space_message.dart';
 import '../../models/permission_request.dart';
 import '../../models/session_status.dart';
 
@@ -59,7 +59,7 @@ class ChatConnecting extends ChatState {}
 
 class ChatReady extends ChatState {
   final String sessionId;
-  final List<OpenCodeMessage> messages;
+  final List<SpaceMessage> messages;
   final ChatStatus status;
   final bool isReconnectionRefresh;
   final SessionStatus? sessionStatus;
@@ -93,7 +93,7 @@ class ChatReady extends ChatState {
 
   ChatReady copyWith({
     String? sessionId,
-    List<OpenCodeMessage>? messages,
+    List<SpaceMessage>? messages,
     ChatStatus? status,
     bool? isReconnectionRefresh,
     SessionStatus? sessionStatus,
@@ -120,7 +120,7 @@ class ChatError extends ChatState {
 class ChatPermissionRequired extends ChatState {
   final String sessionId;
   final PermissionRequest permission;
-  final List<OpenCodeMessage> messages;
+  final List<SpaceMessage> messages;
 
   const ChatPermissionRequired({
     required this.sessionId,

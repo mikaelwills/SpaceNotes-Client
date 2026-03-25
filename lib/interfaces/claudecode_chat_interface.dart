@@ -7,14 +7,14 @@ import '../blocs/chat/chat_event.dart';
 import '../blocs/chat/chat_state.dart';
 import '../blocs/config/config_cubit.dart';
 import '../blocs/config/config_state.dart';
-import '../models/opencode_message.dart';
+import '../models/space_message.dart';
 import '../models/message_part.dart';
 import 'chat_interface.dart';
 
 class ClaudeCodeChatInterface implements ChatInterface {
   final SpaceChannelService _spaceChannel = SpaceChannelService();
 
-  final List<OpenCodeMessage> _messages = [];
+  final List<SpaceMessage> _messages = [];
   final Map<String, int> _messageIndex = {};
   StreamSubscription? _wsSubscription;
   StreamSubscription? _configSubscription;
@@ -26,7 +26,7 @@ class ClaudeCodeChatInterface implements ChatInterface {
   void Function(ChatEvent)? _addEvent;
 
   @override
-  List<OpenCodeMessage> get messages => _messages;
+  List<SpaceMessage> get messages => _messages;
 
   @override
   ChatStatus get chatStatus => _chatStatus;
@@ -76,7 +76,7 @@ class ClaudeCodeChatInterface implements ChatInterface {
         switch (event.type) {
           case SpaceChannelEventType.msg:
             if (event.from == 'assistant') {
-              final message = OpenCodeMessage(
+              final message = SpaceMessage(
                 id: event.id,
                 sessionId: _sessionId,
                 role: 'assistant',
@@ -151,7 +151,7 @@ class ClaudeCodeChatInterface implements ChatInterface {
   Future<void> onSendMessage(SendChatMessage event, Emitter<ChatState> emit) async {
 
     final messageId = DateTime.now().millisecondsSinceEpoch.toString();
-    final userMessage = OpenCodeMessage(
+    final userMessage = SpaceMessage(
       id: messageId,
       sessionId: _sessionId,
       role: 'user',

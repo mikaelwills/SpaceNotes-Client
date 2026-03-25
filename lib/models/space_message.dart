@@ -13,7 +13,7 @@ enum MessageSendStatus {
   sending,
 }
 
-class OpenCodeMessage extends Equatable {
+class SpaceMessage extends Equatable {
   final String id;
   final String sessionId;
   final String role; // 'user' or 'assistant'
@@ -27,7 +27,7 @@ class OpenCodeMessage extends Equatable {
   final String? task;
   final String? session;
 
-  const OpenCodeMessage({
+  const SpaceMessage({
     required this.id,
     required this.sessionId,
     required this.role,
@@ -42,7 +42,7 @@ class OpenCodeMessage extends Equatable {
     this.session,
   });
 
-  factory OpenCodeMessage.fromJson(Map<String, dynamic> json) {
+  factory SpaceMessage.fromJson(Map<String, dynamic> json) {
     // Handle both direct message format and nested info format
     final info = json['info'] as Map<String, dynamic>?;
     final time = info?['time'] as Map<String, dynamic>?;
@@ -89,7 +89,7 @@ class OpenCodeMessage extends Equatable {
       completedTime = null;
     }
 
-    return OpenCodeMessage(
+    return SpaceMessage(
       id: id,
       sessionId: sessionId,
       role: role,
@@ -106,8 +106,8 @@ class OpenCodeMessage extends Equatable {
 
 
 
-  /// Factory constructor specifically for OpenCode API responses
-  factory OpenCodeMessage.fromApiResponse(Map<String, dynamic> json) {
+  /// Factory constructor specifically for Space API responses
+  factory SpaceMessage.fromApiResponse(Map<String, dynamic> json) {
     // Handle both direct message format and nested info format
     final info = json['info'] as Map<String, dynamic>?;
     final timeData = info?['time'] as Map<String, dynamic>? ?? json['time'] as Map<String, dynamic>?;
@@ -141,7 +141,7 @@ class OpenCodeMessage extends Equatable {
           completedTime = DateTime.fromMillisecondsSinceEpoch(timeData['completed'] as int);
         }
       } catch (e) {
-        print('❌ [OpenCodeMessage] Error parsing time: $e');
+        print('❌ [SpaceMessage] Error parsing time: $e');
       }
     }
     
@@ -170,7 +170,7 @@ class OpenCodeMessage extends Equatable {
       }
     }
     
-    final message = OpenCodeMessage(
+    final message = SpaceMessage(
       id: messageId,
       sessionId: sessionId,
       role: role,
@@ -200,7 +200,7 @@ class OpenCodeMessage extends Equatable {
     };
   }
 
-  OpenCodeMessage copyWith({
+  SpaceMessage copyWith({
     String? id,
     String? sessionId,
     String? role,
@@ -214,7 +214,7 @@ class OpenCodeMessage extends Equatable {
     String? task,
     String? session,
   }) {
-    return OpenCodeMessage(
+    return SpaceMessage(
       id: id ?? this.id,
       sessionId: sessionId ?? this.sessionId,
       role: role ?? this.role,

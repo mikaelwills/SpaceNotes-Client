@@ -1,4 +1,4 @@
-import 'package:spacenotes_client/models/opencode_message.dart';
+import 'package:spacenotes_client/models/space_message.dart';
 import 'package:spacenotes_client/models/message_part.dart';
 
 void main() {
@@ -7,10 +7,10 @@ void main() {
   print('This test verifies that _updateOrAddMessage correctly ignores');
   print('message.updated events with empty parts when existing message has content.\n');
 
-  final messages = <OpenCodeMessage>[];
+  final messages = <SpaceMessage>[];
   final messageIndex = <String, int>{};
 
-  void updateOrAddMessage(OpenCodeMessage message) {
+  void updateOrAddMessage(SpaceMessage message) {
     final index = messageIndex[message.id];
 
     if (index != null && index < messages.length) {
@@ -35,7 +35,7 @@ void main() {
   final messageId = 'msg_test123';
   final sessionId = 'ses_test456';
 
-  final streamingMessage = OpenCodeMessage(
+  final streamingMessage = SpaceMessage(
     id: messageId,
     sessionId: sessionId,
     role: 'assistant',
@@ -54,7 +54,7 @@ void main() {
   updateOrAddMessage(streamingMessage);
   print('   Current content: "${messages.last.parts.first.content}"\n');
 
-  final emptyPartsMessage = OpenCodeMessage(
+  final emptyPartsMessage = SpaceMessage(
     id: messageId,
     sessionId: sessionId,
     role: 'assistant',
@@ -90,7 +90,7 @@ void main() {
   print('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
   print('Test 2: Verify legitimate updates still work\n');
 
-  final updatedMessage = OpenCodeMessage(
+  final updatedMessage = SpaceMessage(
     id: messageId,
     sessionId: sessionId,
     role: 'assistant',

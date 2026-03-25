@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import '../theme/spacenotes_theme.dart';
 
-class OpenCodeMarkdownStyles {
+class SpaceMarkdownStyles {
   static MarkdownStyleSheet get standard => MarkdownStyleSheet(
         p: const TextStyle(
           fontFamily: 'FiraCode',

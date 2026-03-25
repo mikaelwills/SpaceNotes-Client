@@ -2,10 +2,10 @@ import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../blocs/chat/chat_event.dart';
 import '../blocs/chat/chat_state.dart';
-import '../models/opencode_message.dart';
+import '../models/space_message.dart';
 
 abstract class ChatInterface {
-  List<OpenCodeMessage> get messages;
+  List<SpaceMessage> get messages;
   ChatStatus get chatStatus;
 
   void setAddEvent(void Function(ChatEvent) addEvent);

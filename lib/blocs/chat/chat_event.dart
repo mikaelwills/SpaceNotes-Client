@@ -1,6 +1,6 @@
 import 'package:equatable/equatable.dart';
-import '../../models/opencode_event.dart';
-import '../../models/opencode_message.dart';
+import '../../models/space_event.dart';
+import '../../models/space_message.dart';
 import '../../models/permission_request.dart';
 
 abstract class ChatEvent extends Equatable {
@@ -27,7 +27,7 @@ class CancelCurrentOperation extends ChatEvent {}
 
 // SSE-related events (merged from MessageBloc)
 class SSEEventReceived extends ChatEvent {
-  final OpenCodeEvent event;
+  final SpaceEvent event;
 
   const SSEEventReceived(this.event);
 

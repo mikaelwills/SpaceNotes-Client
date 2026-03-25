@@ -1,7 +1,7 @@
 import 'dart:async';
-import '../models/opencode_event.dart';
+import '../models/space_event.dart';
 import '../repositories/spacetimedb_notes_repository.dart' show SpacetimeDbNotesRepository;
-import 'opencode_client.dart';
+import 'space_client.dart';
 import 'sse_service.dart';
 import 'debug_logger.dart';
 
@@ -16,7 +16,7 @@ class _PendingTitle {
 }
 
 class TitleGenerationService {
-  final OpenCodeClient _openCodeClient;
+  final SpaceClient _spaceClient;
   final SSEService _sseService;
   SpacetimeDbNotesRepository? _repo;
 
@@ -26,16 +26,16 @@ class TitleGenerationService {
   final Map<String, Timer> _debounceTimers = {};
   final Map<String, String> _noteContents = {};
   final Map<String, String> _notePaths = {};
-  StreamSubscription<OpenCodeEvent>? _sseSubscription;
+  StreamSubscription<SpaceEvent>? _sseSubscription;
   String _accumulatedText = '';
   String? _firstMessageId;
   bool _seenAssistantMessage = false;
   Timer? _timeoutTimer;
 
   TitleGenerationService({
-    required OpenCodeClient openCodeClient,
+    required SpaceClient spaceClient,
     required SSEService sseService,
-  })  : _openCodeClient = openCodeClient,
+  })  : _spaceClient = spaceClient,
         _sseService = sseService;
 
   void setRepository(SpacetimeDbNotesRepository repo) {
@@ -114,7 +114,7 @@ class TitleGenerationService {
           'Max 60 characters.\n\n'
           '---\n$truncatedContent';
 
-      await _openCodeClient.sendMessageAsync(
+      await _spaceClient.sendMessageAsync(
         _titleSessionId!,
         prompt,
         system: 'You are a filename generator. Reply with ONLY a short descriptive filename. '
@@ -135,7 +135,7 @@ class TitleGenerationService {
     if (_titleSessionId != null) return;
 
     try {
-      final session = await _openCodeClient.createSession();
+      final session = await _spaceClient.createSession();
       _titleSessionId = session.id;
       debugLogger.info('TITLE', 'Created title session: ${session.id}');
     } catch (e) {
@@ -153,7 +153,7 @@ class TitleGenerationService {
     );
   }
 
-  void _onSSEEvent(OpenCodeEvent event) {
+  void _onSSEEvent(SpaceEvent event) {
     if (_titleSessionId == null || event.sessionId != _titleSessionId) return;
 
     if (event.type == 'message.part.updated') {
@@ -163,7 +163,7 @@ class TitleGenerationService {
     }
   }
 
-  void _handlePartUpdate(OpenCodeEvent event) {
+  void _handlePartUpdate(SpaceEvent event) {
     final data = event.data;
     if (data == null) return;
 

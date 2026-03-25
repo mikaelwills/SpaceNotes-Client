@@ -126,7 +126,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         const Text(
           'All services run on this IP. '
           'SpaceNotes :${ConfigLoaded.spacetimeDbPort}  '
-          'OpenCode :${ConfigLoaded.openCodePort}  '
+          'Space :${ConfigLoaded.spacePort}  '
           'Claude Code :${ConfigLoaded.claudeCodePort}',
           style: const TextStyle(
             fontFamily: 'FiraCode',

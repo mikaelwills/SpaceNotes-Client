@@ -2,20 +2,20 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../blocs/config/config_cubit.dart';
 import '../models/session.dart';
-import '../models/opencode_message.dart';
+import '../models/space_message.dart';
 import '../models/message_part.dart';
 import '../models/provider.dart';
 import '../models/permission_request.dart';
 import '../models/session_status.dart';
 
-class OpenCodeClient {
+class SpaceClient {
   final http.Client _client = http.Client();
   final ConfigCubit _configCubit;
   String? _providerID;
   String? _modelID;
   List<String> _availableAgents = [];
 
-  OpenCodeClient({required ConfigCubit configCubit}) : _configCubit = configCubit;
+  SpaceClient({required ConfigCubit configCubit}) : _configCubit = configCubit;
 
   List<String> get availableAgents => _availableAgents;
 
@@ -105,9 +105,9 @@ class OpenCodeClient {
       }
     } catch (e) {
       if (e.toString().contains('No route to host') || e.toString().contains('Connection failed')) {
-        throw Exception('Cannot connect to OpenCode server at $_baseUrl. Please check:\n'
+        throw Exception('Cannot connect to Space server at $_baseUrl. Please check:\n'
             '1. Tailscale is running and connected\n'
-            '2. OpenCode server is running at $_baseUrl\n'
+            '2. Space server is running at $_baseUrl\n'
             '3. Network connectivity is available');
       }
     }
@@ -191,7 +191,7 @@ class OpenCodeClient {
     }
   }
 
-  Future<OpenCodeMessage> sendMessage(
+  Future<SpaceMessage> sendMessage(
     String sessionId,
     String message, {
     String? agent,
@@ -234,7 +234,7 @@ class OpenCodeClient {
 
       if (response.statusCode == 200) {
         if (response.body.isEmpty) {
-          return OpenCodeMessage(
+          return SpaceMessage(
             id: 'pending_${DateTime.now().millisecondsSinceEpoch}',
             sessionId: sessionId,
             role: 'user',
@@ -251,8 +251,8 @@ class OpenCodeClient {
           throw Exception('Failed to send message: $errorName - $errorMessage');
         }
 
-        final openCodeMessage = OpenCodeMessage.fromApiResponse(messageData);
-        return openCodeMessage;
+        final spaceMessage = SpaceMessage.fromApiResponse(messageData);
+        return spaceMessage;
       } else {
         throw Exception('Failed to send message: ${response.statusCode}');
       }
@@ -523,7 +523,7 @@ class OpenCodeClient {
     return 'Session ${sessionId.substring(0, 8)}...';
   }
 
-  Future<List<OpenCodeMessage>> getSessionMessages(String sessionId, {int limit = 100}) async {
+  Future<List<SpaceMessage>> getSessionMessages(String sessionId, {int limit = 100}) async {
     try {
       final uri = Uri.parse('$_baseUrl/session/$sessionId/message?limit=$limit');
       final response = await _client.get(
@@ -533,7 +533,7 @@ class OpenCodeClient {
 
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
-        final messages = data.map((json) => OpenCodeMessage.fromApiResponse(json)).toList();
+        final messages = data.map((json) => SpaceMessage.fromApiResponse(json)).toList();
         return messages;
       } else {
         throw Exception('Failed to load messages: ${response.statusCode}');

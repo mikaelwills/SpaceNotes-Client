@@ -3,13 +3,13 @@ import 'dart:convert';
 import 'package:flutter_client_sse/constants/sse_request_type_enum.dart';
 import 'package:flutter_client_sse/flutter_client_sse.dart';
 import '../blocs/config/config_cubit.dart';
-import '../models/opencode_event.dart';
+import '../models/space_event.dart';
 import 'debug_logger.dart';
 
 class SSEService {
   final ConfigCubit _configCubit;
   StreamSubscription? _subscription;
-  StreamController<OpenCodeEvent>? _eventController;
+  StreamController<SpaceEvent>? _eventController;
   Timer? _reconnectTimer;
   bool _isConnected = false;
   int _reconnectAttempts = 0;
@@ -18,12 +18,12 @@ class SSEService {
 
 
 
-  Stream<OpenCodeEvent> connectToEventStream() {
+  Stream<SpaceEvent> connectToEventStream() {
     if (_eventController != null && !_eventController!.isClosed) {
       return _eventController!.stream;
     }
 
-    _eventController = StreamController<OpenCodeEvent>.broadcast();
+    _eventController = StreamController<SpaceEvent>.broadcast();
     _connectToSSE();
     return _eventController!.stream;
   }
@@ -50,12 +50,12 @@ class SSEService {
 
         if (event.data != null && event.data!.isNotEmpty) {
           try {
-            final openCodeEvent = _tryFastTextExtraction(event.data!) ??
+            final spaceEvent = _tryFastTextExtraction(event.data!) ??
                                   _parseFullEvent(event.data!);
 
-            if (openCodeEvent != null) {
+            if (spaceEvent != null) {
               if (_eventController?.isClosed == false) {
-                _eventController!.add(openCodeEvent);
+                _eventController!.add(spaceEvent);
               }
             }
           } catch (e) {
@@ -123,7 +123,7 @@ class SSEService {
   }
 
   // Fast path for text streaming - optimized for message.part.updated events
-  OpenCodeEvent? _tryFastTextExtraction(String rawData) {
+  SpaceEvent? _tryFastTextExtraction(String rawData) {
     try {
       // Quick check if this is a text streaming event
       if (!rawData.contains('"type":"message.part.updated"') ||
@@ -162,7 +162,7 @@ class SSEService {
         if (text != null) partData['text'] = text;
         if (delta != null) partData['delta'] = delta;
 
-        return OpenCodeEvent(
+        return SpaceEvent(
           type: type,
           sessionId: sessionId,
           messageId: messageId,
@@ -182,10 +182,10 @@ class SSEService {
     }
   }
   
-  OpenCodeEvent? _parseFullEvent(String rawData) {
+  SpaceEvent? _parseFullEvent(String rawData) {
     try {
       final Map<String, dynamic> eventData = json.decode(rawData);
-      return OpenCodeEvent.fromJson(eventData);
+      return SpaceEvent.fromJson(eventData);
     } catch (e) {
       return null;
     }

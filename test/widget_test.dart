@@ -8,13 +8,13 @@
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  testWidgets('OpenCode app smoke test', (WidgetTester tester) async {
-    // Create a mock OpenCode client
+  testWidgets('Space app smoke test', (WidgetTester tester) async {
+    // Create a mock Space client
 
     // Build our app and trigger a frame.
 
-    // Verify that our app shows the OpenCode title.
-    expect(find.text('OpenCode Mobile'), findsOneWidget);
-    expect(find.text('OpenCode Mobile Client'), findsOneWidget);
+    // Verify that our app shows the Space title.
+    expect(find.text('Space Mobile'), findsOneWidget);
+    expect(find.text('Space Mobile Client'), findsOneWidget);
   });
 }

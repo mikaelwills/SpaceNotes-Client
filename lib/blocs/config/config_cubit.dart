@@ -38,10 +38,10 @@ class ConfigCubit extends Cubit<ConfigState> {
       final selectedProviderID = prefs.getString('selected_provider_id');
       final selectedModelID = prefs.getString('selected_model_id');
       final defaultAgent = prefs.getString('default_agent') ?? _defaultAgentName;
-      final backendTypeStr = prefs.getString('backend_type') ?? 'opencode';
+      final backendTypeStr = prefs.getString('backend_type') ?? 'space';
       final backendType = backendTypeStr == 'claudecode'
           ? BackendType.claudecode
-          : BackendType.opencode;
+          : BackendType.space;
 
       emit(ConfigLoaded(
         serverIp: savedIP,
@@ -139,7 +139,7 @@ class ConfigCubit extends Cubit<ConfigState> {
       if (currentState is! ConfigLoaded) return;
 
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('backend_type', type == BackendType.claudecode ? 'claudecode' : 'opencode');
+      await prefs.setString('backend_type', type == BackendType.claudecode ? 'claudecode' : 'space');
 
       emit(currentState.copyWith(backendType: type));
     } catch (e) {
@@ -152,7 +152,7 @@ class ConfigCubit extends Cubit<ConfigState> {
     if (currentState is ConfigLoaded) {
       return currentState.backendType;
     }
-    return BackendType.opencode;
+    return BackendType.space;
   }
 
   String get baseUrl {
@@ -160,7 +160,7 @@ class ConfigCubit extends Cubit<ConfigState> {
     if (currentState is ConfigLoaded) {
       return currentState.baseUrl;
     }
-    return 'http://$_defaultServerIp:${ConfigLoaded.openCodePort}';
+    return 'http://$_defaultServerIp:${ConfigLoaded.spacePort}';
   }
 
   String get serverIp {

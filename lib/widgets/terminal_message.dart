@@ -5,14 +5,14 @@ import 'package:flutter_markdown/flutter_markdown.dart';
 import '../blocs/chat/chat_bloc.dart';
 import '../blocs/chat/chat_event.dart';
 import '../theme/spacenotes_theme.dart';
-import '../models/opencode_message.dart';
+import '../models/space_message.dart';
 import '../models/message_part.dart';
 import '../utils/text_sanitizer.dart';
 import '../utils/tool_display_helper.dart';
 import 'streaming_text.dart';
 
 class TerminalMessage extends StatelessWidget {
-  final OpenCodeMessage message;
+  final SpaceMessage message;
   final bool isStreaming;
 
   const TerminalMessage({
