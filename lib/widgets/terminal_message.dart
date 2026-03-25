@@ -27,11 +27,8 @@ class TerminalMessage extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (message.role == 'user') _buildUserMessage(context),
-        if (message.role == 'assistant') ...[
-          const SizedBox(height: 8),
+        if (message.role == 'assistant')
           _buildAssistantMessage(context),
-          const SizedBox(height: 8),
-        ],
       ],
     );
   }
@@ -64,9 +61,11 @@ class TerminalMessage extends StatelessWidget {
       case 'worker':
         return SpaceNotesTheme.primary;
       case 'webhook':
-        return SpaceNotesTheme.warning;
+        return const Color(0xFFF5E27A);
+      case 'master':
+        return SpaceNotesTheme.error;
       default:
-        return SpaceNotesTheme.textSecondary;
+        return SpaceNotesTheme.error;
     }
   }
 
@@ -78,30 +77,44 @@ class TerminalMessage extends StatelessWidget {
     return GestureDetector(
       onLongPress: () => _copyToClipboard(context, content),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          const Spacer(),
           if (message.sendStatus == MessageSendStatus.failed || message.sendStatus == MessageSendStatus.queued)
             _buildStatusIcons(context),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.only(right: 12, top: 8, bottom: 12),
-              child: Text(
-                _safeTextSanitize(content, preserveMarkdown: false),
-                style: SpaceNotesTextStyles.terminal.copyWith(
-                  color: SpaceNotesTheme.textSecondary,
-                ),
-                textAlign: TextAlign.right,
-              ),
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            constraints: BoxConstraints(
+              maxWidth: MediaQuery.of(context).size.width * 0.75,
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.only(top: 10, right: 4),
-            child: Text(
-              _formattedTime,
-              style: SpaceNotesTextStyles.terminal.copyWith(
-                color: SpaceNotesTheme.textSecondary.withValues(alpha: 0.5),
-                fontSize: 10,
-              ),
+            decoration: BoxDecoration(
+              color: const Color(0xFF0F1214),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Flexible(
+                  child: Text(
+                    _safeTextSanitize(content, preserveMarkdown: false),
+                    style: SpaceNotesTextStyles.terminal.copyWith(
+                      color: SpaceNotesTheme.text,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Padding(
+                  padding: const EdgeInsets.only(top: 2),
+                  child: Text(
+                    _formattedTime,
+                    style: SpaceNotesTextStyles.terminal.copyWith(
+                      color: const Color(0xFF555555),
+                      fontFamily: 'FiraCode',
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -114,23 +127,68 @@ class TerminalMessage extends StatelessWidget {
       (p.content != null && p.content!.isNotEmpty) || p.type == 'tool'
     );
 
-    final prefix = _sourceLabel != null
-        ? '$_formattedTime $_sourceLabel '
-        : '$_formattedTime ';
+    final color = _sourceLabelColor;
 
     return GestureDetector(
       onLongPress: () => _copyToClipboard(context, message.content),
-      child: Padding(
-        padding: const EdgeInsets.only(left: 4, top: 8, bottom: 12),
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: const Color(0xFF0F1214),
+          borderRadius: BorderRadius.circular(6),
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            ...message.parts.asMap().entries.map((entry) {
-              if (entry.key == 0 && entry.value.type == 'text') {
-                return _buildPrefixedTextPart(entry.value, prefix);
-              }
-              return _buildMessagePart(entry.value);
-            }),
+            Row(
+              children: [
+                Text(
+                  _formattedTime,
+                  style: SpaceNotesTextStyles.terminal.copyWith(
+                    color: const Color(0xFF555555),
+                    fontFamily: 'FiraCode',
+                  ),
+                ),
+                if (message.project != null && message.project!.isNotEmpty) ...[
+                  const SizedBox(width: 8),
+                  Text(
+                    message.project!.toUpperCase(),
+                    style: SpaceNotesTextStyles.terminal.copyWith(
+                      color: color,
+                      fontFamily: 'FiraCode',
+                      fontWeight: FontWeight.w700,
+                      fontSize: 11,
+                      letterSpacing: 0.8,
+                    ),
+                  ),
+                ],
+                if (message.task != null && message.task!.isNotEmpty) ...[
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 6),
+                    child: Text(
+                      '›',
+                      style: SpaceNotesTextStyles.terminal.copyWith(
+                        color: color.withValues(alpha: 0.4),
+                        fontFamily: 'FiraCode',
+                      ),
+                    ),
+                  ),
+                  Flexible(
+                    child: Text(
+                      message.task!,
+                      style: SpaceNotesTextStyles.terminal.copyWith(
+                        color: SpaceNotesTheme.textSecondary,
+                        fontFamily: 'FiraCode',
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+            const SizedBox(height: 6),
+            ...message.parts.map((part) => _buildMessagePart(part)),
             if (isStreaming && !hasContent)
               const _BlinkingCursor(),
           ],
@@ -158,56 +216,6 @@ class TerminalMessage extends StatelessWidget {
       default:
         return _buildTextPart(part);
     }
-  }
-
-  Widget _buildPrefixedTextPart(MessagePart part, String prefix) {
-    if (part.content == null || part.content!.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
-    final prefixedContent = '$prefix${part.content!}';
-    final isLastPart = message.parts.last == part;
-    final shouldStream = isStreaming && isLastPart && message.role == 'assistant';
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 4),
-      child: shouldStream
-          ? StreamingText(
-              text: _safeTextSanitize(prefixedContent, preserveMarkdown: true),
-              style: SpaceNotesTextStyles.terminal,
-              isStreaming: true,
-              useMarkdown: true,
-            )
-          : MarkdownBody(
-              data: _safeTextSanitize(prefixedContent, preserveMarkdown: true),
-              styleSheet: MarkdownStyleSheet(
-                p: SpaceNotesTextStyles.terminal,
-                code: SpaceNotesTextStyles.code,
-                codeblockDecoration: BoxDecoration(
-                  color: SpaceNotesTheme.surface,
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                codeblockPadding: const EdgeInsets.all(8),
-                blockquote: SpaceNotesTextStyles.terminal.copyWith(
-                  color: SpaceNotesTheme.textSecondary,
-                ),
-                blockquoteDecoration: const BoxDecoration(
-                  border: Border(
-                    left: BorderSide(
-                      color: SpaceNotesTheme.textSecondary,
-                      width: 2,
-                    ),
-                  ),
-                ),
-                h1: SpaceNotesTextStyles.terminal.copyWith(fontSize: 20, fontWeight: FontWeight.bold),
-                h2: SpaceNotesTextStyles.terminal.copyWith(fontSize: 18, fontWeight: FontWeight.bold),
-                h3: SpaceNotesTextStyles.terminal.copyWith(fontSize: 16, fontWeight: FontWeight.bold),
-                listBullet: SpaceNotesTextStyles.terminal,
-                listIndent: 16,
-              ),
-              selectable: false,
-            ),
-    );
   }
 
   Widget _buildTextPart(MessagePart part) {

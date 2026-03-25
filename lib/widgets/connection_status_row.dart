@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../theme/spacenotes_theme.dart';
 import '../blocs/chat/chat_bloc.dart';
+import '../blocs/chat/chat_event.dart';
 import '../blocs/chat/chat_state.dart';
 
 class ConnectionStatusRow extends StatefulWidget {
@@ -65,18 +66,30 @@ class _ConnectionStatusRowState extends State<ConnectionStatusRow>
                   ),
                 ],
               ),
-              if (isWorking) ...[
-                SizedBox(
-                  width: 70,
-                  child: AnimatedDots(
-                    textStyle: SpaceNotesTextStyles.terminal.copyWith(
-                      fontSize: 11,
+              Row(
+                children: [
+                  if (isWorking) ...[
+                    SizedBox(
+                      width: 70,
+                      child: AnimatedDots(
+                        textStyle: SpaceNotesTextStyles.terminal.copyWith(
+                          fontSize: 11,
+                          color: SpaceNotesTheme.textSecondary,
+                          fontWeight: FontWeight.w400,
+                        ),
+                      ),
+                    ),
+                  ],
+                  GestureDetector(
+                    onTap: () => context.read<ChatBloc>().add(ClearMessages()),
+                    child: const Icon(
+                      Icons.delete_outline,
+                      size: 18,
                       color: SpaceNotesTheme.textSecondary,
-                      fontWeight: FontWeight.w400,
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ],
           ),
         );

@@ -75,7 +75,7 @@ class ClaudeCodeChatInterface implements ChatInterface {
       (event) {
         switch (event.type) {
           case SpaceChannelEventType.msg:
-            if (event.from == 'assistant') {
+            if (event.from == 'assistant' || event.sourceType == SpaceChannelSourceType.worker || event.sourceType == SpaceChannelSourceType.webhook) {
               final message = SpaceMessage(
                 id: event.id,
                 sessionId: _sessionId,

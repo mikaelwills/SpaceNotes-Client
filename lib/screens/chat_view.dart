@@ -210,7 +210,7 @@ class _ChatViewState extends ConsumerState<ChatView> {
                     child: ListView.builder(
                       controller: _chatScrollController,
                       keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-                      padding: widget.messagePadding ?? const EdgeInsets.fromLTRB(16, 16, 16, 120),
+                      padding: widget.messagePadding ?? const EdgeInsets.fromLTRB(4, 8, 4, 120),
                       itemCount: messages.length,
                       itemBuilder: (context, index) {
                         final message = messages[index];

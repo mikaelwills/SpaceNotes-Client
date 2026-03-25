@@ -38,13 +38,16 @@ class SpaceChannelEvent {
   factory SpaceChannelEvent.fromJson(Map<String, dynamic> json) {
     final typeStr = json['type'] as String? ?? 'msg';
 
+    final session = json['session'] ?? '';
     SpaceChannelSourceType? sourceType;
-    if (typeStr == 'worker_reply') {
+    if (typeStr == 'worker_reply' || (session is String && session.startsWith('worker-'))) {
       sourceType = SpaceChannelSourceType.worker;
     } else if (typeStr == 'webhook') {
       sourceType = SpaceChannelSourceType.webhook;
     } else if (json['sourceType'] != null) {
       sourceType = _parseSourceType(json['sourceType'] as String);
+    } else if (session is String && session.isNotEmpty) {
+      sourceType = SpaceChannelSourceType.master;
     }
 
     final eventType = (typeStr == 'edit')
@@ -53,18 +56,18 @@ class SpaceChannelEvent {
 
     return SpaceChannelEvent(
       type: eventType,
-      id: json['id'] as String,
-      from: json['from'] as String?,
-      text: json['text'] as String?,
+      id: json['id'] ?? 'msg-${DateTime.now().millisecondsSinceEpoch}',
+      from: json['from'] ?? '',
+      text: json['text'] ?? '',
       ts: json['ts'] as int?,
-      replyTo: json['replyTo'] as String?,
+      replyTo: json['replyTo'] ?? '',
       file: json['file'] != null
           ? SpaceChannelFile.fromJson(json['file'] as Map<String, dynamic>)
           : null,
       sourceType: sourceType,
-      project: json['project'] as String?,
-      task: json['task'] as String?,
-      session: json['session'] as String?,
+      project: json['project'] ?? json['source'] ?? '',
+      task: json['task'] ?? '',
+      session: json['session'] ?? '',
     );
   }
 
@@ -203,12 +206,17 @@ class SpaceChannelService {
   }
 
   void handleRawMessage(String raw) {
+    debugLogger.info('WS', 'RAW', raw.length > 200 ? raw.substring(0, 200) : raw);
     try {
       final json = jsonDecode(raw) as Map<String, dynamic>;
       final typeStr = json['type'] as String? ?? '';
 
       if (typeStr == 'tool_event') {
         _handleToolEvent(json);
+        return;
+      }
+
+      if (typeStr == 'session') {
         return;
       }
 
