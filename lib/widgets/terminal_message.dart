@@ -59,6 +59,17 @@ class TerminalMessage extends StatelessWidget {
     }
   }
 
+  Color get _sourceLabelColor {
+    switch (message.sourceType) {
+      case 'worker':
+        return SpaceNotesTheme.primary;
+      case 'webhook':
+        return SpaceNotesTheme.warning;
+      default:
+        return SpaceNotesTheme.textSecondary;
+    }
+  }
+
   Widget _buildUserMessage(BuildContext context) {
     final content = message.parts.isNotEmpty && message.parts.first.content != null
         ? message.parts.first.content!
@@ -121,10 +132,19 @@ class TerminalMessage extends StatelessWidget {
                 ),
                 if (_sourceLabel != null) ...[
                   const SizedBox(width: 6),
+                  Container(
+                    width: 5,
+                    height: 5,
+                    decoration: BoxDecoration(
+                      color: _sourceLabelColor,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
                   Text(
                     _sourceLabel!,
                     style: SpaceNotesTextStyles.terminal.copyWith(
-                      color: SpaceNotesTheme.textSecondary,
+                      color: _sourceLabelColor,
                       fontSize: 10,
                     ),
                   ),
