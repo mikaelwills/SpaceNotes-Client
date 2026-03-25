@@ -1,153 +1,104 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
-import '../blocs/chat/chat_bloc.dart';
-import '../blocs/chat/chat_state.dart';
+import '../blocs/worker/worker_bloc.dart';
+import '../blocs/worker/worker_state.dart';
 import '../theme/spacenotes_theme.dart';
 
-class WorkerInfo {
-  final String session;
-  final String? project;
-  final String? task;
-  final DateTime lastSeen;
-  final String? lastMessage;
-
-  const WorkerInfo({
-    required this.session,
-    this.project,
-    this.task,
-    required this.lastSeen,
-    this.lastMessage,
-  });
-}
-
-final workerListProvider = Provider<List<WorkerInfo>>((ref) {
-  final chatBloc = GetIt.I<ChatBloc>();
-  final state = chatBloc.state;
-
-  if (state is! ChatReady) return [];
-
-  final workers = <String, WorkerInfo>{};
-
-  for (final msg in state.messages) {
-    if (msg.sourceType == 'worker' && msg.session != null) {
-      final text = msg.parts.isNotEmpty ? msg.parts.first.content : null;
-      final preview = text != null && text.length > 80
-          ? '${text.substring(0, 80)}...'
-          : text;
-
-      workers[msg.session!] = WorkerInfo(
-        session: msg.session!,
-        project: msg.project,
-        task: msg.task,
-        lastSeen: msg.created,
-        lastMessage: preview,
-      );
-    }
-  }
-
-  final list = workers.values.toList();
-  list.sort((a, b) => b.lastSeen.compareTo(a.lastSeen));
-  return list;
-});
-
-class WorkerDashboard extends ConsumerStatefulWidget {
+class WorkerDashboard extends StatefulWidget {
   const WorkerDashboard({super.key});
 
   @override
-  ConsumerState<WorkerDashboard> createState() => _WorkerDashboardState();
+  State<WorkerDashboard> createState() => _WorkerDashboardState();
 }
 
-class _WorkerDashboardState extends ConsumerState<WorkerDashboard> {
-  StreamSubscription? _subscription;
+class _WorkerDashboardState extends State<WorkerDashboard> {
+  late final WorkerBloc _workerBloc;
 
   @override
   void initState() {
     super.initState();
-    final chatBloc = GetIt.I<ChatBloc>();
-    _subscription = chatBloc.stream.listen((_) {
-      if (mounted) setState(() {});
-    });
-  }
-
-  @override
-  void dispose() {
-    _subscription?.cancel();
-    super.dispose();
+    _workerBloc = GetIt.I<WorkerBloc>();
   }
 
   @override
   Widget build(BuildContext context) {
-    final workers = ref.watch(workerListProvider);
+    return BlocBuilder<WorkerBloc, WorkerState>(
+      bloc: _workerBloc,
+      builder: (context, state) {
+        final workers = state.workers.values.toList()
+          ..sort((a, b) => b.lastActivity.compareTo(a.lastActivity));
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
-          child: Row(
-            children: [
-              const Text(
-                'Workers',
-                style: TextStyle(
-                  color: SpaceNotesTheme.textSecondary,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 1.2,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                decoration: BoxDecoration(
-                  color: SpaceNotesTheme.primary.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Text(
-                  '${workers.length}',
-                  style: const TextStyle(
-                    color: SpaceNotesTheme.primary,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
+              child: Row(
+                children: [
+                  const Text(
+                    'Workers',
+                    style: TextStyle(
+                      color: SpaceNotesTheme.textSecondary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 1.2,
+                    ),
                   ),
-                ),
-              ),
-            ],
-          ),
-        ),
-        Expanded(
-          child: workers.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.memory,
-                          size: 48,
-                          color: SpaceNotesTheme.textSecondary
-                              .withValues(alpha: 0.4)),
-                      const SizedBox(height: 12),
-                      const Text(
-                        'No workers connected',
-                        style: TextStyle(
-                          color: SpaceNotesTheme.textSecondary,
-                          fontSize: 14,
-                        ),
+                  const SizedBox(width: 8),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                    decoration: BoxDecoration(
+                      color: SpaceNotesTheme.primary.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      '${workers.length}',
+                      style: const TextStyle(
+                        color: SpaceNotesTheme.primary,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
                       ),
-                    ],
+                    ),
                   ),
-                )
-              : ListView.separated(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                  itemCount: workers.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 2),
-                  itemBuilder: (context, index) {
-                    return _WorkerTile(worker: workers[index]);
-                  },
-                ),
-        ),
-      ],
+                ],
+              ),
+            ),
+            Expanded(
+              child: workers.isEmpty
+                  ? Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.memory,
+                              size: 48,
+                              color: SpaceNotesTheme.textSecondary
+                                  .withValues(alpha: 0.4)),
+                          const SizedBox(height: 12),
+                          const Text(
+                            'No workers connected',
+                            style: TextStyle(
+                              color: SpaceNotesTheme.textSecondary,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  : ListView.separated(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 4),
+                      itemCount: workers.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 2),
+                      itemBuilder: (context, index) {
+                        return _WorkerTile(worker: workers[index]);
+                      },
+                    ),
+            ),
+          ],
+        );
+      },
     );
   }
 }
@@ -212,7 +163,7 @@ class _WorkerTile extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      _timeAgo(worker.lastSeen),
+                      'connected ${_timeAgo(worker.connectedAt)} · active ${_timeAgo(worker.lastActivity)}',
                       style: const TextStyle(
                         color: SpaceNotesTheme.textSecondary,
                         fontSize: 11,
@@ -223,31 +174,17 @@ class _WorkerTile extends StatelessWidget {
               ),
             ],
           ),
-          if (worker.project != null || worker.task != null) ...[
+          if (worker.project.isNotEmpty || worker.task.isNotEmpty) ...[
             const SizedBox(height: 10),
             Wrap(
               spacing: 6,
               runSpacing: 4,
               children: [
-                if (worker.project != null)
-                  _InfoChip(label: 'project', value: worker.project!),
-                if (worker.task != null)
-                  _InfoChip(label: 'task', value: worker.task!),
+                if (worker.project.isNotEmpty)
+                  _InfoChip(label: 'project', value: worker.project),
+                if (worker.task.isNotEmpty)
+                  _InfoChip(label: 'task', value: worker.task),
               ],
-            ),
-          ],
-          if (worker.lastMessage != null) ...[
-            const SizedBox(height: 8),
-            Text(
-              worker.lastMessage!,
-              style: const TextStyle(
-                fontFamily: 'FiraCode',
-                fontSize: 11,
-                color: SpaceNotesTheme.textSecondary,
-                height: 1.3,
-              ),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
             ),
           ],
         ],
