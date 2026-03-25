@@ -187,6 +187,53 @@ class _WorkerTile extends StatelessWidget {
               ],
             ),
           ],
+          if (worker.recentToolEvents.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: SpaceNotesTheme.inputSurface,
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: worker.recentToolEvents
+                    .take(5)
+                    .map(
+                      (event) => Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 1),
+                        child: Row(
+                          children: [
+                            Text(
+                              event.toolName,
+                              style: const TextStyle(
+                                fontFamily: 'FiraCode',
+                                fontSize: 10,
+                                color: SpaceNotesTheme.secondary,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Text(
+                                event.inputSummary,
+                                style: const TextStyle(
+                                  fontFamily: 'FiraCode',
+                                  fontSize: 10,
+                                  color: SpaceNotesTheme.textSecondary,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                                maxLines: 1,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    )
+                    .toList(),
+              ),
+            ),
+          ],
         ],
       ),
     );
