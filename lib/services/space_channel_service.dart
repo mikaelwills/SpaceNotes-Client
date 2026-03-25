@@ -206,6 +206,17 @@ class SpaceChannelService {
     });
   }
 
+  void sendPermissionResponse(String session, String requestId, String behavior) {
+    if (_channel == null) return;
+    debugLogger.info('WS', 'Permission response', 'id=$requestId, behavior=$behavior');
+    _channel!.sink.add(jsonEncode({
+      'type': 'permission_response',
+      'session': session,
+      'request_id': requestId,
+      'behavior': behavior,
+    }));
+  }
+
   void sendMessage(String text) {
     if (_channel == null) return;
 

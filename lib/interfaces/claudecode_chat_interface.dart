@@ -9,6 +9,7 @@ import '../blocs/config/config_cubit.dart';
 import '../blocs/config/config_state.dart';
 import '../models/space_message.dart';
 import '../models/message_part.dart';
+import '../models/permission_request.dart';
 import 'chat_interface.dart';
 
 class ClaudeCodeChatInterface implements ChatInterface {
@@ -247,7 +248,37 @@ class ClaudeCodeChatInterface implements ChatInterface {
   void onMessageStatusChanged(MessageStatusChanged event, Emitter<ChatState> emit) {}
 
   @override
-  Future<void> onRespondToPermission(RespondToPermission event, Emitter<ChatState> emit) async {}
+  Future<void> onRespondToPermission(RespondToPermission event, Emitter<ChatState> emit) async {
+    final idx = _messages.indexWhere((m) => m.id == event.permissionId);
+    if (idx == -1) return;
+
+    final msg = _messages[idx];
+    final updatedParts = msg.parts.map((p) {
+      if (p.metadata?['pending_permission'] == true) {
+        return MessagePart(
+          id: p.id,
+          type: p.type,
+          content: p.content,
+          metadata: {
+            ...?p.metadata,
+            'pending_permission': false,
+            'permission_responded': event.response == PermissionResponse.reject ? 'deny' : 'allow',
+          },
+        );
+      }
+      return p;
+    }).toList();
+
+    _messages[idx] = msg.copyWith(parts: updatedParts);
+
+    _spaceChannel.sendPermissionResponse(
+      msg.session ?? '',
+      event.permissionId,
+      event.response == PermissionResponse.reject ? 'deny' : 'allow',
+    );
+
+    _addEvent?.call(RefreshChatStateEvent());
+  }
 
   @override
   void onRefreshState(Emitter<ChatState> emit) {

@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import '../blocs/chat/chat_bloc.dart';
 import '../blocs/chat/chat_event.dart';
+import '../models/permission_request.dart';
 import '../theme/spacenotes_theme.dart';
 import '../models/space_message.dart';
 import '../models/message_part.dart';
@@ -190,6 +191,9 @@ class TerminalMessage extends StatelessWidget {
   }
 
   Widget _buildMessagePart(MessagePart part) {
+    final isPending = part.metadata?['pending_permission'] == true;
+    if (isPending) return _buildPermissionPart(part);
+
     switch (part.type) {
       case 'text':
         return _buildTextPart(part);
@@ -208,6 +212,78 @@ class TerminalMessage extends StatelessWidget {
       default:
         return _buildTextPart(part);
     }
+  }
+
+  Widget _buildPermissionPart(MessagePart part) {
+    final toolName = part.metadata?['tool_name'] ?? '';
+    final inputPreview = part.metadata?['input_preview'] ?? '';
+    final requestId = part.metadata?['request_id'] ?? '';
+    final responded = part.metadata?['permission_responded'] as String?;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.shield_outlined, size: 14, color: SpaceNotesTheme.warning),
+              const SizedBox(width: 6),
+              Text(
+                toolName,
+                style: SpaceNotesTextStyles.terminal.copyWith(
+                  color: SpaceNotesTheme.warning,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+          if (inputPreview.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(
+              inputPreview.length > 120 ? '${inputPreview.substring(0, 120)}...' : inputPreview,
+              style: SpaceNotesTextStyles.terminal.copyWith(
+                color: const Color(0xFF999999),
+                fontFamily: 'FiraCode',
+                fontSize: 12,
+              ),
+            ),
+          ],
+          const SizedBox(height: 8),
+          if (responded != null)
+            Text(
+              responded == 'allow' ? '✓ Allowed' : '✗ Denied',
+              style: SpaceNotesTextStyles.terminal.copyWith(
+                color: responded == 'allow' ? const Color(0xFF4CAF50) : SpaceNotesTheme.error,
+                fontWeight: FontWeight.w600,
+              ),
+            )
+          else
+            Row(
+              children: [
+                Builder(builder: (ctx) => _PermissionButton(
+                  label: 'Allow',
+                  color: const Color(0xFF4CAF50),
+                  onTap: () => _respondToPermission(ctx, requestId, PermissionResponse.once),
+                )),
+                const SizedBox(width: 12),
+                Builder(builder: (ctx) => _PermissionButton(
+                  label: 'Deny',
+                  color: SpaceNotesTheme.error,
+                  onTap: () => _respondToPermission(ctx, requestId, PermissionResponse.reject),
+                )),
+              ],
+            ),
+        ],
+      ),
+    );
+  }
+
+  void _respondToPermission(BuildContext context, String requestId, PermissionResponse response) {
+    context.read<ChatBloc>().add(RespondToPermission(
+      permissionId: message.id,
+      response: response,
+    ));
   }
 
   Widget _buildTextPart(MessagePart part) {
@@ -700,6 +776,36 @@ class TerminalMessage extends StatelessWidget {
             ),
           ],
         ],
+      ),
+    );
+  }
+}
+
+class _PermissionButton extends StatelessWidget {
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _PermissionButton({required this.label, required this.color, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+        decoration: BoxDecoration(
+          border: Border.all(color: color.withValues(alpha: 0.5), width: 1),
+          borderRadius: BorderRadius.circular(4),
+        ),
+        child: Text(
+          label,
+          style: SpaceNotesTextStyles.terminal.copyWith(
+            color: color,
+            fontWeight: FontWeight.w600,
+            fontSize: 13,
+          ),
+        ),
       ),
     );
   }
