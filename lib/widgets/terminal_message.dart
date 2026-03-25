@@ -38,6 +38,25 @@ class TerminalMessage extends StatelessWidget {
     );
   }
 
+  String get _formattedTime {
+    final h = message.created.hour.toString().padLeft(2, '0');
+    final m = message.created.minute.toString().padLeft(2, '0');
+    return '$h:$m';
+  }
+
+  Widget _buildTimestamp({double topPadding = 10}) {
+    return Padding(
+      padding: EdgeInsets.only(top: topPadding, left: 4),
+      child: Text(
+        _formattedTime,
+        style: SpaceNotesTextStyles.terminal.copyWith(
+          color: SpaceNotesTheme.textSecondary.withValues(alpha: 0.5),
+          fontSize: 10,
+        ),
+      ),
+    );
+  }
+
   String? get _sourceLabel {
     final type = message.sourceType;
     if (type == null) return null;
@@ -92,6 +111,7 @@ class TerminalMessage extends StatelessWidget {
               ),
             ),
           ),
+          _buildTimestamp(),
         ],
       ),
     );
@@ -104,16 +124,24 @@ class TerminalMessage extends StatelessWidget {
 
     return GestureDetector(
       onLongPress: () => _copyToClipboard(context, message.content),
-      child: Padding(
-        padding: const EdgeInsets.only(left: 12, top: 8, bottom: 12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            ...message.parts.map((part) => _buildMessagePart(part)),
-            if (isStreaming && !hasContent)
-              const _BlinkingCursor(),
-          ],
-        ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildTimestamp(),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.only(left: 8, top: 8, bottom: 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  ...message.parts.map((part) => _buildMessagePart(part)),
+                  if (isStreaming && !hasContent)
+                    const _BlinkingCursor(),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
