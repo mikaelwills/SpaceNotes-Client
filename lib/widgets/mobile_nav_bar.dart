@@ -124,27 +124,29 @@ class MobileNavBar extends ConsumerWidget {
   }
 
   static const _mainScreens = [
-    ('/notes', Icons.notes),
-    ('/notes/chat', Icons.chat_bubble_outline),
-    ('/notes/workers', Icons.smart_toy_outlined),
+    ('/notes', Icons.notes, 'notes'),
+    ('/notes/chat', Icons.chat_bubble_outline, 'chat'),
+    ('/notes/workers', Icons.smart_toy_outlined, 'workers'),
+    ('/notes/users', Icons.people_outline, 'calling'),
   ];
 
   String _currentScreen(String location) {
     if (location.startsWith('/notes/chat')) return '/notes/chat';
     if (location == '/notes/workers') return '/notes/workers';
+    if (location == '/notes/users') return '/notes/users';
     return '/notes';
   }
 
   List<Widget> _buildNavIcons(BuildContext context, String location) {
     final current = _currentScreen(location);
     final icons = <Widget>[];
-    for (final (route, icon) in _mainScreens) {
-      if (route == current) continue;
+    for (final (route, icon, _) in _mainScreens) {
+      final isActive = route == current;
       if (icons.isNotEmpty) icons.add(const SizedBox(width: 16));
       icons.add(
         GestureDetector(
-          onTap: () => context.go(route),
-          child: Icon(icon, color: SpaceNotesTheme.text),
+          onTap: isActive ? null : () => context.go(route),
+          child: Icon(icon, color: isActive ? SpaceNotesTheme.primary : SpaceNotesTheme.text),
         ),
       );
     }
