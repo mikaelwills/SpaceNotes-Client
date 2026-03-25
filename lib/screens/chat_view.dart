@@ -38,6 +38,7 @@ class _ChatViewState extends ConsumerState<ChatView> {
   ScrollController? _ownScrollController;
   bool _showScrollToBottom = false;
   bool _autoScrollEnabled = true;
+  int _previousMessageCount = 0;
 
   ScrollController get _chatScrollController =>
       widget.scrollController ?? (_ownScrollController ??= ScrollController());
@@ -89,8 +90,13 @@ class _ChatViewState extends ConsumerState<ChatView> {
           _scrollToBottom();
         } else if (state is ChatReady && state.isStreaming && _autoScrollEnabled) {
           _scrollToBottom();
+        } else if (state is ChatReady && state.messages.length > _previousMessageCount && _autoScrollEnabled) {
+          _scrollToBottom();
         } else if (state is ChatPermissionRequired) {
           _showPermissionDialog(context, state);
+        }
+        if (state is ChatReady) {
+          _previousMessageCount = state.messages.length;
         }
       },
       child: Stack(
