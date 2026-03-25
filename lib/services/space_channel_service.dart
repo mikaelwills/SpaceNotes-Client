@@ -5,7 +5,7 @@ import '../models/session_event.dart';
 import '../models/tool_event.dart';
 import 'debug_logger.dart';
 
-enum SpaceChannelEventType { msg, edit }
+enum SpaceChannelEventType { msg, edit, permissionRequest }
 
 enum SpaceChannelSourceType { master, worker, webhook, unknown }
 
@@ -21,6 +21,7 @@ class SpaceChannelEvent {
   final String? project;
   final String? task;
   final String? session;
+  final Map<String, dynamic>? permissionData;
 
   const SpaceChannelEvent({
     required this.type,
@@ -34,6 +35,7 @@ class SpaceChannelEvent {
     this.project,
     this.task,
     this.session,
+    this.permissionData,
   });
 
   factory SpaceChannelEvent.fromJson(Map<String, dynamic> json) {
@@ -228,6 +230,11 @@ class SpaceChannelService {
         return;
       }
 
+      if (typeStr == 'permission_request') {
+        _handlePermissionRequest(json);
+        return;
+      }
+
       final event = SpaceChannelEvent.fromJson(json);
       if (_eventController?.isClosed == false) {
         _eventController!.add(event);
@@ -243,6 +250,46 @@ class SpaceChannelService {
 
     if (_sessionEventController?.isClosed == false) {
       _sessionEventController!.add(sessionEvent);
+    }
+  }
+
+  void _handlePermissionRequest(Map<String, dynamic> json) {
+    final requestId = json['request_id'] as String? ?? json['id'] as String? ?? 'perm-${DateTime.now().millisecondsSinceEpoch}';
+    final toolName = json['tool_name'] as String? ?? json['permission'] as String? ?? '';
+    final description = json['description'] as String? ?? '';
+    final inputPreview = json['input_preview'] as String? ?? '';
+    final session = json['session'] as String? ?? '';
+
+    SpaceChannelSourceType? sourceType;
+    if (session.startsWith('worker-')) {
+      sourceType = SpaceChannelSourceType.worker;
+    } else if (session.isNotEmpty) {
+      sourceType = SpaceChannelSourceType.master;
+    }
+
+    debugLogger.info('WS', 'Permission request', 'id=$requestId, tool=$toolName');
+
+    final event = SpaceChannelEvent(
+      type: SpaceChannelEventType.permissionRequest,
+      id: requestId,
+      from: 'assistant',
+      text: '$toolName: $description',
+      sourceType: sourceType,
+      session: session,
+      project: json['project'] as String? ?? '',
+      task: json['task'] as String? ?? '',
+      permissionData: {
+        'request_id': requestId,
+        'tool_name': toolName,
+        'description': description,
+        'input_preview': inputPreview,
+        'pending_permission': true,
+        'raw': json,
+      },
+    );
+
+    if (_eventController?.isClosed == false) {
+      _eventController!.add(event);
     }
   }
 

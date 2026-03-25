@@ -107,6 +107,42 @@ class ClaudeCodeChatInterface implements ChatInterface {
             }
             break;
 
+          case SpaceChannelEventType.permissionRequest:
+            final permData = event.permissionData ?? {};
+            final toolName = permData['tool_name'] as String? ?? 'unknown';
+            final description = permData['description'] as String? ?? '';
+            final permMessage = SpaceMessage(
+              id: event.id,
+              sessionId: _sessionId,
+              role: 'assistant',
+              created: DateTime.now(),
+              completed: DateTime.now(),
+              parts: [
+                MessagePart(
+                  id: '${event.id}-p0',
+                  type: 'text',
+                  content: '$toolName: $description',
+                  metadata: {
+                    'request_id': permData['request_id'],
+                    'tool_name': toolName,
+                    'input_preview': permData['input_preview'] ?? '',
+                    'pending_permission': true,
+                  },
+                ),
+              ],
+              isStreaming: false,
+              sourceType: event.sourceType?.name,
+              project: event.project,
+              task: event.task,
+              session: event.session,
+            );
+
+            _messages.add(permMessage);
+            _messageIndex[permMessage.id] = _messages.length - 1;
+            _enforceMessageLimit();
+            _addEvent?.call(RefreshChatStateEvent());
+            break;
+
           case SpaceChannelEventType.edit:
             if (event.text != null) {
               final idx = _messageIndex[event.id];
