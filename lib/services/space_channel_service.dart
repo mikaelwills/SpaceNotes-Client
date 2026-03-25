@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:web_socket_channel/web_socket_channel.dart';
+import '../models/session_event.dart';
 import '../models/tool_event.dart';
 import 'debug_logger.dart';
 
@@ -105,6 +106,7 @@ class SpaceChannelService {
   WebSocketChannel? _channel;
   StreamController<SpaceChannelEvent>? _eventController;
   StreamController<ToolEvent>? _toolEventController;
+  StreamController<SessionEvent>? _sessionEventController;
   StreamSubscription? _subscription;
   Timer? _reconnectTimer;
   bool _isConnected = false;
@@ -119,6 +121,11 @@ class SpaceChannelService {
   Stream<ToolEvent> get toolEvents {
     _toolEventController ??= StreamController<ToolEvent>.broadcast();
     return _toolEventController!.stream;
+  }
+
+  Stream<SessionEvent> get sessionEvents {
+    _sessionEventController ??= StreamController<SessionEvent>.broadcast();
+    return _sessionEventController!.stream;
   }
 
   List<ToolEvent> getToolEventsForSession(String session) {
@@ -217,6 +224,7 @@ class SpaceChannelService {
       }
 
       if (typeStr == 'session') {
+        _handleSessionEvent(json);
         return;
       }
 
@@ -226,6 +234,15 @@ class SpaceChannelService {
       }
     } catch (e) {
       debugLogger.error('WS', 'Parse error', e.toString());
+    }
+  }
+
+  void _handleSessionEvent(Map<String, dynamic> json) {
+    final sessionEvent = SessionEvent.fromJson(json);
+    debugLogger.info('WS', 'Session event', 'action=${sessionEvent.action}, session=${sessionEvent.session}');
+
+    if (_sessionEventController?.isClosed == false) {
+      _sessionEventController!.add(sessionEvent);
     }
   }
 
@@ -268,6 +285,7 @@ class SpaceChannelService {
     _channel?.sink.close();
     _eventController?.close();
     _toolEventController?.close();
+    _sessionEventController?.close();
     _isConnected = false;
   }
 }

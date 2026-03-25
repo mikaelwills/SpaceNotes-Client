@@ -1,0 +1,43 @@
+import 'package:equatable/equatable.dart';
+
+class SessionEvent extends Equatable {
+  final String action;
+  final String session;
+  final String? project;
+  final String? task;
+  final bool? isMaster;
+
+  const SessionEvent({
+    required this.action,
+    required this.session,
+    this.project,
+    this.task,
+    this.isMaster,
+  });
+
+  factory SessionEvent.fromJson(Map<String, dynamic> json) {
+    return SessionEvent(
+      action: json['action'] as String? ?? '',
+      session: json['session'] as String? ?? '',
+      project: json['project'] as String?,
+      task: json['task'] as String?,
+      isMaster: json['is_master'] as bool?,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'action': action,
+      'session': session,
+      if (project != null) 'project': project,
+      if (task != null) 'task': task,
+      if (isMaster != null) 'is_master': isMaster,
+    };
+  }
+
+  bool get isConnected => action == 'connected';
+  bool get isDisconnected => action == 'disconnected';
+
+  @override
+  List<Object?> get props => [action, session, project, task, isMaster];
+}
