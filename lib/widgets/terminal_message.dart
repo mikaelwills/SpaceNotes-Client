@@ -238,7 +238,9 @@ class TerminalMessage extends StatelessWidget {
           : MarkdownBody(
               data: _safeTextSanitize(part.content!, preserveMarkdown: true),
               styleSheet: MarkdownStyleSheet(
-                p: SpaceNotesTextStyles.terminal,
+                p: SpaceNotesTextStyles.terminal.copyWith(
+                  color: const Color(0xFF999999),
+                ),
                 code: SpaceNotesTextStyles.code,
                 codeblockDecoration: BoxDecoration(
                   color: SpaceNotesTheme.surface,
