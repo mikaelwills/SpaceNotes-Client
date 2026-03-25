@@ -109,6 +109,12 @@ class MobileNavBar extends ConsumerWidget {
                   child: const Icon(Icons.notes,
                       color: SpaceNotesTheme.text),
                 ),
+                const SizedBox(width: 16),
+                GestureDetector(
+                  onTap: () => context.go("/notes/workers"),
+                  child: const Icon(Icons.smart_toy_outlined,
+                      color: SpaceNotesTheme.text),
+                ),
                 const Spacer(),
                 GestureDetector(
                   onTap: () => _onNewSessionPressed(context),
