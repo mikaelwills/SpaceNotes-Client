@@ -39,21 +39,15 @@ class TerminalMessage extends StatelessWidget {
     return '$h:$m';
   }
 
-  String? get _sourceLabel {
-    final type = message.sourceType;
-    if (type == null) return null;
-    switch (type) {
-      case 'master':
-        return 'master';
-      case 'worker':
-        final taskName = message.task;
-        return taskName != null ? 'worker: $taskName' : 'worker';
-      case 'webhook':
-        final session = message.session;
-        return session != null ? 'webhook: $session' : 'webhook';
-      default:
-        return null;
+  Widget? get _statusIcon {
+    final content = message.content;
+    if (content.startsWith('✓')) {
+      return const Icon(Icons.check, size: 14, color: Color(0xFF4CAF50));
     }
+    if (content.startsWith('✗')) {
+      return const Icon(Icons.close, size: 14, color: SpaceNotesTheme.error);
+    }
+    return null;
   }
 
   Color get _sourceLabelColor {
@@ -163,17 +157,16 @@ class TerminalMessage extends StatelessWidget {
                     ),
                   ),
                 ],
-                if (message.task != null && message.task!.isNotEmpty) ...[
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 6),
-                    child: Text(
-                      '›',
-                      style: SpaceNotesTextStyles.terminal.copyWith(
-                        color: color.withValues(alpha: 0.4),
-                        fontFamily: 'FiraCode',
-                      ),
-                    ),
-                  ),
+              ],
+            ),
+            if (message.task != null && message.task!.isNotEmpty) ...[
+              const SizedBox(height: 2),
+              Row(
+                children: [
+                  if (_statusIcon != null) ...[
+                    _statusIcon!,
+                    const SizedBox(width: 6),
+                  ],
                   Flexible(
                     child: Text(
                       message.task!,
@@ -181,12 +174,11 @@ class TerminalMessage extends StatelessWidget {
                         color: SpaceNotesTheme.textSecondary,
                         fontFamily: 'FiraCode',
                       ),
-                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                 ],
-              ],
-            ),
+              ),
+            ],
             const SizedBox(height: 6),
             ...message.parts.map((part) => _buildMessagePart(part)),
             if (isStreaming && !hasContent)
@@ -223,6 +215,12 @@ class TerminalMessage extends StatelessWidget {
       return const SizedBox.shrink();
     }
 
+    var content = part.content!;
+    if (content.startsWith('✓') || content.startsWith('✗')) {
+      final lines = content.split('\n');
+      content = lines.skip(1).join('\n').trim();
+      if (content.isEmpty) return const SizedBox.shrink();
+    }
     final isLastPart = message.parts.last == part;
     final shouldStream = isStreaming && isLastPart && message.role == 'assistant';
 
@@ -230,13 +228,13 @@ class TerminalMessage extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 4),
       child: shouldStream
           ? StreamingText(
-              text: _safeTextSanitize(part.content!, preserveMarkdown: true),
+              text: _safeTextSanitize(content, preserveMarkdown: true),
               style: SpaceNotesTextStyles.terminal,
               isStreaming: true,
               useMarkdown: true,
             )
           : MarkdownBody(
-              data: _safeTextSanitize(part.content!, preserveMarkdown: true),
+              data: _safeTextSanitize(content, preserveMarkdown: true),
               styleSheet: MarkdownStyleSheet(
                 p: SpaceNotesTextStyles.terminal.copyWith(
                   color: const Color(0xFF999999),
