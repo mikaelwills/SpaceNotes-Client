@@ -12,7 +12,7 @@ import '../models/message_part.dart';
 import 'chat_interface.dart';
 
 class ClaudeCodeChatInterface implements ChatInterface {
-  final SpaceChannelService _spaceChannel = SpaceChannelService();
+  final SpaceChannelService _spaceChannel = GetIt.I<SpaceChannelService>();
 
   final List<SpaceMessage> _messages = [];
   final Map<String, int> _messageIndex = {};

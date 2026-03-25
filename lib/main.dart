@@ -13,7 +13,9 @@ import 'services/debug_logger.dart';
 import 'blocs/chat/chat_bloc.dart';
 import 'blocs/config/config_cubit.dart';
 import 'blocs/desktop_notes/desktop_notes_bloc.dart';
+import 'blocs/worker/worker_bloc.dart';
 import 'router/app_router.dart';
+import 'services/space_channel_service.dart';
 import 'services/web_config_service.dart';
 
 void main() async {
@@ -28,8 +30,14 @@ void main() async {
   await configCubit.initialize();
   GetIt.I.registerSingleton<ConfigCubit>(configCubit);
 
+  final spaceChannelService = SpaceChannelService();
+  GetIt.I.registerSingleton<SpaceChannelService>(spaceChannelService);
+
   final chatBloc = ChatBloc();
   GetIt.I.registerSingleton<ChatBloc>(chatBloc);
+
+  final workerBloc = WorkerBloc(spaceChannelService);
+  GetIt.I.registerSingleton<WorkerBloc>(workerBloc);
 
   if (kIsWeb) {
     await WebConfigService.tryAutoConfigureSpace(configCubit);

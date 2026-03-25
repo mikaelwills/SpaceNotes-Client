@@ -1,12 +1,41 @@
+import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../models/session_event.dart' as model;
+import '../../models/tool_event.dart' as model;
+import '../../services/space_channel_service.dart';
 import 'worker_event.dart';
 import 'worker_state.dart';
 
 class WorkerBloc extends Bloc<WorkerEvent, WorkerState> {
-  WorkerBloc() : super(const WorkerState()) {
+  final SpaceChannelService _spaceChannel;
+  StreamSubscription<model.SessionEvent>? _sessionSub;
+  StreamSubscription<model.ToolEvent>? _toolSub;
+
+  WorkerBloc(this._spaceChannel) : super(const WorkerState()) {
     on<WorkerConnected>(_onWorkerConnected);
     on<WorkerDisconnected>(_onWorkerDisconnected);
     on<WorkerToolEventReceived>(_onToolEventReceived);
+
+    _sessionSub = _spaceChannel.sessionEvents.listen((event) {
+      if (event.isConnected) {
+        add(WorkerConnected(
+          session: event.session,
+          project: event.project ?? '',
+          task: event.task ?? '',
+          isMaster: event.isMaster ?? false,
+        ));
+      } else if (event.isDisconnected) {
+        add(WorkerDisconnected(event.session));
+      }
+    });
+
+    _toolSub = _spaceChannel.toolEvents.listen((event) {
+      add(WorkerToolEventReceived(
+        session: event.session,
+        toolName: event.tool,
+        inputSummary: event.input.toString(),
+      ));
+    });
   }
 
   void _onWorkerConnected(WorkerConnected event, Emitter<WorkerState> emit) {
@@ -54,5 +83,12 @@ class WorkerBloc extends Bloc<WorkerEvent, WorkerState> {
         ),
       },
     ));
+  }
+
+  @override
+  Future<void> close() {
+    _sessionSub?.cancel();
+    _toolSub?.cancel();
+    return super.close();
   }
 }
