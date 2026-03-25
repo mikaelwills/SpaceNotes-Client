@@ -29,10 +29,42 @@ class TerminalMessage extends StatelessWidget {
         if (message.role == 'user') _buildUserMessage(context),
         if (message.role == 'assistant') ...[
           const SizedBox(height: 8),
+          if (_sourceLabel != null)
+            _buildSourceLabel(),
           _buildAssistantMessage(context),
           const SizedBox(height: 8),
         ],
       ],
+    );
+  }
+
+  String? get _sourceLabel {
+    final type = message.sourceType;
+    if (type == null) return null;
+    switch (type) {
+      case 'master':
+        return 'master';
+      case 'worker':
+        final taskName = message.task;
+        return taskName != null ? 'worker: $taskName' : 'worker';
+      case 'webhook':
+        final session = message.session;
+        return session != null ? 'webhook: $session' : 'webhook';
+      default:
+        return null;
+    }
+  }
+
+  Widget _buildSourceLabel() {
+    return Padding(
+      padding: const EdgeInsets.only(left: 12, bottom: 4),
+      child: Text(
+        _sourceLabel!,
+        style: SpaceNotesTextStyles.terminal.copyWith(
+          color: SpaceNotesTheme.textSecondary,
+          fontSize: 10,
+        ),
+      ),
     );
   }
 
