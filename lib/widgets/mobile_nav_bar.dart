@@ -103,56 +103,10 @@ class MobileNavBar extends ConsumerWidget {
                 const SizedBox(width: 16),
               ],
 
-              if (currentLocation.startsWith('/notes/chat')) ...[
-                GestureDetector(
-                  onTap: () => context.go("/notes"),
-                  child: const Icon(Icons.notes,
-                      color: SpaceNotesTheme.text),
-                ),
-                const SizedBox(width: 16),
-                GestureDetector(
-                  onTap: () => context.go("/notes/workers"),
-                  child: const Icon(Icons.smart_toy_outlined,
-                      color: SpaceNotesTheme.text),
-                ),
-                const Spacer(),
-                GestureDetector(
-                  onTap: () => _onNewSessionPressed(context),
-                  child: const Icon(Icons.create_outlined,
-                      color: SpaceNotesTheme.text),
-                ),
-                const SizedBox(width: 20),
-              ],
+              if (!isOnNote && !currentLocation.startsWith('/notes/folder/') && currentLocation != '/settings')
+                ..._buildNavIcons(context, currentLocation),
 
-              if (!isOnNote && !currentLocation.startsWith('/notes/chat') && currentLocation != '/settings' && currentLocation != '/notes/users' && currentLocation != '/notes/workers') ...[
-                GestureDetector(
-                  onTap: () => context.go("/notes/chat"),
-                  child: const Icon(Icons.chat_bubble_outline, color: SpaceNotesTheme.text),
-                ),
-                const SizedBox(width: 16),
-                GestureDetector(
-                  onTap: () => context.go("/notes/users"),
-                  child: const Icon(Icons.people_outline, color: SpaceNotesTheme.text),
-                ),
-                const SizedBox(width: 16),
-                GestureDetector(
-                  onTap: () => context.go("/notes/workers"),
-                  child: const Icon(Icons.smart_toy_outlined, color: SpaceNotesTheme.text),
-                ),
-                const SizedBox(width: 16),
-              ],
-
-              if (currentLocation == '/notes/users' || currentLocation == '/notes/workers') ...[
-                GestureDetector(
-                  onTap: () => context.go("/notes"),
-                  child: const Icon(Icons.arrow_back, color: SpaceNotesTheme.text),
-                ),
-                const Spacer(),
-              ],
-
-              if (!currentLocation.startsWith('/notes/folder/') &&
-                  !isOnNote &&
-                  !currentLocation.startsWith('/notes/chat'))
+              if (!isOnNote && !currentLocation.startsWith('/notes/folder/') && !currentLocation.startsWith('/notes/chat'))
                 const Expanded(
                   child: Center(
                     child: SyncStateIndicator(),
@@ -167,6 +121,44 @@ class MobileNavBar extends ConsumerWidget {
             ],
           ),
         );
+  }
+
+  static const _mainScreens = [
+    ('/notes', Icons.notes),
+    ('/notes/chat', Icons.chat_bubble_outline),
+    ('/notes/workers', Icons.smart_toy_outlined),
+  ];
+
+  String _currentScreen(String location) {
+    if (location.startsWith('/notes/chat')) return '/notes/chat';
+    if (location == '/notes/workers') return '/notes/workers';
+    return '/notes';
+  }
+
+  List<Widget> _buildNavIcons(BuildContext context, String location) {
+    final current = _currentScreen(location);
+    final icons = <Widget>[];
+    for (final (route, icon) in _mainScreens) {
+      if (route == current) continue;
+      if (icons.isNotEmpty) icons.add(const SizedBox(width: 16));
+      icons.add(
+        GestureDetector(
+          onTap: () => context.go(route),
+          child: Icon(icon, color: SpaceNotesTheme.text),
+        ),
+      );
+    }
+    if (current == '/notes/chat') {
+      icons.add(const Spacer());
+      icons.add(
+        GestureDetector(
+          onTap: () => _onNewSessionPressed(context),
+          child: const Icon(Icons.create_outlined, color: SpaceNotesTheme.text),
+        ),
+      );
+      icons.add(const SizedBox(width: 4));
+    }
+    return icons;
   }
 
   void _navigateBackFromNote(BuildContext context, String notePath) {
