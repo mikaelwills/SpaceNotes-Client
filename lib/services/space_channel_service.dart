@@ -5,6 +5,8 @@ import 'debug_logger.dart';
 
 enum SpaceChannelEventType { msg, edit }
 
+enum SpaceChannelSourceType { master, worker, webhook, unknown }
+
 class SpaceChannelEvent {
   final SpaceChannelEventType type;
   final String id;
@@ -13,6 +15,10 @@ class SpaceChannelEvent {
   final int? ts;
   final String? replyTo;
   final SpaceChannelFile? file;
+  final SpaceChannelSourceType? sourceType;
+  final String? project;
+  final String? task;
+  final String? session;
 
   const SpaceChannelEvent({
     required this.type,
@@ -22,12 +28,30 @@ class SpaceChannelEvent {
     this.ts,
     this.replyTo,
     this.file,
+    this.sourceType,
+    this.project,
+    this.task,
+    this.session,
   });
 
   factory SpaceChannelEvent.fromJson(Map<String, dynamic> json) {
     final typeStr = json['type'] as String? ?? 'msg';
+
+    SpaceChannelSourceType? sourceType;
+    if (typeStr == 'worker_reply') {
+      sourceType = SpaceChannelSourceType.worker;
+    } else if (typeStr == 'webhook') {
+      sourceType = SpaceChannelSourceType.webhook;
+    } else if (json['sourceType'] != null) {
+      sourceType = _parseSourceType(json['sourceType'] as String);
+    }
+
+    final eventType = (typeStr == 'edit')
+        ? SpaceChannelEventType.edit
+        : SpaceChannelEventType.msg;
+
     return SpaceChannelEvent(
-      type: typeStr == 'edit' ? SpaceChannelEventType.edit : SpaceChannelEventType.msg,
+      type: eventType,
       id: json['id'] as String,
       from: json['from'] as String?,
       text: json['text'] as String?,
@@ -36,7 +60,24 @@ class SpaceChannelEvent {
       file: json['file'] != null
           ? SpaceChannelFile.fromJson(json['file'] as Map<String, dynamic>)
           : null,
+      sourceType: sourceType,
+      project: json['project'] as String?,
+      task: json['task'] as String?,
+      session: json['session'] as String?,
     );
+  }
+
+  static SpaceChannelSourceType _parseSourceType(String value) {
+    switch (value) {
+      case 'master':
+        return SpaceChannelSourceType.master;
+      case 'worker':
+        return SpaceChannelSourceType.worker;
+      case 'webhook':
+        return SpaceChannelSourceType.webhook;
+      default:
+        return SpaceChannelSourceType.unknown;
+    }
   }
 }
 

@@ -92,6 +92,10 @@ class ClaudeCodeChatInterface implements ChatInterface {
                   ),
                 ],
                 isStreaming: false,
+                sourceType: event.sourceType?.name,
+                project: event.project,
+                task: event.task,
+                session: event.session,
               );
 
               _messages.add(message);

@@ -22,6 +22,10 @@ class OpenCodeMessage extends Equatable {
   final List<MessagePart> parts;
   final bool isStreaming;
   final MessageSendStatus? sendStatus; // Nullable, only for user messages
+  final String? sourceType;
+  final String? project;
+  final String? task;
+  final String? session;
 
   const OpenCodeMessage({
     required this.id,
@@ -32,6 +36,10 @@ class OpenCodeMessage extends Equatable {
     required this.parts,
     this.isStreaming = false,
     this.sendStatus,
+    this.sourceType,
+    this.project,
+    this.task,
+    this.session,
   });
 
   factory OpenCodeMessage.fromJson(Map<String, dynamic> json) {
@@ -184,7 +192,11 @@ class OpenCodeMessage extends Equatable {
       'completed': completed?.toIso8601String(),
       'parts': parts.map((part) => part.toJson()).toList(),
       'isStreaming': isStreaming,
-      'sendStatus': sendStatus?.toString(), // Add sendStatus to JSON
+      'sendStatus': sendStatus?.toString(),
+      if (sourceType != null) 'sourceType': sourceType,
+      if (project != null) 'project': project,
+      if (task != null) 'task': task,
+      if (session != null) 'session': session,
     };
   }
 
@@ -197,6 +209,10 @@ class OpenCodeMessage extends Equatable {
     List<MessagePart>? parts,
     bool? isStreaming,
     MessageSendStatus? sendStatus,
+    String? sourceType,
+    String? project,
+    String? task,
+    String? session,
   }) {
     return OpenCodeMessage(
       id: id ?? this.id,
@@ -207,6 +223,10 @@ class OpenCodeMessage extends Equatable {
       parts: parts ?? this.parts,
       isStreaming: isStreaming ?? this.isStreaming,
       sendStatus: sendStatus ?? this.sendStatus,
+      sourceType: sourceType ?? this.sourceType,
+      project: project ?? this.project,
+      task: task ?? this.task,
+      session: session ?? this.session,
     );
   }
 
@@ -220,5 +240,5 @@ class OpenCodeMessage extends Equatable {
   }
 
   @override
-  List<Object?> get props => [id, sessionId, role, created, completed, parts, isStreaming, sendStatus];
+  List<Object?> get props => [id, sessionId, role, created, completed, parts, isStreaming, sendStatus, sourceType, project, task, session];
 }
