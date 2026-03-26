@@ -53,8 +53,15 @@ class _SessionChatScreenState extends State<SessionChatScreen> {
       children: [
         _buildHeader(projectName),
         Expanded(
-          child: BlocBuilder<SessionChatBloc, SessionChatState>(
+          child: BlocConsumer<SessionChatBloc, SessionChatState>(
             bloc: GetIt.I<SessionChatBloc>(),
+            listener: (context, state) {
+              _scrollToBottom();
+            },
+            listenWhen: (previous, current) {
+              return previous.messagesFor(widget.sessionId).length !=
+                  current.messagesFor(widget.sessionId).length;
+            },
             builder: (context, state) {
               final messages = state.messagesFor(widget.sessionId);
               if (messages.isEmpty) {
@@ -157,6 +164,18 @@ class _SessionChatScreenState extends State<SessionChatScreen> {
         ],
       ),
     );
+  }
+
+  void _scrollToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeOut,
+        );
+      }
+    });
   }
 
   void _onToolEvent(ToolEvent event) {
