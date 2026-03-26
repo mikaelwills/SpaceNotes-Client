@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
+import 'package:go_router/go_router.dart';
 import '../blocs/session/session_bloc.dart';
 import '../blocs/session/session_state.dart';
 import '../theme/spacenotes_theme.dart';
@@ -110,7 +111,10 @@ class _SessionTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return InkWell(
+      onTap: () => context.go('/notes/sessions/${Uri.encodeComponent(sessionInfo.session)}'),
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
         color: SpaceNotesTheme.surface,
@@ -228,6 +232,7 @@ class _SessionTile extends StatelessWidget {
           ],
         ],
       ),
+    ),
     );
   }
 

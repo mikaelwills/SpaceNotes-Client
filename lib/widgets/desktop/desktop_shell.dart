@@ -143,7 +143,7 @@ class _DesktopTopBar extends ConsumerWidget {
   }
 
   bool _shouldShowBackButton(String location) {
-    return location == '/notes/chat' || location == '/settings' || location == '/notes/sessions';
+    return location == '/notes/chat' || location == '/settings' || location.startsWith('/notes/sessions');
   }
 
   @override

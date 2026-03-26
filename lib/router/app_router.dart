@@ -14,6 +14,7 @@ import '../screens/notes_home_view.dart';
 import '../screens/note_screen.dart';
 import '../screens/chat_view.dart';
 import '../screens/session_dashboard.dart';
+import '../screens/session_chat.dart';
 import '../widgets/adaptive/adaptive_app_shell.dart';
 import '../providers/call_providers.dart';
 import '../providers/notes_providers.dart';
@@ -171,6 +172,17 @@ GoRouter createAppRouter(ProviderContainer container) {
                 key: state.pageKey,
                 child: const SessionDashboard(),
               ),
+            ),
+            GoRoute(
+              path: '/notes/sessions/:sessionId',
+              name: 'session-chat',
+              pageBuilder: (context, state) {
+                final sessionId = Uri.decodeComponent(state.pathParameters['sessionId']!);
+                return _buildFadeTransitionPage(
+                  key: state.pageKey,
+                  child: SessionChatScreen(sessionId: sessionId),
+                );
+              },
             ),
           ],
         ),
