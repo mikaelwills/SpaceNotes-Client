@@ -7,7 +7,7 @@ import 'debug_logger.dart';
 
 enum SpaceChannelEventType { msg, edit, permissionRequest }
 
-enum SpaceChannelSourceType { master, worker, webhook, unknown }
+enum SpaceChannelSourceType { session, webhook, unknown }
 
 class SpaceChannelEvent {
   final SpaceChannelEventType type;
@@ -41,16 +41,11 @@ class SpaceChannelEvent {
   factory SpaceChannelEvent.fromJson(Map<String, dynamic> json) {
     final typeStr = json['type'] ?? 'msg';
 
-    final session = json['session'] ?? '';
     SpaceChannelSourceType? sourceType;
-    if (typeStr == 'worker_reply' || (session is String && session.startsWith('worker-'))) {
-      sourceType = SpaceChannelSourceType.worker;
-    } else if (typeStr == 'webhook') {
+    if (typeStr == 'webhook') {
       sourceType = SpaceChannelSourceType.webhook;
-    } else if (json['sourceType'] != null) {
-      sourceType = _parseSourceType(json['sourceType'] ?? '');
-    } else if (session is String && session.isNotEmpty) {
-      sourceType = SpaceChannelSourceType.master;
+    } else {
+      sourceType = SpaceChannelSourceType.session;
     }
 
     final eventType = (typeStr == 'edit')
@@ -74,18 +69,6 @@ class SpaceChannelEvent {
     );
   }
 
-  static SpaceChannelSourceType _parseSourceType(String value) {
-    switch (value) {
-      case 'master':
-        return SpaceChannelSourceType.master;
-      case 'worker':
-        return SpaceChannelSourceType.worker;
-      case 'webhook':
-        return SpaceChannelSourceType.webhook;
-      default:
-        return SpaceChannelSourceType.unknown;
-    }
-  }
 }
 
 class SpaceChannelFile {
@@ -271,13 +254,6 @@ class SpaceChannelService {
     final inputPreview = json['input_preview'] ?? '';
     final session = json['session'] ?? '';
 
-    SpaceChannelSourceType? sourceType;
-    if (session.startsWith('worker-')) {
-      sourceType = SpaceChannelSourceType.worker;
-    } else if (session.isNotEmpty) {
-      sourceType = SpaceChannelSourceType.master;
-    }
-
     debugLogger.info('WS', 'Permission request', 'id=$requestId, tool=$toolName');
 
     final event = SpaceChannelEvent(
@@ -285,7 +261,7 @@ class SpaceChannelService {
       id: requestId,
       from: 'assistant',
       text: '$toolName: $description',
-      sourceType: sourceType,
+      sourceType: SpaceChannelSourceType.session,
       session: session,
       project: json['project'] ?? '',
       task: json['task'] ?? '',

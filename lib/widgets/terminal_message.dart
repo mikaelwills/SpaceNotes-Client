@@ -262,7 +262,7 @@ class TerminalMessage extends StatelessWidget {
     }
     final isLastPart = message.parts.last == part;
     final shouldStream = isStreaming && isLastPart && message.role == 'assistant';
-    final contentColor = (message.sourceType == 'worker' || message.sourceType == 'webhook')
+    final contentColor = (message.sourceType == 'session' || message.sourceType == 'webhook')
         ? const Color(0xFF999999)
         : SpaceNotesTheme.text;
 
@@ -746,12 +746,10 @@ class TerminalMessage extends StatelessWidget {
 
   Color get _sourceLabelColor {
     switch (message.sourceType) {
-      case 'worker':
+      case 'session':
         return SpaceNotesTheme.primary;
       case 'webhook':
         return const Color(0xFFF5E27A);
-      case 'master':
-        return SpaceNotesTheme.error;
       default:
         return SpaceNotesTheme.error;
     }
