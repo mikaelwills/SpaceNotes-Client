@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
 import '../blocs/session/session_bloc.dart';
-import '../blocs/session/session_state.dart';
 import '../blocs/session_chat/session_chat_bloc.dart';
 import '../blocs/session_chat/session_chat_state.dart';
 import '../models/tool_event.dart';
@@ -52,15 +51,7 @@ class _SessionChatScreenState extends State<SessionChatScreen> {
 
     return Column(
       children: [
-        _buildHeader(projectName, info),
-        AnimatedSize(
-          duration: const Duration(milliseconds: 200),
-          curve: Curves.easeInOut,
-          alignment: Alignment.topCenter,
-          child: _showToolRow && _latestTool != null
-              ? _buildToolRow(_latestTool!)
-              : const SizedBox.shrink(),
-        ),
+        _buildHeader(projectName),
         Expanded(
           child: BlocBuilder<SessionChatBloc, SessionChatState>(
             bloc: GetIt.I<SessionChatBloc>(),
@@ -94,19 +85,17 @@ class _SessionChatScreenState extends State<SessionChatScreen> {
     );
   }
 
-  Widget _buildHeader(String projectName, SessionInfo? info) {
+  Widget _buildHeader(String projectName) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(
         children: [
-          const Icon(Icons.terminal_outlined, size: 18, color: SpaceNotesTheme.secondary),
-          const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  projectName,
+                  projectName.split(' ').map((w) => w.isEmpty ? w : '${w[0].toUpperCase()}${w.substring(1)}').join(' '),
                   style: const TextStyle(
                     fontFamily: 'FiraCode',
                     fontSize: 14,
@@ -114,65 +103,55 @@ class _SessionChatScreenState extends State<SessionChatScreen> {
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-                if (info?.task.isNotEmpty == true)
-                  Text(
-                    info!.task,
-                    style: const TextStyle(
-                      fontFamily: 'FiraCode',
-                      fontSize: 11,
-                      color: SpaceNotesTheme.textSecondary,
-                    ),
+                AnimatedOpacity(
+                  opacity: _showToolRow && _latestTool != null ? 1.0 : 0.0,
+                  duration: const Duration(milliseconds: 200),
+                  child: Row(
+                    children: [
+                      SizedBox(
+                        width: 10,
+                        height: 10,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 1.5,
+                          color: SpaceNotesTheme.secondary.withValues(alpha: 0.7),
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      if (_latestTool != null) ...[
+                        Text(
+                          _toolLabel(_latestTool!.tool.toLowerCase()),
+                          style: TextStyle(
+                            fontFamily: 'FiraCode',
+                            fontSize: 11,
+                            color: SpaceNotesTheme.primary.withValues(alpha: 0.8),
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            _formatToolDetail(_latestTool!),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontFamily: 'FiraCode',
+                              fontSize: 11,
+                              color: SpaceNotesTheme.textSecondary.withValues(alpha: 0.8),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
+                ),
               ],
             ),
           ),
           Container(
             width: 8,
             height: 8,
-            decoration: BoxDecoration(
+            decoration: const BoxDecoration(
               shape: BoxShape.circle,
-              color: info != null ? SpaceNotesTheme.secondary : SpaceNotesTheme.textSecondary,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildToolRow(ToolEvent event) {
-    final display = _formatToolEvent(event);
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-      decoration: BoxDecoration(
-        color: SpaceNotesTheme.surface.withValues(alpha: 0.5),
-        border: Border(
-          bottom: BorderSide(
-            color: SpaceNotesTheme.textSecondary.withValues(alpha: 0.15),
-          ),
-        ),
-      ),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 12,
-            height: 12,
-            child: CircularProgressIndicator(
-              strokeWidth: 1.5,
-              color: SpaceNotesTheme.secondary.withValues(alpha: 0.7),
-            ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              display,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontFamily: 'FiraCode',
-                fontSize: 11,
-                color: SpaceNotesTheme.textSecondary.withValues(alpha: 0.8),
-              ),
+              color: SpaceNotesTheme.secondary,
             ),
           ),
         ],
@@ -193,36 +172,31 @@ class _SessionChatScreenState extends State<SessionChatScreen> {
     });
   }
 
-  String _formatToolEvent(ToolEvent event) {
-    final tool = event.tool.toLowerCase();
+  String _formatToolDetail(ToolEvent event) {
     final input = event.input;
 
     final command = input['command'];
     if (command != null && command is String && command.isNotEmpty) {
       final firstWord = command.contains(' ') ? command.substring(0, command.indexOf(' ')) : command;
-      return 'bash $firstWord';
+      return firstWord;
     }
 
     final filePath = input['file_path'] ?? input['path'] ?? input['filePath'];
     if (filePath != null && filePath is String && filePath.isNotEmpty) {
-      final fileName = filePath.contains('/') ? filePath.substring(filePath.lastIndexOf('/') + 1) : filePath;
-      final toolLabel = _toolLabel(tool);
-      return '$toolLabel $fileName';
+      return filePath.contains('/') ? filePath.substring(filePath.lastIndexOf('/') + 1) : filePath;
     }
 
     final pattern = input['pattern'];
     if (pattern != null && pattern is String && pattern.isNotEmpty) {
-      final truncated = pattern.length > 30 ? '${pattern.substring(0, 30)}...' : pattern;
-      return 'search "$truncated"';
+      return pattern.length > 30 ? '${pattern.substring(0, 30)}...' : pattern;
     }
 
     final query = input['query'];
     if (query != null && query is String && query.isNotEmpty) {
-      final truncated = query.length > 30 ? '${query.substring(0, 30)}...' : query;
-      return '${_toolLabel(tool)} "$truncated"';
+      return query.length > 30 ? '${query.substring(0, 30)}...' : query;
     }
 
-    return _toolLabel(tool);
+    return '';
   }
 
   String _toolLabel(String tool) {
