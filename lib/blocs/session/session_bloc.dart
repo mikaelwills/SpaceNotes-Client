@@ -22,7 +22,6 @@ class SessionBloc extends Bloc<SessionEvent, SessionState> {
           session: event.session,
           project: event.project ?? '',
           task: event.task ?? '',
-          isMaster: event.isMaster ?? false,
         ));
       } else if (event.isDisconnected) {
         add(SessionDisconnected(event.session));
@@ -44,7 +43,6 @@ class SessionBloc extends Bloc<SessionEvent, SessionState> {
       session: event.session,
       project: event.project,
       task: event.task,
-      isMaster: event.isMaster,
       connectedAt: now,
       lastActivity: now,
     );

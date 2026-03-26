@@ -5,14 +5,12 @@ class SessionEvent extends Equatable {
   final String session;
   final String? project;
   final String? task;
-  final bool? isMaster;
 
   const SessionEvent({
     required this.action,
     required this.session,
     this.project,
     this.task,
-    this.isMaster,
   });
 
   factory SessionEvent.fromJson(Map<String, dynamic> json) {
@@ -21,7 +19,6 @@ class SessionEvent extends Equatable {
       session: json['session'] ?? '',
       project: json['project'],
       task: json['task'],
-      isMaster: json['is_master'],
     );
   }
 
@@ -31,7 +28,6 @@ class SessionEvent extends Equatable {
       'session': session,
       if (project != null) 'project': project,
       if (task != null) 'task': task,
-      if (isMaster != null) 'is_master': isMaster,
     };
   }
 
@@ -39,5 +35,5 @@ class SessionEvent extends Equatable {
   bool get isDisconnected => action == 'disconnected';
 
   @override
-  List<Object?> get props => [action, session, project, task, isMaster];
+  List<Object?> get props => [action, session, project, task];
 }

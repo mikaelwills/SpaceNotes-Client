@@ -19,7 +19,6 @@ class SessionInfo extends Equatable {
   final String session;
   final String project;
   final String task;
-  final bool isMaster;
   final DateTime connectedAt;
   final DateTime lastActivity;
   final List<ToolEvent> recentToolEvents;
@@ -28,7 +27,6 @@ class SessionInfo extends Equatable {
     required this.session,
     required this.project,
     required this.task,
-    required this.isMaster,
     required this.connectedAt,
     required this.lastActivity,
     this.recentToolEvents = const [],
@@ -42,7 +40,6 @@ class SessionInfo extends Equatable {
       session: session,
       project: project,
       task: task,
-      isMaster: isMaster,
       connectedAt: connectedAt,
       lastActivity: lastActivity ?? this.lastActivity,
       recentToolEvents: recentToolEvents ?? this.recentToolEvents,
@@ -54,7 +51,6 @@ class SessionInfo extends Equatable {
         session,
         project,
         task,
-        isMaster,
         connectedAt,
         lastActivity,
         recentToolEvents,

@@ -11,17 +11,15 @@ class SessionConnected extends SessionEvent {
   final String session;
   final String project;
   final String task;
-  final bool isMaster;
 
   const SessionConnected({
     required this.session,
     required this.project,
     required this.task,
-    required this.isMaster,
   });
 
   @override
-  List<Object?> get props => [session, project, task, isMaster];
+  List<Object?> get props => [session, project, task];
 }
 
 class SessionDisconnected extends SessionEvent {
