@@ -18,17 +18,20 @@ class SessionChatBloc extends Bloc<SessionChatEvent, SessionChatState> {
     on<SessionChatSessionRemoved>(_onSessionRemoved);
 
     _eventSub = _spaceChannel.eventStream.listen((e) {
-      if (e.type == SpaceChannelEventType.msg &&
-          e.from == 'assistant' &&
-          e.session != null &&
-          e.session!.isNotEmpty) {
+      if (e.session == null || e.session!.isEmpty) return;
+
+      final isAssistantMsg = e.type == SpaceChannelEventType.msg && e.from == 'assistant';
+      final isWebhook = e.sourceType == SpaceChannelSourceType.webhook;
+
+      if (isAssistantMsg || isWebhook) {
+        final role = isWebhook ? 'webhook' : 'assistant';
         final message = SpaceMessage(
           id: e.id,
           sessionId: e.session!,
-          role: 'assistant',
+          role: role,
           created: DateTime.now(),
           parts: [MessagePart(id: e.id, type: 'text', content: e.text ?? '')],
-          sourceType: 'session',
+          sourceType: isWebhook ? 'webhook' : 'session',
           project: e.project,
           task: e.task,
           session: e.session,
