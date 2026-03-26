@@ -5,6 +5,7 @@ import '../blocs/session/session_state.dart';
 import '../blocs/session_chat/session_chat_bloc.dart';
 import '../blocs/session_chat/session_chat_state.dart';
 import '../theme/spacenotes_theme.dart';
+import '../widgets/keyboard_dismiss_on_scroll.dart';
 import '../widgets/terminal_message.dart';
 
 class SessionChatScreen extends StatefulWidget {
@@ -49,13 +50,15 @@ class _SessionChatScreenState extends State<SessionChatScreen> {
                   ),
                 );
               }
-              return ListView.builder(
-                controller: _scrollController,
-                padding: const EdgeInsets.fromLTRB(4, 8, 4, 80),
-                itemCount: messages.length,
-                itemBuilder: (context, index) {
-                  return TerminalMessage(message: messages[index]);
-                },
+              return KeyboardDismissOnScroll(
+                child: ListView.builder(
+                  controller: _scrollController,
+                  padding: const EdgeInsets.fromLTRB(4, 8, 4, 80),
+                  itemCount: messages.length,
+                  itemBuilder: (context, index) {
+                    return TerminalMessage(message: messages[index]);
+                  },
+                ),
               );
             },
           ),
