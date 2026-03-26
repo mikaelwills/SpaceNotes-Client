@@ -3,34 +3,34 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../models/session_event.dart' as model;
 import '../../models/tool_event.dart' as model;
 import '../../services/space_channel_service.dart';
-import 'worker_event.dart';
-import 'worker_state.dart';
+import 'session_event.dart';
+import 'session_state.dart';
 
-class WorkerBloc extends Bloc<WorkerEvent, WorkerState> {
+class SessionBloc extends Bloc<SessionEvent, SessionState> {
   final SpaceChannelService _spaceChannel;
   StreamSubscription<model.SessionEvent>? _sessionSub;
   StreamSubscription<model.ToolEvent>? _toolSub;
 
-  WorkerBloc(this._spaceChannel) : super(const WorkerState()) {
-    on<WorkerConnected>(_onWorkerConnected);
-    on<WorkerDisconnected>(_onWorkerDisconnected);
-    on<WorkerToolEventReceived>(_onToolEventReceived);
+  SessionBloc(this._spaceChannel) : super(const SessionState()) {
+    on<SessionConnected>(_onSessionConnected);
+    on<SessionDisconnected>(_onSessionDisconnected);
+    on<SessionToolEventReceived>(_onToolEventReceived);
 
     _sessionSub = _spaceChannel.sessionEvents.listen((event) {
       if (event.isConnected) {
-        add(WorkerConnected(
+        add(SessionConnected(
           session: event.session,
           project: event.project ?? '',
           task: event.task ?? '',
           isMaster: event.isMaster ?? false,
         ));
       } else if (event.isDisconnected) {
-        add(WorkerDisconnected(event.session));
+        add(SessionDisconnected(event.session));
       }
     });
 
     _toolSub = _spaceChannel.toolEvents.listen((event) {
-      add(WorkerToolEventReceived(
+      add(SessionToolEventReceived(
         session: event.session,
         toolName: event.tool,
         inputSummary: event.input.toString(),
@@ -38,9 +38,9 @@ class WorkerBloc extends Bloc<WorkerEvent, WorkerState> {
     });
   }
 
-  void _onWorkerConnected(WorkerConnected event, Emitter<WorkerState> emit) {
+  void _onSessionConnected(SessionConnected event, Emitter<SessionState> emit) {
     final now = DateTime.now();
-    final worker = WorkerInfo(
+    final info = SessionInfo(
       session: event.session,
       project: event.project,
       task: event.task,
@@ -49,18 +49,18 @@ class WorkerBloc extends Bloc<WorkerEvent, WorkerState> {
       lastActivity: now,
     );
     emit(state.copyWith(
-      workers: {...state.workers, event.session: worker},
+      sessions: {...state.sessions, event.session: info},
     ));
   }
 
-  void _onWorkerDisconnected(WorkerDisconnected event, Emitter<WorkerState> emit) {
-    final updated = Map<String, WorkerInfo>.from(state.workers)..remove(event.session);
-    emit(state.copyWith(workers: updated));
+  void _onSessionDisconnected(SessionDisconnected event, Emitter<SessionState> emit) {
+    final updated = Map<String, SessionInfo>.from(state.sessions)..remove(event.session);
+    emit(state.copyWith(sessions: updated));
   }
 
-  void _onToolEventReceived(WorkerToolEventReceived event, Emitter<WorkerState> emit) {
-    final worker = state.workers[event.session];
-    if (worker == null) return;
+  void _onToolEventReceived(SessionToolEventReceived event, Emitter<SessionState> emit) {
+    final info = state.sessions[event.session];
+    if (info == null) return;
 
     final now = DateTime.now();
     final toolEvent = ToolEvent(
@@ -69,15 +69,15 @@ class WorkerBloc extends Bloc<WorkerEvent, WorkerState> {
       timestamp: now,
     );
 
-    final updatedEvents = [...worker.recentToolEvents, toolEvent];
+    final updatedEvents = [...info.recentToolEvents, toolEvent];
     final trimmed = updatedEvents.length > 10
         ? updatedEvents.sublist(updatedEvents.length - 10)
         : updatedEvents;
 
     emit(state.copyWith(
-      workers: {
-        ...state.workers,
-        event.session: worker.copyWith(
+      sessions: {
+        ...state.sessions,
+        event.session: info.copyWith(
           lastActivity: now,
           recentToolEvents: trimmed,
         ),

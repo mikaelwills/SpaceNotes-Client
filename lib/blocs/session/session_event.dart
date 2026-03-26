@@ -1,19 +1,19 @@
 import 'package:equatable/equatable.dart';
 
-abstract class WorkerEvent extends Equatable {
-  const WorkerEvent();
+abstract class SessionEvent extends Equatable {
+  const SessionEvent();
 
   @override
   List<Object?> get props => [];
 }
 
-class WorkerConnected extends WorkerEvent {
+class SessionConnected extends SessionEvent {
   final String session;
   final String project;
   final String task;
   final bool isMaster;
 
-  const WorkerConnected({
+  const SessionConnected({
     required this.session,
     required this.project,
     required this.task,
@@ -24,21 +24,21 @@ class WorkerConnected extends WorkerEvent {
   List<Object?> get props => [session, project, task, isMaster];
 }
 
-class WorkerDisconnected extends WorkerEvent {
+class SessionDisconnected extends SessionEvent {
   final String session;
 
-  const WorkerDisconnected(this.session);
+  const SessionDisconnected(this.session);
 
   @override
   List<Object?> get props => [session];
 }
 
-class WorkerToolEventReceived extends WorkerEvent {
+class SessionToolEventReceived extends SessionEvent {
   final String session;
   final String toolName;
   final String inputSummary;
 
-  const WorkerToolEventReceived({
+  const SessionToolEventReceived({
     required this.session,
     required this.toolName,
     required this.inputSummary,

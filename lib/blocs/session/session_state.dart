@@ -15,7 +15,7 @@ class ToolEvent extends Equatable {
   List<Object?> get props => [toolName, inputSummary, timestamp];
 }
 
-class WorkerInfo extends Equatable {
+class SessionInfo extends Equatable {
   final String session;
   final String project;
   final String task;
@@ -24,7 +24,7 @@ class WorkerInfo extends Equatable {
   final DateTime lastActivity;
   final List<ToolEvent> recentToolEvents;
 
-  const WorkerInfo({
+  const SessionInfo({
     required this.session,
     required this.project,
     required this.task,
@@ -34,11 +34,11 @@ class WorkerInfo extends Equatable {
     this.recentToolEvents = const [],
   });
 
-  WorkerInfo copyWith({
+  SessionInfo copyWith({
     DateTime? lastActivity,
     List<ToolEvent>? recentToolEvents,
   }) {
-    return WorkerInfo(
+    return SessionInfo(
       session: session,
       project: project,
       task: task,
@@ -61,15 +61,15 @@ class WorkerInfo extends Equatable {
       ];
 }
 
-class WorkerState extends Equatable {
-  final Map<String, WorkerInfo> workers;
+class SessionState extends Equatable {
+  final Map<String, SessionInfo> sessions;
 
-  const WorkerState({this.workers = const {}});
+  const SessionState({this.sessions = const {}});
 
-  WorkerState copyWith({Map<String, WorkerInfo>? workers}) {
-    return WorkerState(workers: workers ?? this.workers);
+  SessionState copyWith({Map<String, SessionInfo>? sessions}) {
+    return SessionState(sessions: sessions ?? this.sessions);
   }
 
   @override
-  List<Object?> get props => [workers];
+  List<Object?> get props => [sessions];
 }

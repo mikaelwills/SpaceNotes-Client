@@ -1,32 +1,32 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
-import '../blocs/worker/worker_bloc.dart';
-import '../blocs/worker/worker_state.dart';
+import '../blocs/session/session_bloc.dart';
+import '../blocs/session/session_state.dart';
 import '../theme/spacenotes_theme.dart';
 
-class WorkerDashboard extends StatefulWidget {
-  const WorkerDashboard({super.key});
+class SessionDashboard extends StatefulWidget {
+  const SessionDashboard({super.key});
 
   @override
-  State<WorkerDashboard> createState() => _WorkerDashboardState();
+  State<SessionDashboard> createState() => _SessionDashboardState();
 }
 
-class _WorkerDashboardState extends State<WorkerDashboard> {
-  late final WorkerBloc _workerBloc;
+class _SessionDashboardState extends State<SessionDashboard> {
+  late final SessionBloc _sessionBloc;
 
   @override
   void initState() {
     super.initState();
-    _workerBloc = GetIt.I<WorkerBloc>();
+    _sessionBloc = GetIt.I<SessionBloc>();
   }
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<WorkerBloc, WorkerState>(
-      bloc: _workerBloc,
+    return BlocBuilder<SessionBloc, SessionState>(
+      bloc: _sessionBloc,
       builder: (context, state) {
-        final workers = state.workers.values.toList()
+        final sessions = state.sessions.values.toList()
           ..sort((a, b) => b.lastActivity.compareTo(a.lastActivity));
 
         return Column(
@@ -37,7 +37,7 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
               child: Row(
                 children: [
                   const Text(
-                    'Workers',
+                    'Sessions',
                     style: TextStyle(
                       color: SpaceNotesTheme.textSecondary,
                       fontSize: 12,
@@ -54,7 +54,7 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
                       borderRadius: BorderRadius.circular(4),
                     ),
                     child: Text(
-                      '${workers.length}',
+                      '${sessions.length}',
                       style: const TextStyle(
                         color: SpaceNotesTheme.primary,
                         fontSize: 11,
@@ -66,7 +66,7 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
               ),
             ),
             Expanded(
-              child: workers.isEmpty
+              child: sessions.isEmpty
                   ? Center(
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
@@ -77,7 +77,7 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
                                   .withValues(alpha: 0.4)),
                           const SizedBox(height: 12),
                           const Text(
-                            'No workers connected',
+                            'No sessions connected',
                             style: TextStyle(
                               color: SpaceNotesTheme.textSecondary,
                               fontSize: 14,
@@ -89,10 +89,10 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
                   : ListView.separated(
                       padding: const EdgeInsets.symmetric(
                           horizontal: 12, vertical: 4),
-                      itemCount: workers.length,
+                      itemCount: sessions.length,
                       separatorBuilder: (_, __) => const SizedBox(height: 2),
                       itemBuilder: (context, index) {
-                        return _WorkerTile(worker: workers[index]);
+                        return _SessionTile(sessionInfo: sessions[index]);
                       },
                     ),
             ),
@@ -103,10 +103,10 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
   }
 }
 
-class _WorkerTile extends StatelessWidget {
-  final WorkerInfo worker;
+class _SessionTile extends StatelessWidget {
+  final SessionInfo sessionInfo;
 
-  const _WorkerTile({required this.worker});
+  const _SessionTile({required this.sessionInfo});
 
   @override
   Widget build(BuildContext context) {
@@ -133,7 +133,7 @@ class _WorkerTile extends StatelessWidget {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: const Icon(
-                  Icons.smart_toy_outlined,
+                  Icons.terminal_outlined,
                   size: 18,
                   color: SpaceNotesTheme.secondary,
                 ),
@@ -144,7 +144,7 @@ class _WorkerTile extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      worker.session,
+                      sessionInfo.session,
                       style: const TextStyle(
                         fontFamily: 'FiraCode',
                         fontSize: 13,
@@ -155,7 +155,7 @@ class _WorkerTile extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'connected ${_timeAgo(worker.connectedAt)} · active ${_timeAgo(worker.lastActivity)}',
+                      'connected ${_timeAgo(sessionInfo.connectedAt)} · active ${_timeAgo(sessionInfo.lastActivity)}',
                       style: const TextStyle(
                         color: SpaceNotesTheme.textSecondary,
                         fontSize: 11,
@@ -166,20 +166,20 @@ class _WorkerTile extends StatelessWidget {
               ),
             ],
           ),
-          if (worker.project.isNotEmpty || worker.task.isNotEmpty) ...[
+          if (sessionInfo.project.isNotEmpty || sessionInfo.task.isNotEmpty) ...[
             const SizedBox(height: 10),
             Wrap(
               spacing: 6,
               runSpacing: 4,
               children: [
-                if (worker.project.isNotEmpty)
-                  _InfoChip(label: 'project', value: worker.project),
-                if (worker.task.isNotEmpty)
-                  _InfoChip(label: 'task', value: worker.task),
+                if (sessionInfo.project.isNotEmpty)
+                  _InfoChip(label: 'project', value: sessionInfo.project),
+                if (sessionInfo.task.isNotEmpty)
+                  _InfoChip(label: 'task', value: sessionInfo.task),
               ],
             ),
           ],
-          if (worker.recentToolEvents.isNotEmpty) ...[
+          if (sessionInfo.recentToolEvents.isNotEmpty) ...[
             const SizedBox(height: 8),
             Container(
               padding: const EdgeInsets.all(8),
@@ -189,7 +189,7 @@ class _WorkerTile extends StatelessWidget {
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: worker.recentToolEvents
+                children: sessionInfo.recentToolEvents
                     .take(5)
                     .map(
                       (event) => Padding(
