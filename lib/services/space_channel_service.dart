@@ -197,7 +197,7 @@ class SpaceChannelService {
   }
 
   void _reconnect() {
-    if (_eventController == null || _eventController!.isClosed) return;
+    if (_url == null) return;
 
     _subscription?.cancel();
     _reconnectTimer?.cancel();
@@ -324,15 +324,12 @@ class SpaceChannelService {
     _subscription?.cancel();
     _channel?.sink.close();
 
-    if (_eventController != null && !_eventController!.isClosed) {
-      _eventController!.close();
-    }
-
     _isConnected = false;
     _reconnectAttempts = 0;
-    _eventController = null;
     _channel = null;
     _toolEventsBySession.clear();
+
+    _connectWebSocket();
   }
 
   void dispose() {
