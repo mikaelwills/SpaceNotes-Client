@@ -14,6 +14,8 @@ import '../dialogs/notes_list_dialogs.dart';
 import '../blocs/chat/chat_bloc.dart';
 import '../blocs/chat/chat_event.dart';
 import '../blocs/chat/chat_state.dart';
+import '../blocs/session_chat/session_chat_bloc.dart';
+import '../blocs/session_chat/session_chat_event.dart';
 import '../screens/home_screen.dart';
 import 'notes_search_bar.dart';
 
@@ -99,7 +101,8 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
     required String? notePath,
     required bool isWorking,
   }) {
-    if (viewType == HomeViewType.note) {
+    if (viewType == HomeViewType.note ||
+        viewType == HomeViewType.sessions) {
       return const SizedBox.shrink();
     }
 
@@ -108,14 +111,24 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
       return const SizedBox.shrink();
     }
 
+    final isSessionChat = viewType == HomeViewType.sessionChat;
+
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          _buildSearchBar(isChat),
-          const SizedBox(width: 12),
-          _buildRightButtons(isChat, isWorking, folderPath),
+          if (isSessionChat) ...[
+            _buildRoundedButton(
+              onPressed: () => context.go('/notes/sessions'),
+              tooltip: 'Back to sessions',
+              icon: Icons.arrow_back,
+            ),
+            const SizedBox(width: 8),
+          ],
+          _buildSearchBar(isChat || isSessionChat),
+          const SizedBox(width: 8),
+          _buildRightButtons(isChat || isSessionChat, isWorking, folderPath),
         ],
       ),
     );
@@ -133,7 +146,11 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
         child: NotesSearchBar(
           controller: _searchController,
           height: 48,
-          hintText: isChat ? 'Ask AI...' : 'Search notes...',
+          hintText: isChat
+              ? (_getCurrentSessionId() != null
+                  ? '${_getCurrentSessionId()}...'
+                  : 'Ask AI...')
+              : 'Search notes...',
           onChanged: isChat ? (_) {} : _onSearchChanged,
           onFocusChanged: (focused) {
             setState(() => _isSearchFocused = focused);
@@ -156,19 +173,19 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
   Widget _buildRightButtons(bool isChat, bool isWorking, String folderPath) {
     if (isChat) {
       return isWorking
-          ? _buildCircularButton(
+          ? _buildRoundedButton(
               onPressed: () =>
                   context.read<ChatBloc>().add(CancelCurrentOperation()),
               tooltip: 'Cancel',
               icon: Icons.stop,
             )
-          : _buildCircularButton(
+          : _buildRoundedButton(
               onPressed: _onSendToAi,
               tooltip: 'Send to AI',
               icon: Icons.arrow_upward,
             );
     } else if (_isSearchFocused || _searchController.text.isNotEmpty) {
-      return _buildCircularButton(
+      return _buildRoundedButton(
         onPressed: _onSendToAi,
         tooltip: 'Send to AI',
         icon: Icons.arrow_upward,
@@ -177,7 +194,7 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
       return Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          _buildCircularButton(
+          _buildRoundedButton(
             onPressed: () => NotesListDialogs.showCreateFolderDialog(
               context,
               ref,
@@ -187,7 +204,7 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
             icon: Icons.create_new_folder_outlined,
           ),
           const SizedBox(width: 8),
-          _buildCircularButton(
+          _buildRoundedButton(
             onPressed: () => _createQuickNote(folderPath),
             tooltip: 'Create new note',
             icon: Icons.add,
@@ -198,7 +215,7 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
   }
 
 
-  Widget _buildCircularButton({
+  Widget _buildRoundedButton({
     required VoidCallback onPressed,
     required String tooltip,
     required IconData icon,
@@ -206,9 +223,9 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
     return Container(
       width: 48,
       height: 48,
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: SpaceNotesTheme.inputSurface,
-        shape: BoxShape.circle,
+        borderRadius: BorderRadius.circular(14),
       ),
       child: IconButton(
         onPressed: onPressed,
@@ -226,7 +243,16 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
     final l = GoRouterState.of(context).uri.toString();
     if (l.startsWith('/notes/chat')) return HomeViewType.chat;
     if (l.startsWith('/notes/note/')) return HomeViewType.note;
+    if (l == '/notes/sessions') return HomeViewType.sessions;
+    if (l.startsWith('/notes/sessions/')) return HomeViewType.sessionChat;
     return HomeViewType.folders;
+  }
+
+  String? _getCurrentSessionId() {
+    final l = GoRouterState.of(context).uri.toString();
+    if (!l.startsWith('/notes/sessions/')) return null;
+    final encoded = l.substring('/notes/sessions/'.length);
+    return Uri.decodeComponent(encoded);
   }
 
   void _onSearchChanged(String query) {
@@ -235,10 +261,20 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
 
   void _onSendToAi() {
     final message = _searchController.text.trim();
-    debugPrint('[MobileBottomInputBar] _onSendToAi called, message: "$message"');
     if (message.isEmpty && _pendingImageBase64 == null) return;
 
-    debugPrint('[MobileBottomInputBar] Sending message and navigating to chat');
+    final sessionId = _getCurrentSessionId();
+    if (sessionId != null) {
+      context.read<SessionChatBloc>().add(
+            SessionChatSendMessage(sessionId, message));
+      _searchController.clear();
+      setState(() {
+        _pendingImageBase64 = null;
+        _pendingImageMimeType = null;
+      });
+      return;
+    }
+
     context.read<ChatBloc>().add(SendChatMessage(
       message.isEmpty ? 'What is in this image?' : message,
       imageBase64: _pendingImageBase64,

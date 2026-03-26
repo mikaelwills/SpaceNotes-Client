@@ -14,6 +14,7 @@ import 'blocs/chat/chat_bloc.dart';
 import 'blocs/config/config_cubit.dart';
 import 'blocs/desktop_notes/desktop_notes_bloc.dart';
 import 'blocs/session/session_bloc.dart';
+import 'blocs/session_chat/session_chat_bloc.dart';
 import 'router/app_router.dart';
 import 'services/space_channel_service.dart';
 import 'services/web_config_service.dart';
@@ -39,6 +40,9 @@ void main() async {
   final sessionBloc = SessionBloc(spaceChannelService);
   GetIt.I.registerSingleton<SessionBloc>(sessionBloc);
 
+  final sessionChatBloc = SessionChatBloc(spaceChannelService);
+  GetIt.I.registerSingleton<SessionChatBloc>(sessionChatBloc);
+
   if (kIsWeb) {
     await WebConfigService.tryAutoConfigureSpace(configCubit);
   }
@@ -57,6 +61,8 @@ void main() async {
     child: SpaceNotesApp(
       configCubit: configCubit,
       chatBloc: chatBloc,
+      sessionBloc: sessionBloc,
+      sessionChatBloc: sessionChatBloc,
       container: container,
     ),
   ));
@@ -65,12 +71,16 @@ void main() async {
 class SpaceNotesApp extends StatefulWidget {
   final ConfigCubit configCubit;
   final ChatBloc chatBloc;
+  final SessionBloc sessionBloc;
+  final SessionChatBloc sessionChatBloc;
   final ProviderContainer container;
 
   const SpaceNotesApp({
     super.key,
     required this.configCubit,
     required this.chatBloc,
+    required this.sessionBloc,
+    required this.sessionChatBloc,
     required this.container,
   });
 
@@ -111,6 +121,8 @@ class _SpaceNotesAppState extends State<SpaceNotesApp> with WidgetsBindingObserv
       providers: [
         BlocProvider<ConfigCubit>.value(value: widget.configCubit),
         BlocProvider<ChatBloc>.value(value: widget.chatBloc),
+        BlocProvider<SessionBloc>.value(value: widget.sessionBloc),
+        BlocProvider<SessionChatBloc>.value(value: widget.sessionChatBloc),
         BlocProvider<DesktopNotesBloc>(
           create: (_) => DesktopNotesBloc(),
         ),

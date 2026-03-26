@@ -8,33 +8,31 @@ abstract class SessionChatEvent extends Equatable {
   List<Object?> get props => [];
 }
 
-class SessionChatStarted extends SessionChatEvent {
-  final String sessionId;
-
-  const SessionChatStarted(this.sessionId);
-
-  @override
-  List<Object?> get props => [sessionId];
-}
-
 class SessionChatMessageReceived extends SessionChatEvent {
+  final String sessionId;
   final SpaceMessage message;
 
-  const SessionChatMessageReceived(this.message);
+  const SessionChatMessageReceived(this.sessionId, this.message);
 
   @override
-  List<Object?> get props => [message];
+  List<Object?> get props => [sessionId, message];
 }
 
 class SessionChatSendMessage extends SessionChatEvent {
+  final String sessionId;
   final String text;
 
-  const SessionChatSendMessage(this.text);
+  const SessionChatSendMessage(this.sessionId, this.text);
 
   @override
-  List<Object?> get props => [text];
+  List<Object?> get props => [sessionId, text];
 }
 
-class SessionChatStopped extends SessionChatEvent {
-  const SessionChatStopped();
+class SessionChatSessionRemoved extends SessionChatEvent {
+  final String sessionId;
+
+  const SessionChatSessionRemoved(this.sessionId);
+
+  @override
+  List<Object?> get props => [sessionId];
 }

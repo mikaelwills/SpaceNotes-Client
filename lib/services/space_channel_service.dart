@@ -117,6 +117,11 @@ class SpaceChannelService {
     return List.unmodifiable(_toolEventsBySession[session] ?? []);
   }
 
+  Stream<SpaceChannelEvent> get eventStream {
+    _eventController ??= StreamController<SpaceChannelEvent>.broadcast();
+    return _eventController!.stream;
+  }
+
   Stream<SpaceChannelEvent> eventsForSession(String sessionId) {
     _eventController ??= StreamController<SpaceChannelEvent>.broadcast();
     return _eventController!.stream.where((e) => e.session == sessionId);

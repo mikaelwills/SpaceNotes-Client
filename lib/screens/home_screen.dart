@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../widgets/adaptive/platform_utils.dart';
 import '../widgets/mobile_bottom_input_bar.dart';
 
-enum HomeViewType { folders, chat, note }
+enum HomeViewType { folders, chat, note, sessions, sessionChat }
 
 /// HomeScreen shell that provides the shared bottom input area (mobile only)
 class HomeScreen extends StatelessWidget {
