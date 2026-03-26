@@ -25,9 +25,6 @@ class TerminalIPInput extends StatelessWidget {
     this.showConnectButton = true,
   });
 
-  Color get _accentColor => isConnected ? SpaceNotesTheme.primary : SpaceNotesTheme.textSecondary;
-  Color get _textColor => isConnected ? SpaceNotesTheme.text : SpaceNotesTheme.textSecondary;
-
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -205,4 +202,7 @@ class TerminalIPInput extends StatelessWidget {
       ),
     );
   }
+
+  Color get _accentColor => isConnected ? SpaceNotesTheme.primary : SpaceNotesTheme.textSecondary;
+  Color get _textColor => isConnected ? SpaceNotesTheme.text : SpaceNotesTheme.textSecondary;
 }

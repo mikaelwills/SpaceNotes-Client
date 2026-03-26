@@ -77,17 +77,17 @@ class Note {
 
   factory Note.fromJson(Map<String, dynamic> json) {
     return Note(
-      id: (json['id'] as String?) ?? '',
-      path: (json['path'] as String?) ?? '',
-      name: (json['name'] as String?) ?? '',
-      content: (json['content'] as String?) ?? '',
-      folderPath: (json['folderPath'] as String?) ?? '',
-      depth: (json['depth'] as int?) ?? 0,
-      frontmatter: (json['frontmatter'] as String?) ?? '',
-      size: Int64((json['size'] as int?) ?? 0),
-      createdTime: Int64((json['createdTime'] as int?) ?? 0),
-      modifiedTime: Int64((json['modifiedTime'] as int?) ?? 0),
-      dbUpdatedAt: Int64((json['dbUpdatedAt'] as int?) ?? 0),
+      id: json['id'] ?? '',
+      path: json['path'] ?? '',
+      name: json['name'] ?? '',
+      content: json['content'] ?? '',
+      folderPath: json['folderPath'] ?? '',
+      depth: json['depth'] ?? 0,
+      frontmatter: json['frontmatter'] ?? '',
+      size: Int64(json['size'] ?? 0),
+      createdTime: Int64(json['createdTime'] ?? 0),
+      modifiedTime: Int64(json['modifiedTime'] ?? 0),
+      dbUpdatedAt: Int64(json['dbUpdatedAt'] ?? 0),
     );
   }
 

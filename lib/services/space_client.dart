@@ -585,9 +585,9 @@ class SpaceClient {
         final List<dynamic> data = json.decode(response.body);
         return data.map((agent) {
           if (agent is String) return agent;
-          if (agent is Map) return agent['id']?.toString() ?? agent['name']?.toString() ?? '';
+          if (agent is Map) return agent['id'] ?? agent['name'] ?? '';
           return '';
-        }).where((name) => name.isNotEmpty).toList();
+        }).where((name) => name.isNotEmpty).cast<String>().toList();
       } else {
         return [];
       }

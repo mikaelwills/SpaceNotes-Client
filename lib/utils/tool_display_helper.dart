@@ -90,21 +90,21 @@ class ToolDisplayHelper {
   /// Optimized tool name extraction with smart fallback chain
   static String? _extractToolName(Map<String, dynamic> metadata) {
     // Primary sources in order of preference
-    return metadata['tool'] as String? ??
-           metadata['name'] as String? ??
-           metadata['tool_name'] as String? ??
-           metadata['function_name'] as String?;
+    return metadata['tool'] ??
+           metadata['name'] ??
+           metadata['tool_name'] ??
+           metadata['function_name'];
   }
 
   /// Gets contextual name by examining tool input parameters
   static String? _getContextualName(String toolName, Map<String, dynamic> metadata) {
-    final state = metadata['state'] as Map<String, dynamic>?;
-    final input = state?['input'] as Map<String, dynamic>?;
+    final state = metadata['state'];
+    final input = state?['input'];
     
     if (input == null) return null;
 
     // File operations - show filename
-    final filePath = input['path'] as String? ?? input['filePath'] as String?;
+    final filePath = input['path'] ?? input['filePath'];
     if (filePath != null && filePath.isNotEmpty) {
       final fileName = _getFileName(filePath);
       final cleanToolName = _formatToolName(toolName);
@@ -112,14 +112,14 @@ class ToolDisplayHelper {
     }
 
     // Bash commands - show command name
-    final command = input['command'] as String?;
+    final command = input['command'];
     if (command != null && command.isNotEmpty) {
       final commandName = _getFirstWord(command);
       return 'bash $commandName';
     }
 
     // Search operations - show pattern
-    final pattern = input['pattern'] as String?;
+    final pattern = input['pattern'];
     if (pattern != null && pattern.isNotEmpty) {
       final displayPattern = pattern.length > 30
           ? '${pattern.substring(0, 30)}...'
@@ -128,7 +128,7 @@ class ToolDisplayHelper {
     }
 
     // Query operations (MCP tools like search_notes)
-    final query = input['query'] as String?;
+    final query = input['query'];
     if (query != null && query.isNotEmpty) {
       final displayQuery = query.length > 30
           ? '${query.substring(0, 30)}...'
@@ -138,7 +138,7 @@ class ToolDisplayHelper {
     }
 
     // Folder path operations
-    final folderPath = input['folder_path'] as String?;
+    final folderPath = input['folder_path'];
     if (folderPath != null && folderPath.isNotEmpty) {
       final cleanToolName = _formatToolName(toolName);
       return '$cleanToolName $folderPath';

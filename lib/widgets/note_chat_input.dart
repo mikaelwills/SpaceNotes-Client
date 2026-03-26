@@ -29,22 +29,6 @@ class _NoteChatInputState extends State<NoteChatInput> {
     super.dispose();
   }
 
-  String get _noteName {
-    final name = widget.notePath.split('/').last.replaceAll('.md', '');
-    return name.length > 20 ? '${name.substring(0, 20)}...' : name;
-  }
-
-  void _sendMessage() {
-    final message = _controller.text.trim();
-    if (message.isEmpty) return;
-
-    FocusScope.of(context).unfocus();
-
-    final prefixedMessage = '[Viewing note: ${widget.notePath}]\n\n$message';
-    context.read<ChatBloc>().add(SendChatMessage(prefixedMessage));
-    _controller.clear();
-  }
-
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<ChatBloc, ChatState>(
@@ -107,5 +91,21 @@ class _NoteChatInputState extends State<NoteChatInput> {
         );
       },
     );
+  }
+
+  String get _noteName {
+    final name = widget.notePath.split('/').last.replaceAll('.md', '');
+    return name.length > 20 ? '${name.substring(0, 20)}...' : name;
+  }
+
+  void _sendMessage() {
+    final message = _controller.text.trim();
+    if (message.isEmpty) return;
+
+    FocusScope.of(context).unfocus();
+
+    final prefixedMessage = '[Viewing note: ${widget.notePath}]\n\n$message';
+    context.read<ChatBloc>().add(SendChatMessage(prefixedMessage));
+    _controller.clear();
   }
 }

@@ -16,12 +16,11 @@ class MessagePart extends Equatable {
   factory MessagePart.fromJson(Map<String, dynamic> json) {
     // print('🔍 [MessagePart] Parsing part: $json'); // REMOVED: Too verbose, can contain large content
     
-    final id = json['id'] as String? ?? DateTime.now().millisecondsSinceEpoch.toString();
-    final type = json['type'] as String;
-    final content = json['text'] as String? ?? json['content'] as String?;
-    
-    // Extract metadata from various fields
-    Map<String, dynamic>? metadata = json['metadata'] as Map<String, dynamic>?;
+    final id = json['id'] ?? DateTime.now().millisecondsSinceEpoch.toString();
+    final type = json['type'] ?? '';
+    final content = json['text'] ?? json['content'];
+
+    Map<String, dynamic>? metadata = json['metadata'];
     
     // Add additional fields as metadata if they exist
     metadata ??= <String, dynamic>{};

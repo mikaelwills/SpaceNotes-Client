@@ -28,58 +28,6 @@ class _ProviderListScreenState extends State<ProviderListScreen> {
     _fetchProviders();
   }
 
-  void _loadCurrentSelection() {
-    final configState = context.read<ConfigCubit>().state;
-    if (configState is ConfigLoaded) {
-      _currentProviderID = configState.selectedProviderID;
-      _currentModelID = configState.selectedModelID;
-    }
-  }
-
-  Future<void> _fetchProviders() async {
-    try {
-      final spaceClient = context.read<SpaceClient>();
-      final providersResponse = await spaceClient.getAvailableProviders();
-      
-      if (mounted) {
-        setState(() {
-          _providersResponse = providersResponse;
-          _isLoading = false;
-          _error = null;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _error = e.toString();
-          _isLoading = false;
-        });
-      }
-    }
-  }
-
-  Future<void> _selectProvider(String providerID, String modelID) async {
-    if (!mounted) return;
-
-    final configCubit = context.read<ConfigCubit>();
-    final spaceClient = context.read<SpaceClient>();
-
-    try {
-      // Update ConfigCubit
-      await configCubit.updateProvider(providerID, modelID);
-
-      // Update SpaceClient
-      spaceClient.setProvider(providerID, modelID);
-
-      if (mounted) {
-        // Navigate back to chat
-        SessionValidator.navigateToChat(context);
-      }
-    } catch (e) {
-      debugPrint('Failed to update provider: $e');
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -257,5 +205,54 @@ class _ProviderListScreenState extends State<ProviderListScreen> {
         ),
       ),
     );
+  }
+
+  void _loadCurrentSelection() {
+    final configState = context.read<ConfigCubit>().state;
+    if (configState is ConfigLoaded) {
+      _currentProviderID = configState.selectedProviderID;
+      _currentModelID = configState.selectedModelID;
+    }
+  }
+
+  Future<void> _fetchProviders() async {
+    try {
+      final spaceClient = context.read<SpaceClient>();
+      final providersResponse = await spaceClient.getAvailableProviders();
+
+      if (mounted) {
+        setState(() {
+          _providersResponse = providersResponse;
+          _isLoading = false;
+          _error = null;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _error = e.toString();
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _selectProvider(String providerID, String modelID) async {
+    if (!mounted) return;
+
+    final configCubit = context.read<ConfigCubit>();
+    final spaceClient = context.read<SpaceClient>();
+
+    try {
+      await configCubit.updateProvider(providerID, modelID);
+
+      spaceClient.setProvider(providerID, modelID);
+
+      if (mounted) {
+        SessionValidator.navigateToChat(context);
+      }
+    } catch (e) {
+      debugPrint('Failed to update provider: $e');
+    }
   }
 }

@@ -16,7 +16,7 @@ sealed class CallState {
   }
 
   factory CallState.fromJson(Map<String, dynamic> json) {
-    final type = json['type'] as String;
+    final type = json['type'] ?? '';
     switch (type) {
       case 'Ringing': return CallStateRinging.fromJson(json);
       case 'Active': return CallStateActive.fromJson(json);

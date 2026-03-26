@@ -138,16 +138,6 @@ class _SidebarSearchState extends ConsumerState<_SidebarSearch> {
     super.dispose();
   }
 
-  void _onSearchChanged(String value) {
-    ref.read(folderSearchQueryProvider.notifier).state = value;
-  }
-
-  void _clearSearch() {
-    _controller.clear();
-    ref.read(folderSearchQueryProvider.notifier).state = '';
-    _focusNode.unfocus();
-  }
-
   @override
   Widget build(BuildContext context) {
     final searchQuery = ref.watch(folderSearchQueryProvider);
@@ -220,6 +210,16 @@ class _SidebarSearchState extends ConsumerState<_SidebarSearch> {
       ),
     );
   }
+
+  void _onSearchChanged(String value) {
+    ref.read(folderSearchQueryProvider.notifier).state = value;
+  }
+
+  void _clearSearch() {
+    _controller.clear();
+    ref.read(folderSearchQueryProvider.notifier).state = '';
+    _focusNode.unfocus();
+  }
 }
 
 class _FolderTree extends ConsumerStatefulWidget {
@@ -231,22 +231,6 @@ class _FolderTreeState extends ConsumerState<_FolderTree> {
   bool _isDragOverRoot = false;
   String _lastSearchQuery = '';
   Set<String> _expandedBeforeSearch = {};
-
-  bool _canAcceptAtRoot(_DraggableData data) {
-    if (!data.path.contains('/')) return false;
-    return true;
-  }
-
-  void _handleDropAtRoot(_DraggableData data) async {
-    final repo = ref.read(notesRepositoryProvider);
-    final newPath = data.name;
-
-    if (data.isFolder) {
-      await repo.moveFolder(data.path, newPath);
-    } else {
-      await repo.moveNote(data.path, newPath);
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -424,6 +408,22 @@ class _FolderTreeState extends ConsumerState<_FolderTree> {
       },
     );
   }
+
+  bool _canAcceptAtRoot(_DraggableData data) {
+    if (!data.path.contains('/')) return false;
+    return true;
+  }
+
+  void _handleDropAtRoot(_DraggableData data) async {
+    final repo = ref.read(notesRepositoryProvider);
+    final newPath = data.name;
+
+    if (data.isFolder) {
+      await repo.moveFolder(data.path, newPath);
+    } else {
+      await repo.moveNote(data.path, newPath);
+    }
+  }
 }
 
 class _DraggableData {
@@ -464,176 +464,6 @@ class _FolderTreeItem extends ConsumerStatefulWidget {
 
 class _FolderTreeItemState extends ConsumerState<_FolderTreeItem> {
   bool _isDragOver = false;
-
-  void _handleFolderAction(
-      BuildContext context, WidgetRef ref, Folder folder, String action) async {
-    final repo = ref.read(notesRepositoryProvider);
-    switch (action) {
-      case 'new_note':
-        final now = DateTime.now();
-        final timestamp =
-            '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}-${now.hour.toString().padLeft(2, '0')}-${now.minute.toString().padLeft(2, '0')}';
-        final notePath = '${folder.path}/Untitled-$timestamp.md';
-        final noteId = await repo.createNote(notePath, '');
-        if (noteId != null && context.mounted) {
-          _openNoteInDesktop(context, noteId);
-        }
-        break;
-      case 'new_folder':
-        final controller = TextEditingController();
-        final result = await showDialog<String>(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            title: const Text('New Folder'),
-            content: TextField(
-              controller: controller,
-              autofocus: true,
-              style: SpaceNotesTextStyles.terminal,
-              decoration: const InputDecoration(
-                hintText: 'Folder name',
-              ),
-              onSubmitted: (value) => Navigator.of(ctx).pop(value),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(ctx).pop(),
-                child: Text('Cancel',
-                    style: SpaceNotesTextStyles.terminal
-                        .copyWith(color: SpaceNotesTheme.textSecondary)),
-              ),
-              TextButton(
-                onPressed: () => Navigator.of(ctx).pop(controller.text),
-                child: Text('Create',
-                    style: SpaceNotesTextStyles.terminal
-                        .copyWith(color: SpaceNotesTheme.primary)),
-              ),
-            ],
-          ),
-        );
-        if (result != null && result.isNotEmpty && context.mounted) {
-          final newFolderPath = '${folder.path}/$result';
-          final existingFolder = widget.allFolders.any((f) => f.path == newFolderPath);
-          if (existingFolder) {
-            if (context.mounted) {
-              showDialog(
-                context: context,
-                builder: (ctx) => AlertDialog(
-                  title: const Text('Folder Exists'),
-                  content: Text(
-                    'A folder named "$result" already exists here.',
-                  ),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.of(ctx).pop(),
-                      child: Text('OK',
-                          style: SpaceNotesTextStyles.terminal
-                              .copyWith(color: SpaceNotesTheme.primary)),
-                    ),
-                  ],
-                ),
-              );
-            }
-          } else {
-            await repo.createFolder(newFolderPath);
-          }
-        }
-        break;
-      case 'rename':
-        final controller = TextEditingController(text: folder.name);
-        final result = await showDialog<String>(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            title: const Text('Rename Folder'),
-            content: TextField(
-              controller: controller,
-              autofocus: true,
-              style: SpaceNotesTextStyles.terminal,
-              decoration: const InputDecoration(
-                hintText: 'Folder name',
-              ),
-              onSubmitted: (value) => Navigator.of(ctx).pop(value),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(ctx).pop(),
-                child: Text('Cancel',
-                    style: SpaceNotesTextStyles.terminal
-                        .copyWith(color: SpaceNotesTheme.textSecondary)),
-              ),
-              TextButton(
-                onPressed: () => Navigator.of(ctx).pop(controller.text),
-                child: Text('Rename',
-                    style: SpaceNotesTextStyles.terminal
-                        .copyWith(color: SpaceNotesTheme.primary)),
-              ),
-            ],
-          ),
-        );
-        if (result != null && result.isNotEmpty && result != folder.name && context.mounted) {
-          final parentPath = folder.path.contains('/')
-              ? folder.path.substring(0, folder.path.lastIndexOf('/'))
-              : '';
-          final newPath = parentPath.isEmpty ? result : '$parentPath/$result';
-          await repo.moveFolder(folder.path, newPath);
-        }
-        break;
-      case 'delete':
-        final childFolders = widget.allFolders.where((f) =>
-            f.path.startsWith('${folder.path}/'));
-        final childNotes = widget.allNotes.where((n) =>
-            n.path.startsWith('${folder.path}/'));
-        final hasChildren = childFolders.isNotEmpty || childNotes.isNotEmpty;
-
-        if (hasChildren) {
-          final confirmed = await showDialog<bool>(
-            context: context,
-            builder: (ctx) => AlertDialog(
-              title: const Text('Delete Folder?'),
-              content: Text(
-                'This folder contains items. Are you sure you want to delete "${folder.name}" and all its contents?',
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(ctx).pop(false),
-                  child: Text('Cancel',
-                      style: SpaceNotesTextStyles.terminal
-                          .copyWith(color: SpaceNotesTheme.textSecondary)),
-                ),
-                TextButton(
-                  onPressed: () => Navigator.of(ctx).pop(true),
-                  child: Text('Delete',
-                      style: SpaceNotesTextStyles.terminal
-                          .copyWith(color: SpaceNotesTheme.error)),
-                ),
-              ],
-            ),
-          );
-          if (confirmed != true || !context.mounted) return;
-        }
-        repo.deleteFolder(folder.path);
-        break;
-    }
-  }
-
-  bool _canAcceptDrop(_DraggableData data) {
-    final targetPath = widget.folder.path;
-    if (data.isFolder) {
-      if (data.path == targetPath) return false;
-      if (targetPath.startsWith('${data.path}/')) return false;
-    }
-    return true;
-  }
-
-  void _handleDrop(_DraggableData data) async {
-    final repo = ref.read(notesRepositoryProvider);
-    final newPath = '${widget.folder.path}/${data.name}';
-
-    if (data.isFolder) {
-      await repo.moveFolder(data.path, newPath);
-    } else {
-      await repo.moveNote(data.path, newPath);
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -811,6 +641,176 @@ class _FolderTreeItemState extends ConsumerState<_FolderTreeItem> {
         _handleFolderAction(context, ref, widget.folder, action);
       },
     );
+  }
+
+  void _handleFolderAction(
+      BuildContext context, WidgetRef ref, Folder folder, String action) async {
+    final repo = ref.read(notesRepositoryProvider);
+    switch (action) {
+      case 'new_note':
+        final now = DateTime.now();
+        final timestamp =
+            '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}-${now.hour.toString().padLeft(2, '0')}-${now.minute.toString().padLeft(2, '0')}';
+        final notePath = '${folder.path}/Untitled-$timestamp.md';
+        final noteId = await repo.createNote(notePath, '');
+        if (noteId != null && context.mounted) {
+          _openNoteInDesktop(context, noteId);
+        }
+        break;
+      case 'new_folder':
+        final controller = TextEditingController();
+        final result = await showDialog<String>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text('New Folder'),
+            content: TextField(
+              controller: controller,
+              autofocus: true,
+              style: SpaceNotesTextStyles.terminal,
+              decoration: const InputDecoration(
+                hintText: 'Folder name',
+              ),
+              onSubmitted: (value) => Navigator.of(ctx).pop(value),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(),
+                child: Text('Cancel',
+                    style: SpaceNotesTextStyles.terminal
+                        .copyWith(color: SpaceNotesTheme.textSecondary)),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(controller.text),
+                child: Text('Create',
+                    style: SpaceNotesTextStyles.terminal
+                        .copyWith(color: SpaceNotesTheme.primary)),
+              ),
+            ],
+          ),
+        );
+        if (result != null && result.isNotEmpty && context.mounted) {
+          final newFolderPath = '${folder.path}/$result';
+          final existingFolder = widget.allFolders.any((f) => f.path == newFolderPath);
+          if (existingFolder) {
+            if (context.mounted) {
+              showDialog(
+                context: context,
+                builder: (ctx) => AlertDialog(
+                  title: const Text('Folder Exists'),
+                  content: Text(
+                    'A folder named "$result" already exists here.',
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.of(ctx).pop(),
+                      child: Text('OK',
+                          style: SpaceNotesTextStyles.terminal
+                              .copyWith(color: SpaceNotesTheme.primary)),
+                    ),
+                  ],
+                ),
+              );
+            }
+          } else {
+            await repo.createFolder(newFolderPath);
+          }
+        }
+        break;
+      case 'rename':
+        final controller = TextEditingController(text: folder.name);
+        final result = await showDialog<String>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text('Rename Folder'),
+            content: TextField(
+              controller: controller,
+              autofocus: true,
+              style: SpaceNotesTextStyles.terminal,
+              decoration: const InputDecoration(
+                hintText: 'Folder name',
+              ),
+              onSubmitted: (value) => Navigator.of(ctx).pop(value),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(),
+                child: Text('Cancel',
+                    style: SpaceNotesTextStyles.terminal
+                        .copyWith(color: SpaceNotesTheme.textSecondary)),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(controller.text),
+                child: Text('Rename',
+                    style: SpaceNotesTextStyles.terminal
+                        .copyWith(color: SpaceNotesTheme.primary)),
+              ),
+            ],
+          ),
+        );
+        if (result != null && result.isNotEmpty && result != folder.name && context.mounted) {
+          final parentPath = folder.path.contains('/')
+              ? folder.path.substring(0, folder.path.lastIndexOf('/'))
+              : '';
+          final newPath = parentPath.isEmpty ? result : '$parentPath/$result';
+          await repo.moveFolder(folder.path, newPath);
+        }
+        break;
+      case 'delete':
+        final childFolders = widget.allFolders.where((f) =>
+            f.path.startsWith('${folder.path}/'));
+        final childNotes = widget.allNotes.where((n) =>
+            n.path.startsWith('${folder.path}/'));
+        final hasChildren = childFolders.isNotEmpty || childNotes.isNotEmpty;
+
+        if (hasChildren) {
+          final confirmed = await showDialog<bool>(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              title: const Text('Delete Folder?'),
+              content: Text(
+                'This folder contains items. Are you sure you want to delete "${folder.name}" and all its contents?',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(ctx).pop(false),
+                  child: Text('Cancel',
+                      style: SpaceNotesTextStyles.terminal
+                          .copyWith(color: SpaceNotesTheme.textSecondary)),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.of(ctx).pop(true),
+                  child: Text('Delete',
+                      style: SpaceNotesTextStyles.terminal
+                          .copyWith(color: SpaceNotesTheme.error)),
+                ),
+              ],
+            ),
+          );
+          if (confirmed != true || !context.mounted) return;
+        }
+        repo.deleteFolder(folder.path);
+        break;
+    }
+  }
+
+  bool _canAcceptDrop(_DraggableData data) {
+    final targetPath = widget.folder.path;
+    if (data.isFolder) {
+      if (data.path == targetPath) return false;
+      if (targetPath.startsWith('${data.path}/')) return false;
+    }
+    return true;
+  }
+
+  void _handleDrop(_DraggableData data) async {
+    final repo = ref.read(notesRepositoryProvider);
+    final newPath = '${widget.folder.path}/${data.name}';
+
+    if (data.isFolder) {
+      await repo.moveFolder(data.path, newPath);
+    } else {
+      await repo.moveNote(data.path, newPath);
+    }
   }
 }
 
@@ -1006,34 +1006,6 @@ class _TreeItemRow extends StatefulWidget {
 class _TreeItemRowState extends State<_TreeItemRow> {
   bool _isHovered = false;
 
-  void _showContextMenu(BuildContext context, Offset position) {
-    if (widget.contextMenuItems == null) return;
-
-    showMenu<String>(
-      context: context,
-      position: RelativeRect.fromLTRB(
-        position.dx,
-        position.dy,
-        position.dx,
-        position.dy,
-      ),
-      items: widget.contextMenuItems!,
-      color: SpaceNotesTheme.inputSurface,
-      elevation: 8,
-      menuPadding: EdgeInsets.zero,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8),
-        side: BorderSide(
-          color: SpaceNotesTheme.textSecondary.withValues(alpha: 0.3),
-        ),
-      ),
-    ).then((value) {
-      if (value != null && widget.onContextMenuSelected != null) {
-        widget.onContextMenuSelected!(value);
-      }
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
     final indent = 8.0 + (widget.indentLevel * 16.0);
@@ -1163,6 +1135,34 @@ class _TreeItemRowState extends State<_TreeItemRow> {
         ),
       ),
     );
+  }
+
+  void _showContextMenu(BuildContext context, Offset position) {
+    if (widget.contextMenuItems == null) return;
+
+    showMenu<String>(
+      context: context,
+      position: RelativeRect.fromLTRB(
+        position.dx,
+        position.dy,
+        position.dx,
+        position.dy,
+      ),
+      items: widget.contextMenuItems!,
+      color: SpaceNotesTheme.inputSurface,
+      elevation: 8,
+      menuPadding: EdgeInsets.zero,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+        side: BorderSide(
+          color: SpaceNotesTheme.textSecondary.withValues(alpha: 0.3),
+        ),
+      ),
+    ).then((value) {
+      if (value != null && widget.onContextMenuSelected != null) {
+        widget.onContextMenuSelected!(value);
+      }
+    });
   }
 }
 

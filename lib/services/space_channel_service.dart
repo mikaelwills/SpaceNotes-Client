@@ -39,7 +39,7 @@ class SpaceChannelEvent {
   });
 
   factory SpaceChannelEvent.fromJson(Map<String, dynamic> json) {
-    final typeStr = json['type'] as String? ?? 'msg';
+    final typeStr = json['type'] ?? 'msg';
 
     final session = json['session'] ?? '';
     SpaceChannelSourceType? sourceType;
@@ -48,7 +48,7 @@ class SpaceChannelEvent {
     } else if (typeStr == 'webhook') {
       sourceType = SpaceChannelSourceType.webhook;
     } else if (json['sourceType'] != null) {
-      sourceType = _parseSourceType(json['sourceType'] as String);
+      sourceType = _parseSourceType(json['sourceType'] ?? '');
     } else if (session is String && session.isNotEmpty) {
       sourceType = SpaceChannelSourceType.master;
     }
@@ -62,10 +62,10 @@ class SpaceChannelEvent {
       id: json['id'] ?? 'msg-${DateTime.now().millisecondsSinceEpoch}',
       from: json['from'] ?? '',
       text: json['text'] ?? '',
-      ts: json['ts'] as int?,
+      ts: json['ts'],
       replyTo: json['replyTo'] ?? '',
       file: json['file'] != null
-          ? SpaceChannelFile.fromJson(json['file'] as Map<String, dynamic>)
+          ? SpaceChannelFile.fromJson(json['file'] ?? {})
           : null,
       sourceType: sourceType,
       project: json['project'] ?? json['source'] ?? '',
@@ -96,8 +96,8 @@ class SpaceChannelFile {
 
   factory SpaceChannelFile.fromJson(Map<String, dynamic> json) {
     return SpaceChannelFile(
-      url: json['url'] as String,
-      name: json['name'] as String,
+      url: json['url'] ?? '',
+      name: json['name'] ?? '',
     );
   }
 }
@@ -229,7 +229,7 @@ class SpaceChannelService {
     debugLogger.info('WS', 'RAW', raw.length > 200 ? raw.substring(0, 200) : raw);
     try {
       final json = jsonDecode(raw) as Map<String, dynamic>;
-      final typeStr = json['type'] as String? ?? '';
+      final typeStr = json['type'] ?? '';
 
       if (typeStr == 'tool_event') {
         _handleToolEvent(json);
@@ -265,11 +265,11 @@ class SpaceChannelService {
   }
 
   void _handlePermissionRequest(Map<String, dynamic> json) {
-    final requestId = json['request_id'] as String? ?? json['id'] as String? ?? 'perm-${DateTime.now().millisecondsSinceEpoch}';
-    final toolName = json['tool_name'] as String? ?? json['permission'] as String? ?? '';
-    final description = json['description'] as String? ?? '';
-    final inputPreview = json['input_preview'] as String? ?? '';
-    final session = json['session'] as String? ?? '';
+    final requestId = json['request_id'] ?? json['id'] ?? 'perm-${DateTime.now().millisecondsSinceEpoch}';
+    final toolName = json['tool_name'] ?? json['permission'] ?? '';
+    final description = json['description'] ?? '';
+    final inputPreview = json['input_preview'] ?? '';
+    final session = json['session'] ?? '';
 
     SpaceChannelSourceType? sourceType;
     if (session.startsWith('worker-')) {
@@ -287,8 +287,8 @@ class SpaceChannelService {
       text: '$toolName: $description',
       sourceType: sourceType,
       session: session,
-      project: json['project'] as String? ?? '',
-      task: json['task'] as String? ?? '',
+      project: json['project'] ?? '',
+      task: json['task'] ?? '',
       permissionData: {
         'request_id': requestId,
         'tool_name': toolName,

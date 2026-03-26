@@ -84,58 +84,6 @@ class _TerminalButtonState extends State<TerminalButton>
     super.dispose();
   }
 
-  Color get _borderColor {
-    switch (widget.type) {
-      case TerminalButtonType.primary:
-        return SpaceNotesTheme.primary;
-      case TerminalButtonType.warning:
-        return SpaceNotesTheme.warning;
-      case TerminalButtonType.danger:
-        return SpaceNotesTheme.error;
-      case TerminalButtonType.neutral:
-        return SpaceNotesTheme.text;
-    }
-  }
-
-  Color get _textColor {
-    switch (widget.type) {
-      case TerminalButtonType.primary:
-        return SpaceNotesTheme.primary;
-      case TerminalButtonType.warning:
-        return SpaceNotesTheme.warning;
-      case TerminalButtonType.danger:
-        return SpaceNotesTheme.error;
-      case TerminalButtonType.neutral:
-        return SpaceNotesTheme.text;
-    }
-  }
-
-  String get _displayText {
-    if (widget.isLoading) {
-      return widget.loadingText ?? '${widget.command.toUpperCase()}...';
-    }
-    return widget.command.toUpperCase();
-  }
-
-  Widget _buildSpinner() {
-    const frames = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
-    return AnimatedBuilder(
-      animation: _spinnerController,
-      builder: (context, child) {
-        final frameIndex = (_spinnerController.value * frames.length).floor();
-        return Text(
-          frames[frameIndex % frames.length],
-          style: TextStyle(
-            fontFamily: 'FiraCode',
-            fontSize: 14,
-            color: _textColor,
-            fontWeight: FontWeight.w500,
-          ),
-        );
-      },
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return MouseRegion(
@@ -202,5 +150,57 @@ class _TerminalButtonState extends State<TerminalButton>
         },
       ),
     );
+  }
+
+  Widget _buildSpinner() {
+    const frames = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
+    return AnimatedBuilder(
+      animation: _spinnerController,
+      builder: (context, child) {
+        final frameIndex = (_spinnerController.value * frames.length).floor();
+        return Text(
+          frames[frameIndex % frames.length],
+          style: TextStyle(
+            fontFamily: 'FiraCode',
+            fontSize: 14,
+            color: _textColor,
+            fontWeight: FontWeight.w500,
+          ),
+        );
+      },
+    );
+  }
+
+  Color get _borderColor {
+    switch (widget.type) {
+      case TerminalButtonType.primary:
+        return SpaceNotesTheme.primary;
+      case TerminalButtonType.warning:
+        return SpaceNotesTheme.warning;
+      case TerminalButtonType.danger:
+        return SpaceNotesTheme.error;
+      case TerminalButtonType.neutral:
+        return SpaceNotesTheme.text;
+    }
+  }
+
+  Color get _textColor {
+    switch (widget.type) {
+      case TerminalButtonType.primary:
+        return SpaceNotesTheme.primary;
+      case TerminalButtonType.warning:
+        return SpaceNotesTheme.warning;
+      case TerminalButtonType.danger:
+        return SpaceNotesTheme.error;
+      case TerminalButtonType.neutral:
+        return SpaceNotesTheme.text;
+    }
+  }
+
+  String get _displayText {
+    if (widget.isLoading) {
+      return widget.loadingText ?? '${widget.command.toUpperCase()}...';
+    }
+    return widget.command.toUpperCase();
   }
 }

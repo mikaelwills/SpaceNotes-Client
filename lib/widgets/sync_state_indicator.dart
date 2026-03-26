@@ -15,19 +15,6 @@ class SyncStateIndicator extends ConsumerStatefulWidget {
 class _SyncStateIndicatorState extends ConsumerState<SyncStateIndicator> {
   SyncState? _lastLoggedState;
 
-  void _logStateChange(SyncState state, String source) {
-    if (_lastLoggedState == null ||
-        _lastLoggedState!.isSyncing != state.isSyncing ||
-        _lastLoggedState!.pendingCount != state.pendingCount ||
-        _lastLoggedState!.hasError != state.hasError) {
-      debugLogger.debug(
-        'SYNC_UI',
-        '$source: isSyncing=${state.isSyncing}, pending=${state.pendingCount}, hasError=${state.hasError}',
-      );
-      _lastLoggedState = state;
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final repo = ref.watch(notesRepositoryProvider);
@@ -67,6 +54,19 @@ class _SyncStateIndicatorState extends ConsumerState<SyncStateIndicator> {
     }
 
     return const SizedBox.shrink();
+  }
+
+  void _logStateChange(SyncState state, String source) {
+    if (_lastLoggedState == null ||
+        _lastLoggedState!.isSyncing != state.isSyncing ||
+        _lastLoggedState!.pendingCount != state.pendingCount ||
+        _lastLoggedState!.hasError != state.hasError) {
+      debugLogger.debug(
+        'SYNC_UI',
+        '$source: isSyncing=${state.isSyncing}, pending=${state.pendingCount}, hasError=${state.hasError}',
+      );
+      _lastLoggedState = state;
+    }
   }
 }
 

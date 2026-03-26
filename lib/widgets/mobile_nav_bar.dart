@@ -263,12 +263,6 @@ class _EditableNoteNameState extends ConsumerState<_EditableNoteName> {
     super.dispose();
   }
 
-  String _extractFolderPath() {
-    final lastSlash = widget.notePath.lastIndexOf('/');
-    if (lastSlash == -1) return '';
-    return widget.notePath.substring(0, lastSlash);
-  }
-
   @override
   Widget build(BuildContext context) {
     final folderPath = _extractFolderPath();
@@ -398,6 +392,12 @@ class _EditableNoteNameState extends ConsumerState<_EditableNoteName> {
       _lastRenamedTo = newName;
     }
   }
+
+  String _extractFolderPath() {
+    final lastSlash = widget.notePath.lastIndexOf('/');
+    if (lastSlash == -1) return '';
+    return widget.notePath.substring(0, lastSlash);
+  }
 }
 
 class _EditableFolderName extends ConsumerStatefulWidget {
@@ -432,57 +432,6 @@ class _EditableFolderNameState extends ConsumerState<_EditableFolderName> {
     _controller.dispose();
     _focusNode.dispose();
     super.dispose();
-  }
-
-  void _onFocusChanged() {
-    if (!_focusNode.hasFocus && _isEditing) {
-      _performRename();
-    }
-  }
-
-  void _startEditing() {
-    setState(() {
-      _isEditing = true;
-      _controller.text = widget.currentName;
-      _controller.selection = TextSelection(
-        baseOffset: 0,
-        extentOffset: widget.currentName.length,
-      );
-    });
-    _focusNode.requestFocus();
-  }
-
-  Future<void> _performRename() async {
-    final newName = _controller.text.trim();
-
-    setState(() {
-      _isEditing = false;
-    });
-
-    if (newName.isEmpty || newName == widget.currentName) {
-      return;
-    }
-
-    final parentPath = widget.folderPath.contains('/')
-        ? widget.folderPath.substring(0, widget.folderPath.lastIndexOf('/') + 1)
-        : '';
-    final newFolderPath = '$parentPath$newName';
-
-    final repo = ref.read(notesRepositoryProvider);
-    debugPrint('🏷️  RENAME FOLDER: ${widget.folderPath} -> $newFolderPath');
-
-    final success = await repo.moveFolder(widget.folderPath, newFolderPath);
-
-    if (mounted && success) {
-      final encodedNewPath = Uri.encodeComponent(newFolderPath);
-      context.go('/notes/folder/$encodedNewPath');
-    }
-  }
-
-  String _extractParentPath() {
-    final lastSlash = widget.folderPath.lastIndexOf('/');
-    if (lastSlash == -1) return '';
-    return widget.folderPath.substring(0, lastSlash);
   }
 
   @override
@@ -555,6 +504,57 @@ class _EditableFolderNameState extends ConsumerState<_EditableFolderName> {
         ],
       ),
     );
+  }
+
+  void _onFocusChanged() {
+    if (!_focusNode.hasFocus && _isEditing) {
+      _performRename();
+    }
+  }
+
+  void _startEditing() {
+    setState(() {
+      _isEditing = true;
+      _controller.text = widget.currentName;
+      _controller.selection = TextSelection(
+        baseOffset: 0,
+        extentOffset: widget.currentName.length,
+      );
+    });
+    _focusNode.requestFocus();
+  }
+
+  Future<void> _performRename() async {
+    final newName = _controller.text.trim();
+
+    setState(() {
+      _isEditing = false;
+    });
+
+    if (newName.isEmpty || newName == widget.currentName) {
+      return;
+    }
+
+    final parentPath = widget.folderPath.contains('/')
+        ? widget.folderPath.substring(0, widget.folderPath.lastIndexOf('/') + 1)
+        : '';
+    final newFolderPath = '$parentPath$newName';
+
+    final repo = ref.read(notesRepositoryProvider);
+    debugPrint('🏷️  RENAME FOLDER: ${widget.folderPath} -> $newFolderPath');
+
+    final success = await repo.moveFolder(widget.folderPath, newFolderPath);
+
+    if (mounted && success) {
+      final encodedNewPath = Uri.encodeComponent(newFolderPath);
+      context.go('/notes/folder/$encodedNewPath');
+    }
+  }
+
+  String _extractParentPath() {
+    final lastSlash = widget.folderPath.lastIndexOf('/');
+    if (lastSlash == -1) return '';
+    return widget.folderPath.substring(0, lastSlash);
   }
 }
 

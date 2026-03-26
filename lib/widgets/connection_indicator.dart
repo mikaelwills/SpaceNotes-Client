@@ -109,50 +109,11 @@ class _PulsingHealthBarState extends ConsumerState<_PulsingHealthBar>
     }
   }
 
-  void _triggerPulse() {
-    _pulseController.forward(from: 0.0).then((_) {
-      if (mounted) {
-        _pulseController.reverse();
-      }
-    });
-  }
-
   @override
   void dispose() {
     _debounceTimer?.cancel();
     _pulseController.dispose();
     super.dispose();
-  }
-
-  Color _getStatusColor() {
-    switch (widget.status) {
-      case stdb.ConnectionStatus.connected:
-        return SpaceNotesTheme.success;
-      case stdb.ConnectionStatus.connecting:
-      case stdb.ConnectionStatus.reconnecting:
-        return SpaceNotesTheme.warning;
-      case stdb.ConnectionStatus.authError:
-      case stdb.ConnectionStatus.fatalError:
-      case stdb.ConnectionStatus.disconnected:
-        return SpaceNotesTheme.error;
-    }
-  }
-
-  double _getHealthScore() {
-    if (widget.quality != null) {
-      return widget.quality!.healthScore;
-    }
-    switch (widget.status) {
-      case stdb.ConnectionStatus.connected:
-        return 1.0;
-      case stdb.ConnectionStatus.connecting:
-      case stdb.ConnectionStatus.reconnecting:
-        return 0.5;
-      case stdb.ConnectionStatus.authError:
-      case stdb.ConnectionStatus.disconnected:
-      case stdb.ConnectionStatus.fatalError:
-        return 0.0;
-    }
   }
 
   @override
@@ -206,6 +167,45 @@ class _PulsingHealthBarState extends ConsumerState<_PulsingHealthBar>
         ),
       ),
     );
+  }
+
+  void _triggerPulse() {
+    _pulseController.forward(from: 0.0).then((_) {
+      if (mounted) {
+        _pulseController.reverse();
+      }
+    });
+  }
+
+  Color _getStatusColor() {
+    switch (widget.status) {
+      case stdb.ConnectionStatus.connected:
+        return SpaceNotesTheme.success;
+      case stdb.ConnectionStatus.connecting:
+      case stdb.ConnectionStatus.reconnecting:
+        return SpaceNotesTheme.warning;
+      case stdb.ConnectionStatus.authError:
+      case stdb.ConnectionStatus.fatalError:
+      case stdb.ConnectionStatus.disconnected:
+        return SpaceNotesTheme.error;
+    }
+  }
+
+  double _getHealthScore() {
+    if (widget.quality != null) {
+      return widget.quality!.healthScore;
+    }
+    switch (widget.status) {
+      case stdb.ConnectionStatus.connected:
+        return 1.0;
+      case stdb.ConnectionStatus.connecting:
+      case stdb.ConnectionStatus.reconnecting:
+        return 0.5;
+      case stdb.ConnectionStatus.authError:
+      case stdb.ConnectionStatus.disconnected:
+      case stdb.ConnectionStatus.fatalError:
+        return 0.0;
+    }
   }
 
   void _handleReconnectTap() {

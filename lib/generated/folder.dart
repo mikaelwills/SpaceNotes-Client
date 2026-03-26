@@ -37,9 +37,9 @@ class Folder {
 
   factory Folder.fromJson(Map<String, dynamic> json) {
     return Folder(
-      path: (json['path'] as String?) ?? '',
-      name: (json['name'] as String?) ?? '',
-      depth: (json['depth'] as int?) ?? 0,
+      path: json['path'] ?? '',
+      name: json['name'] ?? '',
+      depth: json['depth'] ?? 0,
     );
   }
 

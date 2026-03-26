@@ -36,16 +36,6 @@ class _PerformanceMonitorState extends State<PerformanceMonitor> {
     }
   }
 
-  void _startMonitoring() {
-    _updateTimer = Timer.periodic(const Duration(seconds: 2), (timer) {
-      if (mounted) {
-        setState(() {
-          _lastReport = PerformanceTracker.generateReport();
-        });
-      }
-    });
-  }
-
   @override
   void dispose() {
     _updateTimer?.cancel();
@@ -158,6 +148,16 @@ class _PerformanceMonitorState extends State<PerformanceMonitor> {
         ),
       ],
     );
+  }
+
+  void _startMonitoring() {
+    _updateTimer = Timer.periodic(const Duration(seconds: 2), (timer) {
+      if (mounted) {
+        setState(() {
+          _lastReport = PerformanceTracker.generateReport();
+        });
+      }
+    });
   }
 
   Color _getLatencyColor(double latencyMs) {

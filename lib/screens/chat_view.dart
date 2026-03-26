@@ -40,9 +40,6 @@ class _ChatViewState extends ConsumerState<ChatView> {
   bool _autoScrollEnabled = true;
   int _previousMessageCount = 0;
 
-  ScrollController get _chatScrollController =>
-      widget.scrollController ?? (_ownScrollController ??= ScrollController());
-
   @override
   void initState() {
     super.initState();
@@ -53,28 +50,6 @@ class _ChatViewState extends ConsumerState<ChatView> {
   void dispose() {
     _ownScrollController?.dispose();
     super.dispose();
-  }
-
-  void _scrollToBottom() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_chatScrollController.hasClients) {
-        _chatScrollController.animateTo(
-          _chatScrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 200),
-          curve: Curves.easeOut,
-        );
-      }
-    });
-  }
-
-  Future<void> _showPermissionDialog(BuildContext context, ChatPermissionRequired state) async {
-    final response = await PermissionDialog.show(context, state.permission);
-    if (response != null && context.mounted) {
-      context.read<ChatBloc>().add(RespondToPermission(
-        permissionId: state.permission.id,
-        response: response,
-      ));
-    }
   }
 
   @override
@@ -283,4 +258,29 @@ class _ChatViewState extends ConsumerState<ChatView> {
       ),
     );
   }
+
+  void _scrollToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_chatScrollController.hasClients) {
+        _chatScrollController.animateTo(
+          _chatScrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeOut,
+        );
+      }
+    });
+  }
+
+  Future<void> _showPermissionDialog(BuildContext context, ChatPermissionRequired state) async {
+    final response = await PermissionDialog.show(context, state.permission);
+    if (response != null && context.mounted) {
+      context.read<ChatBloc>().add(RespondToPermission(
+        permissionId: state.permission.id,
+        response: response,
+      ));
+    }
+  }
+
+  ScrollController get _chatScrollController =>
+      widget.scrollController ?? (_ownScrollController ??= ScrollController());
 }

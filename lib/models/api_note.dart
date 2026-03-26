@@ -62,10 +62,10 @@ class ApiNote extends Equatable {
     required this.content,
     required this.folderPath,
     required this.depth,
-    this.frontmatter,
     required this.size,
     required this.createdTime,
     required this.modifiedTime,
+    this.frontmatter,
   });
 
   factory ApiNote.fromJson(Map<String, dynamic> json) {

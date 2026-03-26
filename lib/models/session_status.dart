@@ -31,12 +31,12 @@ class SessionStatus {
   });
 
   factory SessionStatus.fromJson(Map<String, dynamic> json) {
-    final statusStr = json['status'] as String? ?? 'idle';
-    final retryTimeMs = json['retryTime'] as int?;
+    final statusStr = json['status'] ?? 'idle';
+    final retryTimeMs = json['retryTime'];
 
     return SessionStatus(
       status: SessionStatusType.fromString(statusStr),
-      retryCount: json['retryCount'] as int?,
+      retryCount: json['retryCount'],
       nextRetryTime: retryTimeMs != null
           ? DateTime.fromMillisecondsSinceEpoch(retryTimeMs)
           : null,

@@ -71,111 +71,28 @@ class QuillNoteEditorState extends State<QuillNoteEditor> {
     _attachDocumentListener();
   }
 
-  void _attachDocumentListener() {
+  @override
+  void dispose() {
     _documentChangesSubscription?.cancel();
-    _documentChangesSubscription = _controller.document.changes.listen((_) {
-      if (!_isUpdatingFromParent) {
-        _notifyContentChanged();
-      }
-    });
-  }
-
-  QuillController _createController(String markdown) {
-    if (markdown.isEmpty) {
-      return QuillController.basic();
+    _controller.dispose();
+    _rawController.dispose();
+    _rawFocusNode.dispose();
+    if (widget.focusNode == null) {
+      _focusNode.dispose();
     }
-    try {
-      final delta = _mdToDelta.convert(markdown);
-      return QuillController(
-        document: Document.fromDelta(delta),
-        selection: const TextSelection.collapsed(offset: 0),
-      );
-    } catch (e) {
-      debugLogger.error('EDITOR', 'Error converting markdown to delta: $e');
-      return QuillController.basic();
-    }
+    super.dispose();
   }
 
-  void _notifyContentChanged() {
-    try {
-      final markdown = _deltaToMd.convert(_controller.document.toDelta());
-      widget.onContentChanged(markdown);
-    } catch (e) {
-      debugLogger.error('EDITOR', 'Error converting delta to markdown: $e');
-    }
-  }
-
-  void updateContent(String markdown) {
-    if (_isUpdatingFromParent) return;
-    _isUpdatingFromParent = true;
-    try {
-      final delta = _mdToDelta.convert(markdown);
-      final currentSelection = _controller.selection;
-      _controller.document = Document.fromDelta(delta);
-      _attachDocumentListener();
-      try {
-        _controller.updateSelection(currentSelection, ChangeSource.local);
-      } catch (_) {}
-    } catch (e) {
-      debugLogger.error('EDITOR', 'Error updating content: $e');
-    } finally {
-      _isUpdatingFromParent = false;
-    }
-  }
-
-  String getMarkdown() {
-    try {
-      return _deltaToMd.convert(_controller.document.toDelta());
-    } catch (e) {
-      debugLogger.error('EDITOR', 'Error getting markdown: $e');
-      return '';
-    }
-  }
-
-  void undo() {
-    _controller.undo();
-  }
-
-  void redo() {
-    _controller.redo();
-  }
-
-  bool get canUndo => _controller.hasUndo;
-  bool get canRedo => _controller.hasRedo;
-
-  void _toggleRawMode() {
-    setState(() {
-      if (_isRawMode) {
-        final rawText = _rawController.text;
-        _isUpdatingFromParent = true;
-        try {
-          final delta = _mdToDelta.convert(rawText);
-          _controller.document = Document.fromDelta(delta);
-          _attachDocumentListener();
-        } catch (e) {
-          debugLogger.error('EDITOR', 'Error converting markdown to delta: $e');
-        }
-        _isUpdatingFromParent = false;
-        widget.onContentChanged(rawText);
-      } else {
-        _rawController.text = _cleanMarkdown(getMarkdown());
-      }
-      _isRawMode = !_isRawMode;
-    });
-  }
-
-  String _cleanMarkdown(String markdown) {
-    return markdown
-        .replaceAll(r'\-', '-')
-        .replaceAll(r'\.', '.')
-        .replaceAll(r'\!', '!')
-        .replaceAll(r'\#', '#')
-        .replaceAll(r'\*', '*')
-        .replaceAll(r'\_', '_')
-        .replaceAll(r'\[', '[')
-        .replaceAll(r'\]', ']')
-        .replaceAll(r'\(', '(')
-        .replaceAll(r'\)', ')');
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        if (widget.showToolbar) _buildCollapsibleToolbar(),
+        Expanded(
+          child: _isRawMode ? _buildRawEditor() : _buildQuillEditor(),
+        ),
+      ],
+    );
   }
 
   Widget _buildRawEditor() {
@@ -358,30 +275,6 @@ class QuillNoteEditorState extends State<QuillNoteEditor> {
     );
   }
 
-  @override
-  void dispose() {
-    _documentChangesSubscription?.cancel();
-    _controller.dispose();
-    _rawController.dispose();
-    _rawFocusNode.dispose();
-    if (widget.focusNode == null) {
-      _focusNode.dispose();
-    }
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        if (widget.showToolbar) _buildCollapsibleToolbar(),
-        Expanded(
-          child: _isRawMode ? _buildRawEditor() : _buildQuillEditor(),
-        ),
-      ],
-    );
-  }
-
   Widget _buildCollapsibleToolbar() {
     return SizedBox(
       height: 44,
@@ -471,6 +364,113 @@ class QuillNoteEditorState extends State<QuillNoteEditor> {
         ],
       ),
     );
+  }
+
+  void updateContent(String markdown) {
+    if (_isUpdatingFromParent) return;
+    _isUpdatingFromParent = true;
+    try {
+      final delta = _mdToDelta.convert(markdown);
+      final currentSelection = _controller.selection;
+      _controller.document = Document.fromDelta(delta);
+      _attachDocumentListener();
+      try {
+        _controller.updateSelection(currentSelection, ChangeSource.local);
+      } catch (_) {}
+    } catch (e) {
+      debugLogger.error('EDITOR', 'Error updating content: $e');
+    } finally {
+      _isUpdatingFromParent = false;
+    }
+  }
+
+  String getMarkdown() {
+    try {
+      return _deltaToMd.convert(_controller.document.toDelta());
+    } catch (e) {
+      debugLogger.error('EDITOR', 'Error getting markdown: $e');
+      return '';
+    }
+  }
+
+  void undo() {
+    _controller.undo();
+  }
+
+  void redo() {
+    _controller.redo();
+  }
+
+  bool get canUndo => _controller.hasUndo;
+  bool get canRedo => _controller.hasRedo;
+
+  void _attachDocumentListener() {
+    _documentChangesSubscription?.cancel();
+    _documentChangesSubscription = _controller.document.changes.listen((_) {
+      if (!_isUpdatingFromParent) {
+        _notifyContentChanged();
+      }
+    });
+  }
+
+  QuillController _createController(String markdown) {
+    if (markdown.isEmpty) {
+      return QuillController.basic();
+    }
+    try {
+      final delta = _mdToDelta.convert(markdown);
+      return QuillController(
+        document: Document.fromDelta(delta),
+        selection: const TextSelection.collapsed(offset: 0),
+      );
+    } catch (e) {
+      debugLogger.error('EDITOR', 'Error converting markdown to delta: $e');
+      return QuillController.basic();
+    }
+  }
+
+  void _notifyContentChanged() {
+    try {
+      final markdown = _deltaToMd.convert(_controller.document.toDelta());
+      widget.onContentChanged(markdown);
+    } catch (e) {
+      debugLogger.error('EDITOR', 'Error converting delta to markdown: $e');
+    }
+  }
+
+  void _toggleRawMode() {
+    setState(() {
+      if (_isRawMode) {
+        final rawText = _rawController.text;
+        _isUpdatingFromParent = true;
+        try {
+          final delta = _mdToDelta.convert(rawText);
+          _controller.document = Document.fromDelta(delta);
+          _attachDocumentListener();
+        } catch (e) {
+          debugLogger.error('EDITOR', 'Error converting markdown to delta: $e');
+        }
+        _isUpdatingFromParent = false;
+        widget.onContentChanged(rawText);
+      } else {
+        _rawController.text = _cleanMarkdown(getMarkdown());
+      }
+      _isRawMode = !_isRawMode;
+    });
+  }
+
+  String _cleanMarkdown(String markdown) {
+    return markdown
+        .replaceAll(r'\-', '-')
+        .replaceAll(r'\.', '.')
+        .replaceAll(r'\!', '!')
+        .replaceAll(r'\#', '#')
+        .replaceAll(r'\*', '*')
+        .replaceAll(r'\_', '_')
+        .replaceAll(r'\[', '[')
+        .replaceAll(r'\]', ']')
+        .replaceAll(r'\(', '(')
+        .replaceAll(r'\)', ')');
   }
 }
 

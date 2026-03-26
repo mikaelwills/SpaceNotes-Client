@@ -34,36 +34,6 @@ class TerminalMessage extends StatelessWidget {
     );
   }
 
-  String get _formattedTime {
-    final h = message.created.hour.toString().padLeft(2, '0');
-    final m = message.created.minute.toString().padLeft(2, '0');
-    return '$h:$m';
-  }
-
-  Widget? get _statusIcon {
-    final content = message.content;
-    if (content.startsWith('✓')) {
-      return const Icon(Icons.check, size: 14, color: Color(0xFF4CAF50));
-    }
-    if (content.startsWith('✗')) {
-      return const Icon(Icons.close, size: 14, color: SpaceNotesTheme.error);
-    }
-    return null;
-  }
-
-  Color get _sourceLabelColor {
-    switch (message.sourceType) {
-      case 'worker':
-        return SpaceNotesTheme.primary;
-      case 'webhook':
-        return const Color(0xFFF5E27A);
-      case 'master':
-        return SpaceNotesTheme.error;
-      default:
-        return SpaceNotesTheme.error;
-    }
-  }
-
   Widget _buildUserMessage(BuildContext context) {
     final content = message.parts.isNotEmpty && message.parts.first.content != null
         ? message.parts.first.content!
@@ -218,7 +188,7 @@ class TerminalMessage extends StatelessWidget {
     final toolName = part.metadata?['tool_name'] ?? '';
     final inputPreview = part.metadata?['input_preview'] ?? '';
     final requestId = part.metadata?['request_id'] ?? '';
-    final responded = part.metadata?['permission_responded'] as String?;
+    final responded = part.metadata?['permission_responded'];
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 4),
@@ -277,13 +247,6 @@ class TerminalMessage extends StatelessWidget {
         ],
       ),
     );
-  }
-
-  void _respondToPermission(BuildContext context, String requestId, PermissionResponse response) {
-    context.read<ChatBloc>().add(RespondToPermission(
-      permissionId: message.id,
-      response: response,
-    ));
   }
 
   Widget _buildTextPart(MessagePart part) {
@@ -376,44 +339,44 @@ class TerminalMessage extends StatelessWidget {
     if (errorVal is String) {
       error = errorVal;
     } else if (errorVal is Map) {
-      error = errorVal['message'] as String? ?? errorVal.toString();
+      error = errorVal['message'] ?? errorVal.toString();
     }
-    error ??= part.metadata?['errorMessage'] as String?;
-    error ??= part.metadata?['result']?['error'] as String?;
+    error ??= part.metadata?['errorMessage'];
+    error ??= part.metadata?['result']?['error'];
 
     if (state == 'error') {
       print('🔴 [ToolError] state=$state metadata=${part.metadata}');
     }
 
-    final output = part.metadata?['output'] as String? ??
-                   part.metadata?['result']?['content'] as String?;
+    final output = part.metadata?['output'] ??
+                   part.metadata?['result']?['content'];
 
     String? commandDetails;
 
     Map<String, dynamic>? input;
 
     if (part.metadata?['input'] is Map) {
-      input = part.metadata!['input'] as Map<String, dynamic>;
+      input = part.metadata!['input'];
     }
     else if (stateValue is Map && stateValue['input'] is Map) {
-      input = stateValue['input'] as Map<String, dynamic>;
+      input = stateValue['input'];
     }
 
     if (input != null) {
       if (input['command'] != null) {
-        commandDetails = input['command'] as String;
+        commandDetails = input['command'] ?? '';
       } else if (input['query'] != null) {
         commandDetails = '"${input['query']}"';
       } else if (input['path'] != null || input['filePath'] != null) {
-        commandDetails = (input['path'] ?? input['filePath']) as String;
+        commandDetails = input['path'] ?? input['filePath'] ?? '';
       } else if (input['pattern'] != null) {
         commandDetails = '"${input['pattern']}"';
       } else if (input['folder_path'] != null) {
-        commandDetails = input['folder_path'] as String;
+        commandDetails = input['folder_path'] ?? '';
       } else if (input['id'] != null) {
-        commandDetails = input['id'] as String;
+        commandDetails = input['id'] ?? '';
       } else if (input['old_string'] != null) {
-        final old = input['old_string'] as String;
+        final old = input['old_string'] ?? '';
         commandDetails = '"${old.length > 40 ? '${old.substring(0, 40)}...' : old}"';
       } else {
         final keys = input.keys.where((k) => k != 'type').toList();
@@ -545,7 +508,7 @@ class TerminalMessage extends StatelessWidget {
       return const SizedBox.shrink();
     }
 
-    final reasoningTokens = part.metadata?['reasoning_tokens'] as int?;
+    final reasoningTokens = part.metadata?['reasoning_tokens'];
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 4, top: 2),
@@ -595,9 +558,9 @@ class TerminalMessage extends StatelessWidget {
   }
 
   Widget _buildRetryPart(MessagePart part) {
-    final attempt = part.metadata?['attempt'] as int? ?? 1;
-    final maxAttempts = part.metadata?['maxAttempts'] as int? ?? 3;
-    final reason = part.metadata?['reason'] as String? ?? 'Unknown error';
+    final attempt = part.metadata?['attempt'] ?? 1;
+    final maxAttempts = part.metadata?['maxAttempts'] ?? 3;
+    final reason = part.metadata?['reason'] ?? 'Unknown error';
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 4),
@@ -625,7 +588,7 @@ class TerminalMessage extends StatelessWidget {
 
   Widget _buildSubtaskPart(MessagePart part) {
     final description = part.content ?? 'Subtask';
-    final status = part.metadata?['status'] as String? ?? 'pending';
+    final status = part.metadata?['status'] ?? 'pending';
 
     IconData icon;
     Color color;
@@ -671,7 +634,7 @@ class TerminalMessage extends StatelessWidget {
 
   Widget _buildStepFinishPart(MessagePart part) {
     // Show step finish with token info if available
-    final tokens = part.metadata?['tokens'] as Map<String, dynamic>?;
+    final tokens = part.metadata?['tokens'];
 
     if (tokens == null) {
       return const SizedBox.shrink();
@@ -707,22 +670,6 @@ class TerminalMessage extends StatelessWidget {
         ],
       ),
     );
-  }
-
-  void _copyToClipboard(BuildContext context, String text) {
-    if (text.isEmpty) return;
-
-    Clipboard.setData(ClipboardData(text: text));
-    HapticFeedback.mediumImpact();
-  }
-
-  String _safeTextSanitize(String text, {bool preserveMarkdown = true}) {
-    try {
-      return TextSanitizer.sanitize(text, preserveMarkdown: preserveMarkdown);
-    } catch (e) {
-      print('⚠️ [TerminalMessage] Text sanitization failed, using ASCII fallback: $e');
-      return TextSanitizer.sanitizeToAscii(text);
-    }
   }
 
   Widget _buildStatusIcons(BuildContext context) {
@@ -778,6 +725,59 @@ class TerminalMessage extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  String get _formattedTime {
+    final h = message.created.hour.toString().padLeft(2, '0');
+    final m = message.created.minute.toString().padLeft(2, '0');
+    return '$h:$m';
+  }
+
+  Widget? get _statusIcon {
+    final content = message.content;
+    if (content.startsWith('✓')) {
+      return const Icon(Icons.check, size: 14, color: Color(0xFF4CAF50));
+    }
+    if (content.startsWith('✗')) {
+      return const Icon(Icons.close, size: 14, color: SpaceNotesTheme.error);
+    }
+    return null;
+  }
+
+  Color get _sourceLabelColor {
+    switch (message.sourceType) {
+      case 'worker':
+        return SpaceNotesTheme.primary;
+      case 'webhook':
+        return const Color(0xFFF5E27A);
+      case 'master':
+        return SpaceNotesTheme.error;
+      default:
+        return SpaceNotesTheme.error;
+    }
+  }
+
+  void _copyToClipboard(BuildContext context, String text) {
+    if (text.isEmpty) return;
+
+    Clipboard.setData(ClipboardData(text: text));
+    HapticFeedback.mediumImpact();
+  }
+
+  String _safeTextSanitize(String text, {bool preserveMarkdown = true}) {
+    try {
+      return TextSanitizer.sanitize(text, preserveMarkdown: preserveMarkdown);
+    } catch (e) {
+      print('⚠️ [TerminalMessage] Text sanitization failed, using ASCII fallback: $e');
+      return TextSanitizer.sanitizeToAscii(text);
+    }
+  }
+
+  void _respondToPermission(BuildContext context, String requestId, PermissionResponse response) {
+    context.read<ChatBloc>().add(RespondToPermission(
+      permissionId: message.id,
+      response: response,
+    ));
   }
 }
 

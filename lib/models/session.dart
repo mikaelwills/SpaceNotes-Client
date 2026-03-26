@@ -20,15 +20,15 @@ class Session extends Equatable {
   }) : lastUpdated = lastUpdated ?? created;
 
   factory Session.fromJson(Map<String, dynamic> json) {
-    final created = DateTime.fromMillisecondsSinceEpoch(json['time']['created'] as int);
-    final updated = json['time']['updated'] != null 
-        ? DateTime.fromMillisecondsSinceEpoch(json['time']['updated'] as int)
+    final timeMap = json['time'] ?? {};
+    final created = DateTime.fromMillisecondsSinceEpoch(timeMap['created'] ?? 0);
+    final updated = timeMap['updated'] != null
+        ? DateTime.fromMillisecondsSinceEpoch(timeMap['updated'] ?? 0)
         : created;
-    
-    // Use title as description if available, otherwise fall back to provided description
-    String description = json['description'] as String? ?? '';
+
+    String description = json['description'] ?? '';
     if (description.isEmpty && json['title'] != null) {
-      String title = json['title'] as String;
+      String title = json['title'] ?? '';
       
       // Clean up generic titles but keep meaningful ones
       if (title.startsWith('New Session -') ||
@@ -45,17 +45,17 @@ class Session extends Equatable {
     }
     
     return Session(
-      id: json['id'] as String,
+      id: json['id'] ?? '',
       created: created,
       lastActivity: json['lastActivity'] != null
-          ? DateTime.fromMillisecondsSinceEpoch(json['lastActivity'] as int)
+          ? DateTime.fromMillisecondsSinceEpoch(json['lastActivity'] ?? 0)
           : null,
-      isActive: json['isActive'] as bool? ?? false,
+      isActive: json['isActive'] ?? false,
       description: description,
       lastUpdated: json['lastUpdated'] != null
-          ? DateTime.fromMillisecondsSinceEpoch(json['lastUpdated'] as int)
+          ? DateTime.fromMillisecondsSinceEpoch(json['lastUpdated'] ?? 0)
           : json['lastActivity'] != null
-              ? DateTime.fromMillisecondsSinceEpoch(json['lastActivity'] as int)
+              ? DateTime.fromMillisecondsSinceEpoch(json['lastActivity'] ?? 0)
               : updated,
       isLoadingSummary: false,
     );

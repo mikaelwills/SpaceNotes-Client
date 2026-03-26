@@ -53,95 +53,6 @@ class _NoteScreenState extends ConsumerState<NoteScreen> {
     }
   }
 
-  String get _noteName => _currentPath.split('/').last;
-
-  void _initNote() {
-    _debounceTimer?.cancel();
-    _updateSubscription?.cancel();
-
-    final note = ref.read(notesListProvider).valueOrNull
-        ?.firstWhereOrNull((n) => n.id == widget.noteId);
-
-    if (note != null) {
-      _currentPath = note.path;
-      _currentContent = note.content;
-      _lastSavedContent = note.content;
-      debugLogger.info('NOTE', 'Opened: $_noteName (${note.content.length} chars)');
-    } else {
-      _currentPath = '';
-      _currentContent = '';
-      _lastSavedContent = '';
-      debugLogger.info('NOTE', 'Note not found: ${widget.noteId}');
-    }
-
-    _setupUpdateListener();
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(currentNotePathProvider.notifier).state = _currentPath;
-      if (mounted) setState(() {});
-    });
-  }
-
-  void _setupUpdateListener() {
-    _updateSubscription?.cancel();
-    _updateSubscription = _repo.noteUpdateEvents?.listen((event) {
-      if (event.newRow.id != widget.noteId) return;
-
-      if (event.newRow.path != _currentPath) {
-        _currentPath = event.newRow.path;
-        ref.read(currentNotePathProvider.notifier).state = _currentPath;
-      }
-
-      if (event.context.isMyTransaction) {
-        _lastSavedContent = event.newRow.content;
-        return;
-      }
-
-      if (event.newRow.content != _currentContent) {
-        debugLogger.sync('External change detected, syncing');
-        _debounceTimer?.cancel();
-        _currentContent = event.newRow.content;
-        _lastSavedContent = event.newRow.content;
-        _quillKey.currentState?.updateContent(event.newRow.content);
-        if (mounted) setState(() {});
-      }
-    });
-
-    _clientSubscription?.cancel();
-    _clientSubscription = _repo.watchClient().listen((client) {
-      if (client != null && _updateSubscription == null) {
-        debugLogger.debug('NOTE', 'Client connected, re-establishing update listener');
-        _setupNoteUpdateListener();
-      }
-    });
-  }
-
-  void _setupNoteUpdateListener() {
-    _updateSubscription?.cancel();
-    _updateSubscription = _repo.noteUpdateEvents?.listen((event) {
-      if (event.newRow.id != widget.noteId) return;
-
-      if (event.newRow.path != _currentPath) {
-        _currentPath = event.newRow.path;
-        ref.read(currentNotePathProvider.notifier).state = _currentPath;
-      }
-
-      if (event.context.isMyTransaction) {
-        _lastSavedContent = event.newRow.content;
-        return;
-      }
-
-      if (event.newRow.content != _currentContent) {
-        debugLogger.sync('External change detected, syncing');
-        _debounceTimer?.cancel();
-        _currentContent = event.newRow.content;
-        _lastSavedContent = event.newRow.content;
-        _quillKey.currentState?.updateContent(event.newRow.content);
-        if (mounted) setState(() {});
-      }
-    });
-  }
-
   @override
   void dispose() {
     final hasPending = _currentContent != _lastSavedContent;
@@ -243,21 +154,6 @@ class _NoteScreenState extends ConsumerState<NoteScreen> {
     );
   }
 
-  void _openMobileChatSheet() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      useRootNavigator: true,
-      backgroundColor: Colors.transparent,
-      barrierColor: Colors.black.withValues(alpha: 0.15),
-      builder: (context) => NoteChatPanel(
-        notePath: _currentPath,
-        onClose: () => Navigator.of(context).pop(),
-        isDesktop: false,
-      ),
-    );
-  }
-
   Widget _buildEditor(Note? note) {
     final content = _currentContent.isNotEmpty ? _currentContent : (note?.content ?? '');
 
@@ -279,6 +175,110 @@ class _NoteScreenState extends ConsumerState<NoteScreen> {
             _saveContent();
           });
         },
+      ),
+    );
+  }
+
+  String get _noteName => _currentPath.split('/').last;
+
+  void _initNote() {
+    _debounceTimer?.cancel();
+    _updateSubscription?.cancel();
+
+    final note = ref.read(notesListProvider).valueOrNull
+        ?.firstWhereOrNull((n) => n.id == widget.noteId);
+
+    if (note != null) {
+      _currentPath = note.path;
+      _currentContent = note.content;
+      _lastSavedContent = note.content;
+      debugLogger.info('NOTE', 'Opened: $_noteName (${note.content.length} chars)');
+    } else {
+      _currentPath = '';
+      _currentContent = '';
+      _lastSavedContent = '';
+      debugLogger.info('NOTE', 'Note not found: ${widget.noteId}');
+    }
+
+    _setupUpdateListener();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(currentNotePathProvider.notifier).state = _currentPath;
+      if (mounted) setState(() {});
+    });
+  }
+
+  void _setupUpdateListener() {
+    _updateSubscription?.cancel();
+    _updateSubscription = _repo.noteUpdateEvents?.listen((event) {
+      if (event.newRow.id != widget.noteId) return;
+
+      if (event.newRow.path != _currentPath) {
+        _currentPath = event.newRow.path;
+        ref.read(currentNotePathProvider.notifier).state = _currentPath;
+      }
+
+      if (event.context.isMyTransaction) {
+        _lastSavedContent = event.newRow.content;
+        return;
+      }
+
+      if (event.newRow.content != _currentContent) {
+        debugLogger.sync('External change detected, syncing');
+        _debounceTimer?.cancel();
+        _currentContent = event.newRow.content;
+        _lastSavedContent = event.newRow.content;
+        _quillKey.currentState?.updateContent(event.newRow.content);
+        if (mounted) setState(() {});
+      }
+    });
+
+    _clientSubscription?.cancel();
+    _clientSubscription = _repo.watchClient().listen((client) {
+      if (client != null && _updateSubscription == null) {
+        debugLogger.debug('NOTE', 'Client connected, re-establishing update listener');
+        _setupNoteUpdateListener();
+      }
+    });
+  }
+
+  void _setupNoteUpdateListener() {
+    _updateSubscription?.cancel();
+    _updateSubscription = _repo.noteUpdateEvents?.listen((event) {
+      if (event.newRow.id != widget.noteId) return;
+
+      if (event.newRow.path != _currentPath) {
+        _currentPath = event.newRow.path;
+        ref.read(currentNotePathProvider.notifier).state = _currentPath;
+      }
+
+      if (event.context.isMyTransaction) {
+        _lastSavedContent = event.newRow.content;
+        return;
+      }
+
+      if (event.newRow.content != _currentContent) {
+        debugLogger.sync('External change detected, syncing');
+        _debounceTimer?.cancel();
+        _currentContent = event.newRow.content;
+        _lastSavedContent = event.newRow.content;
+        _quillKey.currentState?.updateContent(event.newRow.content);
+        if (mounted) setState(() {});
+      }
+    });
+  }
+
+  void _openMobileChatSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      useRootNavigator: true,
+      backgroundColor: Colors.transparent,
+      barrierColor: Colors.black.withValues(alpha: 0.15),
+      builder: (context) => NoteChatPanel(
+        notePath: _currentPath,
+        onClose: () => Navigator.of(context).pop(),
+        isDesktop: false,
       ),
     );
   }

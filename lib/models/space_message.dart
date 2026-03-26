@@ -32,8 +32,8 @@ class SpaceMessage extends Equatable {
     required this.sessionId,
     required this.role,
     required this.created,
-    this.completed,
     required this.parts,
+    this.completed,
     this.isStreaming = false,
     this.sendStatus,
     this.sourceType,
@@ -44,22 +44,19 @@ class SpaceMessage extends Equatable {
 
   factory SpaceMessage.fromJson(Map<String, dynamic> json) {
     // Handle both direct message format and nested info format
-    final info = json['info'] as Map<String, dynamic>?;
-    final time = info?['time'] as Map<String, dynamic>?;
-    
-    // Extract ID from various possible locations
-    final id = info?['id'] as String? ?? 
-               json['id'] as String? ?? 
+    final info = json['info'];
+    final time = info?['time'];
+
+    final id = info?['id'] ??
+               json['id'] ??
                DateTime.now().millisecondsSinceEpoch.toString();
-    
-    // Extract session ID
-    final sessionId = info?['sessionID'] as String? ?? 
-                      json['sessionID'] as String? ?? 
-                      json['sessionId'] as String? ?? '';
-    
-    // Extract role
-    final role = info?['role'] as String? ?? 
-                 json['role'] as String? ?? 
+
+    final sessionId = info?['sessionID'] ??
+                      json['sessionID'] ??
+                      json['sessionId'] ?? '';
+
+    final role = info?['role'] ??
+                 json['role'] ??
                  'assistant';
     
     // Handle timestamps (could be milliseconds or ISO strings)
@@ -95,11 +92,10 @@ class SpaceMessage extends Equatable {
       role: role,
       created: createdTime,
       completed: completedTime,
-      parts: (json['parts'] as List<dynamic>?)
-              ?.map((part) => MessagePart.fromJson(part as Map<String, dynamic>))
-              .toList() ??
-          [],
-      isStreaming: json['isStreaming'] as bool? ?? 
+      parts: (json['parts'] ?? [])
+              .map((part) => MessagePart.fromJson(part ?? {}))
+              .toList(),
+      isStreaming: json['isStreaming'] ??
                    (completedTime == null && role == 'assistant'),
     );
   }
@@ -109,23 +105,20 @@ class SpaceMessage extends Equatable {
   /// Factory constructor specifically for Space API responses
   factory SpaceMessage.fromApiResponse(Map<String, dynamic> json) {
     // Handle both direct message format and nested info format
-    final info = json['info'] as Map<String, dynamic>?;
-    final timeData = info?['time'] as Map<String, dynamic>? ?? json['time'] as Map<String, dynamic>?;
+    final info = json['info'];
+    final timeData = info?['time'] ?? json['time'];
 
-    // Extract ID from various possible locations
-    final messageId = info?['id'] as String? ??
-                      json['id'] as String? ??
+    final messageId = info?['id'] ??
+                      json['id'] ??
                       DateTime.now().millisecondsSinceEpoch.toString();
 
-    // Extract session ID
-    final sessionId = info?['sessionID'] as String? ??
-                      json['sessionID'] as String? ??
-                      json['sessionId'] as String? ??
-                      json['session_id'] as String? ?? '';
+    final sessionId = info?['sessionID'] ??
+                      json['sessionID'] ??
+                      json['sessionId'] ??
+                      json['session_id'] ?? '';
 
-    // Extract role
-    final role = info?['role'] as String? ??
-                 json['role'] as String? ??
+    final role = info?['role'] ??
+                 json['role'] ??
                  'assistant';
 
     // Handle timestamps
@@ -135,10 +128,10 @@ class SpaceMessage extends Equatable {
     if (timeData != null) {
       try {
         if (timeData['created'] != null) {
-          createdTime = DateTime.fromMillisecondsSinceEpoch(timeData['created'] as int);
+          createdTime = DateTime.fromMillisecondsSinceEpoch(timeData['created'] ?? 0);
         }
         if (timeData['completed'] != null) {
-          completedTime = DateTime.fromMillisecondsSinceEpoch(timeData['completed'] as int);
+          completedTime = DateTime.fromMillisecondsSinceEpoch(timeData['completed'] ?? 0);
         }
       } catch (e) {
         print('❌ [SpaceMessage] Error parsing time: $e');
@@ -146,9 +139,9 @@ class SpaceMessage extends Equatable {
     }
     
     // Parse parts - this is the key part that was missing
-    final partsList = json['parts'] as List<dynamic>? ?? [];
+    final partsList = json['parts'] ?? [];
     final parts = partsList.map((partData) {
-      return MessagePart.fromJson(partData as Map<String, dynamic>);
+      return MessagePart.fromJson(partData ?? {});
     }).toList();
     
     
@@ -161,7 +154,7 @@ class SpaceMessage extends Equatable {
       // Check if any text parts are still streaming (no end time)
       for (final part in parts) {
         if (part.type == 'text' && part.metadata != null) {
-          final timeData = part.metadata!['time'] as Map<String, dynamic>?;
+          final timeData = part.metadata!['time'];
           if (timeData != null && timeData['end'] == null) {
             isMessageStreaming = true;
             break;

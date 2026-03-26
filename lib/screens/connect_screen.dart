@@ -25,49 +25,6 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
     super.dispose();
   }
 
-  Future<void> _connect() async {
-    final ip = _ipController.text.trim();
-
-    if (ip.isEmpty) {
-      setState(() {
-        _errorMessage = 'Server address is required';
-      });
-      return;
-    }
-
-    setState(() {
-      _isConnecting = true;
-      _errorMessage = null;
-    });
-
-    try {
-      final configCubit = context.read<ConfigCubit>();
-      await configCubit.updateServer(ip);
-
-      final repository = ref.read(notesRepositoryProvider);
-      await repository.configure(host: '$ip:${ConfigLoaded.spacetimeDbPort}');
-      await repository.connectAndGetInitialData();
-
-      final isConfigured = await repository.isConfigured();
-
-      if (mounted && isConfigured) {
-        context.go('/notes');
-      } else {
-        setState(() {
-          _errorMessage = 'Failed to connect to server';
-          _isConnecting = false;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _errorMessage = 'Connection failed: $e';
-          _isConnecting = false;
-        });
-      }
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Center(
@@ -172,5 +129,48 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
         ),
       ),
     );
+  }
+
+  Future<void> _connect() async {
+    final ip = _ipController.text.trim();
+
+    if (ip.isEmpty) {
+      setState(() {
+        _errorMessage = 'Server address is required';
+      });
+      return;
+    }
+
+    setState(() {
+      _isConnecting = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final configCubit = context.read<ConfigCubit>();
+      await configCubit.updateServer(ip);
+
+      final repository = ref.read(notesRepositoryProvider);
+      await repository.configure(host: '$ip:${ConfigLoaded.spacetimeDbPort}');
+      await repository.connectAndGetInitialData();
+
+      final isConfigured = await repository.isConfigured();
+
+      if (mounted && isConfigured) {
+        context.go('/notes');
+      } else {
+        setState(() {
+          _errorMessage = 'Failed to connect to server';
+          _isConnecting = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _errorMessage = 'Connection failed: $e';
+          _isConnecting = false;
+        });
+      }
+    }
   }
 }

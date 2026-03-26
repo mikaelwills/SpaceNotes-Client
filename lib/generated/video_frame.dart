@@ -52,12 +52,12 @@ class VideoFrame {
 
   factory VideoFrame.fromJson(Map<String, dynamic> json) {
     return VideoFrame(
-      sessionId: Int64((json['sessionId'] as int?) ?? 0),
-      from: Identity.fromJson(json['from'] as String),
-      seq: (json['seq'] as int?) ?? 0,
-      codec: (json['codec'] as int?) ?? 0,
-      isKeyframe: (json['isKeyframe'] as bool?) ?? false,
-      data: (json['data'] as List?)?.cast<int>() ?? [],
+      sessionId: Int64(json['sessionId'] ?? 0),
+      from: Identity.fromJson(json['from'] ?? ''),
+      seq: json['seq'] ?? 0,
+      codec: json['codec'] ?? 0,
+      isKeyframe: json['isKeyframe'] ?? false,
+      data: List<int>.from(json['data'] ?? []),
     );
   }
 

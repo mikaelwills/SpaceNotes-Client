@@ -49,17 +49,6 @@ class _CallScreenState extends ConsumerState<CallScreen> {
     super.dispose();
   }
 
-  Future<void> _startCapture() async {
-    if (_captureStarted) return;
-    _captureStarted = true;
-
-    final callService = ref.read(callServiceProvider);
-    final repo = ref.read(notesRepositoryProvider);
-    callService.setClient(repo.client);
-    await callService.startCapture(widget.sessionId, fps: 25, width: 2560, height: 1440);
-    if (mounted) setState(() {});
-  }
-
   @override
   Widget build(BuildContext context) {
     final sessionAsync = ref.watch(activeCallSessionProvider);
@@ -147,6 +136,17 @@ class _CallScreenState extends ConsumerState<CallScreen> {
     setState(() => _muted = _callService?.audioService?.isMuted ?? false);
   }
 
+  Future<void> _startCapture() async {
+    if (_captureStarted) return;
+    _captureStarted = true;
+
+    final callService = ref.read(callServiceProvider);
+    final repo = ref.read(notesRepositoryProvider);
+    callService.setClient(repo.client);
+    await callService.startCapture(widget.sessionId, fps: 25, width: 2560, height: 1440);
+    if (mounted) setState(() {});
+  }
+
   void _endCall(CallSession session) {
     _callService?.setClient(ref.read(notesRepositoryProvider).client);
     _callService?.endCall(session.sessionId);
@@ -184,6 +184,14 @@ class _RemoteVideoState extends State<_RemoteVideo> {
   }
 
   @override
+  void dispose() {
+    _decodedImage?.dispose();
+    _h264NativeDecoder?.stop();
+    _h264WebDecoder?.stop();
+    super.dispose();
+  }
+
+  @override
   void didUpdateWidget(_RemoteVideo oldWidget) {
     super.didUpdateWidget(oldWidget);
     final frame = widget.remoteFrame.valueOrNull;
@@ -195,47 +203,6 @@ class _RemoteVideoState extends State<_RemoteVideo> {
     } else if (frame.codec == 1) {
       _feedH264Frame(frame);
     }
-  }
-
-  void _feedH264Frame(ReceivedVideoFrame frame) {
-    if (kIsWeb) {
-      _h264WebDecoder ??= WebH264Decoder();
-      if (!_h264WebDecoder!.isStarted) {
-        _h264WebDecoder!.start();
-        if (mounted) setState(() => _usingH264 = true);
-      }
-      _h264WebDecoder!.feedFrame(frame.data, frame.seq, frame.isKeyframe);
-    } else {
-      if (_h264NativeDecoder != null && _h264NativeDecoder!.isStarted) {
-        _h264NativeDecoder!.feedFrame(frame.data, frame.seq, frame.isKeyframe);
-      }
-    }
-    widget.videoStats?.recordDisplay();
-  }
-
-  void _decodeJpeg(Uint8List bytes) {
-    _decoding = true;
-    ui.decodeImageFromList(bytes, (ui.Image image) {
-      if (!mounted) {
-        image.dispose();
-        return;
-      }
-      final old = _decodedImage;
-      setState(() {
-        _decodedImage = image;
-        _decoding = false;
-      });
-      widget.videoStats?.recordDisplay();
-      old?.dispose();
-    });
-  }
-
-  @override
-  void dispose() {
-    _decodedImage?.dispose();
-    _h264NativeDecoder?.stop();
-    _h264WebDecoder?.stop();
-    super.dispose();
   }
 
   @override
@@ -292,6 +259,39 @@ class _RemoteVideoState extends State<_RemoteVideo> {
         return Container(color: SpaceNotesTheme.background);
       },
     );
+  }
+
+  void _feedH264Frame(ReceivedVideoFrame frame) {
+    if (kIsWeb) {
+      _h264WebDecoder ??= WebH264Decoder();
+      if (!_h264WebDecoder!.isStarted) {
+        _h264WebDecoder!.start();
+        if (mounted) setState(() => _usingH264 = true);
+      }
+      _h264WebDecoder!.feedFrame(frame.data, frame.seq, frame.isKeyframe);
+    } else {
+      if (_h264NativeDecoder != null && _h264NativeDecoder!.isStarted) {
+        _h264NativeDecoder!.feedFrame(frame.data, frame.seq, frame.isKeyframe);
+      }
+    }
+    widget.videoStats?.recordDisplay();
+  }
+
+  void _decodeJpeg(Uint8List bytes) {
+    _decoding = true;
+    ui.decodeImageFromList(bytes, (ui.Image image) {
+      if (!mounted) {
+        image.dispose();
+        return;
+      }
+      final old = _decodedImage;
+      setState(() {
+        _decodedImage = image;
+        _decoding = false;
+      });
+      widget.videoStats?.recordDisplay();
+      old?.dispose();
+    });
   }
 }
 

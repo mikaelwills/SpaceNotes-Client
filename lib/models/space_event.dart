@@ -9,55 +9,49 @@ class SpaceEvent extends Equatable {
 
   const SpaceEvent({
     required this.type,
+    required this.timestamp,
     this.sessionId,
     this.messageId,
     this.data,
-    required this.timestamp,
   });
 
   factory SpaceEvent.fromJson(Map<String, dynamic> json) {
     
-    final eventType = json['type'] as String;
+    final eventType = json['type'] ?? '';
     String? sessionId;
     String? messageId;
-    
-    // Try multiple field name variations for session ID at root level
-    sessionId = json['sessionId'] as String? ?? 
-                json['sessionID'] as String? ?? 
-                json['session_id'] as String?;
-    
-    // Try multiple field name variations for message ID at root level
-    messageId = json['messageId'] as String? ?? 
-                json['messageID'] as String? ?? 
-                json['message_id'] as String?;
+
+    sessionId = json['sessionId'] ??
+                json['sessionID'] ??
+                json['session_id'];
+
+    messageId = json['messageId'] ??
+                json['messageID'] ??
+                json['message_id'];
     
     
     // If not found at root level, check nested properties based on event type
     if (sessionId == null || messageId == null) {
       if (json['properties'] is Map<String, dynamic>) {
-        final properties = json['properties'] as Map<String, dynamic>;
+        final properties = json['properties'] ?? {};
 
-        // Check properties.sessionID directly (for session.status, session.idle, etc.)
-        sessionId ??= properties['sessionID'] as String? ?? properties['sessionId'] as String?;
-        messageId ??= properties['messageID'] as String? ?? properties['messageId'] as String?;
+        sessionId ??= properties['sessionID'] ?? properties['sessionId'];
+        messageId ??= properties['messageID'] ?? properties['messageId'];
 
-        // For message.updated and session.updated, info is in properties.info
         if (properties['info'] is Map<String, dynamic>) {
-          final info = properties['info'] as Map<String, dynamic>;
-          sessionId ??= info['sessionID'] as String? ?? info['sessionId'] as String?;
-          messageId ??= info['id'] as String?;
+          final info = properties['info'] ?? {};
+          sessionId ??= info['sessionID'] ?? info['sessionId'];
+          messageId ??= info['id'];
         }
 
-        // For message.part.updated events, session info is in properties.part
         if (properties['part'] is Map<String, dynamic>) {
-          final part = properties['part'] as Map<String, dynamic>;
-          sessionId ??= part['sessionID'] as String? ?? part['sessionId'] as String?;
-          messageId ??= part['messageID'] as String? ?? part['messageId'] as String?;
+          final part = properties['part'] ?? {};
+          sessionId ??= part['sessionID'] ?? part['sessionId'];
+          messageId ??= part['messageID'] ?? part['messageId'];
         }
 
-        // For storage.write events, extract session ID from the key path
         if (eventType == 'storage.write' && properties['key'] is String) {
-          final key = properties['key'] as String;
+          final key = properties['key'] ?? '';
           final keyParts = key.split('/');
           if (keyParts.length >= 3 && keyParts[2].startsWith('ses_')) {
             sessionId ??= keyParts[2];
@@ -67,9 +61,9 @@ class SpaceEvent extends Equatable {
           }
 
           if (properties['content'] is Map<String, dynamic>) {
-            final content = properties['content'] as Map<String, dynamic>;
-            sessionId ??= content['sessionID'] as String? ?? content['sessionId'] as String?;
-            messageId ??= content['messageID'] as String? ?? content['messageId'] as String?;
+            final content = properties['content'] ?? {};
+            sessionId ??= content['sessionID'] ?? content['sessionId'];
+            messageId ??= content['messageID'] ?? content['messageId'];
           }
         }
       }
@@ -81,7 +75,7 @@ class SpaceEvent extends Equatable {
       messageId: messageId,
       data: json,  // Store the entire JSON for later processing
       timestamp: json['timestamp'] != null 
-          ? DateTime.parse(json['timestamp'] as String)
+          ? DateTime.parse(json['timestamp'] ?? '')
           : DateTime.now(),
     );
   }

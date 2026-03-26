@@ -167,13 +167,13 @@ class TitleGenerationService {
     final data = event.data;
     if (data == null) return;
 
-    final properties = data['properties'] as Map<String, dynamic>?;
+    final properties = data['properties'];
     if (properties == null) return;
 
-    final part = properties['part'] as Map<String, dynamic>?;
+    final part = properties['part'];
     if (part == null) return;
 
-    final partType = part['type'] as String?;
+    final partType = part['type'];
     if (partType != 'text') return;
 
     final msgId = event.messageId;
@@ -188,8 +188,8 @@ class TitleGenerationService {
 
     _seenAssistantMessage = true;
 
-    final text = part['text'] as String?;
-    final delta = part['delta'] as String?;
+    final text = part['text'];
+    final delta = part['delta'];
 
     if (text != null) {
       _accumulatedText = text;

@@ -58,19 +58,40 @@ class _NotesSearchBarState extends State<NotesSearchBar> {
     super.dispose();
   }
 
-  void _onTextChanged() {
-    setState(() {});
-  }
-
-  void _onFocusChange() {
-    widget.onFocusChanged?.call(_focusNode.hasFocus);
-  }
-
-  void _handleClear() {
-    widget.controller.clear();
-    widget.onChanged('');
-    widget.onClear?.call();
-    HapticFeedback.lightImpact();
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        TerminalInputField(
+          controller: widget.controller,
+          hintText: widget.hintText ?? 'Search notes...',
+          onChanged: widget.onChanged,
+          focusNode: _focusNode,
+          textInputAction: TextInputAction.newline,
+          keyboardType: TextInputType.multiline,
+          suffixIcon: _buildSuffixIcon(),
+          minHeight: widget.height ?? 48,
+          showBorders: false,
+          dynamicHeight: true,
+        ),
+        if (widget.errorText != null) ...[
+          const SizedBox(height: 4),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Text(
+              widget.errorText!,
+              style: const TextStyle(
+                fontFamily: 'FiraCode',
+                fontSize: 12,
+                color: SpaceNotesTheme.error,
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
   }
 
   Widget? _buildSuffixIcon() {
@@ -147,39 +168,18 @@ class _NotesSearchBarState extends State<NotesSearchBar> {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        TerminalInputField(
-          controller: widget.controller,
-          hintText: widget.hintText ?? 'Search notes...',
-          onChanged: widget.onChanged,
-          focusNode: _focusNode,
-          textInputAction: TextInputAction.newline,
-          keyboardType: TextInputType.multiline,
-          suffixIcon: _buildSuffixIcon(),
-          minHeight: widget.height ?? 48,
-          showBorders: false,
-          dynamicHeight: true,
-        ),
-        if (widget.errorText != null) ...[
-          const SizedBox(height: 4),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: Text(
-              widget.errorText!,
-              style: const TextStyle(
-                fontFamily: 'FiraCode',
-                fontSize: 12,
-                color: SpaceNotesTheme.error,
-              ),
-            ),
-          ),
-        ],
-      ],
-    );
+  void _onTextChanged() {
+    setState(() {});
+  }
+
+  void _onFocusChange() {
+    widget.onFocusChanged?.call(_focusNode.hasFocus);
+  }
+
+  void _handleClear() {
+    widget.controller.clear();
+    widget.onChanged('');
+    widget.onClear?.call();
+    HapticFeedback.lightImpact();
   }
 }

@@ -18,13 +18,13 @@ class ToolEvent extends Equatable {
   });
 
   factory ToolEvent.fromJson(Map<String, dynamic> json) {
-    final ts = json['ts'] as int?;
+    final ts = json['ts'];
     return ToolEvent(
-      session: json['session'] as String? ?? '',
-      project: json['project'] as String? ?? '',
-      task: json['task'] as String? ?? '',
-      tool: json['tool'] as String? ?? '',
-      input: json['input'] as Map<String, dynamic>? ?? {},
+      session: json['session'] ?? '',
+      project: json['project'] ?? '',
+      task: json['task'] ?? '',
+      tool: json['tool'] ?? '',
+      input: json['input'] ?? {},
       timestamp: ts != null
           ? DateTime.fromMillisecondsSinceEpoch(ts)
           : DateTime.now(),

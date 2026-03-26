@@ -19,10 +19,10 @@ class PermissionRequest {
     required this.patterns,
     required this.sessionId,
     required this.messageId,
-    this.callId,
     required this.always,
     required this.metadata,
     required this.created,
+    this.callId,
   });
 
   factory PermissionRequest.fromJson(Map<String, dynamic> json) {
@@ -35,11 +35,11 @@ class PermissionRequest {
     return PermissionRequest(
       id: json['id'] ?? '',
       permission: json['permission'] ?? '',
-      patterns: (json['patterns'] as List?)?.cast<String>() ?? [],
+      patterns: (json['patterns'] ?? []).cast<String>(),
       sessionId: json['sessionID'] ?? '',
       messageId: (tool is Map ? tool['messageID'] : null) ?? '',
       callId: tool is Map ? tool['callID'] : null,
-      always: (json['always'] as List?)?.cast<String>() ?? [],
+      always: (json['always'] ?? []).cast<String>(),
       metadata: json['metadata'] ?? {},
       created: created,
     );

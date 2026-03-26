@@ -42,10 +42,10 @@ class AudioFrame {
 
   factory AudioFrame.fromJson(Map<String, dynamic> json) {
     return AudioFrame(
-      sessionId: Int64((json['sessionId'] as int?) ?? 0),
-      from: Identity.fromJson(json['from'] as String),
-      seq: (json['seq'] as int?) ?? 0,
-      pcm: (json['pcm'] as List?)?.cast<int>() ?? [],
+      sessionId: Int64(json['sessionId'] ?? 0),
+      from: Identity.fromJson(json['from'] ?? ''),
+      seq: json['seq'] ?? 0,
+      pcm: List<int>.from(json['pcm'] ?? []),
     );
   }
 

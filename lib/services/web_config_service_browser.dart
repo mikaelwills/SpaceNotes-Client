@@ -30,7 +30,7 @@ class WebConfigService {
       final config = await _fetchConfig();
 
       if (config != null) {
-        final port = config['spacetimedb_port'] as int?;
+        final port = config['spacetimedb_port'];
 
         if (port != null && currentHost.isNotEmpty) {
           final host = '$currentHost:$port';

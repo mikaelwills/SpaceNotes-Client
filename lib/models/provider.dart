@@ -17,7 +17,7 @@ class Provider {
     if (modelsData is Map<String, dynamic>) {
       // Models is a map where keys are model IDs
       modelsList = modelsData.entries.map((entry) {
-        final modelData = entry.value as Map<String, dynamic>;
+        final modelData = entry.value ?? {};
         // Add the model ID from the key if not present in the data
         if (!modelData.containsKey('id')) {
           modelData['id'] = entry.key;
@@ -27,15 +27,15 @@ class Provider {
     } else if (modelsData is List<dynamic>) {
       // Models is already a list
       modelsList = modelsData
-          .map((modelJson) => Model.fromJson(modelJson as Map<String, dynamic>))
+          .map((modelJson) => Model.fromJson(modelJson ?? {}))
           .toList();
     } else {
       modelsList = [];
     }
     
     return Provider(
-      id: json['id'] as String,
-      name: json['name'] as String,
+      id: json['id'] ?? '',
+      name: json['name'] ?? '',
       models: modelsList,
     );
   }
@@ -62,9 +62,9 @@ class Model {
 
   factory Model.fromJson(Map<String, dynamic> json) {
     return Model(
-      id: json['id'] as String,
-      name: json['name'] as String,
-      description: json['description'] as String?,
+      id: json['id'] ?? '',
+      name: json['name'] ?? '',
+      description: json['description'],
     );
   }
 
@@ -96,7 +96,7 @@ class ProvidersResponse {
     if (providersData is Map<String, dynamic>) {
       // Providers is a map where keys are provider IDs
       providersList = providersData.entries.map((entry) {
-        final providerData = entry.value as Map<String, dynamic>;
+        final providerData = entry.value ?? {};
         // Add the provider ID from the key if not present in the data
         if (!providerData.containsKey('id')) {
           providerData['id'] = entry.key;
@@ -106,7 +106,7 @@ class ProvidersResponse {
     } else if (providersData is List<dynamic>) {
       // Providers is already a list
       providersList = providersData
-          .map((providerJson) => Provider.fromJson(providerJson as Map<String, dynamic>))
+          .map((providerJson) => Provider.fromJson(providerJson ?? {}))
           .toList();
     } else {
       providersList = [];
@@ -116,9 +116,9 @@ class ProvidersResponse {
     Model? defaultModel;
 
     if (json['default'] != null) {
-      final defaultJson = json['default'] as Map<String, dynamic>;
-      final defaultProviderId = defaultJson['providerId'] as String?;
-      final defaultModelId = defaultJson['modelId'] as String?;
+      final defaultJson = json['default'] ?? {};
+      final defaultProviderId = defaultJson['providerId'];
+      final defaultModelId = defaultJson['modelId'];
 
       if (defaultProviderId != null) {
         try {

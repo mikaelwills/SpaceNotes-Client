@@ -66,31 +66,6 @@ class _FolderListItemState extends State<FolderListItem> with SingleTickerProvid
     super.dispose();
   }
 
-  void _handleTap() {
-    if (_swipeOffset != 0) {
-      _animateToOffset(0);
-      return;
-    }
-    HapticFeedback.selectionClick();
-    widget.onTap();
-  }
-
-  void _handleLongPress() {
-    if (widget.onLongPress != null) {
-      HapticFeedback.heavyImpact();
-      widget.onLongPress!();
-    }
-  }
-
-  void _animateToOffset(double target) {
-    _animation = Tween<double>(begin: _swipeOffset, end: target).animate(
-      CurvedAnimation(parent: _animationController, curve: Curves.easeOut),
-    );
-    _animationController.forward(from: 0).then((_) {
-      setState(() => _swipeOffset = target);
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -231,5 +206,30 @@ class _FolderListItemState extends State<FolderListItem> with SingleTickerProvid
         ],
       ),
     );
+  }
+
+  void _handleTap() {
+    if (_swipeOffset != 0) {
+      _animateToOffset(0);
+      return;
+    }
+    HapticFeedback.selectionClick();
+    widget.onTap();
+  }
+
+  void _handleLongPress() {
+    if (widget.onLongPress != null) {
+      HapticFeedback.heavyImpact();
+      widget.onLongPress!();
+    }
+  }
+
+  void _animateToOffset(double target) {
+    _animation = Tween<double>(begin: _swipeOffset, end: target).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeOut),
+    );
+    _animationController.forward(from: 0).then((_) {
+      setState(() => _swipeOffset = target);
+    });
   }
 }

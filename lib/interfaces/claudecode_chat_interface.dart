@@ -110,8 +110,8 @@ class ClaudeCodeChatInterface implements ChatInterface {
 
           case SpaceChannelEventType.permissionRequest:
             final permData = event.permissionData ?? {};
-            final toolName = permData['tool_name'] as String? ?? 'unknown';
-            final description = permData['description'] as String? ?? '';
+            final toolName = permData['tool_name'] ?? 'unknown';
+            final description = permData['description'] ?? '';
             final permMessage = SpaceMessage(
               id: event.id,
               sessionId: _sessionId,

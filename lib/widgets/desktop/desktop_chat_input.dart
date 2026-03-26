@@ -27,58 +27,6 @@ class _DesktopChatInputState extends ConsumerState<DesktopChatInput> {
     super.dispose();
   }
 
-  void _onSend() {
-    final message = _controller.text.trim();
-    if (message.isEmpty && _pendingImageBase64 == null) return;
-
-    context.read<ChatBloc>().add(SendChatMessage(
-      message.isEmpty ? 'What is in this image?' : message,
-      imageBase64: _pendingImageBase64,
-      imageMimeType: _pendingImageMimeType,
-    ));
-    _controller.clear();
-    setState(() {
-      _pendingImageBase64 = null;
-      _pendingImageMimeType = null;
-    });
-  }
-
-  Future<void> _onPickImage() async {
-    try {
-      final picker = ImagePicker();
-      final XFile? image = await picker.pickImage(source: ImageSource.gallery);
-      if (image == null) return;
-
-      debugPrint('[DesktopChatInput] Image selected: ${image.path}, name: ${image.name}');
-
-      final bytes = await image.readAsBytes();
-      debugPrint('[DesktopChatInput] Read ${bytes.length} bytes');
-
-      final base64 = base64Encode(bytes);
-      debugPrint('[DesktopChatInput] Base64 length: ${base64.length}');
-
-      final extension = image.name.split('.').last.toLowerCase();
-      debugPrint('[DesktopChatInput] Extension: $extension');
-
-      final mimeType = switch (extension) {
-        'jpg' || 'jpeg' => 'image/jpeg',
-        'png' => 'image/png',
-        'gif' => 'image/gif',
-        'webp' => 'image/webp',
-        _ => 'image/jpeg',
-      };
-      debugPrint('[DesktopChatInput] MimeType: $mimeType');
-
-      setState(() {
-        _pendingImageBase64 = base64;
-        _pendingImageMimeType = mimeType;
-      });
-    } catch (e, stack) {
-      debugPrint('[DesktopChatInput] Error picking image: $e');
-      debugPrint('[DesktopChatInput] Stack: $stack');
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<ChatBloc, ChatState>(
@@ -153,5 +101,57 @@ class _DesktopChatInputState extends ConsumerState<DesktopChatInput> {
         );
       },
     );
+  }
+
+  void _onSend() {
+    final message = _controller.text.trim();
+    if (message.isEmpty && _pendingImageBase64 == null) return;
+
+    context.read<ChatBloc>().add(SendChatMessage(
+      message.isEmpty ? 'What is in this image?' : message,
+      imageBase64: _pendingImageBase64,
+      imageMimeType: _pendingImageMimeType,
+    ));
+    _controller.clear();
+    setState(() {
+      _pendingImageBase64 = null;
+      _pendingImageMimeType = null;
+    });
+  }
+
+  Future<void> _onPickImage() async {
+    try {
+      final picker = ImagePicker();
+      final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+      if (image == null) return;
+
+      debugPrint('[DesktopChatInput] Image selected: ${image.path}, name: ${image.name}');
+
+      final bytes = await image.readAsBytes();
+      debugPrint('[DesktopChatInput] Read ${bytes.length} bytes');
+
+      final base64 = base64Encode(bytes);
+      debugPrint('[DesktopChatInput] Base64 length: ${base64.length}');
+
+      final extension = image.name.split('.').last.toLowerCase();
+      debugPrint('[DesktopChatInput] Extension: $extension');
+
+      final mimeType = switch (extension) {
+        'jpg' || 'jpeg' => 'image/jpeg',
+        'png' => 'image/png',
+        'gif' => 'image/gif',
+        'webp' => 'image/webp',
+        _ => 'image/jpeg',
+      };
+      debugPrint('[DesktopChatInput] MimeType: $mimeType');
+
+      setState(() {
+        _pendingImageBase64 = base64;
+        _pendingImageMimeType = mimeType;
+      });
+    } catch (e, stack) {
+      debugPrint('[DesktopChatInput] Error picking image: $e');
+      debugPrint('[DesktopChatInput] Stack: $stack');
+    }
   }
 }

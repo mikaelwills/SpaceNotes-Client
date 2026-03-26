@@ -17,11 +17,11 @@ class SessionEvent extends Equatable {
 
   factory SessionEvent.fromJson(Map<String, dynamic> json) {
     return SessionEvent(
-      action: json['action'] as String? ?? '',
-      session: json['session'] as String? ?? '',
-      project: json['project'] as String?,
-      task: json['task'] as String?,
-      isMaster: json['is_master'] as bool?,
+      action: json['action'] ?? '',
+      session: json['session'] ?? '',
+      project: json['project'],
+      task: json['task'],
+      isMaster: json['is_master'],
     );
   }
 

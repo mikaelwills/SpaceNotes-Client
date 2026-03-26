@@ -32,52 +32,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     _loadLogFileCount();
   }
 
-  Future<void> _loadLogFileCount() async {
-    final files = await debugLogger.getLogFiles();
-    if (mounted) {
-      setState(() => _logFileCount = files.length);
-    }
-  }
-
   @override
   void dispose() {
     _serverIpController.dispose();
     _maxNotesController.dispose();
     super.dispose();
-  }
-
-  void _loadCurrentConfig() {
-    final configState = context.read<ConfigCubit>().state;
-    if (configState is ConfigLoaded) {
-      _serverIpController.text =
-          configState.serverIp == '0.0.0.0' ? '' : configState.serverIp;
-    }
-
-    final desktopNotesState = context.read<DesktopNotesBloc>().state;
-    _maxNotesController.text = desktopNotesState.maxOpenNotes.toString();
-  }
-
-  Future<void> _saveServerConfig() async {
-    final ip = _serverIpController.text.trim();
-    if (ip.isEmpty) return;
-
-    setState(() => _isConnecting = true);
-
-    try {
-      final configCubit = context.read<ConfigCubit>();
-      await configCubit.updateServer(ip);
-
-      final repository = ref.read(notesRepositoryProvider);
-      await repository.configure(host: '$ip:${ConfigLoaded.spacetimeDbPort}');
-      await repository.connectAndGetInitialData();
-
-    } catch (e) {
-      debugLogger.error('SETTINGS', 'Failed to connect: $e');
-    } finally {
-      if (mounted) {
-        setState(() => _isConnecting = false);
-      }
-    }
   }
 
   @override
@@ -195,31 +154,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
-  Widget _connectionDot(bool connected, String label) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 8,
-          height: 8,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: connected ? SpaceNotesTheme.success : SpaceNotesTheme.error,
-          ),
-        ),
-        const SizedBox(width: 6),
-        Text(
-          label,
-          style: const TextStyle(
-            fontFamily: 'FiraCode',
-            fontSize: 11,
-            color: SpaceNotesTheme.textSecondary,
-          ),
-        ),
-      ],
-    );
-  }
-
   Widget _buildMaxOpenNotesSection() {
     return Row(
       children: [
@@ -272,6 +206,163 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               ),
               const SizedBox(width: 16),
             ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDebugLogsSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Debug Logs ($_logFileCount)',
+          style: const TextStyle(
+            fontFamily: 'FiraCode',
+            fontSize: 16,
+            color: SpaceNotesTheme.text,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const SizedBox(height: 8),
+        const Text(
+          'Export or save logs to help debug sync issues.',
+          style: TextStyle(
+            fontFamily: 'FiraCode',
+            fontSize: 12,
+            color: SpaceNotesTheme.textSecondary,
+          ),
+        ),
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            Expanded(
+              child: ElevatedButton.icon(
+                onPressed: () async {
+                  await debugLogger.exportToFile();
+                },
+                icon: const Icon(Icons.upload_file, size: 18),
+                label: const Text('Export'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: SpaceNotesTheme.inputSurface,
+                  foregroundColor: SpaceNotesTheme.text,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: ElevatedButton.icon(
+                onPressed: () => _saveLogsToNotes(),
+                icon: const Icon(Icons.note_add, size: 18),
+                label: const Text('To Notes'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: SpaceNotesTheme.inputSurface,
+                  foregroundColor: SpaceNotesTheme.text,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: ElevatedButton.icon(
+                onPressed: () async {
+                  await debugLogger.clearLogs();
+                  await _loadLogFileCount();
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Logs cleared'),
+                        duration: Duration(seconds: 1),
+                      ),
+                    );
+                  }
+                },
+                icon: const Icon(Icons.delete_outline, size: 18),
+                label: const Text('Clear'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: SpaceNotesTheme.inputSurface,
+                  foregroundColor: SpaceNotesTheme.error,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Future<void> _loadLogFileCount() async {
+    final files = await debugLogger.getLogFiles();
+    if (mounted) {
+      setState(() => _logFileCount = files.length);
+    }
+  }
+
+  void _loadCurrentConfig() {
+    final configState = context.read<ConfigCubit>().state;
+    if (configState is ConfigLoaded) {
+      _serverIpController.text =
+          configState.serverIp == '0.0.0.0' ? '' : configState.serverIp;
+    }
+
+    final desktopNotesState = context.read<DesktopNotesBloc>().state;
+    _maxNotesController.text = desktopNotesState.maxOpenNotes.toString();
+  }
+
+  Future<void> _saveServerConfig() async {
+    final ip = _serverIpController.text.trim();
+    if (ip.isEmpty) return;
+
+    setState(() => _isConnecting = true);
+
+    try {
+      final configCubit = context.read<ConfigCubit>();
+      await configCubit.updateServer(ip);
+
+      final repository = ref.read(notesRepositoryProvider);
+      await repository.configure(host: '$ip:${ConfigLoaded.spacetimeDbPort}');
+      await repository.connectAndGetInitialData();
+
+    } catch (e) {
+      debugLogger.error('SETTINGS', 'Failed to connect: $e');
+    } finally {
+      if (mounted) {
+        setState(() => _isConnecting = false);
+      }
+    }
+  }
+
+  Widget _connectionDot(bool connected, String label) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 8,
+          height: 8,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: connected ? SpaceNotesTheme.success : SpaceNotesTheme.error,
+          ),
+        ),
+        const SizedBox(width: 6),
+        Text(
+          label,
+          style: const TextStyle(
+            fontFamily: 'FiraCode',
+            fontSize: 11,
+            color: SpaceNotesTheme.textSecondary,
           ),
         ),
       ],
@@ -395,97 +486,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildDebugLogsSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Debug Logs ($_logFileCount)',
-          style: const TextStyle(
-            fontFamily: 'FiraCode',
-            fontSize: 16,
-            color: SpaceNotesTheme.text,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-        const SizedBox(height: 8),
-        const Text(
-          'Export or save logs to help debug sync issues.',
-          style: TextStyle(
-            fontFamily: 'FiraCode',
-            fontSize: 12,
-            color: SpaceNotesTheme.textSecondary,
-          ),
-        ),
-        const SizedBox(height: 16),
-        Row(
-          children: [
-            Expanded(
-              child: ElevatedButton.icon(
-                onPressed: () async {
-                  await debugLogger.exportToFile();
-                },
-                icon: const Icon(Icons.upload_file, size: 18),
-                label: const Text('Export'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: SpaceNotesTheme.inputSurface,
-                  foregroundColor: SpaceNotesTheme.text,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: ElevatedButton.icon(
-                onPressed: () => _saveLogsToNotes(),
-                icon: const Icon(Icons.note_add, size: 18),
-                label: const Text('To Notes'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: SpaceNotesTheme.inputSurface,
-                  foregroundColor: SpaceNotesTheme.text,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: ElevatedButton.icon(
-                onPressed: () async {
-                  await debugLogger.clearLogs();
-                  await _loadLogFileCount();
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Logs cleared'),
-                        duration: Duration(seconds: 1),
-                      ),
-                    );
-                  }
-                },
-                icon: const Icon(Icons.delete_outline, size: 18),
-                label: const Text('Clear'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: SpaceNotesTheme.inputSurface,
-                  foregroundColor: SpaceNotesTheme.error,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ],
     );
   }
 }

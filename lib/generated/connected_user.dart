@@ -37,9 +37,9 @@ class ConnectedUser {
 
   factory ConnectedUser.fromJson(Map<String, dynamic> json) {
     return ConnectedUser(
-      identity: Identity.fromJson(json['identity'] as String),
-      connectedAt: Int64((json['connectedAt'] as int?) ?? 0),
-      name: (json['name'] as String?) ?? '',
+      identity: Identity.fromJson(json['identity'] ?? ''),
+      connectedAt: Int64(json['connectedAt'] ?? 0),
+      name: json['name'] ?? '',
     );
   }
 

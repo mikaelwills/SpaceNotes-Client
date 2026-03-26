@@ -88,45 +88,6 @@ class _StreamingTextState extends State<StreamingText> with SingleTickerProvider
     super.dispose();
   }
 
-  void _startStreaming() {
-    _timer?.cancel();
-    _timer = Timer.periodic(widget.delay, (timer) {
-      if (_currentIndex < _sanitizedFullText.length) {
-        setState(() {
-          _currentIndex++;
-          while (_currentIndex < _sanitizedFullText.length &&
-                 _isLowSurrogate(_sanitizedFullText.codeUnitAt(_currentIndex))) {
-            _currentIndex++;
-          }
-          _displayedText = _sanitizedFullText.substring(0, _currentIndex);
-        });
-      } else {
-        timer.cancel();
-      }
-    });
-  }
-
-  bool _isLowSurrogate(int codeUnit) {
-    return codeUnit >= 0xDC00 && codeUnit <= 0xDFFF;
-  }
-
-  Widget _buildBlinkingCursor() {
-    return AnimatedBuilder(
-      animation: _cursorAnimation,
-      builder: (context, child) {
-        return Opacity(
-          opacity: _cursorAnimation.value,
-          child: Text(
-            '▌',
-            style: widget.style?.copyWith(
-              color: SpaceNotesTheme.primary,
-            ) ?? const TextStyle(color: SpaceNotesTheme.primary),
-          ),
-        );
-      },
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     if (widget.useMarkdown) {
@@ -189,6 +150,45 @@ class _StreamingTextState extends State<StreamingText> with SingleTickerProvider
         if (widget.isStreaming) _buildBlinkingCursor(),
       ],
     );
+  }
+
+  Widget _buildBlinkingCursor() {
+    return AnimatedBuilder(
+      animation: _cursorAnimation,
+      builder: (context, child) {
+        return Opacity(
+          opacity: _cursorAnimation.value,
+          child: Text(
+            '▌',
+            style: widget.style?.copyWith(
+              color: SpaceNotesTheme.primary,
+            ) ?? const TextStyle(color: SpaceNotesTheme.primary),
+          ),
+        );
+      },
+    );
+  }
+
+  void _startStreaming() {
+    _timer?.cancel();
+    _timer = Timer.periodic(widget.delay, (timer) {
+      if (_currentIndex < _sanitizedFullText.length) {
+        setState(() {
+          _currentIndex++;
+          while (_currentIndex < _sanitizedFullText.length &&
+                 _isLowSurrogate(_sanitizedFullText.codeUnitAt(_currentIndex))) {
+            _currentIndex++;
+          }
+          _displayedText = _sanitizedFullText.substring(0, _currentIndex);
+        });
+      } else {
+        timer.cancel();
+      }
+    });
+  }
+
+  bool _isLowSurrogate(int codeUnit) {
+    return codeUnit >= 0xDC00 && codeUnit <= 0xDFFF;
   }
 
   String _safeTextSanitize(String text, {bool preserveMarkdown = true}) {

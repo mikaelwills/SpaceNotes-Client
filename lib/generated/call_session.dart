@@ -43,10 +43,10 @@ class CallSession {
 
   factory CallSession.fromJson(Map<String, dynamic> json) {
     return CallSession(
-      sessionId: Int64((json['sessionId'] as int?) ?? 0),
-      caller: Identity.fromJson(json['caller'] as String),
-      callee: Identity.fromJson(json['callee'] as String),
-      state: CallState.fromJson(json['state'] as Map<String, dynamic>),
+      sessionId: Int64(json['sessionId'] ?? 0),
+      caller: Identity.fromJson(json['caller'] ?? ''),
+      callee: Identity.fromJson(json['callee'] ?? ''),
+      state: CallState.fromJson(Map<String, dynamic>.from(json['state'] ?? {})),
     );
   }
 

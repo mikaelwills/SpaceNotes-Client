@@ -181,18 +181,6 @@ class _TerminalInputDialogState extends State<TerminalInputDialog> {
     super.dispose();
   }
 
-  void _handleConfirm() {
-    if (_formKey.currentState?.validate() ?? false) {
-      final value = _controller.text.trim();
-      Navigator.of(context).pop(value);
-      widget.onConfirm?.call(value);
-    }
-  }
-
-  void _handleCancel() {
-    Navigator.of(context).pop();
-  }
-
   @override
   Widget build(BuildContext context) {
     return TerminalDialog(
@@ -232,5 +220,17 @@ class _TerminalInputDialogState extends State<TerminalInputDialog> {
         ),
       ],
     );
+  }
+
+  void _handleConfirm() {
+    if (_formKey.currentState?.validate() ?? false) {
+      final value = _controller.text.trim();
+      Navigator.of(context).pop(value);
+      widget.onConfirm?.call(value);
+    }
+  }
+
+  void _handleCancel() {
+    Navigator.of(context).pop();
   }
 }

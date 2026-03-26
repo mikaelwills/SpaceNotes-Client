@@ -53,18 +53,6 @@ class _NoteTab extends ConsumerStatefulWidget {
 class _NoteTabState extends ConsumerState<_NoteTab> {
   bool _isHovered = false;
 
-  String get _displayName {
-    final notes = ref.watch(notesListProvider).valueOrNull;
-    final note = notes?.firstWhereOrNull((n) => n.id == widget.noteId);
-    if (note == null) return 'Loading...';
-
-    final name = note.path.split('/').last;
-    if (name.endsWith('.md')) {
-      return name.substring(0, name.length - 3);
-    }
-    return name;
-  }
-
   @override
   Widget build(BuildContext context) {
     return MouseRegion(
@@ -126,5 +114,17 @@ class _NoteTabState extends ConsumerState<_NoteTab> {
         ),
       ),
     );
+  }
+
+  String get _displayName {
+    final notes = ref.watch(notesListProvider).valueOrNull;
+    final note = notes?.firstWhereOrNull((n) => n.id == widget.noteId);
+    if (note == null) return 'Loading...';
+
+    final name = note.path.split('/').last;
+    if (name.endsWith('.md')) {
+      return name.substring(0, name.length - 3);
+    }
+    return name;
   }
 }
