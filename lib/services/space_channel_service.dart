@@ -117,6 +117,23 @@ class SpaceChannelService {
     return List.unmodifiable(_toolEventsBySession[session] ?? []);
   }
 
+  Stream<SpaceChannelEvent> eventsForSession(String sessionId) {
+    _eventController ??= StreamController<SpaceChannelEvent>.broadcast();
+    return _eventController!.stream.where((e) => e.session == sessionId);
+  }
+
+  void sendMessageToSession(String sessionId, String text) {
+    if (_channel == null) return;
+    final id = 'u${DateTime.now().millisecondsSinceEpoch}-${++_seq}';
+    debugLogger.info('WS', 'SendToSession', 'session=$sessionId, id=$id');
+    _channel!.sink.add(jsonEncode({
+      'type': 'chat',
+      'id': id,
+      'text': text,
+      'session': sessionId,
+    }));
+  }
+
   Stream<SpaceChannelEvent> connect(String url) {
     _url = url;
 
