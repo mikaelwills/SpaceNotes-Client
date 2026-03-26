@@ -1,19 +1,5 @@
 import 'package:equatable/equatable.dart';
-
-class ToolEvent extends Equatable {
-  final String toolName;
-  final String inputSummary;
-  final DateTime timestamp;
-
-  const ToolEvent({
-    required this.toolName,
-    required this.inputSummary,
-    required this.timestamp,
-  });
-
-  @override
-  List<Object?> get props => [toolName, inputSummary, timestamp];
-}
+import '../../models/tool_event.dart';
 
 class SessionInfo extends Equatable {
   final String session;

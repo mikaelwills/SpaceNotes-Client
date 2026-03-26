@@ -201,7 +201,7 @@ class _SessionTile extends StatelessWidget {
                         child: Row(
                           children: [
                             Text(
-                              event.toolName,
+                              event.tool,
                               style: const TextStyle(
                                 fontFamily: 'FiraCode',
                                 fontSize: 10,
@@ -212,7 +212,7 @@ class _SessionTile extends StatelessWidget {
                             const SizedBox(width: 6),
                             Expanded(
                               child: Text(
-                                event.inputSummary,
+                                _formatToolInput(event.input),
                                 style: const TextStyle(
                                   fontFamily: 'FiraCode',
                                   fontSize: 10,
@@ -234,6 +234,20 @@ class _SessionTile extends StatelessWidget {
       ),
     ),
     );
+  }
+
+  String _formatToolInput(Map<String, dynamic> input) {
+    final command = input['command'];
+    if (command is String && command.isNotEmpty) return command;
+    final path = input['file_path'] ?? input['path'];
+    if (path is String && path.isNotEmpty) return path;
+    final pattern = input['pattern'];
+    if (pattern is String && pattern.isNotEmpty) return pattern;
+    final query = input['query'];
+    if (query is String && query.isNotEmpty) return query;
+    if (input.isEmpty) return '';
+    final first = input.values.first;
+    return first is String ? first : first.toString();
   }
 
   String _timeAgo(DateTime dt) {

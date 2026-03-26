@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import '../../models/tool_event.dart';
 
 abstract class SessionEvent extends Equatable {
   const SessionEvent();
@@ -32,16 +33,10 @@ class SessionDisconnected extends SessionEvent {
 }
 
 class SessionToolEventReceived extends SessionEvent {
-  final String session;
-  final String toolName;
-  final String inputSummary;
+  final ToolEvent toolEvent;
 
-  const SessionToolEventReceived({
-    required this.session,
-    required this.toolName,
-    required this.inputSummary,
-  });
+  const SessionToolEventReceived(this.toolEvent);
 
   @override
-  List<Object?> get props => [session, toolName, inputSummary];
+  List<Object?> get props => [toolEvent];
 }

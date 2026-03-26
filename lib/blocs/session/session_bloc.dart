@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../models/session_event.dart' as model;
-import '../../models/tool_event.dart' as model;
+import '../../models/tool_event.dart';
 import '../../services/space_channel_service.dart';
 import 'session_event.dart';
 import 'session_state.dart';
@@ -9,7 +9,7 @@ import 'session_state.dart';
 class SessionBloc extends Bloc<SessionEvent, SessionState> {
   final SpaceChannelService _spaceChannel;
   StreamSubscription<model.SessionEvent>? _sessionSub;
-  StreamSubscription<model.ToolEvent>? _toolSub;
+  StreamSubscription<ToolEvent>? _toolSub;
 
   SessionBloc(this._spaceChannel) : super(const SessionState()) {
     on<SessionConnected>(_onSessionConnected);
@@ -29,11 +29,7 @@ class SessionBloc extends Bloc<SessionEvent, SessionState> {
     });
 
     _toolSub = _spaceChannel.toolEvents.listen((event) {
-      add(SessionToolEventReceived(
-        session: event.session,
-        toolName: event.tool,
-        inputSummary: event.input.toString(),
-      ));
+      add(SessionToolEventReceived(event));
     });
   }
 
@@ -57,15 +53,9 @@ class SessionBloc extends Bloc<SessionEvent, SessionState> {
   }
 
   void _onToolEventReceived(SessionToolEventReceived event, Emitter<SessionState> emit) {
-    final info = state.sessions[event.session];
+    final toolEvent = event.toolEvent;
+    final info = state.sessions[toolEvent.session];
     if (info == null) return;
-
-    final now = DateTime.now();
-    final toolEvent = ToolEvent(
-      toolName: event.toolName,
-      inputSummary: event.inputSummary,
-      timestamp: now,
-    );
 
     final updatedEvents = [...info.recentToolEvents, toolEvent];
     final trimmed = updatedEvents.length > 10
@@ -75,8 +65,8 @@ class SessionBloc extends Bloc<SessionEvent, SessionState> {
     emit(state.copyWith(
       sessions: {
         ...state.sessions,
-        event.session: info.copyWith(
-          lastActivity: now,
+        toolEvent.session: info.copyWith(
+          lastActivity: DateTime.now(),
           recentToolEvents: trimmed,
         ),
       },
