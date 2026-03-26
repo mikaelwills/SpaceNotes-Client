@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:get_it/get_it.dart';
 import '../blocs/session/session_bloc.dart';
 import '../blocs/session/session_state.dart';
 import '../blocs/session_chat/session_chat_bloc.dart';
@@ -30,7 +31,7 @@ class _SessionChatScreenState extends State<SessionChatScreen> {
   @override
   void initState() {
     super.initState();
-    final spaceChannel = context.read<SpaceChannelService>();
+    final spaceChannel = GetIt.I<SpaceChannelService>();
     _toolSub = spaceChannel.toolEvents
         .where((e) => e.session == widget.sessionId)
         .listen(_onToolEvent);
@@ -46,8 +47,7 @@ class _SessionChatScreenState extends State<SessionChatScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final sessionBloc = context.read<SessionBloc>();
-    final info = sessionBloc.state.sessions[widget.sessionId];
+    final info = GetIt.I<SessionBloc>().state.sessions[widget.sessionId];
     final projectName = info?.project ?? widget.sessionId;
 
     return Column(
@@ -63,6 +63,7 @@ class _SessionChatScreenState extends State<SessionChatScreen> {
         ),
         Expanded(
           child: BlocBuilder<SessionChatBloc, SessionChatState>(
+            bloc: GetIt.I<SessionChatBloc>(),
             builder: (context, state) {
               final messages = state.messagesFor(widget.sessionId);
               if (messages.isEmpty) {
