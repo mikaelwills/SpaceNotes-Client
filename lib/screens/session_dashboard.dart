@@ -91,7 +91,7 @@ class _SessionDashboardState extends State<SessionDashboard> {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 12, vertical: 4),
                       itemCount: sessions.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 2),
+                      separatorBuilder: (_, __) => const SizedBox(height: 8),
                       itemBuilder: (context, index) {
                         return _SessionTile(sessionInfo: sessions[index]);
                       },
@@ -119,10 +119,6 @@ class _SessionTile extends StatelessWidget {
       decoration: BoxDecoration(
         color: SpaceNotesTheme.surface,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(
-          color: SpaceNotesTheme.primary.withValues(alpha: 0.1),
-          width: 1,
-        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
