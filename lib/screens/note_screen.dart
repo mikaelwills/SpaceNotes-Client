@@ -11,6 +11,8 @@ import '../widgets/note_chat_panel.dart';
 import '../widgets/adaptive/platform_utils.dart';
 import '../services/debug_logger.dart';
 import '../widgets/keyboard_dismiss_on_scroll.dart';
+import '../theme/spacenotes_theme.dart';
+import 'chat_view.dart';
 
 class NoteScreen extends ConsumerStatefulWidget {
   final String noteId;
@@ -31,6 +33,7 @@ class _NoteScreenState extends ConsumerState<NoteScreen> {
   String _currentContent = '';
   String _lastSavedContent = '';
   bool _isChatOpen = false;
+  double _chatHeight = 0;
 
   late final _repo = ref.read(notesRepositoryProvider);
 
@@ -134,23 +137,80 @@ class _NoteScreenState extends ConsumerState<NoteScreen> {
   }
 
   Widget _buildMobileLayout(Note? note) {
-    return Stack(
+    return Column(
       children: [
-        Padding(
-          padding: const EdgeInsets.only(bottom: 80),
+        Expanded(
           child: _buildEditor(note),
         ),
-        Positioned(
-          left: 0,
-          right: 0,
-          bottom: 0,
-          child: NoteBottomBar(
-            notePath: _currentPath,
-            quillKey: _quillKey,
-            onChatTap: _openMobileChatSheet,
-          ),
+        if (_isChatOpen)
+          _buildMobileChatArea(),
+        NoteBottomBar(
+          notePath: _currentPath,
+          quillKey: _quillKey,
+          onChatTap: () => setState(() {
+            _isChatOpen = !_isChatOpen;
+          }),
+          onSendMessage: () {
+            if (!_isChatOpen) {
+              setState(() => _isChatOpen = true);
+            }
+          },
         ),
       ],
+    );
+  }
+
+  Widget _buildMobileChatArea() {
+    return GestureDetector(
+      onVerticalDragUpdate: (details) {
+        setState(() {
+          _chatHeight -= details.delta.dy;
+          _chatHeight = _chatHeight.clamp(100, MediaQuery.of(context).size.height * 0.6);
+        });
+      },
+      onVerticalDragEnd: (details) {
+        if (_chatHeight < 150 || details.primaryVelocity! > 300) {
+          setState(() {
+            _isChatOpen = false;
+            _chatHeight = 0;
+          });
+        }
+      },
+      child: Container(
+        height: _chatHeight > 0 ? _chatHeight : MediaQuery.of(context).size.height * 0.35,
+        decoration: const BoxDecoration(
+          color: SpaceNotesTheme.background,
+          border: Border(
+            top: BorderSide(color: SpaceNotesTheme.inputSurface, width: 1),
+          ),
+        ),
+        child: Column(
+          children: [
+            _buildChatDragHandle(),
+            const Expanded(
+              child: ChatView(
+                showConnectionStatus: false,
+                showInput: false,
+                messagePadding: EdgeInsets.fromLTRB(8, 4, 8, 8),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildChatDragHandle() {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Container(
+        width: 40,
+        height: 4,
+        decoration: BoxDecoration(
+          color: SpaceNotesTheme.textSecondary.withValues(alpha: 0.3),
+          borderRadius: BorderRadius.circular(2),
+        ),
+      ),
     );
   }
 
@@ -213,23 +273,28 @@ class _NoteScreenState extends ConsumerState<NoteScreen> {
     _updateSubscription = _repo.noteUpdateEvents?.listen((event) {
       if (event.newRow.id != widget.noteId) return;
 
+      debugLogger.info('SYNC_DEBUG', 'NoteScreen update', 'isMyTransaction=${event.context.isMyTransaction}, isOptimistic=${event.context.isOptimistic}, contentChanged=${event.newRow.content != _currentContent}, name=${event.newRow.name}');
+
       if (event.newRow.path != _currentPath) {
         _currentPath = event.newRow.path;
         ref.read(currentNotePathProvider.notifier).state = _currentPath;
       }
 
       if (event.context.isMyTransaction) {
+        debugLogger.info('SYNC_DEBUG', 'Dropped as local echo');
         _lastSavedContent = event.newRow.content;
         return;
       }
 
       if (event.newRow.content != _currentContent) {
-        debugLogger.sync('External change detected, syncing');
+        debugLogger.info('SYNC_DEBUG', 'Applying external update to editor');
         _debounceTimer?.cancel();
         _currentContent = event.newRow.content;
         _lastSavedContent = event.newRow.content;
         _quillKey.currentState?.updateContent(event.newRow.content);
         if (mounted) setState(() {});
+      } else {
+        debugLogger.info('SYNC_DEBUG', 'Content identical, skipping');
       }
     });
 
@@ -247,40 +312,30 @@ class _NoteScreenState extends ConsumerState<NoteScreen> {
     _updateSubscription = _repo.noteUpdateEvents?.listen((event) {
       if (event.newRow.id != widget.noteId) return;
 
+      debugLogger.info('SYNC_DEBUG', 'NoteScreen reconnect update', 'isMyTransaction=${event.context.isMyTransaction}, isOptimistic=${event.context.isOptimistic}, contentChanged=${event.newRow.content != _currentContent}, name=${event.newRow.name}');
+
       if (event.newRow.path != _currentPath) {
         _currentPath = event.newRow.path;
         ref.read(currentNotePathProvider.notifier).state = _currentPath;
       }
 
       if (event.context.isMyTransaction) {
+        debugLogger.info('SYNC_DEBUG', 'Reconnect: dropped as local echo');
         _lastSavedContent = event.newRow.content;
         return;
       }
 
       if (event.newRow.content != _currentContent) {
-        debugLogger.sync('External change detected, syncing');
+        debugLogger.info('SYNC_DEBUG', 'Reconnect: applying external update to editor');
         _debounceTimer?.cancel();
         _currentContent = event.newRow.content;
         _lastSavedContent = event.newRow.content;
         _quillKey.currentState?.updateContent(event.newRow.content);
         if (mounted) setState(() {});
+      } else {
+        debugLogger.info('SYNC_DEBUG', 'Reconnect: content identical, skipping');
       }
     });
-  }
-
-  void _openMobileChatSheet() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      useRootNavigator: true,
-      backgroundColor: Colors.transparent,
-      barrierColor: Colors.black.withValues(alpha: 0.15),
-      builder: (context) => NoteChatPanel(
-        notePath: _currentPath,
-        onClose: () => Navigator.of(context).pop(),
-        isDesktop: false,
-      ),
-    );
   }
 
   Future<void> _saveAndExit() async {
@@ -309,5 +364,4 @@ class _NoteScreenState extends ConsumerState<NoteScreen> {
       debugLogger.error('SAVE', '$_noteName failed: $e');
     }
   }
-
 }

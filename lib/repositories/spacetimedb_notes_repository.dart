@@ -294,6 +294,7 @@ class SpacetimeDbNotesRepository {
 
     final noteUpdateSub = noteTable.updateEventStream.listen((event) {
       if (!_initialSyncComplete) return;
+      debugLogger.info('SYNC_DEBUG', 'Note update event received', 'noteId=${event.newRow.id}, isMyTransaction=${event.context.isMyTransaction}, isOptimistic=${event.context.isOptimistic}, name=${event.newRow.name}');
       _emitCurrentNotesDebounced();
     });
     _subscriptions.add(noteUpdateSub);

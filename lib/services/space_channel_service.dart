@@ -231,7 +231,7 @@ class SpaceChannelService {
   }
 
   void handleRawMessage(String raw) {
-    debugLogger.info('WS', 'RAW', raw.length > 200 ? raw.substring(0, 200) : raw);
+    debugLogger.debug('WS', 'RAW', raw.length > 200 ? raw.substring(0, 200) : raw);
     try {
       final json = jsonDecode(raw) as Map<String, dynamic>;
       final typeStr = json['type'] ?? '';

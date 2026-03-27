@@ -17,14 +17,6 @@ class NoteChatPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (isDesktop) {
-      return _buildDesktopPanel(context);
-    } else {
-      return _buildMobileSheet(context);
-    }
-  }
-
-  Widget _buildDesktopPanel(BuildContext context) {
     return Container(
       width: 400,
       decoration: const BoxDecoration(
@@ -38,7 +30,7 @@ class NoteChatPanel extends StatelessWidget {
       ),
       child: Column(
         children: [
-          _buildHeader(showCloseButton: true),
+          _buildHeader(),
           Expanded(
             child: ChatView(
               showConnectionStatus: false,
@@ -55,77 +47,7 @@ class NoteChatPanel extends StatelessWidget {
     );
   }
 
-  Widget _buildMobileSheet(BuildContext context) {
-    return GestureDetector(
-      onTap: onClose,
-      behavior: HitTestBehavior.opaque,
-      child: DraggableScrollableSheet(
-        initialChildSize: 0.2,
-        minChildSize: 0.15,
-        maxChildSize: 0.9,
-        snap: true,
-        snapSizes: const [0.4, 0.75, 0.9],
-        builder: (context, scrollController) {
-          return GestureDetector(
-            onTap: () {},
-            child: Container(
-              decoration: BoxDecoration(
-                color: SpaceNotesTheme.background,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.3),
-                    blurRadius: 10,
-                    offset: const Offset(0, -2),
-                  ),
-                ],
-              ),
-              child: CustomScrollView(
-                controller: scrollController,
-                slivers: [
-                  SliverToBoxAdapter(
-                    child: Column(
-                      children: [
-                        _buildDragHandle(),
-                        _buildHeader(),
-                      ],
-                    ),
-                  ),
-                  SliverFillRemaining(
-                    child: ChatView(
-                      showConnectionStatus: false,
-                      showInput: false,
-                      customInput: NoteChatInput(
-                        notePath: notePath,
-                        onClose: onClose,
-                      ),
-                      messagePadding: const EdgeInsets.fromLTRB(16, 8, 16, 80),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildDragHandle() {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Container(
-        width: 40,
-        height: 4,
-        decoration: BoxDecoration(
-          color: SpaceNotesTheme.textSecondary.withValues(alpha: 0.3),
-          borderRadius: BorderRadius.circular(2),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHeader({bool showCloseButton = false}) {
+  Widget _buildHeader() {
     final noteName = notePath.split('/').last.replaceAll('.md', '');
 
     return Container(
@@ -155,20 +77,19 @@ class NoteChatPanel extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
             ),
           ),
-          if (showCloseButton)
-            IconButton(
-              onPressed: onClose,
-              icon: const Icon(
-                Icons.close,
-                size: 20,
-                color: SpaceNotesTheme.textSecondary,
-              ),
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(
-                minWidth: 32,
-                minHeight: 32,
-              ),
+          IconButton(
+            onPressed: onClose,
+            icon: const Icon(
+              Icons.close,
+              size: 20,
+              color: SpaceNotesTheme.textSecondary,
             ),
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(
+              minWidth: 32,
+              minHeight: 32,
+            ),
+          ),
         ],
       ),
     );
