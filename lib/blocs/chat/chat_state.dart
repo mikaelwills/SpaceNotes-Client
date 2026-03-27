@@ -63,6 +63,7 @@ class ChatReady extends ChatState {
   final ChatStatus status;
   final bool isReconnectionRefresh;
   final SessionStatus? sessionStatus;
+  final String targetSession;
 
   const ChatReady({
     required this.sessionId,
@@ -70,6 +71,7 @@ class ChatReady extends ChatState {
     this.status = const ChatStatus(),
     this.isReconnectionRefresh = false,
     this.sessionStatus,
+    this.targetSession = 'note-assistant',
   });
 
   bool get isIdle => status.isIdle;
@@ -89,6 +91,7 @@ class ChatReady extends ChatState {
         status,
         isReconnectionRefresh,
         sessionStatus,
+        targetSession,
       ];
 
   ChatReady copyWith({
@@ -97,6 +100,7 @@ class ChatReady extends ChatState {
     ChatStatus? status,
     bool? isReconnectionRefresh,
     SessionStatus? sessionStatus,
+    String? targetSession,
   }) {
     return ChatReady(
       sessionId: sessionId ?? this.sessionId,
@@ -104,6 +108,7 @@ class ChatReady extends ChatState {
       status: status ?? this.status,
       isReconnectionRefresh: isReconnectionRefresh ?? this.isReconnectionRefresh,
       sessionStatus: sessionStatus ?? this.sessionStatus,
+      targetSession: targetSession ?? this.targetSession,
     );
   }
 }

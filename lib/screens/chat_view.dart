@@ -197,10 +197,14 @@ class _ChatViewState extends ConsumerState<ChatView> {
                         final message = messages[index];
                         final isLastMessage = index == messages.length - 1;
                         final isStreamingMessage = isStreaming && isLastMessage;
+                        final session = message.session;
 
                         return TerminalMessage(
                           message: message,
                           isStreaming: isStreamingMessage,
+                          onTap: (session != null && session.isNotEmpty && message.role == 'assistant')
+                              ? () => context.read<ChatBloc>().add(SetTargetSession(session))
+                              : null,
                         );
                       },
                     ),

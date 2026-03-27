@@ -21,6 +21,7 @@ abstract class ChatInterface {
   void onMessageStatusChanged(MessageStatusChanged event, Emitter<ChatState> emit);
   Future<void> onRespondToPermission(RespondToPermission event, Emitter<ChatState> emit);
   void onRefreshState(Emitter<ChatState> emit);
+  void onSetTargetSession(SetTargetSession event, Emitter<ChatState> emit);
 
   void dispose();
 }

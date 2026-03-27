@@ -136,36 +136,72 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
 
   Widget _buildSearchBar(bool isChat) {
     final isChatConnected = ref.watch(chatConnectedProvider).valueOrNull ?? false;
+    final chatState = context.watch<ChatBloc>().state;
+    final targetSession = chatState is ChatReady ? chatState.targetSession : 'note-assistant';
+    final isMainChat = isChat && _getCurrentSessionId() == null;
+
+    String hintText;
+    if (!isChat) {
+      hintText = 'Search notes...';
+    } else if (_getCurrentSessionId() != null) {
+      hintText = '${_getCurrentSessionId()}...';
+    } else {
+      hintText = '$targetSession...';
+    }
 
     return Expanded(
-      child: Container(
-        decoration: BoxDecoration(
-          color: SpaceNotesTheme.inputSurface,
-          borderRadius: BorderRadius.circular(14),
-        ),
-        child: NotesSearchBar(
-          controller: _searchController,
-          height: 48,
-          hintText: isChat
-              ? (_getCurrentSessionId() != null
-                  ? '${_getCurrentSessionId()}...'
-                  : 'Ask AI...')
-              : 'Search notes...',
-          onChanged: isChat ? (_) {} : _onSearchChanged,
-          onFocusChanged: (focused) {
-            setState(() => _isSearchFocused = focused);
-          },
-          onSubmitted: _onSendToAi,
-          showImagePicker: isChatConnected,
-          onImagePickerTap: _onPickImage,
-          hasImageAttached: _pendingImageBase64 != null,
-          onClearImage: () {
-            setState(() {
-              _pendingImageBase64 = null;
-              _pendingImageMimeType = null;
-            });
-          },
-        ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (isMainChat && targetSession != 'note-assistant')
+            GestureDetector(
+              onTap: () => context.read<ChatBloc>().add(const SetTargetSession('note-assistant')),
+              child: Padding(
+                padding: const EdgeInsets.only(left: 4, bottom: 4),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.close, size: 12, color: SpaceNotesTheme.primary),
+                    const SizedBox(width: 4),
+                    Text(
+                      targetSession,
+                      style: SpaceNotesTextStyles.terminal.copyWith(
+                        color: SpaceNotesTheme.primary,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          Container(
+            decoration: BoxDecoration(
+              color: SpaceNotesTheme.inputSurface,
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: NotesSearchBar(
+              controller: _searchController,
+              height: 48,
+              hintText: hintText,
+              onChanged: isChat ? (_) {} : _onSearchChanged,
+              onFocusChanged: (focused) {
+                setState(() => _isSearchFocused = focused);
+              },
+              onSubmitted: _onSendToAi,
+              showImagePicker: isChatConnected,
+              onImagePickerTap: _onPickImage,
+              hasImageAttached: _pendingImageBase64 != null,
+              onClearImage: () {
+                setState(() {
+                  _pendingImageBase64 = null;
+                  _pendingImageMimeType = null;
+                });
+              },
+            ),
+          ),
+        ],
       ),
     );
   }

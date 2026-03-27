@@ -21,6 +21,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     on<RefreshChatStateEvent>((e, emit) => _interface.onRefreshState(emit));
     on<SSEEventReceived>((e, emit) {});
     on<AddUserMessage>((e, emit) {});
+    on<SetTargetSession>((e, emit) => _interface.onSetTargetSession(e, emit));
 
     _interface.setAddEvent(add);
     _interface.initialize();

@@ -99,3 +99,12 @@ class SessionErrorReceived extends ChatEvent {
   @override
   List<Object> get props => [error];
 }
+
+class SetTargetSession extends ChatEvent {
+  final String sessionName;
+
+  const SetTargetSession(this.sessionName);
+
+  @override
+  List<Object> get props => [sessionName];
+}

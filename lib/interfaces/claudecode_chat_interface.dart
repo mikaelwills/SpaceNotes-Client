@@ -22,6 +22,8 @@ class ClaudeCodeChatInterface implements ChatInterface {
 
   static const int _maxMessages = 100;
   static const String _sessionId = 'claude-code';
+  static const String _defaultTargetSession = 'note-assistant';
+  String _targetSession = _defaultTargetSession;
 
   ChatStatus _chatStatus = const ChatStatus();
   void Function(ChatEvent)? _addEvent;
@@ -211,7 +213,7 @@ class ClaudeCodeChatInterface implements ChatInterface {
     _chatStatus = _chatStatus.copyWith(isSending: true);
     emit(_createReadyState());
 
-    _spaceChannel.sendMessage(event.message);
+    _spaceChannel.sendMessageToSession(_targetSession, event.message);
   }
 
   @override
@@ -238,7 +240,7 @@ class ClaudeCodeChatInterface implements ChatInterface {
 
   @override
   Future<void> onRetryMessage(RetryMessage event, Emitter<ChatState> emit) async {
-    _spaceChannel.sendMessage(event.messageContent);
+    _spaceChannel.sendMessageToSession(_targetSession, event.messageContent);
   }
 
   @override
@@ -285,11 +287,18 @@ class ClaudeCodeChatInterface implements ChatInterface {
     emit(_createReadyState());
   }
 
+  @override
+  void onSetTargetSession(SetTargetSession event, Emitter<ChatState> emit) {
+    _targetSession = event.sessionName;
+    emit(_createReadyState());
+  }
+
   ChatReady _createReadyState() {
     return ChatReady(
       sessionId: _sessionId,
       messages: List.from(_messages),
       status: _chatStatus,
+      targetSession: _targetSession,
     );
   }
 

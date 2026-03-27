@@ -15,11 +15,13 @@ import 'streaming_text.dart';
 class TerminalMessage extends StatelessWidget {
   final SpaceMessage message;
   final bool isStreaming;
+  final VoidCallback? onTap;
 
   const TerminalMessage({
     super.key,
     required this.message,
     this.isStreaming = false,
+    this.onTap,
   });
 
   @override
@@ -95,6 +97,7 @@ class TerminalMessage extends StatelessWidget {
     final color = _sourceLabelColor;
 
     return GestureDetector(
+      onTap: onTap,
       onLongPress: () => _copyToClipboard(context, message.content),
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
