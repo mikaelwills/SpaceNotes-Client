@@ -2,6 +2,7 @@ import 'package:equatable/equatable.dart';
 import '../../models/space_message.dart';
 import '../../models/permission_request.dart';
 import '../../models/session_status.dart';
+import '../../models/tool_event.dart';
 
 class ChatStatus extends Equatable {
   final bool isSending;
@@ -64,6 +65,7 @@ class ChatReady extends ChatState {
   final bool isReconnectionRefresh;
   final SessionStatus? sessionStatus;
   final String targetSession;
+  final ToolEvent? activeToolEvent;
 
   const ChatReady({
     required this.sessionId,
@@ -72,6 +74,7 @@ class ChatReady extends ChatState {
     this.isReconnectionRefresh = false,
     this.sessionStatus,
     this.targetSession = 'note-assistant',
+    this.activeToolEvent,
   });
 
   bool get isIdle => status.isIdle;
@@ -92,6 +95,7 @@ class ChatReady extends ChatState {
         isReconnectionRefresh,
         sessionStatus,
         targetSession,
+        activeToolEvent,
       ];
 
   ChatReady copyWith({
@@ -101,6 +105,8 @@ class ChatReady extends ChatState {
     bool? isReconnectionRefresh,
     SessionStatus? sessionStatus,
     String? targetSession,
+    ToolEvent? activeToolEvent,
+    bool clearActiveToolEvent = false,
   }) {
     return ChatReady(
       sessionId: sessionId ?? this.sessionId,
@@ -109,6 +115,7 @@ class ChatReady extends ChatState {
       isReconnectionRefresh: isReconnectionRefresh ?? this.isReconnectionRefresh,
       sessionStatus: sessionStatus ?? this.sessionStatus,
       targetSession: targetSession ?? this.targetSession,
+      activeToolEvent: clearActiveToolEvent ? null : (activeToolEvent ?? this.activeToolEvent),
     );
   }
 }

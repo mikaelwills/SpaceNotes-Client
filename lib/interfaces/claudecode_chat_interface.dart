@@ -10,6 +10,7 @@ import '../blocs/config/config_state.dart';
 import '../models/space_message.dart';
 import '../models/message_part.dart';
 import '../models/permission_request.dart';
+import '../models/tool_event.dart';
 import 'chat_interface.dart';
 
 class ClaudeCodeChatInterface implements ChatInterface {
@@ -19,6 +20,9 @@ class ClaudeCodeChatInterface implements ChatInterface {
   final Map<String, int> _messageIndex = {};
   StreamSubscription? _wsSubscription;
   StreamSubscription? _configSubscription;
+  StreamSubscription<ToolEvent>? _toolSubscription;
+  Timer? _toolHideTimer;
+  ToolEvent? _activeToolEvent;
 
   static const int _maxMessages = 100;
   static const String _sessionId = 'claude-code';
@@ -62,6 +66,22 @@ class ClaudeCodeChatInterface implements ChatInterface {
         : 'ws://0.0.0.0:${ConfigLoaded.claudeCodePort}/ws';
 
     _connectToWebSocket(wsUrl);
+    _subscribeToToolEvents();
+  }
+
+  void _subscribeToToolEvents() {
+    _toolSubscription?.cancel();
+    _toolSubscription = _spaceChannel.toolEvents
+        .where((e) => e.session == _targetSession)
+        .listen((event) {
+      _toolHideTimer?.cancel();
+      _activeToolEvent = event;
+      _addEvent?.call(RefreshChatStateEvent());
+      _toolHideTimer = Timer(const Duration(seconds: 5), () {
+        _activeToolEvent = null;
+        _addEvent?.call(RefreshChatStateEvent());
+      });
+    });
   }
 
   void _connectToWebSocket(String wsUrl) {
@@ -290,6 +310,9 @@ class ClaudeCodeChatInterface implements ChatInterface {
   @override
   void onSetTargetSession(SetTargetSession event, Emitter<ChatState> emit) {
     _targetSession = event.sessionName;
+    _activeToolEvent = null;
+    _toolHideTimer?.cancel();
+    _subscribeToToolEvents();
     emit(_createReadyState());
   }
 
@@ -299,6 +322,7 @@ class ClaudeCodeChatInterface implements ChatInterface {
       messages: List.from(_messages),
       status: _chatStatus,
       targetSession: _targetSession,
+      activeToolEvent: _activeToolEvent,
     );
   }
 
@@ -320,6 +344,8 @@ class ClaudeCodeChatInterface implements ChatInterface {
   void dispose() {
     _configSubscription?.cancel();
     _wsSubscription?.cancel();
+    _toolSubscription?.cancel();
+    _toolHideTimer?.cancel();
     _spaceChannel.dispose();
   }
 }
