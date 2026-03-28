@@ -9,6 +9,7 @@ import 'session_chat_state.dart';
 class SessionChatBloc extends Bloc<SessionChatEvent, SessionChatState> {
   final SpaceChannelService _spaceChannel;
   StreamSubscription<SpaceChannelEvent>? _eventSub;
+  StreamSubscription<HistoryBatchEvent>? _historySub;
 
   static const int _maxMessagesPerSession = 100;
 
@@ -16,6 +17,29 @@ class SessionChatBloc extends Bloc<SessionChatEvent, SessionChatState> {
     on<SessionChatMessageReceived>(_onMessageReceived);
     on<SessionChatSendMessage>(_onSendMessage);
     on<SessionChatSessionRemoved>(_onSessionRemoved);
+    on<SessionChatHistoryReceived>(_onHistoryReceived);
+
+    _historySub = _spaceChannel.historyBatches.listen((batch) {
+      final messages = batch.events
+          .where((e) => e.from == 'assistant' || e.sourceType == SpaceChannelSourceType.webhook)
+          .map((e) => SpaceMessage(
+                id: e.id,
+                sessionId: batch.session,
+                role: 'assistant',
+                created: e.ts != null
+                    ? DateTime.fromMillisecondsSinceEpoch(e.ts!)
+                    : DateTime.now(),
+                parts: [MessagePart(id: e.id, type: 'text', content: e.text ?? '')],
+                sourceType: e.sourceType == SpaceChannelSourceType.webhook ? 'webhook' : 'session',
+                project: e.project,
+                task: e.task,
+                session: batch.session,
+              ))
+          .toList();
+      if (messages.isNotEmpty) {
+        add(SessionChatHistoryReceived(batch.session, messages));
+      }
+    });
 
     _eventSub = _spaceChannel.eventStream.listen((e) {
       if (e.session == null || e.session!.isEmpty) return;
@@ -90,9 +114,29 @@ class SessionChatBloc extends Bloc<SessionChatEvent, SessionChatState> {
     emit(state.copyWith(messagesBySession: updated));
   }
 
+  void _onHistoryReceived(
+      SessionChatHistoryReceived event, Emitter<SessionChatState> emit) {
+    final existing = state.messagesBySession[event.sessionId] ?? [];
+    final existingIds = existing.map((m) => m.id).toSet();
+    final newMessages = event.messages.where((m) => !existingIds.contains(m.id)).toList();
+    if (newMessages.isEmpty) return;
+
+    final merged = [...newMessages, ...existing];
+    if (merged.length > _maxMessagesPerSession) {
+      merged.removeRange(0, merged.length - _maxMessagesPerSession);
+    }
+    emit(state.copyWith(
+      messagesBySession: {
+        ...state.messagesBySession,
+        event.sessionId: merged,
+      },
+    ));
+  }
+
   @override
   Future<void> close() {
     _eventSub?.cancel();
+    _historySub?.cancel();
     return super.close();
   }
 }

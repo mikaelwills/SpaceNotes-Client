@@ -85,6 +85,13 @@ class SpaceChannelFile {
   }
 }
 
+class HistoryBatchEvent {
+  final String session;
+  final List<SpaceChannelEvent> events;
+
+  const HistoryBatchEvent({required this.session, required this.events});
+}
+
 class SpaceChannelService {
   static const int _maxToolEventsPerSession = 50;
 
@@ -92,6 +99,7 @@ class SpaceChannelService {
   StreamController<SpaceChannelEvent>? _eventController;
   StreamController<ToolEvent>? _toolEventController;
   StreamController<SessionEvent>? _sessionEventController;
+  StreamController<HistoryBatchEvent>? _historyController;
   StreamSubscription? _subscription;
   Timer? _reconnectTimer;
   bool _isConnected = false;
@@ -111,6 +119,11 @@ class SpaceChannelService {
   Stream<SessionEvent> get sessionEvents {
     _sessionEventController ??= StreamController<SessionEvent>.broadcast();
     return _sessionEventController!.stream;
+  }
+
+  Stream<HistoryBatchEvent> get historyBatches {
+    _historyController ??= StreamController<HistoryBatchEvent>.broadcast();
+    return _historyController!.stream;
   }
 
   List<ToolEvent> getToolEventsForSession(String session) {
@@ -251,6 +264,11 @@ class SpaceChannelService {
         return;
       }
 
+      if (typeStr == 'history_batch') {
+        _handleHistoryBatch(json);
+        return;
+      }
+
       final event = SpaceChannelEvent.fromJson(json);
       if (_eventController?.isClosed == false) {
         _eventController!.add(event);
@@ -318,6 +336,25 @@ class SpaceChannelService {
     }
   }
 
+  void _handleHistoryBatch(Map<String, dynamic> json) {
+    final String session = json['session'] ?? '';
+    final List<dynamic> messages = json['messages'] ?? [];
+    if (session.isEmpty || messages.isEmpty) return;
+
+    debugLogger.info('WS', 'History batch', 'session=$session, count=${messages.length}');
+
+    final events = <SpaceChannelEvent>[];
+    for (final m in messages) {
+      if (m is Map<String, dynamic>) {
+        events.add(SpaceChannelEvent.fromJson(m));
+      }
+    }
+
+    if (_historyController?.isClosed == false) {
+      _historyController!.add(HistoryBatchEvent(session: session, events: events));
+    }
+  }
+
   void restartConnection() {
     debugLogger.info('WS', 'Restart: Cleaning up');
     _reconnectTimer?.cancel();
@@ -339,6 +376,7 @@ class SpaceChannelService {
     _eventController?.close();
     _toolEventController?.close();
     _sessionEventController?.close();
+    _historyController?.close();
     _isConnected = false;
   }
 }

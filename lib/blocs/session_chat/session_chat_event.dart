@@ -36,3 +36,13 @@ class SessionChatSessionRemoved extends SessionChatEvent {
   @override
   List<Object?> get props => [sessionId];
 }
+
+class SessionChatHistoryReceived extends SessionChatEvent {
+  final String sessionId;
+  final List<SpaceMessage> messages;
+
+  const SessionChatHistoryReceived(this.sessionId, this.messages);
+
+  @override
+  List<Object?> get props => [sessionId, messages];
+}
