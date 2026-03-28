@@ -1,6 +1,8 @@
 import 'package:equatable/equatable.dart';
 import '../../models/tool_event.dart';
 
+enum SessionActivityState { idle, thinking, toolUse }
+
 class SessionInfo extends Equatable {
   final String session;
   final String project;
@@ -8,6 +10,7 @@ class SessionInfo extends Equatable {
   final DateTime connectedAt;
   final DateTime lastActivity;
   final List<ToolEvent> recentToolEvents;
+  final SessionActivityState activityState;
 
   const SessionInfo({
     required this.session,
@@ -16,11 +19,13 @@ class SessionInfo extends Equatable {
     required this.connectedAt,
     required this.lastActivity,
     this.recentToolEvents = const [],
+    this.activityState = SessionActivityState.idle,
   });
 
   SessionInfo copyWith({
     DateTime? lastActivity,
     List<ToolEvent>? recentToolEvents,
+    SessionActivityState? activityState,
   }) {
     return SessionInfo(
       session: session,
@@ -29,6 +34,7 @@ class SessionInfo extends Equatable {
       connectedAt: connectedAt,
       lastActivity: lastActivity ?? this.lastActivity,
       recentToolEvents: recentToolEvents ?? this.recentToolEvents,
+      activityState: activityState ?? this.activityState,
     );
   }
 
@@ -40,6 +46,7 @@ class SessionInfo extends Equatable {
         connectedAt,
         lastActivity,
         recentToolEvents,
+        activityState,
       ];
 }
 

@@ -10,11 +10,13 @@ class SessionBloc extends Bloc<SessionEvent, SessionState> {
   final SpaceChannelService _spaceChannel;
   StreamSubscription<model.SessionEvent>? _sessionSub;
   StreamSubscription<ToolEvent>? _toolSub;
+  StreamSubscription<StatusEvent>? _statusSub;
 
   SessionBloc(this._spaceChannel) : super(const SessionState()) {
     on<SessionConnected>(_onSessionConnected);
     on<SessionDisconnected>(_onSessionDisconnected);
     on<SessionToolEventReceived>(_onToolEventReceived);
+    on<SessionStatusChanged>(_onStatusChanged);
 
     _sessionSub = _spaceChannel.sessionEvents.listen((event) {
       if (event.isConnected) {
@@ -30,6 +32,15 @@ class SessionBloc extends Bloc<SessionEvent, SessionState> {
 
     _toolSub = _spaceChannel.toolEvents.listen((event) {
       add(SessionToolEventReceived(event));
+    });
+
+    _statusSub = _spaceChannel.statusEvents.listen((event) {
+      final activityState = switch (event.state) {
+        'thinking' => SessionActivityState.thinking,
+        'idle' => SessionActivityState.idle,
+        _ => SessionActivityState.idle,
+      };
+      add(SessionStatusChanged(session: event.session, activityState: activityState));
     });
   }
 
@@ -68,6 +79,22 @@ class SessionBloc extends Bloc<SessionEvent, SessionState> {
         toolEvent.session: info.copyWith(
           lastActivity: DateTime.now(),
           recentToolEvents: trimmed,
+          activityState: SessionActivityState.toolUse,
+        ),
+      },
+    ));
+  }
+
+  void _onStatusChanged(SessionStatusChanged event, Emitter<SessionState> emit) {
+    final info = state.sessions[event.session];
+    if (info == null) return;
+
+    emit(state.copyWith(
+      sessions: {
+        ...state.sessions,
+        event.session: info.copyWith(
+          lastActivity: DateTime.now(),
+          activityState: event.activityState,
         ),
       },
     ));
@@ -77,6 +104,7 @@ class SessionBloc extends Bloc<SessionEvent, SessionState> {
   Future<void> close() {
     _sessionSub?.cancel();
     _toolSub?.cancel();
+    _statusSub?.cancel();
     return super.close();
   }
 }

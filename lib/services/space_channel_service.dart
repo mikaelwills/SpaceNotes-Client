@@ -92,6 +92,13 @@ class HistoryBatchEvent {
   const HistoryBatchEvent({required this.session, required this.events});
 }
 
+class StatusEvent {
+  final String session;
+  final String state;
+
+  const StatusEvent({required this.session, required this.state});
+}
+
 class SpaceChannelService {
   static const int _maxToolEventsPerSession = 50;
 
@@ -100,6 +107,7 @@ class SpaceChannelService {
   StreamController<ToolEvent>? _toolEventController;
   StreamController<SessionEvent>? _sessionEventController;
   StreamController<HistoryBatchEvent>? _historyController;
+  StreamController<StatusEvent>? _statusController;
   StreamSubscription? _subscription;
   Timer? _reconnectTimer;
   bool _isConnected = false;
@@ -124,6 +132,11 @@ class SpaceChannelService {
   Stream<HistoryBatchEvent> get historyBatches {
     _historyController ??= StreamController<HistoryBatchEvent>.broadcast();
     return _historyController!.stream;
+  }
+
+  Stream<StatusEvent> get statusEvents {
+    _statusController ??= StreamController<StatusEvent>.broadcast();
+    return _statusController!.stream;
   }
 
   List<ToolEvent> getToolEventsForSession(String session) {
@@ -264,6 +277,11 @@ class SpaceChannelService {
         return;
       }
 
+      if (typeStr == 'status') {
+        _handleStatusEvent(json);
+        return;
+      }
+
       if (typeStr == 'history_batch') {
         _handleHistoryBatch(json);
         return;
@@ -336,6 +354,18 @@ class SpaceChannelService {
     }
   }
 
+  void _handleStatusEvent(Map<String, dynamic> json) {
+    final session = json['session'] ?? '';
+    final sessionState = json['state'] ?? '';
+    if (session.isEmpty || sessionState.isEmpty) return;
+
+    debugLogger.info('WS', 'Status', 'session=$session, state=$sessionState');
+
+    if (_statusController?.isClosed == false) {
+      _statusController!.add(StatusEvent(session: session, state: sessionState));
+    }
+  }
+
   void _handleHistoryBatch(Map<String, dynamic> json) {
     final String session = json['session'] ?? '';
     final List<dynamic> messages = json['messages'] ?? [];
@@ -377,6 +407,7 @@ class SpaceChannelService {
     _toolEventController?.close();
     _sessionEventController?.close();
     _historyController?.close();
+    _statusController?.close();
     _isConnected = false;
   }
 }

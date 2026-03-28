@@ -1,5 +1,6 @@
 import 'package:equatable/equatable.dart';
 import '../../models/tool_event.dart';
+import 'session_state.dart';
 
 abstract class SessionEvent extends Equatable {
   const SessionEvent();
@@ -39,4 +40,14 @@ class SessionToolEventReceived extends SessionEvent {
 
   @override
   List<Object?> get props => [toolEvent];
+}
+
+class SessionStatusChanged extends SessionEvent {
+  final String session;
+  final SessionActivityState activityState;
+
+  const SessionStatusChanged({required this.session, required this.activityState});
+
+  @override
+  List<Object?> get props => [session, activityState];
 }

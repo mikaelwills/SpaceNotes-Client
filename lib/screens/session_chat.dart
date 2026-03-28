@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
 import '../blocs/session/session_bloc.dart';
+import '../blocs/session/session_state.dart';
 import '../blocs/session_chat/session_chat_bloc.dart';
 import '../blocs/session_chat/session_chat_state.dart';
 import '../models/tool_event.dart';
@@ -51,7 +52,15 @@ class _SessionChatScreenState extends State<SessionChatScreen> {
 
     return Column(
       children: [
-        _buildHeader(projectName),
+        BlocBuilder<SessionBloc, SessionState>(
+          bloc: GetIt.I<SessionBloc>(),
+          buildWhen: (prev, curr) {
+            final prevInfo = prev.sessions[widget.sessionId];
+            final currInfo = curr.sessions[widget.sessionId];
+            return prevInfo?.activityState != currInfo?.activityState;
+          },
+          builder: (context, _) => _buildHeader(projectName),
+        ),
         Expanded(
           child: BlocConsumer<SessionChatBloc, SessionChatState>(
             bloc: GetIt.I<SessionChatBloc>(),
@@ -93,6 +102,12 @@ class _SessionChatScreenState extends State<SessionChatScreen> {
   }
 
   Widget _buildHeader(String projectName) {
+    final sessionInfo = GetIt.I<SessionBloc>().state.sessions[widget.sessionId];
+    final activityState = sessionInfo?.activityState ?? SessionActivityState.idle;
+    final isActive = activityState != SessionActivityState.idle;
+    final showToolStatus = _showToolRow && _latestTool != null;
+    final showThinking = activityState == SessionActivityState.thinking && !showToolStatus;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(
@@ -111,7 +126,7 @@ class _SessionChatScreenState extends State<SessionChatScreen> {
                   ),
                 ),
                 AnimatedOpacity(
-                  opacity: _showToolRow && _latestTool != null ? 1.0 : 0.0,
+                  opacity: showToolStatus || showThinking ? 1.0 : 0.0,
                   duration: const Duration(milliseconds: 200),
                   child: Row(
                     children: [
@@ -124,7 +139,16 @@ class _SessionChatScreenState extends State<SessionChatScreen> {
                         ),
                       ),
                       const SizedBox(width: 6),
-                      if (_latestTool != null) ...[
+                      if (showThinking)
+                        Text(
+                          'thinking...',
+                          style: TextStyle(
+                            fontFamily: 'FiraCode',
+                            fontSize: 11,
+                            color: SpaceNotesTheme.textSecondary.withValues(alpha: 0.8),
+                          ),
+                        ),
+                      if (showToolStatus && _latestTool != null) ...[
                         Text(
                           _toolLabel(_latestTool!.tool.toLowerCase()),
                           style: TextStyle(
@@ -156,9 +180,9 @@ class _SessionChatScreenState extends State<SessionChatScreen> {
           Container(
             width: 8,
             height: 8,
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: SpaceNotesTheme.secondary,
+              color: isActive ? SpaceNotesTheme.primary : SpaceNotesTheme.secondary,
             ),
           ),
         ],

@@ -129,14 +129,31 @@ class _SessionTile extends StatelessWidget {
                 width: 36,
                 height: 36,
                 decoration: BoxDecoration(
-                  color: SpaceNotesTheme.secondary.withValues(alpha: 0.15),
+                  color: sessionInfo.activityState != SessionActivityState.idle
+                      ? SpaceNotesTheme.primary.withValues(alpha: 0.15)
+                      : SpaceNotesTheme.secondary.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: const Icon(
-                  Icons.terminal_outlined,
-                  size: 18,
-                  color: SpaceNotesTheme.secondary,
-                ),
+                child: sessionInfo.activityState != SessionActivityState.idle
+                    ? SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: Center(
+                          child: SizedBox(
+                            width: 14,
+                            height: 14,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 1.5,
+                              color: SpaceNotesTheme.primary.withValues(alpha: 0.8),
+                            ),
+                          ),
+                        ),
+                      )
+                    : const Icon(
+                        Icons.terminal_outlined,
+                        size: 18,
+                        color: SpaceNotesTheme.secondary,
+                      ),
               ),
               const SizedBox(width: 12),
               Expanded(
