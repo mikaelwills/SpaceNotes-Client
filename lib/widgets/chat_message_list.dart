@@ -102,7 +102,7 @@ class ChatMessageListState extends State<ChatMessageList> {
 
   Widget _buildScrollToBottomButton() {
     return Positioned(
-      bottom: 100,
+      bottom: 76,
       left: 0,
       right: 0,
       child: Center(
@@ -115,13 +115,18 @@ class ChatMessageListState extends State<ChatMessageList> {
               child: Container(
                 width: 48,
                 height: 48,
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   color: SpaceNotesTheme.inputSurface,
-                  shape: BoxShape.circle,
+                  borderRadius: BorderRadius.circular(14),
                 ),
                 child: IconButton(
                   onPressed: forceScrollToBottom,
                   tooltip: 'Scroll to bottom',
+                  style: IconButton.styleFrom(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
                   icon: const Icon(
                     Icons.arrow_downward,
                     size: 24,
