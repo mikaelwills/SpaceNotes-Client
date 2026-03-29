@@ -10,15 +10,6 @@ external void _jsStartEncoder(int width, int height, int fps, int keyframeInterv
 @JS('SpaceNotesCodecs.stopEncoder')
 external void _jsStopEncoder();
 
-@JS('SpaceNotesCodecs.startDecoder')
-external void _jsStartDecoder(String canvasId);
-
-@JS('SpaceNotesCodecs.decodeFrame')
-external void _jsDecodeFrame(JSUint8Array data, bool isKeyframe);
-
-@JS('SpaceNotesCodecs.stopDecoder')
-external void _jsStopDecoder();
-
 class WebVideoCaptureService implements VideoCaptureService {
   final _frameController = StreamController<CapturedFrame>.broadcast();
   bool _isCapturing = false;

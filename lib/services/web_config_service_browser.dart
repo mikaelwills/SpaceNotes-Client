@@ -15,7 +15,9 @@ class WebConfigService {
         const Duration(seconds: 2),
       );
       if (response.statusCode == 200) {
-        _cachedConfig = jsonDecode(response.body) as Map<String, dynamic>;
+        final decoded = jsonDecode(response.body);
+        if (decoded is! Map<String, dynamic>) return null;
+        _cachedConfig = decoded;
         return _cachedConfig;
       }
     } catch (e) {

@@ -7,7 +7,8 @@ import '../blocs/session/session_state.dart';
 import '../blocs/session_chat/session_chat_bloc.dart';
 import '../blocs/session_chat/session_chat_state.dart';
 import '../models/tool_event.dart';
-import '../services/space_channel_service.dart';
+import '../services/space_channel/session_activity_event.dart';
+import '../services/space_channel/space_channel_service.dart';
 import '../theme/spacenotes_theme.dart';
 import '../widgets/keyboard_dismiss_on_scroll.dart';
 import '../widgets/terminal_message.dart';
@@ -23,7 +24,7 @@ class SessionChatScreen extends StatefulWidget {
 
 class _SessionChatScreenState extends State<SessionChatScreen> {
   final _scrollController = ScrollController();
-  StreamSubscription<ToolEvent>? _toolSub;
+  StreamSubscription<SessionActivityEvent>? _activitySub;
   Timer? _hideTimer;
   ToolEvent? _latestTool;
   bool _showToolRow = false;
@@ -32,14 +33,14 @@ class _SessionChatScreenState extends State<SessionChatScreen> {
   void initState() {
     super.initState();
     final spaceChannel = GetIt.I<SpaceChannelService>();
-    _toolSub = spaceChannel.toolEvents
-        .where((e) => e.session == widget.sessionId)
-        .listen(_onToolEvent);
+    _activitySub = spaceChannel.sessionActivity
+        .where((a) => a.session == widget.sessionId && a.type == SessionActivityType.toolUse)
+        .listen((a) => _onToolEvent(a.toolEvent!));
   }
 
   @override
   void dispose() {
-    _toolSub?.cancel();
+    _activitySub?.cancel();
     _hideTimer?.cancel();
     _scrollController.dispose();
     super.dispose();

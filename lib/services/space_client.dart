@@ -393,8 +393,11 @@ class SpaceClient {
       ).timeout(const Duration(seconds: 5));
 
       if (response.statusCode == 200) {
-        final data = json.decode(response.body) as Map<String, dynamic>;
-        return SessionStatus.fromJson(data);
+        final decoded = json.decode(response.body);
+        if (decoded is! Map<String, dynamic>) {
+          throw Exception('Unexpected response format');
+        }
+        return SessionStatus.fromJson(decoded);
       } else {
         throw Exception('Failed to get session status: ${response.statusCode}');
       }

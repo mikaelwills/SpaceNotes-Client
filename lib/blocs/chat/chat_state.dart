@@ -1,7 +1,6 @@
 import 'package:equatable/equatable.dart';
 import '../../models/space_message.dart';
 import '../../models/permission_request.dart';
-import '../../models/session_status.dart';
 import '../../models/tool_event.dart';
 
 class ChatStatus extends Equatable {
@@ -62,19 +61,17 @@ class ChatReady extends ChatState {
   final String sessionId;
   final List<SpaceMessage> messages;
   final ChatStatus status;
-  final bool isReconnectionRefresh;
-  final SessionStatus? sessionStatus;
   final String targetSession;
   final ToolEvent? activeToolEvent;
+  final bool isThinking;
 
   const ChatReady({
     required this.sessionId,
     this.messages = const [],
     this.status = const ChatStatus(),
-    this.isReconnectionRefresh = false,
-    this.sessionStatus,
     this.targetSession = 'note-assistant',
     this.activeToolEvent,
+    this.isThinking = false,
   });
 
   bool get isIdle => status.isIdle;
@@ -92,30 +89,27 @@ class ChatReady extends ChatState {
         sessionId,
         messages,
         status,
-        isReconnectionRefresh,
-        sessionStatus,
         targetSession,
         activeToolEvent,
+        isThinking,
       ];
 
   ChatReady copyWith({
     String? sessionId,
     List<SpaceMessage>? messages,
     ChatStatus? status,
-    bool? isReconnectionRefresh,
-    SessionStatus? sessionStatus,
     String? targetSession,
     ToolEvent? activeToolEvent,
     bool clearActiveToolEvent = false,
+    bool? isThinking,
   }) {
     return ChatReady(
       sessionId: sessionId ?? this.sessionId,
       messages: messages ?? this.messages,
       status: status ?? this.status,
-      isReconnectionRefresh: isReconnectionRefresh ?? this.isReconnectionRefresh,
-      sessionStatus: sessionStatus ?? this.sessionStatus,
       targetSession: targetSession ?? this.targetSession,
       activeToolEvent: clearActiveToolEvent ? null : (activeToolEvent ?? this.activeToolEvent),
+      isThinking: isThinking ?? this.isThinking,
     );
   }
 }

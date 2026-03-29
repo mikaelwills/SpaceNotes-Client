@@ -170,7 +170,6 @@ class _RemoteVideoState extends State<_RemoteVideo> {
   H264DecoderService? _h264NativeDecoder;
   WebH264Decoder? _h264WebDecoder;
   bool _usingH264 = false;
-  bool _decoderStarting = false;
 
   @override
   void initState() {
@@ -401,7 +400,9 @@ class _LocalPreview extends StatelessWidget {
 
     int textureId = -1;
     try {
-      textureId = (capture as dynamic).previewTextureId as int;
+      final dynamic cap = capture;
+      final id = cap.previewTextureId;
+      if (id is int) textureId = id;
     } catch (_) {}
 
     if (textureId >= 0) {

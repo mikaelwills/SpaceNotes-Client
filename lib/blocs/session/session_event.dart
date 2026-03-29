@@ -51,3 +51,12 @@ class SessionStatusChanged extends SessionEvent {
   @override
   List<Object?> get props => [session, activityState];
 }
+
+class SessionMessageReceived extends SessionEvent {
+  final String session;
+
+  const SessionMessageReceived(this.session);
+
+  @override
+  List<Object?> get props => [session];
+}

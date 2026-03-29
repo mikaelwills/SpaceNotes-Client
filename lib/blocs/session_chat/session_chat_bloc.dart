@@ -48,7 +48,7 @@ class SessionChatBloc extends Bloc<SessionChatEvent, SessionChatState> {
       final isWebhook = e.sourceType == SpaceChannelSourceType.webhook;
 
       if (isAssistantMsg || isWebhook) {
-        final role = 'assistant';
+        const role = 'assistant';
         final message = SpaceMessage(
           id: e.id,
           sessionId: e.session!,

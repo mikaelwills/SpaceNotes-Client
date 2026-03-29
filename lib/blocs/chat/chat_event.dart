@@ -1,6 +1,4 @@
 import 'package:equatable/equatable.dart';
-import '../../models/space_event.dart';
-import '../../models/space_message.dart';
 import '../../models/permission_request.dart';
 
 abstract class ChatEvent extends Equatable {
@@ -25,28 +23,9 @@ class SendChatMessage extends ChatEvent {
 
 class CancelCurrentOperation extends ChatEvent {}
 
-// SSE-related events (merged from MessageBloc)
-class SSEEventReceived extends ChatEvent {
-  final SpaceEvent event;
-
-  const SSEEventReceived(this.event);
-
-  @override
-  List<Object> get props => [event];
-}
-
 class ClearMessages extends ChatEvent {}
 
 class ClearChat extends ChatEvent {}
-
-class AddUserMessage extends ChatEvent {
-  final String content;
-
-  const AddUserMessage(this.content);
-
-  @override
-  List<Object> get props => [content];
-}
 
 class RetryMessage extends ChatEvent {
   final String messageContent;
@@ -66,17 +45,7 @@ class DeleteQueuedMessage extends ChatEvent {
   List<Object> get props => [messageContent];
 }
 
-// Internal event for refreshing chat state during reconnection
 class RefreshChatStateEvent extends ChatEvent {}
-
-class MessageStatusChanged extends ChatEvent {
-  final MessageSendStatus status;
-
-  const MessageStatusChanged(this.status);
-
-  @override
-  List<Object> get props => [status];
-}
 
 class RespondToPermission extends ChatEvent {
   final String permissionId;

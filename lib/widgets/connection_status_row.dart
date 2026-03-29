@@ -52,6 +52,7 @@ class _ConnectionStatusRowState extends State<ConnectionStatusRow>
         final toolEvent = chatState is ChatReady
             ? chatState.activeToolEvent
             : null;
+        final isThinking = chatState is ChatReady && chatState.isThinking;
 
         final displayName = targetSession
             .split('-')
@@ -82,7 +83,7 @@ class _ConnectionStatusRowState extends State<ConnectionStatusRow>
                         ),
                       ],
                     ),
-                    _buildToolRow(toolEvent),
+                    _buildToolRow(toolEvent, isThinking),
                   ],
                 ),
               ),
@@ -129,9 +130,11 @@ class _ConnectionStatusRowState extends State<ConnectionStatusRow>
     return dot;
   }
 
-  Widget _buildToolRow(ToolEvent? toolEvent) {
+  Widget _buildToolRow(ToolEvent? toolEvent, bool isThinking) {
+    final showRow = toolEvent != null || isThinking;
+    final showThinking = isThinking && toolEvent == null;
     return AnimatedOpacity(
-      opacity: toolEvent != null ? 1.0 : 0.0,
+      opacity: showRow ? 1.0 : 0.0,
       duration: const Duration(milliseconds: 200),
       child: Padding(
         padding: const EdgeInsets.only(left: 16, top: 2),
@@ -146,6 +149,15 @@ class _ConnectionStatusRowState extends State<ConnectionStatusRow>
               ),
             ),
             const SizedBox(width: 6),
+            if (showThinking)
+              Text(
+                'thinking...',
+                style: TextStyle(
+                  fontFamily: 'FiraCode',
+                  fontSize: 11,
+                  color: SpaceNotesTheme.textSecondary.withValues(alpha: 0.8),
+                ),
+              ),
             if (toolEvent != null) ...[
               Text(
                 _toolLabel(toolEvent.tool.toLowerCase()),
