@@ -55,23 +55,16 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
     final folderPath = ref.watch(currentFolderPathProvider);
     final notePath = ref.watch(currentNotePathProvider);
 
-    return BlocBuilder<ChatBloc, ChatState>(
-      builder: (context, chatState) {
-        final isWorking = chatState is ChatReady && chatState.isWorking;
-
-        return Stack(
-          children: [
-            _buildGradientBackground(),
-            _buildInputRow(
-              viewType: viewType,
-              isChat: isChat,
-              folderPath: folderPath,
-              notePath: notePath,
-              isWorking: isWorking,
-            ),
-          ],
-        );
-      },
+    return Stack(
+      children: [
+        _buildGradientBackground(),
+        _buildInputRow(
+          viewType: viewType,
+          isChat: isChat,
+          folderPath: folderPath,
+          notePath: notePath,
+        ),
+      ],
     );
   }
 
@@ -97,7 +90,6 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
     required bool isChat,
     required String folderPath,
     required String? notePath,
-    required bool isWorking,
   }) {
     if (viewType == HomeViewType.note ||
         viewType == HomeViewType.sessions) {
@@ -126,7 +118,7 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
           ],
           _buildSearchBar(isChat || isSessionChat),
           const SizedBox(width: 8),
-          _buildRightButtons(isChat || isSessionChat, isWorking, folderPath),
+          _buildRightButtons(isChat || isSessionChat, folderPath),
         ],
       ),
     );
@@ -134,7 +126,7 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
 
   Widget _buildSearchBar(bool isChat) {
     final isChatConnected = ref.watch(chatConnectedProvider).valueOrNull ?? false;
-    final chatState = context.watch<ChatBloc>().state;
+    final chatState = context.read<ChatBloc>().state;
     final targetSession = chatState is ChatReady ? chatState.targetSession : 'note-assistant';
 
     String hintText;
@@ -181,20 +173,30 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
     );
   }
 
-  Widget _buildRightButtons(bool isChat, bool isWorking, String folderPath) {
+  Widget _buildRightButtons(bool isChat, String folderPath) {
     if (isChat) {
-      return isWorking
-          ? _buildRoundedButton(
-              onPressed: () =>
-                  context.read<ChatBloc>().add(CancelCurrentOperation()),
-              tooltip: 'Cancel',
-              icon: Icons.stop,
-            )
-          : _buildRoundedButton(
-              onPressed: _onSendToAi,
-              tooltip: 'Send to AI',
-              icon: Icons.arrow_upward,
-            );
+      return BlocBuilder<ChatBloc, ChatState>(
+        buildWhen: (prev, curr) {
+          final prevWorking = prev is ChatReady && prev.isWorking;
+          final currWorking = curr is ChatReady && curr.isWorking;
+          return prevWorking != currWorking;
+        },
+        builder: (context, chatState) {
+          final isWorking = chatState is ChatReady && chatState.isWorking;
+          return isWorking
+              ? _buildRoundedButton(
+                  onPressed: () =>
+                      context.read<ChatBloc>().add(CancelCurrentOperation()),
+                  tooltip: 'Cancel',
+                  icon: Icons.stop,
+                )
+              : _buildRoundedButton(
+                  onPressed: _onSendToAi,
+                  tooltip: 'Send to AI',
+                  icon: Icons.arrow_upward,
+                );
+        },
+      );
     } else if (_isSearchFocused || _searchController.text.isNotEmpty) {
       return _buildRoundedButton(
         onPressed: _onSendToAi,
