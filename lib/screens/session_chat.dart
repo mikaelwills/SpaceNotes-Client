@@ -61,7 +61,6 @@ class _SessionChatScreenState extends State<SessionChatScreen> {
                 key: _messageListKey,
                 messages: List.from(messages),
                 padding: const EdgeInsets.fromLTRB(4, 8, 4, 80),
-                showScrollToBottom: false,
                 maxWidth: double.infinity,
               );
             },
