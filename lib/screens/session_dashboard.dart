@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
 import 'package:go_router/go_router.dart';
-import '../blocs/session/session_bloc.dart';
-import '../blocs/session/session_state.dart';
+import '../blocs/chat/chat_bloc.dart';
+import '../blocs/chat/chat_state.dart';
 import '../theme/spacenotes_theme.dart';
 
 class SessionDashboard extends StatefulWidget {
@@ -14,21 +14,23 @@ class SessionDashboard extends StatefulWidget {
 }
 
 class _SessionDashboardState extends State<SessionDashboard> {
-  late final SessionBloc _sessionBloc;
+  late final ChatBloc _chatBloc;
 
   @override
   void initState() {
     super.initState();
-    _sessionBloc = GetIt.I<SessionBloc>();
+    _chatBloc = GetIt.I<ChatBloc>();
   }
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<SessionBloc, SessionState>(
-      bloc: _sessionBloc,
+    return BlocBuilder<ChatBloc, ChatState>(
+      bloc: _chatBloc,
       builder: (context, state) {
-        final sessions = state.sessions.values.toList()
-          ..sort((a, b) => b.lastActivity.compareTo(a.lastActivity));
+        final sessions = state is ChatReady
+            ? (state.sessions.values.toList()
+              ..sort((a, b) => b.lastActivity.compareTo(a.lastActivity)))
+            : <SessionInfo>[];
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,

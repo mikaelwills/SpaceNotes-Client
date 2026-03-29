@@ -1,6 +1,9 @@
 import 'dart:async';
 import 'dart:convert';
+import 'package:get_it/get_it.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
+import '../../blocs/config/config_cubit.dart';
+import '../../blocs/config/config_state.dart';
 import '../../models/session_event.dart';
 import '../../models/tool_event.dart';
 import '../debug_logger.dart';
@@ -14,7 +17,9 @@ class SpaceChannelService {
   StreamController<SpaceChannelEvent>? _eventController;
   StreamController<HistoryBatchEvent>? _historyController;
   StreamController<SessionActivityEvent>? _activityController;
+  final StreamController<bool> _connectionController = StreamController<bool>.broadcast();
   StreamSubscription? _subscription;
+  StreamSubscription? _configSub;
   Timer? _reconnectTimer;
   bool _isConnected = false;
   int _reconnectAttempts = 0;
@@ -23,6 +28,8 @@ class SpaceChannelService {
 
   bool get isConnected => _isConnected;
   bool get isActive => _eventController != null && !_eventController!.isClosed;
+
+  Stream<bool> get connectionState => _connectionController.stream;
 
   Stream<SpaceChannelEvent> get eventStream {
     _eventController ??= StreamController<SpaceChannelEvent>.broadcast();
@@ -39,6 +46,40 @@ class SpaceChannelService {
     return _activityController!.stream;
   }
 
+  void initialize() {
+    final configCubit = GetIt.I<ConfigCubit>();
+
+    _configSub = configCubit.stream.listen((state) {
+      if (state is ConfigLoaded) {
+        final newUrl = state.claudeCodeWsUrl;
+        if (newUrl != _url) {
+          debugLogger.info('WS', 'Config changed, reconnecting', newUrl);
+          _connectToUrl(newUrl);
+        }
+      }
+    });
+
+    final configState = configCubit.state;
+    final wsUrl = configState is ConfigLoaded
+        ? configState.claudeCodeWsUrl
+        : 'ws://0.0.0.0:${ConfigLoaded.claudeCodePort}/ws';
+
+    _connectToUrl(wsUrl);
+  }
+
+  void _connectToUrl(String url) {
+    _url = url;
+    _reconnectTimer?.cancel();
+    _subscription?.cancel();
+    _channel?.sink.close();
+    _isConnected = false;
+    _reconnectAttempts = 0;
+    _channel = null;
+
+    _eventController ??= StreamController<SpaceChannelEvent>.broadcast();
+    _connectWebSocket();
+  }
+
   void sendMessageToSession(String sessionId, String text) {
     if (_channel == null) return;
     final id = 'u${DateTime.now().millisecondsSinceEpoch}-${++_seq}';
@@ -49,18 +90,6 @@ class SpaceChannelService {
       'text': text,
       'session': sessionId,
     }));
-  }
-
-  Stream<SpaceChannelEvent> connect(String url) {
-    _url = url;
-
-    if (_eventController != null && !_eventController!.isClosed) {
-      return _eventController!.stream;
-    }
-
-    _eventController = StreamController<SpaceChannelEvent>.broadcast();
-    _connectWebSocket();
-    return _eventController!.stream;
   }
 
   void _connectWebSocket() {
@@ -75,10 +104,11 @@ class SpaceChannelService {
       _channel!.ready.then((_) {
         _isConnected = true;
         _reconnectAttempts = 0;
+        _connectionController.add(true);
         debugLogger.info('WS', 'Connected');
       }).catchError((error) {
         debugLogger.error('WS', 'Connection failed', error.toString());
-        _isConnected = false;
+        _setDisconnected();
         _reconnect();
       });
 
@@ -88,7 +118,7 @@ class SpaceChannelService {
         },
         onError: (error) {
           debugLogger.error('WS', 'Stream error', error.toString());
-          _isConnected = false;
+          _setDisconnected();
           if (_eventController?.isClosed == false) {
             _eventController!.addError(error);
           }
@@ -96,15 +126,22 @@ class SpaceChannelService {
         },
         onDone: () {
           debugLogger.info('WS', 'Stream done', 'will reconnect');
-          _isConnected = false;
+          _setDisconnected();
           _reconnect();
         },
         cancelOnError: false,
       );
     } catch (e) {
       debugLogger.error('WS', 'Connect failed', e.toString());
-      _isConnected = false;
+      _setDisconnected();
       _reconnect();
+    }
+  }
+
+  void _setDisconnected() {
+    if (_isConnected) {
+      _isConnected = false;
+      _connectionController.add(false);
     }
   }
 
@@ -259,26 +296,15 @@ class SpaceChannelService {
     }
   }
 
-  void restartConnection() {
-    debugLogger.info('WS', 'Restart: Cleaning up');
-    _reconnectTimer?.cancel();
-    _subscription?.cancel();
-    _channel?.sink.close();
-
-    _isConnected = false;
-    _reconnectAttempts = 0;
-    _channel = null;
-
-    _connectWebSocket();
-  }
-
   void dispose() {
+    _configSub?.cancel();
     _reconnectTimer?.cancel();
     _subscription?.cancel();
     _channel?.sink.close();
     _eventController?.close();
     _historyController?.close();
     _activityController?.close();
+    _connectionController.close();
     _isConnected = false;
   }
 }

@@ -2,10 +2,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
-import '../blocs/session/session_bloc.dart';
-import '../blocs/session/session_state.dart';
-import '../blocs/session_chat/session_chat_bloc.dart';
-import '../blocs/session_chat/session_chat_state.dart';
+import '../blocs/chat/chat_bloc.dart';
+import '../blocs/chat/chat_state.dart';
 import '../models/tool_event.dart';
 import '../services/space_channel/session_activity_event.dart';
 import '../services/space_channel/space_channel_service.dart';
@@ -48,32 +46,41 @@ class _SessionChatScreenState extends State<SessionChatScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final info = GetIt.I<SessionBloc>().state.sessions[widget.sessionId];
-    final projectName = info?.project ?? widget.sessionId;
-
     return Column(
       children: [
-        BlocBuilder<SessionBloc, SessionState>(
-          bloc: GetIt.I<SessionBloc>(),
+        BlocBuilder<ChatBloc, ChatState>(
+          bloc: GetIt.I<ChatBloc>(),
           buildWhen: (prev, curr) {
+            if (prev is! ChatReady || curr is! ChatReady) return true;
             final prevInfo = prev.sessions[widget.sessionId];
             final currInfo = curr.sessions[widget.sessionId];
             return prevInfo?.activityState != currInfo?.activityState;
           },
-          builder: (context, _) => _buildHeader(projectName),
+          builder: (context, state) {
+            final info = state is ChatReady ? state.sessions[widget.sessionId] : null;
+            final projectName = info?.project ?? widget.sessionId;
+            return _buildHeader(projectName, info);
+          },
         ),
         Expanded(
-          child: BlocConsumer<SessionChatBloc, SessionChatState>(
-            bloc: GetIt.I<SessionChatBloc>(),
+          child: BlocConsumer<ChatBloc, ChatState>(
+            bloc: GetIt.I<ChatBloc>(),
             listener: (context, state) {
               _scrollToBottom();
             },
             listenWhen: (previous, current) {
-              return previous.messagesFor(widget.sessionId).length !=
-                  current.messagesFor(widget.sessionId).length;
+              final prevLen = previous is ChatReady
+                  ? previous.messagesFor(widget.sessionId).length
+                  : 0;
+              final currLen = current is ChatReady
+                  ? current.messagesFor(widget.sessionId).length
+                  : 0;
+              return prevLen != currLen;
             },
             builder: (context, state) {
-              final messages = state.messagesFor(widget.sessionId);
+              final messages = state is ChatReady
+                  ? state.messagesFor(widget.sessionId)
+                  : <dynamic>[];
               if (messages.isEmpty) {
                 return Center(
                   child: Text(
@@ -102,8 +109,7 @@ class _SessionChatScreenState extends State<SessionChatScreen> {
     );
   }
 
-  Widget _buildHeader(String projectName) {
-    final sessionInfo = GetIt.I<SessionBloc>().state.sessions[widget.sessionId];
+  Widget _buildHeader(String projectName, SessionInfo? sessionInfo) {
     final activityState = sessionInfo?.activityState ?? SessionActivityState.idle;
     final isActive = activityState != SessionActivityState.idle;
     final showToolStatus = _showToolRow && _latestTool != null;

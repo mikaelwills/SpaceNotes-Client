@@ -4,169 +4,178 @@ import 'package:get_it/get_it.dart';
 import '../../models/message_part.dart';
 import '../../models/permission_request.dart';
 import '../../models/space_message.dart';
-import '../../services/debug_logger.dart';
 import '../../models/tool_event.dart';
+import '../../services/debug_logger.dart';
 import '../../services/space_channel/session_activity_event.dart';
 import '../../services/space_channel/space_channel_event.dart';
 import '../../services/space_channel/space_channel_service.dart';
-import '../config/config_cubit.dart';
-import '../config/config_state.dart';
 import 'chat_event.dart';
 import 'chat_state.dart';
 
 class ChatBloc extends Bloc<ChatEvent, ChatState> {
   final SpaceChannelService _spaceChannel = GetIt.I<SpaceChannelService>();
 
-  final List<SpaceMessage> _messages = [];
-  final Map<String, int> _messageIndex = {};
+  Map<String, SessionInfo> _sessions = {};
+  final Map<String, Map<String, int>> _messageIndices = {};
   StreamSubscription<SpaceChannelEvent>? _eventSub;
   StreamSubscription<SessionActivityEvent>? _activitySub;
-  StreamSubscription? _configSub;
+  StreamSubscription? _historySub;
+  StreamSubscription<bool>? _connectionSub;
   Timer? _toolHideTimer;
   ToolEvent? _activeToolEvent;
   bool _isThinking = false;
 
-  static const int _maxMessages = 100;
-  static const String _sessionId = 'claude-code';
+  static const int _maxMessagesPerSession = 100;
   static const String _defaultTargetSession = 'note-assistant';
   String _targetSession = _defaultTargetSession;
-  String? _currentWsUrl;
 
   ChatStatus _chatStatus = const ChatStatus();
 
   ChatBloc() : super(ChatInitial()) {
-    on<LoadMessagesForCurrentSession>(_onLoadMessages);
     on<SendChatMessage>(_onSendMessage);
+    on<SendSessionMessage>(_onSendSessionMessage);
     on<CancelCurrentOperation>(_onCancelOperation);
     on<ClearMessages>(_onClearMessages);
     on<ClearChat>(_onClearChat);
     on<RetryMessage>(_onRetryMessage);
     on<DeleteQueuedMessage>(_onDeleteQueuedMessage);
     on<RespondToPermission>(_onRespondToPermission);
-    on<SessionErrorReceived>((e, emit) => emit(ChatError(e.error)));
-    on<RefreshChatStateEvent>((e, emit) => emit(_createReadyState()));
     on<SetTargetSession>(_onSetTargetSession);
+    on<InternalMessageReceived>(_onMessageReceived);
+    on<InternalHistoryReceived>(_onHistoryReceived);
+    on<InternalSessionConnected>(_onSessionConnected);
+    on<InternalSessionDisconnected>(_onSessionDisconnected);
+    on<InternalToolEventReceived>(_onToolEventReceived);
+    on<InternalStatusChanged>(_onStatusChanged);
+    on<InternalConnectionChanged>(_onConnectionChanged);
+    on<InternalRefreshState>((_, emit) => emit(_buildReady()));
 
-    _initialize();
-    add(LoadMessagesForCurrentSession());
+    _subscribe();
   }
 
-  void _initialize() {
-    final configCubit = GetIt.I<ConfigCubit>();
+  void _subscribe() {
+    _eventSub = _spaceChannel.eventStream.listen(_onSpaceChannelEvent);
 
-    _configSub = configCubit.stream.listen((state) {
-      if (state is ConfigLoaded) {
-        final newUrl = state.claudeCodeWsUrl;
-        if (newUrl != _currentWsUrl) {
-          debugLogger.info('CC', 'Config changed, reconnecting', newUrl);
-          _connectToWebSocket(newUrl);
-        }
+    _historySub = _spaceChannel.historyBatches.listen((batch) {
+      final messages = batch.events
+          .where((e) =>
+              e.from == 'assistant' ||
+              e.sourceType == SpaceChannelSourceType.webhook)
+          .map((e) => _convertEvent(e, batch.session))
+          .toList();
+      if (messages.isNotEmpty) {
+        add(InternalHistoryReceived(batch.session, messages));
       }
     });
 
-    final configState = configCubit.state;
-    final wsUrl = configState is ConfigLoaded
-        ? configState.claudeCodeWsUrl
-        : 'ws://0.0.0.0:${ConfigLoaded.claudeCodePort}/ws';
+    _activitySub = _spaceChannel.sessionActivity.listen((activity) {
+      switch (activity.type) {
+        case SessionActivityType.connected:
+          final e = activity.sessionEvent!;
+          add(InternalSessionConnected(
+            session: e.session,
+            project: e.project ?? '',
+            task: e.task ?? '',
+          ));
+        case SessionActivityType.disconnected:
+          add(InternalSessionDisconnected(activity.session));
+        case SessionActivityType.toolUse:
+          add(InternalToolEventReceived(activity.toolEvent!));
+        case SessionActivityType.status:
+          final s = activity.statusEvent!;
+          final activityState = switch (s.state) {
+            'thinking' => SessionActivityState.thinking,
+            _ => SessionActivityState.idle,
+          };
+          add(InternalStatusChanged(session: s.session, activityState: activityState));
+      }
+    });
 
-    _connectToWebSocket(wsUrl);
-    _subscribeToActivity();
+    _connectionSub = _spaceChannel.connectionState.listen((connected) {
+      add(InternalConnectionChanged(connected));
+    });
   }
 
-  void _connectToWebSocket(String wsUrl) {
-    _currentWsUrl = wsUrl;
-    debugLogger.info('CC', 'Connecting to WebSocket', wsUrl);
-
-    _eventSub?.cancel();
-    _spaceChannel.restartConnection();
-
-    final stream = _spaceChannel.connect(wsUrl);
-    _chatStatus = _chatStatus.copyWith(isConnected: true);
-
-    _eventSub = stream.listen(
-      _onSpaceChannelEvent,
-      onError: (error) {
-        debugLogger.error('CC', 'WebSocket error', error.toString());
-        _chatStatus = _chatStatus.copyWith(
-            isConnected: false, isSending: false, isStreaming: false);
-        add(RefreshChatStateEvent());
-      },
-      onDone: () {
-        debugLogger.info('CC', 'WebSocket closed');
-        _chatStatus = _chatStatus.copyWith(
-            isConnected: false, isSending: false, isStreaming: false);
-        add(RefreshChatStateEvent());
-      },
+  SpaceMessage _convertEvent(SpaceChannelEvent e, String sessionId) {
+    return SpaceMessage(
+      id: e.id,
+      sessionId: sessionId,
+      role: 'assistant',
+      created: e.ts != null
+          ? DateTime.fromMillisecondsSinceEpoch(e.ts!)
+          : DateTime.now(),
+      parts: [MessagePart(id: '${e.id}-p0', type: 'text', content: e.text ?? '')],
+      isStreaming: false,
+      sourceType: e.sourceType == SpaceChannelSourceType.webhook ? 'webhook' : 'session',
+      project: e.project,
+      task: e.task,
+      session: sessionId,
     );
   }
 
-  void _subscribeToActivity() {
-    _activitySub?.cancel();
-    _activitySub = _spaceChannel.sessionActivity
-        .where((a) => a.session == _targetSession)
-        .listen((activity) {
-      switch (activity.type) {
-        case SessionActivityType.toolUse:
-          _toolHideTimer?.cancel();
-          _activeToolEvent = activity.toolEvent;
-          add(RefreshChatStateEvent());
-          _toolHideTimer = Timer(const Duration(seconds: 5), () {
-            _activeToolEvent = null;
-            add(RefreshChatStateEvent());
-          });
-        case SessionActivityType.status:
-          _isThinking = activity.statusEvent?.state == 'thinking';
-          add(RefreshChatStateEvent());
-        case SessionActivityType.connected:
-        case SessionActivityType.disconnected:
-          break;
+  SessionInfo _ensureSession(String session) {
+    if (_sessions.containsKey(session)) return _sessions[session]!;
+    final now = DateTime.now();
+    final info = SessionInfo(
+      session: session,
+      project: '',
+      task: '',
+      connectedAt: now,
+      lastActivity: now,
+    );
+    _sessions[session] = info;
+    _messageIndices[session] = {};
+    return info;
+  }
+
+  void _addMessage(String sessionId, SpaceMessage message) {
+    final info = _ensureSession(sessionId);
+    final indices = _messageIndices[sessionId]!;
+
+    if (indices.containsKey(message.id)) return;
+
+    final messages = List<SpaceMessage>.from(info.messages)..add(message);
+    indices[message.id] = messages.length - 1;
+
+    if (messages.length > _maxMessagesPerSession) {
+      final toRemove = messages.length - _maxMessagesPerSession;
+      for (var i = 0; i < toRemove; i++) {
+        indices.remove(messages[i].id);
       }
-    });
+      messages.removeRange(0, toRemove);
+      indices.clear();
+      for (var i = 0; i < messages.length; i++) {
+        indices[messages[i].id] = i;
+      }
+    }
+
+    _sessions[sessionId] = info.copyWith(
+      messages: messages,
+      lastActivity: DateTime.now(),
+    );
   }
 
   void _onSpaceChannelEvent(SpaceChannelEvent event) {
+    final sessionId = event.session ?? '';
+
     switch (event.type) {
       case SpaceChannelEventType.msg:
         if (event.from == 'assistant' ||
             event.sourceType == SpaceChannelSourceType.session ||
             event.sourceType == SpaceChannelSourceType.webhook) {
-          final message = SpaceMessage(
-            id: event.id,
-            sessionId: _sessionId,
-            role: 'assistant',
-            created: event.ts != null
-                ? DateTime.fromMillisecondsSinceEpoch(event.ts!)
-                : DateTime.now(),
-            completed: DateTime.now(),
-            parts: [
-              MessagePart(
-                id: '${event.id}-p0',
-                type: 'text',
-                content: event.text ?? '',
-              ),
-            ],
-            isStreaming: false,
-            sourceType: event.sourceType?.name,
-            project: event.project,
-            task: event.task,
-            session: event.session,
-          );
-
-          _messages.add(message);
-          _messageIndex[message.id] = _messages.length - 1;
-          _enforceMessageLimit();
-          _chatStatus = _chatStatus.copyWith(
-              isSending: false, isStreaming: false, clearErrorMessage: true);
-          add(RefreshChatStateEvent());
+          final effectiveSession = sessionId.isNotEmpty ? sessionId : _targetSession;
+          final message = _convertEvent(event, effectiveSession);
+          add(InternalMessageReceived(effectiveSession, message));
         }
 
       case SpaceChannelEventType.permissionRequest:
         final permData = event.permissionData ?? {};
         final toolName = permData['tool_name'] ?? 'unknown';
         final description = permData['description'] ?? '';
+        final effectiveSession = sessionId.isNotEmpty ? sessionId : _targetSession;
         final permMessage = SpaceMessage(
           id: event.id,
-          sessionId: _sessionId,
+          sessionId: effectiveSession,
           role: 'assistant',
           created: DateTime.now(),
           completed: DateTime.now(),
@@ -187,20 +196,19 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
           sourceType: event.sourceType?.name,
           project: event.project,
           task: event.task,
-          session: event.session,
+          session: effectiveSession,
         );
-
-        _messages.add(permMessage);
-        _messageIndex[permMessage.id] = _messages.length - 1;
-        _enforceMessageLimit();
-        add(RefreshChatStateEvent());
+        add(InternalMessageReceived(effectiveSession, permMessage));
 
       case SpaceChannelEventType.edit:
-        if (event.text != null) {
-          final idx = _messageIndex[event.id];
-          if (idx != null && idx < _messages.length) {
-            final existing = _messages[idx];
-            _messages[idx] = existing.copyWith(
+        if (event.text != null && sessionId.isNotEmpty) {
+          final indices = _messageIndices[sessionId];
+          final idx = indices?[event.id];
+          if (idx != null) {
+            final info = _sessions[sessionId]!;
+            final messages = List<SpaceMessage>.from(info.messages);
+            final existing = messages[idx];
+            messages[idx] = existing.copyWith(
               parts: [
                 MessagePart(
                   id: existing.parts.isNotEmpty ? existing.parts.first.id : event.id,
@@ -209,21 +217,119 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
                 ),
               ],
             );
-            add(RefreshChatStateEvent());
+            _sessions[sessionId] = info.copyWith(messages: messages);
+            add(InternalRefreshState());
           }
         }
     }
   }
 
-  void _onLoadMessages(LoadMessagesForCurrentSession event, Emitter<ChatState> emit) {
-    emit(_createReadyState());
+  void _onMessageReceived(InternalMessageReceived event, Emitter<ChatState> emit) {
+    _addMessage(event.sessionId, event.message);
+    _chatStatus = _chatStatus.copyWith(isSending: false, clearErrorMessage: true);
+    emit(_buildReady());
+  }
+
+  void _onHistoryReceived(InternalHistoryReceived event, Emitter<ChatState> emit) {
+    final info = _ensureSession(event.sessionId);
+    final existingIds = info.messages.map((m) => m.id).toSet();
+    final newMessages = event.messages.where((m) => !existingIds.contains(m.id)).toList();
+    if (newMessages.isEmpty) return;
+
+    final merged = [...newMessages, ...info.messages];
+    if (merged.length > _maxMessagesPerSession) {
+      merged.removeRange(0, merged.length - _maxMessagesPerSession);
+    }
+
+    final indices = <String, int>{};
+    for (var i = 0; i < merged.length; i++) {
+      indices[merged[i].id] = i;
+    }
+
+    _sessions[event.sessionId] = info.copyWith(
+      messages: merged,
+      lastActivity: DateTime.now(),
+    );
+    _messageIndices[event.sessionId] = indices;
+    emit(_buildReady());
+  }
+
+  void _onSessionConnected(InternalSessionConnected event, Emitter<ChatState> emit) {
+    final now = DateTime.now();
+    final existing = _sessions[event.session];
+    _sessions[event.session] = SessionInfo(
+      session: event.session,
+      project: event.project,
+      task: event.task,
+      connectedAt: now,
+      lastActivity: now,
+      messages: existing == null ? [] : existing.messages,
+      recentToolEvents: existing == null ? [] : existing.recentToolEvents,
+    );
+    _messageIndices.putIfAbsent(event.session, () => {});
+    emit(_buildReady());
+  }
+
+  void _onSessionDisconnected(InternalSessionDisconnected event, Emitter<ChatState> emit) {
+    _sessions.remove(event.session);
+    _messageIndices.remove(event.session);
+    emit(_buildReady());
+  }
+
+  void _onToolEventReceived(InternalToolEventReceived event, Emitter<ChatState> emit) {
+    final toolEvent = event.toolEvent;
+    final info = _ensureSession(toolEvent.session);
+
+    final updatedEvents = [...info.recentToolEvents, toolEvent];
+    final trimmed = updatedEvents.length > 10
+        ? updatedEvents.sublist(updatedEvents.length - 10)
+        : updatedEvents;
+
+    _sessions[toolEvent.session] = info.copyWith(
+      lastActivity: DateTime.now(),
+      recentToolEvents: trimmed,
+      activityState: SessionActivityState.toolUse,
+    );
+
+    if (toolEvent.session == _targetSession) {
+      _toolHideTimer?.cancel();
+      _activeToolEvent = toolEvent;
+      _toolHideTimer = Timer(const Duration(seconds: 5), () {
+        _activeToolEvent = null;
+        add(InternalRefreshState());
+      });
+    }
+
+    emit(_buildReady());
+  }
+
+  void _onStatusChanged(InternalStatusChanged event, Emitter<ChatState> emit) {
+    final info = _ensureSession(event.session);
+    _sessions[event.session] = info.copyWith(
+      lastActivity: DateTime.now(),
+      activityState: event.activityState,
+    );
+
+    if (event.session == _targetSession) {
+      _isThinking = event.activityState == SessionActivityState.thinking;
+    }
+
+    emit(_buildReady());
+  }
+
+  void _onConnectionChanged(InternalConnectionChanged event, Emitter<ChatState> emit) {
+    _chatStatus = _chatStatus.copyWith(isConnected: event.isConnected);
+    if (!event.isConnected) {
+      _chatStatus = _chatStatus.copyWith(isSending: false);
+    }
+    emit(_buildReady());
   }
 
   void _onSendMessage(SendChatMessage event, Emitter<ChatState> emit) {
     final messageId = DateTime.now().millisecondsSinceEpoch.toString();
     final userMessage = SpaceMessage(
       id: messageId,
-      sessionId: _sessionId,
+      sessionId: _targetSession,
       role: 'user',
       created: DateTime.now(),
       completed: DateTime.now(),
@@ -237,32 +343,44 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       sendStatus: MessageSendStatus.sent,
     );
 
-    _messages.add(userMessage);
-    _messageIndex[userMessage.id] = _messages.length - 1;
-    _enforceMessageLimit();
-
+    _addMessage(_targetSession, userMessage);
     _chatStatus = _chatStatus.copyWith(isSending: true);
-    emit(_createReadyState());
+    emit(_buildReady());
 
     _spaceChannel.sendMessageToSession(_targetSession, event.message);
   }
 
+  void _onSendSessionMessage(SendSessionMessage event, Emitter<ChatState> emit) {
+    final msgId = 'u${DateTime.now().millisecondsSinceEpoch}';
+    final userMessage = SpaceMessage(
+      id: msgId,
+      sessionId: event.sessionId,
+      role: 'user',
+      created: DateTime.now(),
+      parts: [MessagePart(id: msgId, type: 'text', content: event.text)],
+    );
+
+    _addMessage(event.sessionId, userMessage);
+    emit(_buildReady());
+
+    _spaceChannel.sendMessageToSession(event.sessionId, event.text);
+  }
+
   void _onCancelOperation(CancelCurrentOperation event, Emitter<ChatState> emit) {
     debugLogger.info('CC', 'Cancel operation requested');
-    _chatStatus = _chatStatus.copyWith(
-        isSending: false, isStreaming: false, clearErrorMessage: true);
-    emit(_createReadyState());
+    _chatStatus = _chatStatus.copyWith(isSending: false, clearErrorMessage: true);
+    emit(_buildReady());
   }
 
   void _onClearMessages(ClearMessages event, Emitter<ChatState> emit) {
-    _messages.clear();
-    _messageIndex.clear();
-    emit(_createReadyState());
+    _sessions = {};
+    _messageIndices.clear();
+    emit(_buildReady());
   }
 
   void _onClearChat(ClearChat event, Emitter<ChatState> emit) {
-    _messages.clear();
-    _messageIndex.clear();
+    _sessions = {};
+    _messageIndices.clear();
     emit(ChatInitial());
   }
 
@@ -273,35 +391,42 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
   void _onDeleteQueuedMessage(DeleteQueuedMessage event, Emitter<ChatState> emit) {}
 
   void _onRespondToPermission(RespondToPermission event, Emitter<ChatState> emit) {
-    final idx = _messages.indexWhere((m) => m.id == event.permissionId);
-    if (idx == -1) return;
+    for (final entry in _sessions.entries) {
+      final messages = entry.value.messages;
+      final idx = messages.indexWhere((m) => m.id == event.permissionId);
+      if (idx == -1) continue;
 
-    final msg = _messages[idx];
-    final updatedParts = msg.parts.map((p) {
-      if (p.metadata?['pending_permission'] == true) {
-        return MessagePart(
-          id: p.id,
-          type: p.type,
-          content: p.content,
-          metadata: {
-            ...?p.metadata,
-            'pending_permission': false,
-            'permission_responded': event.response == PermissionResponse.reject ? 'deny' : 'allow',
-          },
-        );
-      }
-      return p;
-    }).toList();
+      final msg = messages[idx];
+      final updatedParts = msg.parts.map((p) {
+        if (p.metadata?['pending_permission'] == true) {
+          return MessagePart(
+            id: p.id,
+            type: p.type,
+            content: p.content,
+            metadata: {
+              ...?p.metadata,
+              'pending_permission': false,
+              'permission_responded':
+                  event.response == PermissionResponse.reject ? 'deny' : 'allow',
+            },
+          );
+        }
+        return p;
+      }).toList();
 
-    _messages[idx] = msg.copyWith(parts: updatedParts);
+      final updatedMessages = List<SpaceMessage>.from(messages);
+      updatedMessages[idx] = msg.copyWith(parts: updatedParts);
+      _sessions[entry.key] = entry.value.copyWith(messages: updatedMessages);
 
-    _spaceChannel.sendPermissionResponse(
-      msg.session ?? '',
-      event.permissionId,
-      event.response == PermissionResponse.reject ? 'deny' : 'allow',
-    );
+      _spaceChannel.sendPermissionResponse(
+        msg.session ?? entry.key,
+        event.permissionId,
+        event.response == PermissionResponse.reject ? 'deny' : 'allow',
+      );
 
-    emit(_createReadyState());
+      emit(_buildReady());
+      return;
+    }
   }
 
   void _onSetTargetSession(SetTargetSession event, Emitter<ChatState> emit) {
@@ -309,42 +434,32 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     _activeToolEvent = null;
     _isThinking = false;
     _toolHideTimer?.cancel();
-    _subscribeToActivity();
-    emit(_createReadyState());
+
+    final targetInfo = _sessions[_targetSession];
+    if (targetInfo != null) {
+      _isThinking = targetInfo.activityState == SessionActivityState.thinking;
+    }
+
+    emit(_buildReady());
   }
 
-  ChatReady _createReadyState() {
+  ChatReady _buildReady() {
     return ChatReady(
-      sessionId: _sessionId,
-      messages: List.from(_messages),
-      status: _chatStatus,
+      sessions: Map.unmodifiable(_sessions),
       targetSession: _targetSession,
+      status: _chatStatus,
       activeToolEvent: _activeToolEvent,
       isThinking: _isThinking,
     );
   }
 
-  void _enforceMessageLimit() {
-    if (_messages.length > _maxMessages) {
-      final toRemove = _messages.length - _maxMessages;
-      for (int i = 0; i < toRemove; i++) {
-        final removed = _messages.removeAt(0);
-        _messageIndex.remove(removed.id);
-      }
-      _messageIndex.clear();
-      for (int i = 0; i < _messages.length; i++) {
-        _messageIndex[_messages[i].id] = i;
-      }
-    }
-  }
-
   @override
   Future<void> close() {
-    _configSub?.cancel();
     _eventSub?.cancel();
     _activitySub?.cancel();
+    _historySub?.cancel();
+    _connectionSub?.cancel();
     _toolHideTimer?.cancel();
-    _spaceChannel.dispose();
     return super.close();
   }
 }

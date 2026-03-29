@@ -14,8 +14,6 @@ import '../dialogs/notes_list_dialogs.dart';
 import '../blocs/chat/chat_bloc.dart';
 import '../blocs/chat/chat_event.dart';
 import '../blocs/chat/chat_state.dart';
-import '../blocs/session_chat/session_chat_bloc.dart';
-import '../blocs/session_chat/session_chat_event.dart';
 import '../screens/home_screen.dart';
 import 'notes_search_bar.dart';
 
@@ -301,8 +299,7 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
 
     final sessionId = _getCurrentSessionId();
     if (sessionId != null) {
-      context.read<SessionChatBloc>().add(
-            SessionChatSendMessage(sessionId, message));
+      context.read<ChatBloc>().add(SendSessionMessage(sessionId, message));
       _searchController.clear();
       setState(() {
         _pendingImageBase64 = null;

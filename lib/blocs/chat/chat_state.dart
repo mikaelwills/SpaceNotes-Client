@@ -1,49 +1,91 @@
 import 'package:equatable/equatable.dart';
 import '../../models/space_message.dart';
-import '../../models/permission_request.dart';
 import '../../models/tool_event.dart';
+
+enum SessionActivityState { idle, thinking, toolUse }
+
+class SessionInfo extends Equatable {
+  final String session;
+  final String project;
+  final String task;
+  final DateTime connectedAt;
+  final DateTime lastActivity;
+  final List<SpaceMessage> messages;
+  final List<ToolEvent> recentToolEvents;
+  final SessionActivityState activityState;
+
+  const SessionInfo({
+    required this.session,
+    required this.project,
+    required this.task,
+    required this.connectedAt,
+    required this.lastActivity,
+    this.messages = const [],
+    this.recentToolEvents = const [],
+    this.activityState = SessionActivityState.idle,
+  });
+
+  SessionInfo copyWith({
+    DateTime? lastActivity,
+    List<SpaceMessage>? messages,
+    List<ToolEvent>? recentToolEvents,
+    SessionActivityState? activityState,
+  }) {
+    return SessionInfo(
+      session: session,
+      project: project,
+      task: task,
+      connectedAt: connectedAt,
+      lastActivity: lastActivity ?? this.lastActivity,
+      messages: messages ?? this.messages,
+      recentToolEvents: recentToolEvents ?? this.recentToolEvents,
+      activityState: activityState ?? this.activityState,
+    );
+  }
+
+  @override
+  List<Object?> get props => [
+        session,
+        project,
+        task,
+        connectedAt,
+        lastActivity,
+        messages,
+        recentToolEvents,
+        activityState,
+      ];
+}
 
 class ChatStatus extends Equatable {
   final bool isSending;
-  final bool isStreaming;
   final bool isConnected;
-  final String? pendingMessageId;
   final String? errorMessage;
 
   const ChatStatus({
     this.isSending = false,
-    this.isStreaming = false,
-    this.isConnected = true,
-    this.pendingMessageId,
+    this.isConnected = false,
     this.errorMessage,
   });
 
-  bool get isIdle => !isSending && !isStreaming;
+  bool get isIdle => !isSending;
   bool get isFailed => errorMessage != null;
-  bool get isWorking => isSending || isStreaming;
   bool get canSend => isIdle && isConnected;
 
   ChatStatus copyWith({
     bool? isSending,
-    bool? isStreaming,
     bool? isConnected,
-    String? pendingMessageId,
     String? errorMessage,
-    bool clearPendingMessageId = false,
     bool clearErrorMessage = false,
   }) {
     return ChatStatus(
       isSending: isSending ?? this.isSending,
-      isStreaming: isStreaming ?? this.isStreaming,
       isConnected: isConnected ?? this.isConnected,
-      pendingMessageId:
-          clearPendingMessageId ? null : (pendingMessageId ?? this.pendingMessageId),
       errorMessage: clearErrorMessage ? null : (errorMessage ?? this.errorMessage),
     );
   }
 
   @override
-  List<Object?> get props => [isSending, isStreaming, isConnected, pendingMessageId, errorMessage];
+  List<Object?> get props => [isSending, isConnected, errorMessage];
 }
 
 abstract class ChatState extends Equatable {
@@ -55,63 +97,50 @@ abstract class ChatState extends Equatable {
 
 class ChatInitial extends ChatState {}
 
-class ChatConnecting extends ChatState {}
-
 class ChatReady extends ChatState {
-  final String sessionId;
-  final List<SpaceMessage> messages;
-  final ChatStatus status;
+  final Map<String, SessionInfo> sessions;
   final String targetSession;
+  final ChatStatus status;
   final ToolEvent? activeToolEvent;
   final bool isThinking;
 
   const ChatReady({
-    required this.sessionId,
-    this.messages = const [],
-    this.status = const ChatStatus(),
+    this.sessions = const {},
     this.targetSession = 'note-assistant',
+    this.status = const ChatStatus(),
     this.activeToolEvent,
     this.isThinking = false,
   });
 
-  bool get isIdle => status.isIdle;
-  bool get isSending => status.isSending;
-  bool get isStreaming => status.isStreaming;
-  bool get isFailed => status.isFailed;
   bool get isConnected => status.isConnected;
-  bool get isWorking => status.isWorking;
+  bool get isSending => status.isSending;
+  bool get isWorking => status.isSending;
+  bool get isIdle => status.isIdle;
   bool get canSend => status.canSend;
-  String? get pendingMessageId => status.pendingMessageId;
   String? get errorMessage => status.errorMessage;
+
+  List<SpaceMessage> get allMessages {
+    final all = <SpaceMessage>[];
+    for (final session in sessions.values) {
+      all.addAll(session.messages);
+    }
+    all.sort((a, b) => a.created.compareTo(b.created));
+    return all;
+  }
+
+  List<SpaceMessage> messagesFor(String sessionId) {
+    final session = sessions[sessionId];
+    return session == null ? const [] : session.messages;
+  }
 
   @override
   List<Object?> get props => [
-        sessionId,
-        messages,
-        status,
+        sessions,
         targetSession,
+        status,
         activeToolEvent,
         isThinking,
       ];
-
-  ChatReady copyWith({
-    String? sessionId,
-    List<SpaceMessage>? messages,
-    ChatStatus? status,
-    String? targetSession,
-    ToolEvent? activeToolEvent,
-    bool clearActiveToolEvent = false,
-    bool? isThinking,
-  }) {
-    return ChatReady(
-      sessionId: sessionId ?? this.sessionId,
-      messages: messages ?? this.messages,
-      status: status ?? this.status,
-      targetSession: targetSession ?? this.targetSession,
-      activeToolEvent: clearActiveToolEvent ? null : (activeToolEvent ?? this.activeToolEvent),
-      isThinking: isThinking ?? this.isThinking,
-    );
-  }
 }
 
 class ChatError extends ChatState {
@@ -121,19 +150,4 @@ class ChatError extends ChatState {
 
   @override
   List<Object> get props => [error];
-}
-
-class ChatPermissionRequired extends ChatState {
-  final String sessionId;
-  final PermissionRequest permission;
-  final List<SpaceMessage> messages;
-
-  const ChatPermissionRequired({
-    required this.sessionId,
-    required this.permission,
-    this.messages = const [],
-  });
-
-  @override
-  List<Object> get props => [sessionId, permission, messages];
 }

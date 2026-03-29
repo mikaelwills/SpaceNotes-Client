@@ -9,7 +9,7 @@ import '../widgets/terminal_message.dart';
 import '../blocs/chat/chat_bloc.dart';
 import '../blocs/chat/chat_state.dart';
 import '../blocs/chat/chat_event.dart';
-import '../dialogs/permission_dialog.dart';
+import '../models/space_message.dart';
 import '../widgets/keyboard_dismiss_on_scroll.dart';
 
 /// ChatView displays the AI chat interface
@@ -63,15 +63,11 @@ class _ChatViewState extends ConsumerState<ChatView> {
           FocusManager.instance.primaryFocus?.unfocus();
           _autoScrollEnabled = true;
           _scrollToBottom();
-        } else if (state is ChatReady && state.isStreaming && _autoScrollEnabled) {
+        } else if (state is ChatReady && state.allMessages.length > _previousMessageCount && _autoScrollEnabled) {
           _scrollToBottom();
-        } else if (state is ChatReady && state.messages.length > _previousMessageCount && _autoScrollEnabled) {
-          _scrollToBottom();
-        } else if (state is ChatPermissionRequired) {
-          _showPermissionDialog(context, state);
         }
         if (state is ChatReady) {
-          _previousMessageCount = state.messages.length;
+          _previousMessageCount = state.allMessages.length;
         }
       },
       child: Stack(
@@ -117,19 +113,6 @@ class _ChatViewState extends ConsumerState<ChatView> {
           );
         }
 
-        if (state is ChatConnecting) {
-          return const Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                CircularProgressIndicator(color: SpaceNotesTheme.primary),
-                SizedBox(height: 16),
-                Text('Connecting...', style: SpaceNotesTextStyles.terminal),
-              ],
-            ),
-          );
-        }
-
         if (state is ChatError) {
           return Center(
             child: Column(
@@ -138,24 +121,12 @@ class _ChatViewState extends ConsumerState<ChatView> {
                 const Icon(Icons.error_outline, color: SpaceNotesTheme.error, size: 48),
                 const SizedBox(height: 16),
                 Text(state.error, style: SpaceNotesTextStyles.terminal, textAlign: TextAlign.center),
-                const SizedBox(height: 16),
-                TextButton(
-                  onPressed: () {
-                    context.read<ChatBloc>().add(LoadMessagesForCurrentSession());
-                  },
-                  child: const Text('Retry', style: TextStyle(color: SpaceNotesTheme.primary)),
-                ),
               ],
             ),
           );
         }
 
-        final messages = state is ChatReady
-            ? state.messages
-            : state is ChatPermissionRequired
-                ? state.messages
-                : <dynamic>[];
-        final isStreaming = state is ChatReady ? state.isStreaming : false;
+        final messages = state is ChatReady ? state.allMessages : <SpaceMessage>[];
 
         if (messages.isEmpty) {
           return const Center(
@@ -195,13 +166,10 @@ class _ChatViewState extends ConsumerState<ChatView> {
                       itemCount: messages.length,
                       itemBuilder: (context, index) {
                         final message = messages[index];
-                        final isLastMessage = index == messages.length - 1;
-                        final isStreamingMessage = isStreaming && isLastMessage;
                         final session = message.session;
 
                         return TerminalMessage(
                           message: message,
-                          isStreaming: isStreamingMessage,
                           onTap: (session != null && session.isNotEmpty && message.role == 'assistant')
                               ? () => context.read<ChatBloc>().add(SetTargetSession(session))
                               : null,
@@ -273,16 +241,6 @@ class _ChatViewState extends ConsumerState<ChatView> {
         );
       }
     });
-  }
-
-  Future<void> _showPermissionDialog(BuildContext context, ChatPermissionRequired state) async {
-    final response = await PermissionDialog.show(context, state.permission);
-    if (response != null && context.mounted) {
-      context.read<ChatBloc>().add(RespondToPermission(
-        permissionId: state.permission.id,
-        response: response,
-      ));
-    }
   }
 
   ScrollController get _chatScrollController =>
