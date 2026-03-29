@@ -5,15 +5,13 @@ import '../theme/spacenotes_theme.dart';
 import '../widgets/adaptive/platform_utils.dart';
 import '../widgets/desktop/desktop_chat_input.dart';
 import '../widgets/connection_status_row.dart';
-import '../widgets/terminal_message.dart';
+import '../widgets/chat_message_list.dart';
 import '../blocs/chat/chat_bloc.dart';
 import '../blocs/chat/chat_state.dart';
 import '../blocs/chat/chat_event.dart';
 import '../models/space_message.dart';
-import '../widgets/keyboard_dismiss_on_scroll.dart';
+import '../widgets/terminal_message.dart';
 
-/// ChatView displays the AI chat interface
-/// Can be reused in different contexts (main chat, note chat panel)
 class ChatView extends ConsumerStatefulWidget {
   final bool showConnectionStatus;
   final bool showInput;
@@ -35,21 +33,14 @@ class ChatView extends ConsumerStatefulWidget {
 }
 
 class _ChatViewState extends ConsumerState<ChatView> {
-  ScrollController? _ownScrollController;
-  bool _showScrollToBottom = false;
-  bool _autoScrollEnabled = true;
-  int _previousMessageCount = 0;
+  final _messageListKey = GlobalKey<ChatMessageListState>();
 
   @override
   void initState() {
     super.initState();
-    _scrollToBottom();
-  }
-
-  @override
-  void dispose() {
-    _ownScrollController?.dispose();
-    super.dispose();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _messageListKey.currentState?.scrollToBottom();
+    });
   }
 
   @override
@@ -61,13 +52,9 @@ class _ChatViewState extends ConsumerState<ChatView> {
       listener: (context, state) {
         if (state is ChatReady && state.isSending) {
           FocusManager.instance.primaryFocus?.unfocus();
-          _autoScrollEnabled = true;
-          _scrollToBottom();
-        } else if (state is ChatReady && state.allMessages.length > _previousMessageCount && _autoScrollEnabled) {
-          _scrollToBottom();
-        }
-        if (state is ChatReady) {
-          _previousMessageCount = state.allMessages.length;
+          _messageListKey.currentState?.forceScrollToBottom();
+        } else if (state is ChatReady) {
+          _messageListKey.currentState?.onMessagesChanged(state.allMessages.length);
         }
       },
       child: Stack(
@@ -127,124 +114,26 @@ class _ChatViewState extends ConsumerState<ChatView> {
         }
 
         final messages = state is ChatReady ? state.allMessages : <SpaceMessage>[];
+        final targetSession = state is ChatReady ? state.targetSession : 'note-assistant';
 
-        if (messages.isEmpty) {
-          return const Center(
-            child: Text(
-              'Ask me anything...',
-              style: SpaceNotesTextStyles.terminal,
-            ),
-          );
-        }
-
-        return Stack(
-          children: [
-            KeyboardDismissOnScroll(
-              child: NotificationListener<ScrollNotification>(
-                onNotification: (notification) {
-                  if (notification is ScrollUpdateNotification) {
-                    final isNearBottom = _chatScrollController.position.pixels >=
-                        _chatScrollController.position.maxScrollExtent - 100;
-                    if (_showScrollToBottom == isNearBottom) {
-                      setState(() => _showScrollToBottom = !isNearBottom);
-                    }
-                    if (notification.dragDetails != null) {
-                      _autoScrollEnabled = isNearBottom;
-                    }
-                  }
-                  return false;
-                },
-                child: Center(
-                  child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 800),
-                  child: ScrollConfiguration(
-                    behavior: ScrollConfiguration.of(context).copyWith(scrollbars: false),
-                    child: ListView.builder(
-                      controller: _chatScrollController,
-                      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-                      padding: widget.messagePadding ?? const EdgeInsets.fromLTRB(4, 8, 4, 120),
-                      itemCount: messages.length,
-                      itemBuilder: (context, index) {
-                        final message = messages[index];
-                        final session = message.session;
-                        final targetSession = state is ChatReady ? state.targetSession : 'note-assistant';
-
-                        return TerminalMessage(
-                          message: message,
-                          isTargeted: session != null && session == targetSession && targetSession != 'note-assistant',
-                          onTap: (session != null && session.isNotEmpty && message.role == 'assistant')
-                              ? () => context.read<ChatBloc>().add(SetTargetSession(session))
-                              : null,
-                        );
-                      },
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            ),
-            if (_showScrollToBottom) _buildScrollToBottomButton(),
-          ],
+        return ChatMessageList(
+          key: _messageListKey,
+          messages: messages,
+          padding: widget.messagePadding ?? const EdgeInsets.fromLTRB(4, 8, 4, 120),
+          emptyText: 'Ask me anything...',
+          scrollController: widget.scrollController,
+          itemBuilder: (message, index) {
+            final session = message.session;
+            return TerminalMessage(
+              message: message,
+              isTargeted: session != null && session == targetSession && targetSession != 'note-assistant',
+              onTap: (session != null && session.isNotEmpty && message.role == 'assistant')
+                  ? () => context.read<ChatBloc>().add(SetTargetSession(session))
+                  : null,
+            );
+          },
         );
       },
     );
   }
-
-  Widget _buildScrollToBottomButton() {
-    return Positioned(
-      bottom: 100,
-      left: 0,
-      right: 0,
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 800),
-          child: Align(
-            alignment: Alignment.centerRight,
-            child: Padding(
-              padding: const EdgeInsets.only(right: 16),
-              child: Container(
-                width: 48,
-                height: 48,
-                decoration: const BoxDecoration(
-                  color: SpaceNotesTheme.inputSurface,
-                  shape: BoxShape.circle,
-                ),
-                child: IconButton(
-                  onPressed: () {
-                    _autoScrollEnabled = true;
-                    _chatScrollController.animateTo(
-                      _chatScrollController.position.maxScrollExtent,
-                      duration: const Duration(milliseconds: 200),
-                      curve: Curves.easeOut,
-                    );
-                  },
-                  tooltip: 'Scroll to bottom',
-                  icon: const Icon(
-                    Icons.arrow_downward,
-                    size: 24,
-                    color: SpaceNotesTheme.primary,
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _scrollToBottom() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_chatScrollController.hasClients) {
-        _chatScrollController.animateTo(
-          _chatScrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 200),
-          curve: Curves.easeOut,
-        );
-      }
-    });
-  }
-
-  ScrollController get _chatScrollController =>
-      widget.scrollController ?? (_ownScrollController ??= ScrollController());
 }
