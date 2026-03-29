@@ -167,9 +167,11 @@ class _ChatViewState extends ConsumerState<ChatView> {
                       itemBuilder: (context, index) {
                         final message = messages[index];
                         final session = message.session;
+                        final targetSession = state is ChatReady ? state.targetSession : 'note-assistant';
 
                         return TerminalMessage(
                           message: message,
+                          isTargeted: session != null && session == targetSession && targetSession != 'note-assistant',
                           onTap: (session != null && session.isNotEmpty && message.role == 'assistant')
                               ? () => context.read<ChatBloc>().add(SetTargetSession(session))
                               : null,

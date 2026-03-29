@@ -15,12 +15,14 @@ import 'streaming_text.dart';
 class TerminalMessage extends StatelessWidget {
   final SpaceMessage message;
   final bool isStreaming;
+  final bool isTargeted;
   final VoidCallback? onTap;
 
   const TerminalMessage({
     super.key,
     required this.message,
     this.isStreaming = false,
+    this.isTargeted = false,
     this.onTap,
   });
 
@@ -103,7 +105,7 @@ class TerminalMessage extends StatelessWidget {
         margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
-          color: const Color(0xFF0F1214),
+          color: isTargeted ? const Color(0xFF161A1E) : const Color(0xFF0F1214),
           borderRadius: BorderRadius.circular(6),
         ),
         child: Column(

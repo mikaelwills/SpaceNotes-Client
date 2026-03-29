@@ -136,7 +136,6 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
     final isChatConnected = ref.watch(chatConnectedProvider).valueOrNull ?? false;
     final chatState = context.watch<ChatBloc>().state;
     final targetSession = chatState is ChatReady ? chatState.targetSession : 'note-assistant';
-    final isMainChat = isChat && _getCurrentSessionId() == null;
 
     String hintText;
     if (!isChat) {
@@ -152,28 +151,6 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (isMainChat && targetSession != 'note-assistant')
-            GestureDetector(
-              onTap: () => context.read<ChatBloc>().add(const SetTargetSession('note-assistant')),
-              child: Padding(
-                padding: const EdgeInsets.only(left: 4, bottom: 4),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.close, size: 12, color: SpaceNotesTheme.primary),
-                    const SizedBox(width: 4),
-                    Text(
-                      targetSession,
-                      style: SpaceNotesTextStyles.terminal.copyWith(
-                        color: SpaceNotesTheme.primary,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
           Container(
             decoration: BoxDecoration(
               color: SpaceNotesTheme.inputSurface,
