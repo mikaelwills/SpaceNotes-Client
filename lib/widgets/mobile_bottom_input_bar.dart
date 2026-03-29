@@ -2,14 +2,13 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:get_it/get_it.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image/image.dart' as image_lib;
 import 'package:image_picker/image_picker.dart';
 import '../theme/spacenotes_theme.dart';
 import '../providers/notes_providers.dart';
-import '../providers/connection_providers.dart';
 import '../dialogs/notes_list_dialogs.dart';
 import '../blocs/chat/chat_bloc.dart';
 import '../blocs/chat/chat_event.dart';
@@ -125,8 +124,7 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
   }
 
   Widget _buildSearchBar(bool isChat) {
-    final isChatConnected = ref.watch(chatConnectedProvider).valueOrNull ?? false;
-    final chatState = context.read<ChatBloc>().state;
+    final chatState = GetIt.I<ChatBloc>().state;
     final targetSession = chatState is ChatReady ? chatState.targetSession : 'note-assistant';
 
     String hintText;
@@ -157,7 +155,7 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
                 setState(() => _isSearchFocused = focused);
               },
               onSubmitted: _onSendToAi,
-              showImagePicker: isChatConnected,
+              showImagePicker: isChat,
               onImagePickerTap: _onPickImage,
               hasImageAttached: _pendingImageBase64 != null,
               onClearImage: () {
@@ -175,27 +173,10 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
 
   Widget _buildRightButtons(bool isChat, String folderPath) {
     if (isChat) {
-      return BlocBuilder<ChatBloc, ChatState>(
-        buildWhen: (prev, curr) {
-          final prevWorking = prev is ChatReady && prev.isWorking;
-          final currWorking = curr is ChatReady && curr.isWorking;
-          return prevWorking != currWorking;
-        },
-        builder: (context, chatState) {
-          final isWorking = chatState is ChatReady && chatState.isWorking;
-          return isWorking
-              ? _buildRoundedButton(
-                  onPressed: () =>
-                      context.read<ChatBloc>().add(CancelCurrentOperation()),
-                  tooltip: 'Cancel',
-                  icon: Icons.stop,
-                )
-              : _buildRoundedButton(
-                  onPressed: _onSendToAi,
-                  tooltip: 'Send to AI',
-                  icon: Icons.arrow_upward,
-                );
-        },
+      return _buildRoundedButton(
+        onPressed: _onSendToAi,
+        tooltip: 'Send to AI',
+        icon: Icons.arrow_upward,
       );
     } else if (_isSearchFocused || _searchController.text.isNotEmpty) {
       return _buildRoundedButton(
@@ -278,7 +259,7 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
 
     final sessionId = _getCurrentSessionId();
     if (sessionId != null) {
-      context.read<ChatBloc>().add(SendSessionMessage(sessionId, message));
+      GetIt.I<ChatBloc>().add(SendSessionMessage(sessionId, message));
       _searchController.clear();
       setState(() {
         _pendingImageBase64 = null;
@@ -287,7 +268,7 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
       return;
     }
 
-    context.read<ChatBloc>().add(SendChatMessage(
+    GetIt.I<ChatBloc>().add(SendChatMessage(
       message.isEmpty ? 'What is in this image?' : message,
       imageBase64: _pendingImageBase64,
       imageMimeType: _pendingImageMimeType,
