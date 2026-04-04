@@ -43,7 +43,7 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
   @override
   Widget build(BuildContext context) {
     final viewType = _getCurrentViewType();
-    final isChat = viewType == HomeViewType.chat;
+    final isChat = viewType == HomeViewType.chat || viewType == HomeViewType.sessionChat;
 
     final searchQuery = ref.watch(folderSearchQueryProvider);
     if (!isChat && searchQuery.isEmpty && _searchController.text.isNotEmpty) {
