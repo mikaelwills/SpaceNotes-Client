@@ -125,6 +125,7 @@ class _TerminalInputFieldState extends State<TerminalInputField> {
       fontFamily: 'FiraCode',
       fontSize: 14,
       color: SpaceNotesTheme.textSecondary,
+      overflow: TextOverflow.ellipsis,
     );
     final decoration = InputDecoration(
       border: InputBorder.none,
@@ -136,6 +137,7 @@ class _TerminalInputFieldState extends State<TerminalInputField> {
       filled: false,
       hintText: widget.hintText,
       hintStyle: hintStyle,
+      hintMaxLines: 1,
       isDense: true,
       contentPadding: EdgeInsets.zero,
     );
