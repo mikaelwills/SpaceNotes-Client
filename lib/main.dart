@@ -11,6 +11,7 @@ import 'package:spacetimedb_dart_sdk/spacetimedb_dart_sdk.dart' show SdkLogger;
 import 'theme/spacenotes_theme.dart';
 import 'services/debug_logger.dart';
 import 'blocs/chat/chat_bloc.dart';
+import 'blocs/chat/chat_event.dart';
 import 'blocs/config/config_cubit.dart';
 import 'blocs/desktop_notes/desktop_notes_bloc.dart';
 import 'router/app_router.dart';
@@ -97,6 +98,7 @@ class _SpaceNotesAppState extends State<SpaceNotesApp> with WidgetsBindingObserv
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       debugLogger.info('APP', 'App resumed - checking connection health');
+      widget.chatBloc.add(const ClearTransientActivity());
       final repo = widget.container.read(notesRepositoryProvider);
       repo.tryReconnect();
     }

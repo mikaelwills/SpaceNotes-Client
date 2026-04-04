@@ -151,3 +151,7 @@ class InternalConnectionChanged extends ChatEvent {
 }
 
 class InternalRefreshState extends ChatEvent {}
+
+class ClearTransientActivity extends ChatEvent {
+  const ClearTransientActivity();
+}

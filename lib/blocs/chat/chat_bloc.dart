@@ -49,6 +49,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     on<InternalStatusChanged>(_onStatusChanged);
     on<InternalConnectionChanged>(_onConnectionChanged);
     on<InternalRefreshState>((_, emit) => emit(_buildReady()));
+    on<ClearTransientActivity>(_onClearTransientActivity);
 
     _subscribe();
   }
@@ -427,6 +428,23 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       emit(_buildReady());
       return;
     }
+  }
+
+  void _onClearTransientActivity(
+    ClearTransientActivity event,
+    Emitter<ChatState> emit,
+  ) {
+    _activeToolEvent = null;
+    _isThinking = false;
+    _toolHideTimer?.cancel();
+    final updated = <String, SessionInfo>{};
+    for (final entry in _sessions.entries) {
+      updated[entry.key] = entry.value.copyWith(
+        activityState: SessionActivityState.idle,
+      );
+    }
+    _sessions = updated;
+    emit(_buildReady());
   }
 
   void _onSetTargetSession(SetTargetSession event, Emitter<ChatState> emit) {
