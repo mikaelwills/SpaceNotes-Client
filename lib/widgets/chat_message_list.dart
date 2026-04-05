@@ -37,6 +37,14 @@ class ChatMessageListState extends State<ChatMessageList> {
   int _previousMessageCount = 0;
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _syncScrollButtonVisibility();
+    });
+  }
+
+  @override
   void dispose() {
     _ownScrollController?.dispose();
     super.dispose();
@@ -149,6 +157,20 @@ class ChatMessageListState extends State<ChatMessageList> {
       scrollToBottom();
     }
     _previousMessageCount = newCount;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _syncScrollButtonVisibility();
+    });
+  }
+
+  void _syncScrollButtonVisibility() {
+    if (!mounted) return;
+    if (!_scrollController.hasClients) return;
+    final pos = _scrollController.position;
+    if (!pos.hasContentDimensions) return;
+    final isNearBottom = pos.pixels >= pos.maxScrollExtent - 100;
+    if (_showScrollButton == isNearBottom) {
+      setState(() => _showScrollButton = !isNearBottom);
+    }
   }
 
   void scrollToBottom() {
