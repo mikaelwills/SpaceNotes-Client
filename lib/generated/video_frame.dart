@@ -3,13 +3,6 @@
 import 'package:spacetimedb_dart_sdk/spacetimedb_dart_sdk.dart';
 
 class VideoFrame {
-  final Int64 sessionId;
-  final Identity from;
-  final int seq;
-  final int codec;
-  final bool isKeyframe;
-  final List<int> data;
-
   VideoFrame({
     required this.sessionId,
     required this.from,
@@ -18,6 +11,29 @@ class VideoFrame {
     required this.isKeyframe,
     required this.data,
   });
+
+  factory VideoFrame.fromJson(Map<String, dynamic> json) {
+    return VideoFrame(
+      sessionId: Int64(json['sessionId'] ?? 0),
+      from: Identity.fromJson(json['from'] ?? ''),
+      seq: json['seq'] ?? 0,
+      codec: json['codec'] ?? 0,
+      isKeyframe: json['isKeyframe'] ?? false,
+      data: json['data'],
+    );
+  }
+
+  final Int64 sessionId;
+
+  final Identity from;
+
+  final int seq;
+
+  final int codec;
+
+  final bool isKeyframe;
+
+  final List<int> data;
 
   void encodeBsatn(BsatnEncoder encoder) {
     encoder.writeU64(sessionId);
@@ -49,18 +65,6 @@ class VideoFrame {
       'data': data,
     };
   }
-
-  factory VideoFrame.fromJson(Map<String, dynamic> json) {
-    return VideoFrame(
-      sessionId: Int64(json['sessionId'] ?? 0),
-      from: Identity.fromJson(json['from'] ?? ''),
-      seq: json['seq'] ?? 0,
-      codec: json['codec'] ?? 0,
-      isKeyframe: json['isKeyframe'] ?? false,
-      data: List<int>.from(json['data'] ?? []),
-    );
-  }
-
 }
 
 class VideoFrameDecoder extends RowDecoder<VideoFrame> {
@@ -75,11 +79,17 @@ class VideoFrameDecoder extends RowDecoder<VideoFrame> {
   }
 
   @override
-  Map<String, dynamic>? toJson(VideoFrame row) => row.toJson();
+  Map<String, dynamic>? toJson(VideoFrame row) {
+    return row.toJson();
+  }
 
   @override
-  VideoFrame? fromJson(Map<String, dynamic> json) => VideoFrame.fromJson(json);
+  VideoFrame? fromJson(Map<String, dynamic> json) {
+    return VideoFrame.fromJson(json);
+  }
 
   @override
-  bool get supportsJsonSerialization => true;
+  bool get supportsJsonSerialization {
+    return true;
+  }
 }

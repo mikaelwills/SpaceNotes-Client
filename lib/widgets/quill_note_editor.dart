@@ -338,8 +338,11 @@ class QuillNoteEditorState extends State<QuillNoteEditor> {
                         showDirection: false,
                         showUndo: false,
                         showRedo: false,
+                        // ignore: experimental_member_use
                         showClipboardCopy: false,
+                        // ignore: experimental_member_use
                         showClipboardCut: false,
+                        // ignore: experimental_member_use
                         showClipboardPaste: false,
                         color: Colors.transparent,
                         sectionDividerColor: SpaceNotesTheme.textSecondary.withValues(alpha: 0.2),

@@ -6,7 +6,6 @@ enum SessionActivityState { idle, thinking, toolUse }
 
 class SessionInfo extends Equatable {
   final String session;
-  final String project;
   final String task;
   final DateTime connectedAt;
   final DateTime lastActivity;
@@ -16,7 +15,6 @@ class SessionInfo extends Equatable {
 
   const SessionInfo({
     required this.session,
-    required this.project,
     required this.task,
     required this.connectedAt,
     required this.lastActivity,
@@ -33,7 +31,6 @@ class SessionInfo extends Equatable {
   }) {
     return SessionInfo(
       session: session,
-      project: project,
       task: task,
       connectedAt: connectedAt,
       lastActivity: lastActivity ?? this.lastActivity,
@@ -46,7 +43,6 @@ class SessionInfo extends Equatable {
   @override
   List<Object?> get props => [
         session,
-        project,
         task,
         connectedAt,
         lastActivity,

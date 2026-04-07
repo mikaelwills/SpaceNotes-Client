@@ -8,10 +8,14 @@ sealed class NoteStatus {
   factory NoteStatus.decode(BsatnDecoder decoder) {
     final tag = decoder.readU8();
     switch (tag) {
-      case 0: return NoteStatusDraft.decode(decoder);
-      case 1: return NoteStatusPublished.decode(decoder);
-      case 2: return NoteStatusArchived.decode(decoder);
-      default: throw Exception('Unknown NoteStatus variant: $tag');
+      case 0:
+        return NoteStatusDraft.decode(decoder);
+      case 1:
+        return NoteStatusPublished.decode(decoder);
+      case 2:
+        return NoteStatusArchived.decode(decoder);
+      default:
+        throw Exception('Unknown NoteStatus variant: $tag');
     }
   }
 
@@ -59,4 +63,3 @@ class NoteStatusArchived extends NoteStatus {
     encoder.writeU8(2);
   }
 }
-

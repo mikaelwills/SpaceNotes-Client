@@ -185,16 +185,13 @@ class _SessionTile extends StatelessWidget {
               ),
             ],
           ),
-          if (sessionInfo.project.isNotEmpty || sessionInfo.task.isNotEmpty) ...[
+          if (sessionInfo.task.isNotEmpty) ...[
             const SizedBox(height: 10),
             Wrap(
               spacing: 6,
               runSpacing: 4,
               children: [
-                if (sessionInfo.project.isNotEmpty)
-                  _InfoChip(label: 'project', value: sessionInfo.project),
-                if (sessionInfo.task.isNotEmpty)
-                  _InfoChip(label: 'task', value: sessionInfo.task),
+                _InfoChip(label: 'task', value: sessionInfo.task),
               ],
             ),
           ],

@@ -2,7 +2,6 @@ import 'package:equatable/equatable.dart';
 
 class ToolEvent extends Equatable {
   final String session;
-  final String project;
   final String task;
   final String tool;
   final Map<String, dynamic> input;
@@ -10,7 +9,6 @@ class ToolEvent extends Equatable {
 
   const ToolEvent({
     required this.session,
-    required this.project,
     required this.task,
     required this.tool,
     required this.input,
@@ -21,7 +19,6 @@ class ToolEvent extends Equatable {
     final ts = json['ts'];
     return ToolEvent(
       session: json['session'] ?? '',
-      project: json['project'] ?? '',
       task: json['task'] ?? '',
       tool: json['tool'] ?? '',
       input: json['input'] ?? {},
@@ -34,7 +31,6 @@ class ToolEvent extends Equatable {
   Map<String, dynamic> toJson() {
     return {
       'session': session,
-      'project': project,
       'task': task,
       'tool': tool,
       'input': input,
@@ -43,5 +39,5 @@ class ToolEvent extends Equatable {
   }
 
   @override
-  List<Object?> get props => [session, project, task, tool, input, timestamp];
+  List<Object?> get props => [session, task, tool, input, timestamp];
 }

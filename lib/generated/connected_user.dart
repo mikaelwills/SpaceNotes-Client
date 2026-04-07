@@ -3,15 +3,25 @@
 import 'package:spacetimedb_dart_sdk/spacetimedb_dart_sdk.dart';
 
 class ConnectedUser {
-  final Identity identity;
-  final Int64 connectedAt;
-  final String name;
-
   ConnectedUser({
     required this.identity,
     required this.connectedAt,
     required this.name,
   });
+
+  factory ConnectedUser.fromJson(Map<String, dynamic> json) {
+    return ConnectedUser(
+      identity: Identity.fromJson(json['identity'] ?? ''),
+      connectedAt: Int64(json['connectedAt'] ?? 0),
+      name: json['name'] ?? '',
+    );
+  }
+
+  final Identity identity;
+
+  final Int64 connectedAt;
+
+  final String name;
 
   void encodeBsatn(BsatnEncoder encoder) {
     encoder.writeIdentity(identity);
@@ -34,15 +44,6 @@ class ConnectedUser {
       'name': name,
     };
   }
-
-  factory ConnectedUser.fromJson(Map<String, dynamic> json) {
-    return ConnectedUser(
-      identity: Identity.fromJson(json['identity'] ?? ''),
-      connectedAt: Int64(json['connectedAt'] ?? 0),
-      name: json['name'] ?? '',
-    );
-  }
-
 }
 
 class ConnectedUserDecoder extends RowDecoder<ConnectedUser> {
@@ -57,11 +58,17 @@ class ConnectedUserDecoder extends RowDecoder<ConnectedUser> {
   }
 
   @override
-  Map<String, dynamic>? toJson(ConnectedUser row) => row.toJson();
+  Map<String, dynamic>? toJson(ConnectedUser row) {
+    return row.toJson();
+  }
 
   @override
-  ConnectedUser? fromJson(Map<String, dynamic> json) => ConnectedUser.fromJson(json);
+  ConnectedUser? fromJson(Map<String, dynamic> json) {
+    return ConnectedUser.fromJson(json);
+  }
 
   @override
-  bool get supportsJsonSerialization => true;
+  bool get supportsJsonSerialization {
+    return true;
+  }
 }

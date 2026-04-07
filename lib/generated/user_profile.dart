@@ -3,13 +3,21 @@
 import 'package:spacetimedb_dart_sdk/spacetimedb_dart_sdk.dart';
 
 class UserProfile {
-  final Identity identity;
-  final String name;
-
   UserProfile({
     required this.identity,
     required this.name,
   });
+
+  factory UserProfile.fromJson(Map<String, dynamic> json) {
+    return UserProfile(
+      identity: Identity.fromJson(json['identity'] ?? ''),
+      name: json['name'] ?? '',
+    );
+  }
+
+  final Identity identity;
+
+  final String name;
 
   void encodeBsatn(BsatnEncoder encoder) {
     encoder.writeIdentity(identity);
@@ -29,14 +37,6 @@ class UserProfile {
       'name': name,
     };
   }
-
-  factory UserProfile.fromJson(Map<String, dynamic> json) {
-    return UserProfile(
-      identity: Identity.fromJson(json['identity'] ?? ''),
-      name: json['name'] ?? '',
-    );
-  }
-
 }
 
 class UserProfileDecoder extends RowDecoder<UserProfile> {
@@ -51,11 +51,17 @@ class UserProfileDecoder extends RowDecoder<UserProfile> {
   }
 
   @override
-  Map<String, dynamic>? toJson(UserProfile row) => row.toJson();
+  Map<String, dynamic>? toJson(UserProfile row) {
+    return row.toJson();
+  }
 
   @override
-  UserProfile? fromJson(Map<String, dynamic> json) => UserProfile.fromJson(json);
+  UserProfile? fromJson(Map<String, dynamic> json) {
+    return UserProfile.fromJson(json);
+  }
 
   @override
-  bool get supportsJsonSerialization => true;
+  bool get supportsJsonSerialization {
+    return true;
+  }
 }

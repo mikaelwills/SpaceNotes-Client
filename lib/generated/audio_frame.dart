@@ -3,17 +3,29 @@
 import 'package:spacetimedb_dart_sdk/spacetimedb_dart_sdk.dart';
 
 class AudioFrame {
-  final Int64 sessionId;
-  final Identity from;
-  final int seq;
-  final List<int> pcm;
-
   AudioFrame({
     required this.sessionId,
     required this.from,
     required this.seq,
     required this.pcm,
   });
+
+  factory AudioFrame.fromJson(Map<String, dynamic> json) {
+    return AudioFrame(
+      sessionId: Int64(json['sessionId'] ?? 0),
+      from: Identity.fromJson(json['from'] ?? ''),
+      seq: json['seq'] ?? 0,
+      pcm: json['pcm'],
+    );
+  }
+
+  final Int64 sessionId;
+
+  final Identity from;
+
+  final int seq;
+
+  final List<int> pcm;
 
   void encodeBsatn(BsatnEncoder encoder) {
     encoder.writeU64(sessionId);
@@ -39,16 +51,6 @@ class AudioFrame {
       'pcm': pcm,
     };
   }
-
-  factory AudioFrame.fromJson(Map<String, dynamic> json) {
-    return AudioFrame(
-      sessionId: Int64(json['sessionId'] ?? 0),
-      from: Identity.fromJson(json['from'] ?? ''),
-      seq: json['seq'] ?? 0,
-      pcm: List<int>.from(json['pcm'] ?? []),
-    );
-  }
-
 }
 
 class AudioFrameDecoder extends RowDecoder<AudioFrame> {
@@ -63,11 +65,17 @@ class AudioFrameDecoder extends RowDecoder<AudioFrame> {
   }
 
   @override
-  Map<String, dynamic>? toJson(AudioFrame row) => row.toJson();
+  Map<String, dynamic>? toJson(AudioFrame row) {
+    return row.toJson();
+  }
 
   @override
-  AudioFrame? fromJson(Map<String, dynamic> json) => AudioFrame.fromJson(json);
+  AudioFrame? fromJson(Map<String, dynamic> json) {
+    return AudioFrame.fromJson(json);
+  }
 
   @override
-  bool get supportsJsonSerialization => true;
+  bool get supportsJsonSerialization {
+    return true;
+  }
 }

@@ -34,7 +34,7 @@ class _SessionChatScreenState extends State<SessionChatScreen> {
           },
           builder: (context, state) {
             final info = state is ChatReady ? state.sessions[widget.sessionId] : null;
-            final projectName = info?.project ?? widget.sessionId;
+            final projectName = widget.sessionId;
             return _buildHeader(projectName, info);
           },
         ),

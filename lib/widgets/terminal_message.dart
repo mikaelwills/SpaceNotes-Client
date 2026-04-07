@@ -120,10 +120,10 @@ class TerminalMessage extends StatelessWidget {
                     fontFamily: 'FiraCode',
                   ),
                 ),
-                if (message.project != null && message.project!.isNotEmpty) ...[
+                if (message.session != null && message.session!.isNotEmpty) ...[
                   const SizedBox(width: 8),
                   Text(
-                    message.project!.toUpperCase(),
+                    message.session!.toUpperCase(),
                     style: SpaceNotesTextStyles.terminal.copyWith(
                       color: color,
                       fontFamily: 'FiraCode',

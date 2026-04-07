@@ -3,18 +3,6 @@
 import 'package:spacetimedb_dart_sdk/spacetimedb_dart_sdk.dart';
 
 class Note {
-  final String id;
-  final String path;
-  final String name;
-  final String content;
-  final String folderPath;
-  final int depth;
-  final String frontmatter;
-  final Int64 size;
-  final Int64 createdTime;
-  final Int64 modifiedTime;
-  final Int64 dbUpdatedAt;
-
   Note({
     required this.id,
     required this.path,
@@ -28,6 +16,44 @@ class Note {
     required this.modifiedTime,
     required this.dbUpdatedAt,
   });
+
+  factory Note.fromJson(Map<String, dynamic> json) {
+    return Note(
+      id: json['id'] ?? '',
+      path: json['path'] ?? '',
+      name: json['name'] ?? '',
+      content: json['content'] ?? '',
+      folderPath: json['folderPath'] ?? '',
+      depth: json['depth'] ?? 0,
+      frontmatter: json['frontmatter'] ?? '',
+      size: Int64(json['size'] ?? 0),
+      createdTime: Int64(json['createdTime'] ?? 0),
+      modifiedTime: Int64(json['modifiedTime'] ?? 0),
+      dbUpdatedAt: Int64(json['dbUpdatedAt'] ?? 0),
+    );
+  }
+
+  final String id;
+
+  final String path;
+
+  final String name;
+
+  final String content;
+
+  final String folderPath;
+
+  final int depth;
+
+  final String frontmatter;
+
+  final Int64 size;
+
+  final Int64 createdTime;
+
+  final Int64 modifiedTime;
+
+  final Int64 dbUpdatedAt;
 
   void encodeBsatn(BsatnEncoder encoder) {
     encoder.writeString(id);
@@ -74,23 +100,6 @@ class Note {
       'dbUpdatedAt': dbUpdatedAt.toInt(),
     };
   }
-
-  factory Note.fromJson(Map<String, dynamic> json) {
-    return Note(
-      id: json['id'] ?? '',
-      path: json['path'] ?? '',
-      name: json['name'] ?? '',
-      content: json['content'] ?? '',
-      folderPath: json['folderPath'] ?? '',
-      depth: json['depth'] ?? 0,
-      frontmatter: json['frontmatter'] ?? '',
-      size: Int64(json['size'] ?? 0),
-      createdTime: Int64(json['createdTime'] ?? 0),
-      modifiedTime: Int64(json['modifiedTime'] ?? 0),
-      dbUpdatedAt: Int64(json['dbUpdatedAt'] ?? 0),
-    );
-  }
-
 }
 
 class NoteDecoder extends RowDecoder<Note> {
@@ -105,11 +114,17 @@ class NoteDecoder extends RowDecoder<Note> {
   }
 
   @override
-  Map<String, dynamic>? toJson(Note row) => row.toJson();
+  Map<String, dynamic>? toJson(Note row) {
+    return row.toJson();
+  }
 
   @override
-  Note? fromJson(Map<String, dynamic> json) => Note.fromJson(json);
+  Note? fromJson(Map<String, dynamic> json) {
+    return Note.fromJson(json);
+  }
 
   @override
-  bool get supportsJsonSerialization => true;
+  bool get supportsJsonSerialization {
+    return true;
+  }
 }

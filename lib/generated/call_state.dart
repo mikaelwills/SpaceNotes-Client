@@ -8,20 +8,28 @@ sealed class CallState {
   factory CallState.decode(BsatnDecoder decoder) {
     final tag = decoder.readU8();
     switch (tag) {
-      case 0: return CallStateRinging.decode(decoder);
-      case 1: return CallStateActive.decode(decoder);
-      case 2: return CallStateEnded.decode(decoder);
-      default: throw Exception('Unknown CallState variant: $tag');
+      case 0:
+        return CallStateRinging.decode(decoder);
+      case 1:
+        return CallStateActive.decode(decoder);
+      case 2:
+        return CallStateEnded.decode(decoder);
+      default:
+        throw Exception('Unknown CallState variant: $tag');
     }
   }
 
   factory CallState.fromJson(Map<String, dynamic> json) {
     final type = json['type'] ?? '';
     switch (type) {
-      case 'Ringing': return CallStateRinging.fromJson(json);
-      case 'Active': return CallStateActive.fromJson(json);
-      case 'Ended': return CallStateEnded.fromJson(json);
-      default: throw Exception('Unknown CallState variant: $type');
+      case 'Ringing':
+        return CallStateRinging.fromJson(json);
+      case 'Active':
+        return CallStateActive.fromJson(json);
+      case 'Ended':
+        return CallStateEnded.fromJson(json);
+      default:
+        throw Exception('Unknown CallState variant: $type');
     }
   }
 
@@ -46,7 +54,9 @@ class CallStateRinging extends CallState {
   }
 
   @override
-  Map<String, dynamic> toJson() => {'type': 'Ringing'};
+  Map<String, dynamic> toJson() {
+    return {'type': 'Ringing'};
+  }
 }
 
 class CallStateActive extends CallState {
@@ -66,7 +76,9 @@ class CallStateActive extends CallState {
   }
 
   @override
-  Map<String, dynamic> toJson() => {'type': 'Active'};
+  Map<String, dynamic> toJson() {
+    return {'type': 'Active'};
+  }
 }
 
 class CallStateEnded extends CallState {
@@ -86,6 +98,7 @@ class CallStateEnded extends CallState {
   }
 
   @override
-  Map<String, dynamic> toJson() => {'type': 'Ended'};
+  Map<String, dynamic> toJson() {
+    return {'type': 'Ended'};
+  }
 }
-
