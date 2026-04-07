@@ -128,7 +128,9 @@ class _ChatViewState extends ConsumerState<ChatView> {
               message: message,
               isTargeted: session != null && session == targetSession && targetSession != 'note-assistant',
               onTap: (session != null && session.isNotEmpty && message.role == 'assistant')
-                  ? () => context.read<ChatBloc>().add(SetTargetSession(session))
+                  ? () => context.read<ChatBloc>().add(SetTargetSession(
+                      session == targetSession ? 'note-assistant' : session,
+                    ))
                   : null,
             );
           },
