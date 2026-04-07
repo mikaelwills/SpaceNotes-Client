@@ -238,7 +238,6 @@ class SpaceChannelService {
       text: '$toolName: $description',
       sourceType: SpaceChannelSourceType.session,
       session: session,
-      project: json['project'] ?? '',
       task: json['task'] ?? '',
       permissionData: {
         'request_id': requestId,

@@ -2,117 +2,146 @@
 
 import 'package:spacetimedb_dart_sdk/spacetimedb_dart_sdk.dart';
 
-/// Arguments for the accept_call reducer
 class AcceptCallArgs {
+  AcceptCallArgs({required this.sessionId});
+
   final Int64 sessionId;
-  AcceptCallArgs({required this.sessionId, });
 }
 
-/// Decoder for accept_call reducer arguments
 class AcceptCallArgsDecoder implements ReducerArgDecoder<AcceptCallArgs> {
+  const AcceptCallArgsDecoder();
+
   @override
   AcceptCallArgs? decode(BsatnDecoder decoder) {
     try {
       final sessionId = decoder.readU64();
-
       return AcceptCallArgs(
         sessionId: sessionId,
       );
     } catch (e) {
-      return null; // Deserialization failed
+      return null;
     }
   }
 }
 
-/// Arguments for the append_to_note reducer
 class AppendToNoteArgs {
+  AppendToNoteArgs({
+    required this.path,
+    required this.content,
+  });
+
   final String path;
+
   final String content;
-  AppendToNoteArgs({required this.path, required this.content, });
 }
 
-/// Decoder for append_to_note reducer arguments
 class AppendToNoteArgsDecoder implements ReducerArgDecoder<AppendToNoteArgs> {
+  const AppendToNoteArgsDecoder();
+
   @override
   AppendToNoteArgs? decode(BsatnDecoder decoder) {
     try {
       final path = decoder.readString();
       final content = decoder.readString();
-
       return AppendToNoteArgs(
         path: path,
         content: content,
       );
     } catch (e) {
-      return null; // Deserialization failed
+      return null;
     }
   }
 }
 
-/// Arguments for the clear_all reducer
 class ClearAllArgs {
   ClearAllArgs();
 }
 
-/// Decoder for clear_all reducer arguments
 class ClearAllArgsDecoder implements ReducerArgDecoder<ClearAllArgs> {
+  const ClearAllArgsDecoder();
+
   @override
   ClearAllArgs? decode(BsatnDecoder decoder) {
     try {
-
-      return ClearAllArgs(
-      );
+      return ClearAllArgs();
     } catch (e) {
-      return null; // Deserialization failed
+      return null;
     }
   }
 }
 
-/// Arguments for the create_folder reducer
 class CreateFolderArgs {
+  CreateFolderArgs({
+    required this.path,
+    required this.name,
+    required this.depth,
+  });
+
   final String path;
+
   final String name;
+
   final int depth;
-  CreateFolderArgs({required this.path, required this.name, required this.depth, });
 }
 
-/// Decoder for create_folder reducer arguments
 class CreateFolderArgsDecoder implements ReducerArgDecoder<CreateFolderArgs> {
+  const CreateFolderArgsDecoder();
+
   @override
   CreateFolderArgs? decode(BsatnDecoder decoder) {
     try {
       final path = decoder.readString();
       final name = decoder.readString();
       final depth = decoder.readU32();
-
       return CreateFolderArgs(
         path: path,
         name: name,
         depth: depth,
       );
     } catch (e) {
-      return null; // Deserialization failed
+      return null;
     }
   }
 }
 
-/// Arguments for the create_note reducer
 class CreateNoteArgs {
+  CreateNoteArgs({
+    required this.id,
+    required this.path,
+    required this.name,
+    required this.content,
+    required this.folderPath,
+    required this.depth,
+    required this.frontmatter,
+    required this.size,
+    required this.createdTime,
+    required this.modifiedTime,
+  });
+
   final String id;
+
   final String path;
+
   final String name;
+
   final String content;
+
   final String folderPath;
+
   final int depth;
+
   final String frontmatter;
+
   final Int64 size;
+
   final Int64 createdTime;
+
   final Int64 modifiedTime;
-  CreateNoteArgs({required this.id, required this.path, required this.name, required this.content, required this.folderPath, required this.depth, required this.frontmatter, required this.size, required this.createdTime, required this.modifiedTime, });
 }
 
-/// Decoder for create_note reducer arguments
 class CreateNoteArgsDecoder implements ReducerArgDecoder<CreateNoteArgs> {
+  const CreateNoteArgsDecoder();
+
   @override
   CreateNoteArgs? decode(BsatnDecoder decoder) {
     try {
@@ -126,7 +155,6 @@ class CreateNoteArgsDecoder implements ReducerArgDecoder<CreateNoteArgs> {
       final size = decoder.readU64();
       final createdTime = decoder.readU64();
       final modifiedTime = decoder.readU64();
-
       return CreateNoteArgs(
         id: id,
         path: path,
@@ -140,88 +168,98 @@ class CreateNoteArgsDecoder implements ReducerArgDecoder<CreateNoteArgs> {
         modifiedTime: modifiedTime,
       );
     } catch (e) {
-      return null; // Deserialization failed
+      return null;
     }
   }
 }
 
-/// Arguments for the delete_folder reducer
 class DeleteFolderArgs {
+  DeleteFolderArgs({required this.path});
+
   final String path;
-  DeleteFolderArgs({required this.path, });
 }
 
-/// Decoder for delete_folder reducer arguments
 class DeleteFolderArgsDecoder implements ReducerArgDecoder<DeleteFolderArgs> {
+  const DeleteFolderArgsDecoder();
+
   @override
   DeleteFolderArgs? decode(BsatnDecoder decoder) {
     try {
       final path = decoder.readString();
-
       return DeleteFolderArgs(
         path: path,
       );
     } catch (e) {
-      return null; // Deserialization failed
+      return null;
     }
   }
 }
 
-/// Arguments for the delete_note reducer
 class DeleteNoteArgs {
+  DeleteNoteArgs({required this.id});
+
   final String id;
-  DeleteNoteArgs({required this.id, });
 }
 
-/// Decoder for delete_note reducer arguments
 class DeleteNoteArgsDecoder implements ReducerArgDecoder<DeleteNoteArgs> {
+  const DeleteNoteArgsDecoder();
+
   @override
   DeleteNoteArgs? decode(BsatnDecoder decoder) {
     try {
       final id = decoder.readString();
-
       return DeleteNoteArgs(
         id: id,
       );
     } catch (e) {
-      return null; // Deserialization failed
+      return null;
     }
   }
 }
 
-/// Arguments for the end_call reducer
 class EndCallArgs {
+  EndCallArgs({required this.sessionId});
+
   final Int64 sessionId;
-  EndCallArgs({required this.sessionId, });
 }
 
-/// Decoder for end_call reducer arguments
 class EndCallArgsDecoder implements ReducerArgDecoder<EndCallArgs> {
+  const EndCallArgsDecoder();
+
   @override
   EndCallArgs? decode(BsatnDecoder decoder) {
     try {
       final sessionId = decoder.readU64();
-
       return EndCallArgs(
         sessionId: sessionId,
       );
     } catch (e) {
-      return null; // Deserialization failed
+      return null;
     }
   }
 }
 
-/// Arguments for the find_replace_in_note reducer
 class FindReplaceInNoteArgs {
+  FindReplaceInNoteArgs({
+    required this.path,
+    required this.oldText,
+    required this.newText,
+    required this.replaceAll,
+  });
+
   final String path;
+
   final String oldText;
+
   final String newText;
+
   final bool replaceAll;
-  FindReplaceInNoteArgs({required this.path, required this.oldText, required this.newText, required this.replaceAll, });
 }
 
-/// Decoder for find_replace_in_note reducer arguments
-class FindReplaceInNoteArgsDecoder implements ReducerArgDecoder<FindReplaceInNoteArgs> {
+class FindReplaceInNoteArgsDecoder
+    implements ReducerArgDecoder<FindReplaceInNoteArgs> {
+  const FindReplaceInNoteArgsDecoder();
+
   @override
   FindReplaceInNoteArgs? decode(BsatnDecoder decoder) {
     try {
@@ -229,7 +267,6 @@ class FindReplaceInNoteArgsDecoder implements ReducerArgDecoder<FindReplaceInNot
       final oldText = decoder.readString();
       final newText = decoder.readString();
       final replaceAll = decoder.readBool();
-
       return FindReplaceInNoteArgs(
         path: path,
         oldText: oldText,
@@ -237,195 +274,231 @@ class FindReplaceInNoteArgsDecoder implements ReducerArgDecoder<FindReplaceInNot
         replaceAll: replaceAll,
       );
     } catch (e) {
-      return null; // Deserialization failed
+      return null;
     }
   }
 }
 
-/// Arguments for the get_recent_notes reducer
 class GetRecentNotesArgs {
+  GetRecentNotesArgs({required this.limit});
+
   final int limit;
-  GetRecentNotesArgs({required this.limit, });
 }
 
-/// Decoder for get_recent_notes reducer arguments
-class GetRecentNotesArgsDecoder implements ReducerArgDecoder<GetRecentNotesArgs> {
+class GetRecentNotesArgsDecoder
+    implements ReducerArgDecoder<GetRecentNotesArgs> {
+  const GetRecentNotesArgsDecoder();
+
   @override
   GetRecentNotesArgs? decode(BsatnDecoder decoder) {
     try {
       final limit = decoder.readU32();
-
       return GetRecentNotesArgs(
         limit: limit,
       );
     } catch (e) {
-      return null; // Deserialization failed
+      return null;
     }
   }
 }
 
-/// Arguments for the move_folder reducer
 class MoveFolderArgs {
+  MoveFolderArgs({
+    required this.oldPath,
+    required this.newPath,
+  });
+
   final String oldPath;
+
   final String newPath;
-  MoveFolderArgs({required this.oldPath, required this.newPath, });
 }
 
-/// Decoder for move_folder reducer arguments
 class MoveFolderArgsDecoder implements ReducerArgDecoder<MoveFolderArgs> {
+  const MoveFolderArgsDecoder();
+
   @override
   MoveFolderArgs? decode(BsatnDecoder decoder) {
     try {
       final oldPath = decoder.readString();
       final newPath = decoder.readString();
-
       return MoveFolderArgs(
         oldPath: oldPath,
         newPath: newPath,
       );
     } catch (e) {
-      return null; // Deserialization failed
+      return null;
     }
   }
 }
 
-/// Arguments for the move_note reducer
 class MoveNoteArgs {
+  MoveNoteArgs({
+    required this.oldPath,
+    required this.newPath,
+  });
+
   final String oldPath;
+
   final String newPath;
-  MoveNoteArgs({required this.oldPath, required this.newPath, });
 }
 
-/// Decoder for move_note reducer arguments
 class MoveNoteArgsDecoder implements ReducerArgDecoder<MoveNoteArgs> {
+  const MoveNoteArgsDecoder();
+
   @override
   MoveNoteArgs? decode(BsatnDecoder decoder) {
     try {
       final oldPath = decoder.readString();
       final newPath = decoder.readString();
-
       return MoveNoteArgs(
         oldPath: oldPath,
         newPath: newPath,
       );
     } catch (e) {
-      return null; // Deserialization failed
+      return null;
     }
   }
 }
 
-/// Arguments for the prepend_to_note reducer
 class PrependToNoteArgs {
+  PrependToNoteArgs({
+    required this.path,
+    required this.content,
+  });
+
   final String path;
+
   final String content;
-  PrependToNoteArgs({required this.path, required this.content, });
 }
 
-/// Decoder for prepend_to_note reducer arguments
 class PrependToNoteArgsDecoder implements ReducerArgDecoder<PrependToNoteArgs> {
+  const PrependToNoteArgsDecoder();
+
   @override
   PrependToNoteArgs? decode(BsatnDecoder decoder) {
     try {
       final path = decoder.readString();
       final content = decoder.readString();
-
       return PrependToNoteArgs(
         path: path,
         content: content,
       );
     } catch (e) {
-      return null; // Deserialization failed
+      return null;
     }
   }
 }
 
-/// Arguments for the rename_note reducer
 class RenameNoteArgs {
+  RenameNoteArgs({
+    required this.id,
+    required this.newPath,
+  });
+
   final String id;
+
   final String newPath;
-  RenameNoteArgs({required this.id, required this.newPath, });
 }
 
-/// Decoder for rename_note reducer arguments
 class RenameNoteArgsDecoder implements ReducerArgDecoder<RenameNoteArgs> {
+  const RenameNoteArgsDecoder();
+
   @override
   RenameNoteArgs? decode(BsatnDecoder decoder) {
     try {
       final id = decoder.readString();
       final newPath = decoder.readString();
-
       return RenameNoteArgs(
         id: id,
         newPath: newPath,
       );
     } catch (e) {
-      return null; // Deserialization failed
+      return null;
     }
   }
 }
 
-/// Arguments for the request_call reducer
 class RequestCallArgs {
+  RequestCallArgs({required this.callee});
+
   final Identity callee;
-  RequestCallArgs({required this.callee, });
 }
 
-/// Decoder for request_call reducer arguments
 class RequestCallArgsDecoder implements ReducerArgDecoder<RequestCallArgs> {
+  const RequestCallArgsDecoder();
+
   @override
   RequestCallArgs? decode(BsatnDecoder decoder) {
     try {
       final callee = decoder.readIdentity();
-
       return RequestCallArgs(
         callee: callee,
       );
     } catch (e) {
-      return null; // Deserialization failed
+      return null;
     }
   }
 }
 
-/// Arguments for the send_audio_frame reducer
 class SendAudioFrameArgs {
+  SendAudioFrameArgs({
+    required this.sessionId,
+    required this.seq,
+    required this.pcm,
+  });
+
   final Int64 sessionId;
+
   final int seq;
+
   final List<int> pcm;
-  SendAudioFrameArgs({required this.sessionId, required this.seq, required this.pcm, });
 }
 
-/// Decoder for send_audio_frame reducer arguments
-class SendAudioFrameArgsDecoder implements ReducerArgDecoder<SendAudioFrameArgs> {
+class SendAudioFrameArgsDecoder
+    implements ReducerArgDecoder<SendAudioFrameArgs> {
+  const SendAudioFrameArgsDecoder();
+
   @override
   SendAudioFrameArgs? decode(BsatnDecoder decoder) {
     try {
       final sessionId = decoder.readU64();
       final seq = decoder.readU32();
       final pcm = decoder.readByteArray();
-
       return SendAudioFrameArgs(
         sessionId: sessionId,
         seq: seq,
         pcm: pcm,
       );
     } catch (e) {
-      return null; // Deserialization failed
+      return null;
     }
   }
 }
 
-/// Arguments for the send_video_frame reducer
 class SendVideoFrameArgs {
+  SendVideoFrameArgs({
+    required this.sessionId,
+    required this.seq,
+    required this.codec,
+    required this.isKeyframe,
+    required this.data,
+  });
+
   final Int64 sessionId;
+
   final int seq;
+
   final int codec;
+
   final bool isKeyframe;
+
   final List<int> data;
-  SendVideoFrameArgs({required this.sessionId, required this.seq, required this.codec, required this.isKeyframe, required this.data, });
 }
 
-/// Decoder for send_video_frame reducer arguments
-class SendVideoFrameArgsDecoder implements ReducerArgDecoder<SendVideoFrameArgs> {
+class SendVideoFrameArgsDecoder
+    implements ReducerArgDecoder<SendVideoFrameArgs> {
+  const SendVideoFrameArgsDecoder();
+
   @override
   SendVideoFrameArgs? decode(BsatnDecoder decoder) {
     try {
@@ -434,7 +507,6 @@ class SendVideoFrameArgsDecoder implements ReducerArgDecoder<SendVideoFrameArgs>
       final codec = decoder.readU8();
       final isKeyframe = decoder.readBool();
       final data = decoder.readByteArray();
-
       return SendVideoFrameArgs(
         sessionId: sessionId,
         seq: seq,
@@ -443,45 +515,58 @@ class SendVideoFrameArgsDecoder implements ReducerArgDecoder<SendVideoFrameArgs>
         data: data,
       );
     } catch (e) {
-      return null; // Deserialization failed
+      return null;
     }
   }
 }
 
-/// Arguments for the set_display_name reducer
 class SetDisplayNameArgs {
+  SetDisplayNameArgs({required this.name});
+
   final String name;
-  SetDisplayNameArgs({required this.name, });
 }
 
-/// Decoder for set_display_name reducer arguments
-class SetDisplayNameArgsDecoder implements ReducerArgDecoder<SetDisplayNameArgs> {
+class SetDisplayNameArgsDecoder
+    implements ReducerArgDecoder<SetDisplayNameArgs> {
+  const SetDisplayNameArgsDecoder();
+
   @override
   SetDisplayNameArgs? decode(BsatnDecoder decoder) {
     try {
       final name = decoder.readString();
-
       return SetDisplayNameArgs(
         name: name,
       );
     } catch (e) {
-      return null; // Deserialization failed
+      return null;
     }
   }
 }
 
-/// Arguments for the update_note_content reducer
 class UpdateNoteContentArgs {
+  UpdateNoteContentArgs({
+    required this.id,
+    required this.content,
+    required this.frontmatter,
+    required this.size,
+    required this.modifiedTime,
+  });
+
   final String id;
+
   final String content;
+
   final String frontmatter;
+
   final Int64 size;
+
   final Int64 modifiedTime;
-  UpdateNoteContentArgs({required this.id, required this.content, required this.frontmatter, required this.size, required this.modifiedTime, });
 }
 
-/// Decoder for update_note_content reducer arguments
-class UpdateNoteContentArgsDecoder implements ReducerArgDecoder<UpdateNoteContentArgs> {
+class UpdateNoteContentArgsDecoder
+    implements ReducerArgDecoder<UpdateNoteContentArgs> {
+  const UpdateNoteContentArgsDecoder();
+
   @override
   UpdateNoteContentArgs? decode(BsatnDecoder decoder) {
     try {
@@ -490,7 +575,6 @@ class UpdateNoteContentArgsDecoder implements ReducerArgDecoder<UpdateNoteConten
       final frontmatter = decoder.readString();
       final size = decoder.readU64();
       final modifiedTime = decoder.readU64();
-
       return UpdateNoteContentArgs(
         id: id,
         content: content,
@@ -499,81 +583,113 @@ class UpdateNoteContentArgsDecoder implements ReducerArgDecoder<UpdateNoteConten
         modifiedTime: modifiedTime,
       );
     } catch (e) {
-      return null; // Deserialization failed
+      return null;
     }
   }
 }
 
-/// Arguments for the update_note_path reducer
 class UpdateNotePathArgs {
+  UpdateNotePathArgs({
+    required this.id,
+    required this.newPath,
+  });
+
   final String id;
+
   final String newPath;
-  UpdateNotePathArgs({required this.id, required this.newPath, });
 }
 
-/// Decoder for update_note_path reducer arguments
-class UpdateNotePathArgsDecoder implements ReducerArgDecoder<UpdateNotePathArgs> {
+class UpdateNotePathArgsDecoder
+    implements ReducerArgDecoder<UpdateNotePathArgs> {
+  const UpdateNotePathArgsDecoder();
+
   @override
   UpdateNotePathArgs? decode(BsatnDecoder decoder) {
     try {
       final id = decoder.readString();
       final newPath = decoder.readString();
-
       return UpdateNotePathArgs(
         id: id,
         newPath: newPath,
       );
     } catch (e) {
-      return null; // Deserialization failed
+      return null;
     }
   }
 }
 
-/// Arguments for the upsert_folder reducer
 class UpsertFolderArgs {
+  UpsertFolderArgs({
+    required this.path,
+    required this.name,
+    required this.depth,
+  });
+
   final String path;
+
   final String name;
+
   final int depth;
-  UpsertFolderArgs({required this.path, required this.name, required this.depth, });
 }
 
-/// Decoder for upsert_folder reducer arguments
 class UpsertFolderArgsDecoder implements ReducerArgDecoder<UpsertFolderArgs> {
+  const UpsertFolderArgsDecoder();
+
   @override
   UpsertFolderArgs? decode(BsatnDecoder decoder) {
     try {
       final path = decoder.readString();
       final name = decoder.readString();
       final depth = decoder.readU32();
-
       return UpsertFolderArgs(
         path: path,
         name: name,
         depth: depth,
       );
     } catch (e) {
-      return null; // Deserialization failed
+      return null;
     }
   }
 }
 
-/// Arguments for the upsert_note reducer
 class UpsertNoteArgs {
+  UpsertNoteArgs({
+    required this.id,
+    required this.path,
+    required this.name,
+    required this.content,
+    required this.folderPath,
+    required this.depth,
+    required this.frontmatter,
+    required this.size,
+    required this.createdTime,
+    required this.modifiedTime,
+  });
+
   final String id;
+
   final String path;
+
   final String name;
+
   final String content;
+
   final String folderPath;
+
   final int depth;
+
   final String frontmatter;
+
   final Int64 size;
+
   final Int64 createdTime;
+
   final Int64 modifiedTime;
-  UpsertNoteArgs({required this.id, required this.path, required this.name, required this.content, required this.folderPath, required this.depth, required this.frontmatter, required this.size, required this.createdTime, required this.modifiedTime, });
 }
 
-/// Decoder for upsert_note reducer arguments
 class UpsertNoteArgsDecoder implements ReducerArgDecoder<UpsertNoteArgs> {
+  const UpsertNoteArgsDecoder();
+
   @override
   UpsertNoteArgs? decode(BsatnDecoder decoder) {
     try {
@@ -587,7 +703,6 @@ class UpsertNoteArgsDecoder implements ReducerArgDecoder<UpsertNoteArgs> {
       final size = decoder.readU64();
       final createdTime = decoder.readU64();
       final modifiedTime = decoder.readU64();
-
       return UpsertNoteArgs(
         id: id,
         path: path,
@@ -601,8 +716,51 @@ class UpsertNoteArgsDecoder implements ReducerArgDecoder<UpsertNoteArgs> {
         modifiedTime: modifiedTime,
       );
     } catch (e) {
-      return null; // Deserialization failed
+      return null;
     }
   }
 }
 
+const acceptCallDef =
+    ReducerDef<AcceptCallArgs>('accept_call', AcceptCallArgsDecoder());
+const appendToNoteDef =
+    ReducerDef<AppendToNoteArgs>('append_to_note', AppendToNoteArgsDecoder());
+const clearAllDef =
+    ReducerDef<ClearAllArgs>('clear_all', ClearAllArgsDecoder());
+const createFolderDef =
+    ReducerDef<CreateFolderArgs>('create_folder', CreateFolderArgsDecoder());
+const createNoteDef =
+    ReducerDef<CreateNoteArgs>('create_note', CreateNoteArgsDecoder());
+const deleteFolderDef =
+    ReducerDef<DeleteFolderArgs>('delete_folder', DeleteFolderArgsDecoder());
+const deleteNoteDef =
+    ReducerDef<DeleteNoteArgs>('delete_note', DeleteNoteArgsDecoder());
+const endCallDef = ReducerDef<EndCallArgs>('end_call', EndCallArgsDecoder());
+const findReplaceInNoteDef = ReducerDef<FindReplaceInNoteArgs>(
+    'find_replace_in_note', FindReplaceInNoteArgsDecoder());
+const getRecentNotesDef = ReducerDef<GetRecentNotesArgs>(
+    'get_recent_notes', GetRecentNotesArgsDecoder());
+const moveFolderDef =
+    ReducerDef<MoveFolderArgs>('move_folder', MoveFolderArgsDecoder());
+const moveNoteDef =
+    ReducerDef<MoveNoteArgs>('move_note', MoveNoteArgsDecoder());
+const prependToNoteDef = ReducerDef<PrependToNoteArgs>(
+    'prepend_to_note', PrependToNoteArgsDecoder());
+const renameNoteDef =
+    ReducerDef<RenameNoteArgs>('rename_note', RenameNoteArgsDecoder());
+const requestCallDef =
+    ReducerDef<RequestCallArgs>('request_call', RequestCallArgsDecoder());
+const sendAudioFrameDef = ReducerDef<SendAudioFrameArgs>(
+    'send_audio_frame', SendAudioFrameArgsDecoder());
+const sendVideoFrameDef = ReducerDef<SendVideoFrameArgs>(
+    'send_video_frame', SendVideoFrameArgsDecoder());
+const setDisplayNameDef = ReducerDef<SetDisplayNameArgs>(
+    'set_display_name', SetDisplayNameArgsDecoder());
+const updateNoteContentDef = ReducerDef<UpdateNoteContentArgs>(
+    'update_note_content', UpdateNoteContentArgsDecoder());
+const updateNotePathDef = ReducerDef<UpdateNotePathArgs>(
+    'update_note_path', UpdateNotePathArgsDecoder());
+const upsertFolderDef =
+    ReducerDef<UpsertFolderArgs>('upsert_folder', UpsertFolderArgsDecoder());
+const upsertNoteDef =
+    ReducerDef<UpsertNoteArgs>('upsert_note', UpsertNoteArgsDecoder());

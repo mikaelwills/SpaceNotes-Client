@@ -75,7 +75,6 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
           final e = activity.sessionEvent!;
           add(InternalSessionConnected(
             session: e.session,
-            project: e.project ?? '',
             task: e.task ?? '',
           ));
         case SessionActivityType.disconnected:
@@ -108,7 +107,6 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       parts: [MessagePart(id: '${e.id}-p0', type: 'text', content: e.text ?? '')],
       isStreaming: false,
       sourceType: e.sourceType == SpaceChannelSourceType.webhook ? 'webhook' : 'session',
-      project: e.project,
       task: e.task,
       session: sessionId,
     );
@@ -119,7 +117,6 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     final now = DateTime.now();
     final info = SessionInfo(
       session: session,
-      project: '',
       task: '',
       connectedAt: now,
       lastActivity: now,
@@ -195,7 +192,6 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
           ],
           isStreaming: false,
           sourceType: event.sourceType?.name,
-          project: event.project,
           task: event.task,
           session: effectiveSession,
         );
@@ -260,7 +256,6 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     final existing = _sessions[event.session];
     _sessions[event.session] = SessionInfo(
       session: event.session,
-      project: event.project,
       task: event.task,
       connectedAt: now,
       lastActivity: now,

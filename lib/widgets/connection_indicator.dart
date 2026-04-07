@@ -20,12 +20,12 @@ class ConnectionIndicator extends ConsumerWidget {
           return _buildDisconnectedIndicator();
         }
 
-        return StreamBuilder<stdb.ConnectionStatus>(
-          stream: client.connection.connectionStatus,
-          initialData: client.connection.status,
-          builder: (context, statusSnapshot) {
-            final status =
-                statusSnapshot.data ?? stdb.ConnectionStatus.disconnected;
+        return StreamBuilder<stdb.ConnectionState>(
+          stream: client.connection.onStateChanged,
+          initialData: client.connection.state,
+          builder: (context, stateSnapshot) {
+            final state =
+                stateSnapshot.data ?? const stdb.Disconnected();
 
             return StreamBuilder<stdb.ConnectionQuality>(
               stream: client.connection.connectionQuality,
@@ -33,7 +33,7 @@ class ConnectionIndicator extends ConsumerWidget {
                 final quality = qualitySnapshot.data;
 
                 return _PulsingHealthBar(
-                  status: status,
+                  state: state,
                   quality: quality,
                 );
               },
@@ -60,11 +60,11 @@ class ConnectionIndicator extends ConsumerWidget {
 }
 
 class _PulsingHealthBar extends ConsumerStatefulWidget {
-  final stdb.ConnectionStatus status;
+  final stdb.ConnectionState state;
   final stdb.ConnectionQuality? quality;
 
   const _PulsingHealthBar({
-    required this.status,
+    required this.state,
     required this.quality,
   });
 
@@ -120,7 +120,7 @@ class _PulsingHealthBarState extends ConsumerState<_PulsingHealthBar>
   Widget build(BuildContext context) {
     final color = _getStatusColor();
     final healthScore = _getHealthScore();
-    final isDegraded = widget.status != stdb.ConnectionStatus.connected;
+    final isDegraded = !widget.state.isConnected;
 
     return GestureDetector(
       onTap: isDegraded ? _handleReconnectTap : null,
@@ -178,34 +178,22 @@ class _PulsingHealthBarState extends ConsumerState<_PulsingHealthBar>
   }
 
   Color _getStatusColor() {
-    switch (widget.status) {
-      case stdb.ConnectionStatus.connected:
-        return SpaceNotesTheme.success;
-      case stdb.ConnectionStatus.connecting:
-      case stdb.ConnectionStatus.reconnecting:
-        return SpaceNotesTheme.warning;
-      case stdb.ConnectionStatus.authError:
-      case stdb.ConnectionStatus.fatalError:
-      case stdb.ConnectionStatus.disconnected:
-        return SpaceNotesTheme.error;
-    }
+    return switch (widget.state) {
+      stdb.Connected() => SpaceNotesTheme.success,
+      stdb.Connecting() || stdb.Reconnecting() => SpaceNotesTheme.warning,
+      stdb.AuthError() || stdb.FatalError() || stdb.Disconnected() => SpaceNotesTheme.error,
+    };
   }
 
   double _getHealthScore() {
     if (widget.quality != null) {
       return widget.quality!.healthScore;
     }
-    switch (widget.status) {
-      case stdb.ConnectionStatus.connected:
-        return 1.0;
-      case stdb.ConnectionStatus.connecting:
-      case stdb.ConnectionStatus.reconnecting:
-        return 0.5;
-      case stdb.ConnectionStatus.authError:
-      case stdb.ConnectionStatus.disconnected:
-      case stdb.ConnectionStatus.fatalError:
-        return 0.0;
-    }
+    return switch (widget.state) {
+      stdb.Connected() => 1.0,
+      stdb.Connecting() || stdb.Reconnecting() => 0.5,
+      stdb.AuthError() || stdb.Disconnected() || stdb.FatalError() => 0.0,
+    };
   }
 
   void _handleReconnectTap() {

@@ -95,30 +95,29 @@ class SpacetimeDbNotesRepository {
   /// Ensure client is available (connected or offline-ready)
   Future<void> _ensureConnected() async {
     if (_client != null) {
-      final status = _client!.connection.status;
-      debugLogger.connection('_ensureConnected: client exists, status=$status');
+      final state = _client!.connection.state;
+      debugLogger.connection('_ensureConnected: client exists, state=${state.displayName}');
 
-      if (status == stdb.ConnectionStatus.connected) {
+      if (state.isConnected) {
         return;
       }
 
-      if (status == stdb.ConnectionStatus.reconnecting ||
-          status == stdb.ConnectionStatus.connecting) {
-        debugLogger.connection('In progress ($status), client available for offline ops');
+      if (state.isConnecting) {
+        debugLogger.connection('In progress (${state.displayName}), client available for offline ops');
         return;
       }
 
-      if (status == stdb.ConnectionStatus.authError) {
+      if (state is stdb.AuthError) {
         debugLogger.warning('CONN', 'Auth error - will clear token on reconnect');
         resetConnection();
       }
 
-      if (status == stdb.ConnectionStatus.disconnected) {
+      if (state is stdb.Disconnected) {
         if (_client!.hasOfflineStorage) {
           debugLogger.connection('Offline mode: using existing client');
           return;
         }
-        debugLogger.warning('CONN', 'DEGRADED CONNECTION: $status');
+        debugLogger.warning('CONN', 'DEGRADED CONNECTION: ${state.displayName}');
         resetConnection();
       }
     }
@@ -250,8 +249,7 @@ class SpacetimeDbNotesRepository {
 
       _clientSubject.add(_client);
 
-      final isConnected =
-          _client!.connection.status == stdb.ConnectionStatus.connected;
+      final isConnected = _client!.connection.state.isConnected;
       if (isConnected) {
         debugLogger.connection('Successfully connected to SpacetimeDB');
       } else {
@@ -342,13 +340,13 @@ class SpacetimeDbNotesRepository {
       _syncStateSubject.add(initialState);
     }
 
-    final connectionStatusSub = _client!.connection.connectionStatus.listen((status) {
-      if (status == stdb.ConnectionStatus.authError) {
+    final connectionStateSub = _client!.connection.onStateChanged.listen((state) {
+      if (state is stdb.AuthError) {
         debugLogger.warning('AUTH', 'Auth error detected - auto-clearing token and reconnecting');
         _handleAuthError();
       }
     });
-    _subscriptions.add(connectionStatusSub);
+    _subscriptions.add(connectionStateSub);
 
     debugLogger.sync('Stream listeners registered');
   }
@@ -472,9 +470,7 @@ class SpacetimeDbNotesRepository {
       return false;
     }
 
-    final isConnected =
-        _client!.connection.status == stdb.ConnectionStatus.connected;
-    return isConnected;
+    return _client!.connection.state.isConnected;
   }
 
   Future<Note?> getNote(String id) async {
@@ -901,9 +897,8 @@ class SpacetimeDbNotesRepository {
   Future<void> tryReconnect() async {
     if (_client == null) return;
 
-    final status = _client!.connection.status;
-    if (status == stdb.ConnectionStatus.connected ||
-        status == stdb.ConnectionStatus.connecting) {
+    final state = _client!.connection.state;
+    if (state.isConnected || state.isConnecting) {
       return;
     }
 
@@ -920,9 +915,8 @@ class SpacetimeDbNotesRepository {
       debugLogger.warning('CONN', 'Reconnection failed: $e, retrying in 2s');
       Future.delayed(const Duration(seconds: 2), () {
         if (_client != null) {
-          final retryStatus = _client!.connection.status;
-          if (retryStatus == stdb.ConnectionStatus.disconnected ||
-              retryStatus == stdb.ConnectionStatus.authError) {
+          final retryState = _client!.connection.state;
+          if (retryState.canRetry) {
             tryReconnect();
           }
         }

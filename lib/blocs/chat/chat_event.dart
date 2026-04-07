@@ -100,17 +100,15 @@ class InternalHistoryReceived extends ChatEvent {
 
 class InternalSessionConnected extends ChatEvent {
   final String session;
-  final String project;
   final String task;
 
   const InternalSessionConnected({
     required this.session,
-    required this.project,
     required this.task,
   });
 
   @override
-  List<Object> get props => [session, project, task];
+  List<Object> get props => [session, task];
 }
 
 class InternalSessionDisconnected extends ChatEvent {

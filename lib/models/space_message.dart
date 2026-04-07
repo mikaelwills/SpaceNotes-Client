@@ -23,7 +23,6 @@ class SpaceMessage extends Equatable {
   final bool isStreaming;
   final MessageSendStatus? sendStatus; // Nullable, only for user messages
   final String? sourceType;
-  final String? project;
   final String? task;
   final String? session;
 
@@ -37,7 +36,6 @@ class SpaceMessage extends Equatable {
     this.isStreaming = false,
     this.sendStatus,
     this.sourceType,
-    this.project,
     this.task,
     this.session,
   });
@@ -187,7 +185,6 @@ class SpaceMessage extends Equatable {
       'isStreaming': isStreaming,
       'sendStatus': sendStatus?.toString(),
       if (sourceType != null) 'sourceType': sourceType,
-      if (project != null) 'project': project,
       if (task != null) 'task': task,
       if (session != null) 'session': session,
     };
@@ -203,7 +200,6 @@ class SpaceMessage extends Equatable {
     bool? isStreaming,
     MessageSendStatus? sendStatus,
     String? sourceType,
-    String? project,
     String? task,
     String? session,
   }) {
@@ -217,7 +213,6 @@ class SpaceMessage extends Equatable {
       isStreaming: isStreaming ?? this.isStreaming,
       sendStatus: sendStatus ?? this.sendStatus,
       sourceType: sourceType ?? this.sourceType,
-      project: project ?? this.project,
       task: task ?? this.task,
       session: session ?? this.session,
     );
@@ -233,5 +228,5 @@ class SpaceMessage extends Equatable {
   }
 
   @override
-  List<Object?> get props => [id, sessionId, role, created, completed, parts, isStreaming, sendStatus, sourceType, project, task, session];
+  List<Object?> get props => [id, sessionId, role, created, completed, parts, isStreaming, sendStatus, sourceType, task, session];
 }

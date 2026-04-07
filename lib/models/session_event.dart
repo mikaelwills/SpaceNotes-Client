@@ -3,13 +3,11 @@ import 'package:equatable/equatable.dart';
 class SessionEvent extends Equatable {
   final String action;
   final String session;
-  final String? project;
   final String? task;
 
   const SessionEvent({
     required this.action,
     required this.session,
-    this.project,
     this.task,
   });
 
@@ -17,7 +15,6 @@ class SessionEvent extends Equatable {
     return SessionEvent(
       action: json['action'] ?? '',
       session: json['session'] ?? '',
-      project: json['project'],
       task: json['task'],
     );
   }
@@ -26,7 +23,6 @@ class SessionEvent extends Equatable {
     return {
       'action': action,
       'session': session,
-      if (project != null) 'project': project,
       if (task != null) 'task': task,
     };
   }
@@ -35,5 +31,5 @@ class SessionEvent extends Equatable {
   bool get isDisconnected => action == 'disconnected';
 
   @override
-  List<Object?> get props => [action, session, project, task];
+  List<Object?> get props => [action, session, task];
 }

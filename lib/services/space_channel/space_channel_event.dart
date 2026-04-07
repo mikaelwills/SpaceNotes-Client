@@ -11,7 +11,6 @@ class SpaceChannelEvent {
   final String? replyTo;
   final SpaceChannelFile? file;
   final SpaceChannelSourceType? sourceType;
-  final String? project;
   final String? task;
   final String? session;
   final Map<String, dynamic>? permissionData;
@@ -25,7 +24,6 @@ class SpaceChannelEvent {
     this.replyTo,
     this.file,
     this.sourceType,
-    this.project,
     this.task,
     this.session,
     this.permissionData,
@@ -56,7 +54,6 @@ class SpaceChannelEvent {
           ? SpaceChannelFile.fromJson(json['file'] ?? {})
           : null,
       sourceType: sourceType,
-      project: json['project'] ?? json['source'] ?? '',
       task: json['task'] ?? '',
       session: json['session'] ?? '',
     );
