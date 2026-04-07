@@ -73,14 +73,40 @@ class _ConnectionStatusRowState extends State<ConnectionStatusRow>
                       children: [
                         _buildConnectionIndicator(isConnected),
                         const SizedBox(width: 8),
-                        Text(
-                          displayName,
-                          style: SpaceNotesTextStyles.terminal.copyWith(
-                            fontSize: 13,
-                            color: SpaceNotesTheme.text,
-                            fontWeight: FontWeight.w500,
+                        if (targetSession != 'note-assistant')
+                          GestureDetector(
+                            onTap: () => context
+                                .read<ChatBloc>()
+                                .add(const SetTargetSession('note-assistant')),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  displayName,
+                                  style: SpaceNotesTextStyles.terminal.copyWith(
+                                    fontSize: 13,
+                                    color: SpaceNotesTheme.primary,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                const Icon(
+                                  Icons.close,
+                                  size: 14,
+                                  color: SpaceNotesTheme.primary,
+                                ),
+                              ],
+                            ),
+                          )
+                        else
+                          Text(
+                            displayName,
+                            style: SpaceNotesTextStyles.terminal.copyWith(
+                              fontSize: 13,
+                              color: SpaceNotesTheme.text,
+                              fontWeight: FontWeight.w500,
+                            ),
                           ),
-                        ),
                       ],
                     ),
                     ToolStatusRow(
