@@ -257,6 +257,8 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
     final message = _searchController.text.trim();
     if (message.isEmpty && _pendingImageBase64 == null) return;
 
+    FocusManager.instance.primaryFocus?.unfocus();
+
     final sessionId = _getCurrentSessionId();
     if (sessionId != null) {
       GetIt.I<ChatBloc>().add(SendSessionMessage(sessionId, message));
