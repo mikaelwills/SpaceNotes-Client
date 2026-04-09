@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
+import 'package:go_router/go_router.dart';
 import '../blocs/chat/chat_bloc.dart';
 import '../blocs/chat/chat_state.dart';
 import '../theme/spacenotes_theme.dart';
@@ -79,9 +80,16 @@ class _SessionChatScreenState extends State<SessionChatScreen> {
     final isThinking = activityState == SessionActivityState.thinking;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
       child: Row(
         children: [
+          IconButton(
+            icon: const Icon(Icons.arrow_back, color: SpaceNotesTheme.text, size: 20),
+            onPressed: () => context.pop(),
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+          ),
+          const SizedBox(width: 4),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,

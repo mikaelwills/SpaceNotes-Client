@@ -16,6 +16,7 @@ class TerminalMessage extends StatelessWidget {
   final SpaceMessage message;
   final bool isStreaming;
   final bool isTargeted;
+  final bool isPreview;
   final VoidCallback? onTap;
 
   const TerminalMessage({
@@ -23,6 +24,7 @@ class TerminalMessage extends StatelessWidget {
     required this.message,
     this.isStreaming = false,
     this.isTargeted = false,
+    this.isPreview = false,
     this.onTap,
   });
 
@@ -92,6 +94,8 @@ class TerminalMessage extends StatelessWidget {
   }
 
   Widget _buildAssistantMessage(BuildContext context) {
+    if (isPreview) return _buildPreviewMessage(context);
+
     final hasContent = message.parts.any((p) =>
       (p.content != null && p.content!.isNotEmpty) || p.type == 'tool'
     );
@@ -159,6 +163,88 @@ class TerminalMessage extends StatelessWidget {
             ...message.parts.map((part) => _buildMessagePart(part)),
             if (isStreaming && !hasContent)
               const _BlinkingCursor(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPreviewMessage(BuildContext context) {
+    final color = _sourceLabelColor;
+    final textContent = message.content;
+    final hasText = textContent.isNotEmpty;
+    final latestTool = message.parts.where((p) => p.type == 'tool').lastOrNull;
+    String previewText;
+    if (hasText) {
+      previewText = textContent.replaceAll(RegExp(r'\s+'), ' ').trim();
+    } else if (latestTool != null) {
+      final toolName = ToolDisplayHelper.getDisplayName(latestTool);
+      previewText = 'Running $toolName...';
+    } else {
+      previewText = 'Working...';
+    }
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        decoration: BoxDecoration(
+          color: const Color(0xFF0F1214),
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(
+            color: color.withValues(alpha: 0.15),
+            width: 0.5,
+          ),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        _formattedTime,
+                        style: SpaceNotesTextStyles.terminal.copyWith(
+                          color: const Color(0xFF555555),
+                          fontFamily: 'FiraCode',
+                        ),
+                      ),
+                      if (message.session != null && message.session!.isNotEmpty) ...[
+                        const SizedBox(width: 8),
+                        Text(
+                          message.session!.toUpperCase(),
+                          style: SpaceNotesTextStyles.terminal.copyWith(
+                            color: color,
+                            fontFamily: 'FiraCode',
+                            fontWeight: FontWeight.w700,
+                            fontSize: 11,
+                            letterSpacing: 0.8,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    previewText,
+                    style: SpaceNotesTextStyles.terminal.copyWith(
+                      color: const Color(0xFF999999),
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Icon(
+              Icons.chevron_right,
+              size: 16,
+              color: color.withValues(alpha: 0.5),
+            ),
           ],
         ),
       ),

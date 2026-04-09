@@ -114,7 +114,7 @@ class _SessionTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      onTap: () => context.go('/notes/sessions/${Uri.encodeComponent(sessionInfo.session)}'),
+      onTap: () => context.push('/notes/sessions/${Uri.encodeComponent(sessionInfo.session)}'),
       borderRadius: BorderRadius.circular(10),
       child: Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),

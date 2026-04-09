@@ -11,6 +11,7 @@ import '../blocs/chat/chat_state.dart';
 import '../blocs/chat/chat_event.dart';
 import '../models/space_message.dart';
 import '../widgets/terminal_message.dart';
+import 'package:go_router/go_router.dart';
 
 class ChatView extends ConsumerStatefulWidget {
   final bool showConnectionStatus;
@@ -124,6 +125,16 @@ class _ChatViewState extends ConsumerState<ChatView> {
           scrollController: widget.scrollController,
           itemBuilder: (message, index) {
             final session = message.session;
+            final isOtherSession = session != null && session.isNotEmpty && session != 'note-assistant';
+
+            if (isOtherSession && message.role == 'assistant') {
+              return TerminalMessage(
+                message: message,
+                isPreview: true,
+                onTap: () => context.push('/notes/sessions/${Uri.encodeComponent(session)}'),
+              );
+            }
+
             return TerminalMessage(
               message: message,
               isTargeted: session != null && session == targetSession && targetSession != 'note-assistant',
