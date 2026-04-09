@@ -109,8 +109,8 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
         children: [
           if (isSessionChat) ...[
             _buildRoundedButton(
-              onPressed: () => context.go('/notes/sessions'),
-              tooltip: 'Back to sessions',
+              onPressed: () => context.pop(),
+              tooltip: 'Back',
               icon: Icons.arrow_back,
             ),
             const SizedBox(width: 8),
