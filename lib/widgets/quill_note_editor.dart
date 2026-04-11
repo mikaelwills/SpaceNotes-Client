@@ -373,18 +373,29 @@ class QuillNoteEditorState extends State<QuillNoteEditor> {
     if (_isUpdatingFromParent) return;
     _isUpdatingFromParent = true;
     try {
-      final delta = _mdToDelta.convert(markdown);
-      final currentSelection = _controller.selection;
-      _controller.document = Document.fromDelta(delta);
-      _attachDocumentListener();
-      try {
-        _controller.updateSelection(currentSelection, ChangeSource.local);
-      } catch (_) {}
+      _applyExternalMarkdown(markdown);
     } catch (e) {
       debugLogger.error('EDITOR', 'Error updating content: $e');
     } finally {
       _isUpdatingFromParent = false;
     }
+  }
+
+  void _applyExternalMarkdown(String markdown) {
+    final hadFocus = _focusNode.hasFocus;
+    final previousSelection = _controller.selection;
+
+    _controller.document = Document.fromDelta(_mdToDelta.convert(markdown));
+    _attachDocumentListener();
+
+    if (!hadFocus) {
+      _focusNode.unfocus();
+      return;
+    }
+
+    try {
+      _controller.updateSelection(previousSelection, ChangeSource.local);
+    } catch (_) {}
   }
 
   String getMarkdown() {
