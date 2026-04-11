@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -8,70 +7,26 @@ import '../providers/call_providers.dart';
 import '../providers/notes_providers.dart';
 import '../theme/spacenotes_theme.dart';
 
-final connectedUsersProvider = StreamProvider.autoDispose<List<ConnectedUser>>((ref) {
-  final repository = ref.watch(notesRepositoryProvider);
-  return repository.watchClient().asyncExpand((client) {
-    if (client == null) return Stream.value(<ConnectedUser>[]);
-
-    final controller = StreamController<List<ConnectedUser>>();
-
-    void emit() {
-      final myIdentity = client.identity;
-      final users = client.connectedUser.iter().where((u) {
-        return myIdentity == null || u.identity != myIdentity;
-      }).toList();
-      controller.add(users);
-    }
-
-    emit();
-
-    final subs = <StreamSubscription>[];
-    subs.add(client.connectedUser.insertEventStream.listen((_) => emit()));
-    subs.add(client.connectedUser.deleteEventStream.listen((_) => emit()));
-    subs.add(client.connectedUser.updateEventStream.listen((_) => emit()));
-
-    controller.onCancel = () {
-      for (final sub in subs) {
-        sub.cancel();
-      }
-    };
-
-    return controller.stream;
-  });
+final connectedUsersProvider = Provider.autoDispose<List<ConnectedUser>>((ref) {
+  final client = ref.watch(spacetimeClientProvider);
+  if (client == null) return const [];
+  final rows = watchListenable(ref, client.connectedUser.rows);
+  final myIdentity = client.identity;
+  return rows
+      .where((u) => myIdentity == null || u.identity != myIdentity)
+      .toList();
 });
 
-final myConnectedUserProvider = StreamProvider.autoDispose<ConnectedUser?>((ref) {
-  final repository = ref.watch(notesRepositoryProvider);
-  return repository.watchClient().asyncExpand((client) {
-    if (client == null) return Stream.value(null);
-
-    final controller = StreamController<ConnectedUser?>();
-
-    void emit() {
-      final myIdentity = client.identity;
-      if (myIdentity == null) {
-        controller.add(null);
-        return;
-      }
-      final me = client.connectedUser.iter().where((u) => u.identity == myIdentity).firstOrNull;
-      controller.add(me);
-    }
-
-    emit();
-
-    final subs = <StreamSubscription>[];
-    subs.add(client.connectedUser.insertEventStream.listen((_) => emit()));
-    subs.add(client.connectedUser.deleteEventStream.listen((_) => emit()));
-    subs.add(client.connectedUser.updateEventStream.listen((_) => emit()));
-
-    controller.onCancel = () {
-      for (final sub in subs) {
-        sub.cancel();
-      }
-    };
-
-    return controller.stream;
-  });
+final myConnectedUserProvider = Provider.autoDispose<ConnectedUser?>((ref) {
+  final client = ref.watch(spacetimeClientProvider);
+  if (client == null) return null;
+  final rows = watchListenable(ref, client.connectedUser.rows);
+  final myIdentity = client.identity;
+  if (myIdentity == null) return null;
+  for (final u in rows) {
+    if (u.identity == myIdentity) return u;
+  }
+  return null;
 });
 
 class OnlineUsersScreen extends ConsumerWidget {
@@ -79,9 +34,9 @@ class OnlineUsersScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final usersAsync = ref.watch(connectedUsersProvider);
+    final users = ref.watch(connectedUsersProvider);
     final myIdentity = ref.watch(myIdentityProvider);
-    final myUser = ref.watch(myConnectedUserProvider).valueOrNull;
+    final myUser = ref.watch(myConnectedUserProvider);
 
     return Column(
       children: [
@@ -89,7 +44,8 @@ class OnlineUsersScreen extends ConsumerWidget {
           _MyProfileCard(
             myUser: myUser,
             myIdentity: myIdentity,
-            onEditName: () => _showSetNameDialog(context, ref, myUser?.name ?? ''),
+            onEditName: () =>
+                _showSetNameDialog(context, ref, myUser?.name ?? ''),
           ),
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
@@ -105,76 +61,63 @@ class OnlineUsersScreen extends ConsumerWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              usersAsync.when(
-                data: (users) => Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                  decoration: BoxDecoration(
-                    color: SpaceNotesTheme.primary.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Text(
-                    '${users.length}',
-                    style: const TextStyle(
-                      color: SpaceNotesTheme.primary,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                    ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                decoration: BoxDecoration(
+                  color: SpaceNotesTheme.primary.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  '${users.length}',
+                  style: const TextStyle(
+                    color: SpaceNotesTheme.primary,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
-                loading: () => const SizedBox.shrink(),
-                error: (_, __) => const SizedBox.shrink(),
               ),
             ],
           ),
         ),
         Expanded(
-          child: usersAsync.when(
-            loading: () => const Center(
-              child: CircularProgressIndicator(color: SpaceNotesTheme.primary),
-            ),
-            error: (e, _) => Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Text('Error: $e', style: const TextStyle(color: SpaceNotesTheme.error, fontSize: 13)),
-              ),
-            ),
-            data: (users) {
-              if (users.isEmpty) {
-                return Center(
+          child: users.isEmpty
+              ? Center(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.people_outline, size: 48, color: SpaceNotesTheme.textSecondary.withValues(alpha: 0.4)),
+                      Icon(Icons.people_outline,
+                          size: 48,
+                          color: SpaceNotesTheme.textSecondary
+                              .withValues(alpha: 0.4)),
                       const SizedBox(height: 12),
                       const Text(
                         'No one else online',
-                        style: TextStyle(color: SpaceNotesTheme.textSecondary, fontSize: 14),
+                        style: TextStyle(
+                            color: SpaceNotesTheme.textSecondary, fontSize: 14),
                       ),
                     ],
                   ),
-                );
-              }
-
-              return ListView.separated(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                itemCount: users.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 2),
-                itemBuilder: (context, index) {
-                  final user = users[index];
-                  return _ContactTile(
-                    user: user,
-                    onCall: () => _startCall(context, ref, user.identity),
-                  );
-                },
-              );
-            },
-          ),
+                )
+              : ListView.separated(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  itemCount: users.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 2),
+                  itemBuilder: (context, index) {
+                    final user = users[index];
+                    return _ContactTile(
+                      user: user,
+                      onCall: () => _startCall(context, ref, user.identity),
+                    );
+                  },
+                ),
         ),
       ],
     );
   }
 
-  void _showSetNameDialog(BuildContext context, WidgetRef ref, String currentName) {
+  void _showSetNameDialog(
+      BuildContext context, WidgetRef ref, String currentName) {
     final nameController = TextEditingController(text: currentName);
     final formKey = GlobalKey<FormState>();
 
@@ -227,17 +170,20 @@ class OnlineUsersScreen extends ConsumerWidget {
               fillColor: SpaceNotesTheme.inputSurface,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide(color: SpaceNotesTheme.primary.withValues(alpha: 0.3)),
+                borderSide: BorderSide(
+                    color: SpaceNotesTheme.primary.withValues(alpha: 0.3)),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide(color: SpaceNotesTheme.primary.withValues(alpha: 0.3)),
+                borderSide: BorderSide(
+                    color: SpaceNotesTheme.primary.withValues(alpha: 0.3)),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
                 borderSide: const BorderSide(color: SpaceNotesTheme.primary),
               ),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             ),
             validator: (value) {
               if (value == null || value.trim().isEmpty) {
@@ -250,7 +196,8 @@ class OnlineUsersScreen extends ConsumerWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(),
-            style: TextButton.styleFrom(foregroundColor: SpaceNotesTheme.textSecondary),
+            style: TextButton.styleFrom(
+                foregroundColor: SpaceNotesTheme.textSecondary),
             child: const Text('Cancel'),
           ),
           ElevatedButton(
@@ -276,7 +223,8 @@ class OnlineUsersScreen extends ConsumerWidget {
         return s.caller == client.identity && s.callee == callee;
       }).toList();
       if (sessions.isNotEmpty) {
-        navigator.goNamed('call', pathParameters: {'sessionId': sessions.last.sessionId.toString()});
+        navigator.goNamed('call',
+            pathParameters: {'sessionId': sessions.last.sessionId.toString()});
       }
     });
   }
@@ -321,7 +269,9 @@ class _MyProfileCard extends StatelessWidget {
                 Text(
                   displayName,
                   style: TextStyle(
-                    color: hasName ? SpaceNotesTheme.text : SpaceNotesTheme.textSecondary,
+                    color: hasName
+                        ? SpaceNotesTheme.text
+                        : SpaceNotesTheme.textSecondary,
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
                     fontStyle: hasName ? FontStyle.normal : FontStyle.italic,
@@ -386,7 +336,8 @@ class _ContactTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final hasName = user.name.isNotEmpty;
-    final displayName = hasName ? user.name : user.identity.toHexString.substring(0, 12);
+    final displayName =
+        hasName ? user.name : user.identity.toHexString.substring(0, 12);
 
     return Material(
       color: Colors.transparent,
@@ -474,14 +425,13 @@ class _Avatar extends StatelessWidget {
   final double size;
   final bool isPrimary;
 
-  const _Avatar({required this.name, required this.size, this.isPrimary = false});
+  const _Avatar(
+      {required this.name, required this.size, this.isPrimary = false});
 
   @override
   Widget build(BuildContext context) {
     final initial = name.isNotEmpty ? name[0].toUpperCase() : '?';
-    final color = isPrimary
-        ? SpaceNotesTheme.primary
-        : _colorFromName(name);
+    final color = isPrimary ? SpaceNotesTheme.primary : _colorFromName(name);
 
     return Container(
       width: size,

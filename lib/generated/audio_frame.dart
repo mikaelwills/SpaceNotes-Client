@@ -1,6 +1,6 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-import 'package:spacetimedb_dart_sdk/spacetimedb_dart_sdk.dart';
+import 'package:spacetimedb_dart_sdk/codegen.dart';
 
 class AudioFrame {
   AudioFrame({
@@ -50,6 +50,40 @@ class AudioFrame {
       'seq': seq,
       'pcm': pcm,
     };
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        other is AudioFrame &&
+            sessionId == other.sessionId &&
+            from == other.from &&
+            seq == other.seq &&
+            pcm == other.pcm;
+  }
+
+  @override
+  int get hashCode {
+    return Object.hash(sessionId, from, seq, pcm);
+  }
+
+  @override
+  String toString() {
+    return 'AudioFrame(sessionId: $sessionId, from: $from, seq: $seq, pcm: $pcm)';
+  }
+
+  AudioFrame copyWith({
+    Int64? sessionId,
+    Identity? from,
+    int? seq,
+    List<int>? pcm,
+  }) {
+    return AudioFrame(
+      sessionId: sessionId ?? this.sessionId,
+      from: from ?? this.from,
+      seq: seq ?? this.seq,
+      pcm: pcm ?? this.pcm,
+    );
   }
 }
 

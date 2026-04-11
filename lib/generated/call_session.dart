@@ -1,6 +1,6 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-import 'package:spacetimedb_dart_sdk/spacetimedb_dart_sdk.dart';
+import 'package:spacetimedb_dart_sdk/codegen.dart';
 import 'call_state.dart';
 
 class CallSession {
@@ -51,6 +51,40 @@ class CallSession {
       'callee': callee.toJson(),
       'state': state.toJson(),
     };
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        other is CallSession &&
+            sessionId == other.sessionId &&
+            caller == other.caller &&
+            callee == other.callee &&
+            state == other.state;
+  }
+
+  @override
+  int get hashCode {
+    return Object.hash(sessionId, caller, callee, state);
+  }
+
+  @override
+  String toString() {
+    return 'CallSession(sessionId: $sessionId, caller: $caller, callee: $callee, state: $state)';
+  }
+
+  CallSession copyWith({
+    Int64? sessionId,
+    Identity? caller,
+    Identity? callee,
+    CallState? state,
+  }) {
+    return CallSession(
+      sessionId: sessionId ?? this.sessionId,
+      caller: caller ?? this.caller,
+      callee: callee ?? this.callee,
+      state: state ?? this.state,
+    );
   }
 }
 

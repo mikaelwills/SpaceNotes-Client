@@ -96,7 +96,9 @@ class _NoteTabState extends ConsumerState<_NoteTab> {
               if (_isHovered || widget.isActive)
                 GestureDetector(
                   onTap: () {
-                    context.read<DesktopNotesBloc>().add(CloseNote(widget.noteId));
+                    context
+                        .read<DesktopNotesBloc>()
+                        .add(CloseNote(widget.noteId));
                   },
                   child: const Padding(
                     padding: EdgeInsets.all(2),
@@ -117,8 +119,8 @@ class _NoteTabState extends ConsumerState<_NoteTab> {
   }
 
   String get _displayName {
-    final notes = ref.watch(notesListProvider).valueOrNull;
-    final note = notes?.firstWhereOrNull((n) => n.id == widget.noteId);
+    final notes = ref.watch(notesListProvider);
+    final note = notes.firstWhereOrNull((n) => n.id == widget.noteId);
     if (note == null) return 'Loading...';
 
     final name = note.path.split('/').last;

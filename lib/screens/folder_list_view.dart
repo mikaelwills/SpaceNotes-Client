@@ -44,47 +44,8 @@ class _FolderListViewState extends ConsumerState<FolderListView> {
 
   @override
   Widget build(BuildContext context) {
-    final combinedAsync =
-        ref.watch(dynamicFolderContentsProvider(widget.folderPath));
-
-    return combinedAsync.when(
-      loading: () => _buildLoadingState(),
-      error: (error, stack) => _buildErrorMessage(error.toString()),
-      data: (data) => _buildLoadedState(data.folders, data.notes),
-    );
-  }
-
-  Widget _buildLoadingState() {
-    return const Center(
-      child: CircularProgressIndicator(
-        valueColor: AlwaysStoppedAnimation<Color>(SpaceNotesTheme.primary),
-      ),
-    );
-  }
-
-  Widget _buildErrorMessage(String message) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(
-            Icons.error_outline,
-            size: 48,
-            color: SpaceNotesTheme.error,
-          ),
-          const SizedBox(height: 16),
-          Text(
-            message,
-            style: const TextStyle(
-              fontFamily: 'FiraCode',
-              fontSize: 14,
-              color: SpaceNotesTheme.error,
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
-    );
+    final data = ref.watch(dynamicFolderContentsProvider(widget.folderPath));
+    return _buildLoadedState(data.folders, data.notes);
   }
 
   Widget _buildLoadedState(List<Folder> folders, List<Note> notes) {
@@ -104,40 +65,41 @@ class _FolderListViewState extends ConsumerState<FolderListView> {
 
     return KeyboardDismissOnScroll(
       child: ListView.builder(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
-      itemCount: totalItems + headerOffset,
-      itemBuilder: (context, index) {
-        if (isRootLevel && index == 0) {
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 8),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.chevron_left,
-                  size: 16,
-                  color: SpaceNotesTheme.textSecondary.withValues(alpha: 0.7),
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  'Recent',
-                  style: TextStyle(
-                    fontFamily: 'FiraCode',
-                    fontSize: 12,
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
+        itemCount: totalItems + headerOffset,
+        itemBuilder: (context, index) {
+          if (isRootLevel && index == 0) {
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.chevron_left,
+                    size: 16,
                     color: SpaceNotesTheme.textSecondary.withValues(alpha: 0.7),
                   ),
-                ),
-              ],
-            ),
-          );
-        }
-        final itemIndex = index - headerOffset;
-        if (itemIndex < folders.length) {
-          return _buildFolderItem(folders[itemIndex]);
-        } else {
-          return _buildNoteItem(notes[itemIndex - folders.length]);
-        }
-      },
-    ),
+                  const SizedBox(width: 4),
+                  Text(
+                    'Recent',
+                    style: TextStyle(
+                      fontFamily: 'FiraCode',
+                      fontSize: 12,
+                      color:
+                          SpaceNotesTheme.textSecondary.withValues(alpha: 0.7),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }
+          final itemIndex = index - headerOffset;
+          if (itemIndex < folders.length) {
+            return _buildFolderItem(folders[itemIndex]);
+          } else {
+            return _buildNoteItem(notes[itemIndex - folders.length]);
+          }
+        },
+      ),
     );
   }
 

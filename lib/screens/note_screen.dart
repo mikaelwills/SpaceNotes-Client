@@ -2,7 +2,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:collection/collection.dart';
-import 'package:spacetimedb_dart_sdk/spacetimedb_dart_sdk.dart' as stdb;
+import 'package:spacetimedb_dart_sdk/spacetimedb_dart_sdk.dart';
+import '../generated/client.dart';
 import '../generated/note.dart';
 import '../providers/notes_providers.dart';
 import '../widgets/quill_note_editor.dart';
@@ -38,8 +39,8 @@ class _NoteScreenState extends ConsumerState<NoteScreen> {
   late final _repo = ref.read(notesRepositoryProvider);
 
   Timer? _debounceTimer;
-  StreamSubscription<stdb.TableUpdateEvent<Note>>? _updateSubscription;
-  StreamSubscription? _clientSubscription;
+  SpacetimeDbClient? _listenedClient;
+  VoidCallback? _batchListener;
 
   @override
   void initState() {
@@ -59,27 +60,31 @@ class _NoteScreenState extends ConsumerState<NoteScreen> {
   @override
   void dispose() {
     final hasPending = _currentContent != _lastSavedContent;
-    debugLogger.info('NOTE', 'Dispose: $_noteName${hasPending ? " (saving pending)" : ""}');
+    debugLogger.info(
+        'NOTE', 'Dispose: $_noteName${hasPending ? " (saving pending)" : ""}');
     _debounceTimer?.cancel();
     _saveContent();
     final fileName = _currentPath.split('/').last.replaceAll('.md', '');
-    if (fileName.toLowerCase().startsWith('untitled') && _currentContent.length >= 10) {
-      debugLogger.info('NOTE', 'Dispose trigger: requesting title for $fileName');
+    if (fileName.toLowerCase().startsWith('untitled') &&
+        _currentContent.length >= 10) {
+      debugLogger.info(
+          'NOTE', 'Dispose trigger: requesting title for $fileName');
       _repo.titleService?.triggerImmediate(
         widget.noteId,
         content: _currentContent,
         path: _currentPath,
       );
     }
-    _updateSubscription?.cancel();
-    _clientSubscription?.cancel();
+    _detachBatchListener();
+    _repo.clientNotifier.removeListener(_onClientChanged);
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final note = ref.watch(notesListProvider).valueOrNull
-        ?.firstWhereOrNull((n) => n.id == widget.noteId);
+    final note = ref
+        .watch(notesListProvider)
+        .firstWhereOrNull((n) => n.id == widget.noteId);
 
     if (note != null && note.path != _currentPath) {
       _currentPath = note.path;
@@ -142,8 +147,7 @@ class _NoteScreenState extends ConsumerState<NoteScreen> {
         Expanded(
           child: _buildEditor(note),
         ),
-        if (_isChatOpen)
-          _buildMobileChatArea(),
+        if (_isChatOpen) _buildMobileChatArea(),
         NoteBottomBar(
           notePath: _currentPath,
           quillKey: _quillKey,
@@ -165,7 +169,8 @@ class _NoteScreenState extends ConsumerState<NoteScreen> {
       onVerticalDragUpdate: (details) {
         setState(() {
           _chatHeight -= details.delta.dy;
-          _chatHeight = _chatHeight.clamp(100, MediaQuery.of(context).size.height * 0.6);
+          _chatHeight =
+              _chatHeight.clamp(100, MediaQuery.of(context).size.height * 0.6);
         });
       },
       onVerticalDragEnd: (details) {
@@ -177,7 +182,9 @@ class _NoteScreenState extends ConsumerState<NoteScreen> {
         }
       },
       child: Container(
-        height: _chatHeight > 0 ? _chatHeight : MediaQuery.of(context).size.height * 0.35,
+        height: _chatHeight > 0
+            ? _chatHeight
+            : MediaQuery.of(context).size.height * 0.35,
         decoration: const BoxDecoration(
           color: SpaceNotesTheme.background,
           border: Border(
@@ -215,7 +222,8 @@ class _NoteScreenState extends ConsumerState<NoteScreen> {
   }
 
   Widget _buildEditor(Note? note) {
-    final content = _currentContent.isNotEmpty ? _currentContent : (note?.content ?? '');
+    final content =
+        _currentContent.isNotEmpty ? _currentContent : (note?.content ?? '');
 
     if (_currentContent.isEmpty && note != null) {
       _currentContent = note.content;
@@ -243,16 +251,17 @@ class _NoteScreenState extends ConsumerState<NoteScreen> {
 
   void _initNote() {
     _debounceTimer?.cancel();
-    _updateSubscription?.cancel();
 
-    final note = ref.read(notesListProvider).valueOrNull
-        ?.firstWhereOrNull((n) => n.id == widget.noteId);
+    final note = ref
+        .read(notesListProvider)
+        .firstWhereOrNull((n) => n.id == widget.noteId);
 
     if (note != null) {
       _currentPath = note.path;
       _currentContent = note.content;
       _lastSavedContent = note.content;
-      debugLogger.info('NOTE', 'Opened: $_noteName (${note.content.length} chars)');
+      debugLogger.info(
+          'NOTE', 'Opened: $_noteName (${note.content.length} chars)');
     } else {
       _currentPath = '';
       _currentContent = '';
@@ -260,7 +269,9 @@ class _NoteScreenState extends ConsumerState<NoteScreen> {
       debugLogger.info('NOTE', 'Note not found: ${widget.noteId}');
     }
 
-    _setupUpdateListener();
+    _attachToCurrentClient();
+    _repo.clientNotifier.removeListener(_onClientChanged);
+    _repo.clientNotifier.addListener(_onClientChanged);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(currentNotePathProvider.notifier).state = _currentPath;
@@ -268,12 +279,51 @@ class _NoteScreenState extends ConsumerState<NoteScreen> {
     });
   }
 
-  void _setupUpdateListener() {
-    _updateSubscription?.cancel();
-    _updateSubscription = _repo.noteUpdateEvents?.listen((event) {
-      if (event.newRow.id != widget.noteId) return;
+  void _onClientChanged() {
+    if (!mounted) return;
+    debugLogger.debug('NOTE', 'Client changed, rewiring batch listener');
+    _attachToCurrentClient();
+  }
 
-      debugLogger.info('SYNC_DEBUG', 'NoteScreen update', 'isMyTransaction=${event.context.isMyTransaction}, isOptimistic=${event.context.isOptimistic}, contentChanged=${event.newRow.content != _currentContent}, name=${event.newRow.name}');
+  void _attachToCurrentClient() {
+    final client = _repo.client;
+    if (identical(client, _listenedClient)) return;
+
+    _detachBatchListener();
+    _listenedClient = client;
+
+    if (client == null) return;
+
+    final notifier = client.note.lastBatch;
+    void listener() {
+      final batch = notifier.value;
+      if (batch == null) return;
+      _handleNoteBatch(batch);
+    }
+
+    notifier.addListener(listener);
+    _batchListener = listener;
+  }
+
+  void _detachBatchListener() {
+    final client = _listenedClient;
+    final listener = _batchListener;
+    if (client != null && listener != null) {
+      client.note.lastBatch.removeListener(listener);
+    }
+    _batchListener = null;
+    _listenedClient = null;
+  }
+
+  void _handleNoteBatch(TransactionBatch<Note> batch) {
+    for (final event in batch.updates) {
+      if (event.newRow.id != widget.noteId) continue;
+
+      debugLogger.info(
+        'SYNC_DEBUG',
+        'NoteScreen update',
+        'isMyTransaction=${event.context.isMyTransaction}, isOptimistic=${event.context.isOptimistic}, contentChanged=${event.newRow.content != _currentContent}, name=${event.newRow.name}',
+      );
 
       if (event.newRow.path != _currentPath) {
         _currentPath = event.newRow.path;
@@ -296,46 +346,8 @@ class _NoteScreenState extends ConsumerState<NoteScreen> {
       } else {
         debugLogger.info('SYNC_DEBUG', 'Content identical, skipping');
       }
-    });
-
-    _clientSubscription?.cancel();
-    _clientSubscription = _repo.watchClient().listen((client) {
-      if (client != null && _updateSubscription == null) {
-        debugLogger.debug('NOTE', 'Client connected, re-establishing update listener');
-        _setupNoteUpdateListener();
-      }
-    });
-  }
-
-  void _setupNoteUpdateListener() {
-    _updateSubscription?.cancel();
-    _updateSubscription = _repo.noteUpdateEvents?.listen((event) {
-      if (event.newRow.id != widget.noteId) return;
-
-      debugLogger.info('SYNC_DEBUG', 'NoteScreen reconnect update', 'isMyTransaction=${event.context.isMyTransaction}, isOptimistic=${event.context.isOptimistic}, contentChanged=${event.newRow.content != _currentContent}, name=${event.newRow.name}');
-
-      if (event.newRow.path != _currentPath) {
-        _currentPath = event.newRow.path;
-        ref.read(currentNotePathProvider.notifier).state = _currentPath;
-      }
-
-      if (event.context.isMyTransaction) {
-        debugLogger.info('SYNC_DEBUG', 'Reconnect: dropped as local echo');
-        _lastSavedContent = event.newRow.content;
-        return;
-      }
-
-      if (event.newRow.content != _currentContent) {
-        debugLogger.info('SYNC_DEBUG', 'Reconnect: applying external update to editor');
-        _debounceTimer?.cancel();
-        _currentContent = event.newRow.content;
-        _lastSavedContent = event.newRow.content;
-        _quillKey.currentState?.updateContent(event.newRow.content);
-        if (mounted) setState(() {});
-      } else {
-        debugLogger.info('SYNC_DEBUG', 'Reconnect: content identical, skipping');
-      }
-    });
+      return;
+    }
   }
 
   Future<void> _saveAndExit() async {

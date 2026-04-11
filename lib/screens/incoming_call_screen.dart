@@ -23,32 +23,17 @@ class _IncomingCallScreenState extends ConsumerState<IncomingCallScreen> {
       return const Scaffold(backgroundColor: SpaceNotesTheme.background);
     }
 
-    final incomingCall = ref.watch(incomingCallProvider);
+    final session = ref.watch(incomingCallProvider);
+    if (session == null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && !_accepted) GoRouter.of(context).go('/notes');
+      });
+      return const Scaffold(backgroundColor: SpaceNotesTheme.background);
+    }
 
-    return incomingCall.when(
-      loading: () => const Scaffold(
-        backgroundColor: SpaceNotesTheme.background,
-        body: Center(child: CircularProgressIndicator(color: SpaceNotesTheme.primary)),
-      ),
-      error: (_, __) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) GoRouter.of(context).go('/notes');
-        });
-        return const Scaffold(backgroundColor: SpaceNotesTheme.background);
-      },
-      data: (session) {
-        if (session == null) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted && !_accepted) GoRouter.of(context).go('/notes');
-          });
-          return const Scaffold(backgroundColor: SpaceNotesTheme.background);
-        }
-
-        return _IncomingCallBody(
-          session: session,
-          onAccepted: () => setState(() => _accepted = true),
-        );
-      },
+    return _IncomingCallBody(
+      session: session,
+      onAccepted: () => setState(() => _accepted = true),
     );
   }
 }
@@ -61,13 +46,9 @@ class _IncomingCallBody extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final usersAsync = ref.watch(connectedUsersProvider);
-    final callerName = usersAsync.whenOrNull(
-      data: (users) {
-        final caller = users.where((u) => u.identity == session.caller).firstOrNull;
-        return caller?.name;
-      },
-    );
+    final users = ref.watch(connectedUsersProvider);
+    final caller = users.where((u) => u.identity == session.caller).firstOrNull;
+    final callerName = caller?.name;
     final displayName = (callerName != null && callerName.isNotEmpty)
         ? callerName
         : session.caller.toHexString.substring(0, 12);
@@ -85,7 +66,8 @@ class _IncomingCallBody extends ConsumerWidget {
                 color: Colors.green.withValues(alpha: 0.15),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.videocam_rounded, color: Colors.green, size: 48),
+              child: const Icon(Icons.videocam_rounded,
+                  color: Colors.green, size: 48),
             ),
             const SizedBox(height: 24),
             Text(
@@ -130,7 +112,9 @@ class _IncomingCallBody extends ConsumerWidget {
                     final repo = ref.read(notesRepositoryProvider);
                     callService.setClient(repo.client);
                     callService.acceptCall(session.sessionId);
-                    context.goNamed('call', pathParameters: {'sessionId': session.sessionId.toString()});
+                    context.goNamed('call', pathParameters: {
+                      'sessionId': session.sessionId.toString()
+                    });
                   },
                 ),
               ],

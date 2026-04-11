@@ -10,33 +10,26 @@ class ConnectionIndicator extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final clientAsync = ref.watch(spacetimeClientProvider);
+    final client = ref.watch(spacetimeClientProvider);
 
-    return clientAsync.when(
-      loading: () => _buildDisconnectedIndicator(),
-      error: (_, __) => _buildDisconnectedIndicator(),
-      data: (client) {
-        if (client == null) {
-          return _buildDisconnectedIndicator();
-        }
+    if (client == null) {
+      return _buildDisconnectedIndicator();
+    }
 
-        return StreamBuilder<stdb.ConnectionState>(
-          stream: client.connection.onStateChanged,
-          initialData: client.connection.state,
-          builder: (context, stateSnapshot) {
-            final state =
-                stateSnapshot.data ?? const stdb.Disconnected();
+    return StreamBuilder<stdb.ConnectionState>(
+      stream: client.connection.onStateChanged,
+      initialData: client.connection.state,
+      builder: (context, stateSnapshot) {
+        final state = stateSnapshot.data ?? const stdb.Disconnected();
 
-            return StreamBuilder<stdb.ConnectionQuality>(
-              stream: client.connection.connectionQuality,
-              builder: (context, qualitySnapshot) {
-                final quality = qualitySnapshot.data;
+        return StreamBuilder<stdb.ConnectionQuality>(
+          stream: client.connection.connectionQuality,
+          builder: (context, qualitySnapshot) {
+            final quality = qualitySnapshot.data;
 
-                return _PulsingHealthBar(
-                  state: state,
-                  quality: quality,
-                );
-              },
+            return _PulsingHealthBar(
+              state: state,
+              quality: quality,
             );
           },
         );
@@ -181,7 +174,10 @@ class _PulsingHealthBarState extends ConsumerState<_PulsingHealthBar>
     return switch (widget.state) {
       stdb.Connected() => SpaceNotesTheme.success,
       stdb.Connecting() || stdb.Reconnecting() => SpaceNotesTheme.warning,
-      stdb.AuthError() || stdb.FatalError() || stdb.Disconnected() => SpaceNotesTheme.error,
+      stdb.AuthError() ||
+      stdb.FatalError() ||
+      stdb.Disconnected() =>
+        SpaceNotesTheme.error,
     };
   }
 

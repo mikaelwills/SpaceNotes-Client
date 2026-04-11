@@ -20,21 +20,20 @@ import '../providers/call_providers.dart';
 import '../providers/notes_providers.dart';
 import '../services/debug_logger.dart';
 
-final RouteObserver<ModalRoute<void>> routeObserver = RouteObserver<ModalRoute<void>>();
+final RouteObserver<ModalRoute<void>> routeObserver =
+    RouteObserver<ModalRoute<void>>();
 
 GoRouter createAppRouter(ProviderContainer container) {
   bool navigatedToIncoming = false;
 
-  container.listen(incomingCallProvider, (prev, next) {
-    next.whenData((session) {
-      if (session != null && !navigatedToIncoming) {
-        navigatedToIncoming = true;
-        debugLogger.info('INCOMING_CALL', 'Navigating to incoming call screen');
-        _router?.go('/incoming-call');
-      } else if (session == null) {
-        navigatedToIncoming = false;
-      }
-    });
+  container.listen(incomingCallProvider, (prev, session) {
+    if (session != null && !navigatedToIncoming) {
+      navigatedToIncoming = true;
+      debugLogger.info('INCOMING_CALL', 'Navigating to incoming call screen');
+      _router?.go('/incoming-call');
+    } else if (session == null) {
+      navigatedToIncoming = false;
+    }
   });
 
   _router = GoRouter(
@@ -56,139 +55,141 @@ GoRouter createAppRouter(ProviderContainer container) {
       return null;
     },
     routes: [
-    GoRoute(
-      path: '/incoming-call',
-      name: 'incoming-call',
-      pageBuilder: (context, state) => _buildFadeTransitionPage(
-        key: state.pageKey,
-        child: const IncomingCallScreen(),
-      ),
-    ),
-    GoRoute(
-      path: '/call/:sessionId',
-      name: 'call',
-      pageBuilder: (context, state) {
-        final sessionId = Int64(int.parse(state.pathParameters['sessionId']!));
-        return _buildFadeTransitionPage(
+      GoRoute(
+        path: '/incoming-call',
+        name: 'incoming-call',
+        pageBuilder: (context, state) => _buildFadeTransitionPage(
           key: state.pageKey,
-          child: CallScreen(sessionId: sessionId),
-        );
-      },
-    ),
-    // Adaptive shell (mobile: nav bar + bottom bar, desktop: sidebar + content)
-    ShellRoute(
-      builder: (context, state, child) => AdaptiveAppShell(child: child),
-      routes: [
-        GoRoute(
-          path: '/connect',
-          name: 'connect',
-          pageBuilder: (context, state) => _buildFadeTransitionPage(
-            key: state.pageKey,
-            child: const ConnectScreen(),
-          ),
+          child: const IncomingCallScreen(),
         ),
-        GoRoute(
-          path: '/settings',
-          name: 'settings',
-          pageBuilder: (context, state) => _buildFadeTransitionPage(
+      ),
+      GoRoute(
+        path: '/call/:sessionId',
+        name: 'call',
+        pageBuilder: (context, state) {
+          final sessionId =
+              Int64(int.parse(state.pathParameters['sessionId']!));
+          return _buildFadeTransitionPage(
             key: state.pageKey,
-            child: const SettingsScreen(),
-          ),
-        ),
-        GoRoute(
-          path: '/provider-list',
-          name: 'provider-list',
-          pageBuilder: (context, state) => _buildFadeTransitionPage(
-            key: state.pageKey,
-            child: const ProviderListScreen(),
-          ),
-        ),
-        // Home shell (shared bottom input area)
-        ShellRoute(
-          pageBuilder: (context, state, child) => _buildFadeTransitionPage(
-            key: state.pageKey,
-            child: HomeScreen(child: child),
-          ),
-          routes: [
-            GoRoute(
-              path: '/notes',
-              name: 'notes',
-              pageBuilder: (context, state) => _buildFadeTransitionPage(
-                key: state.pageKey,
-                child: const NotesHomeView(),
-              ),
+            child: CallScreen(sessionId: sessionId),
+          );
+        },
+      ),
+      // Adaptive shell (mobile: nav bar + bottom bar, desktop: sidebar + content)
+      ShellRoute(
+        builder: (context, state, child) => AdaptiveAppShell(child: child),
+        routes: [
+          GoRoute(
+            path: '/connect',
+            name: 'connect',
+            pageBuilder: (context, state) => _buildFadeTransitionPage(
+              key: state.pageKey,
+              child: const ConnectScreen(),
             ),
-            GoRoute(
-              path: '/notes/chat',
-              name: 'chat',
-              pageBuilder: (context, state) => _buildFadeTransitionPage(
-                key: state.pageKey,
-                child: const ChatView(),
-              ),
+          ),
+          GoRoute(
+            path: '/settings',
+            name: 'settings',
+            pageBuilder: (context, state) => _buildFadeTransitionPage(
+              key: state.pageKey,
+              child: const SettingsScreen(),
             ),
-            GoRoute(
-              path: '/notes/folder/:folderPath(.*)',
-              name: 'folder-contents',
-              pageBuilder: (context, state) {
-                final encodedFolderPath = state.pathParameters['folderPath']!;
-                final segments = encodedFolderPath.split('/');
-                final decodedSegments = segments.map((segment) {
-                  try {
-                    return Uri.decodeComponent(segment);
-                  } catch (e) {
-                    return segment;
-                  }
-                }).toList();
-                final folderPath = decodedSegments.join('/');
-                return _buildFadeTransitionPage(
+          ),
+          GoRoute(
+            path: '/provider-list',
+            name: 'provider-list',
+            pageBuilder: (context, state) => _buildFadeTransitionPage(
+              key: state.pageKey,
+              child: const ProviderListScreen(),
+            ),
+          ),
+          // Home shell (shared bottom input area)
+          ShellRoute(
+            pageBuilder: (context, state, child) => _buildFadeTransitionPage(
+              key: state.pageKey,
+              child: HomeScreen(child: child),
+            ),
+            routes: [
+              GoRoute(
+                path: '/notes',
+                name: 'notes',
+                pageBuilder: (context, state) => _buildFadeTransitionPage(
                   key: state.pageKey,
-                  child: FolderListView(folderPath: folderPath),
-                );
-              },
-            ),
-            GoRoute(
-              path: '/notes/note/:id',
-              name: 'note',
-              pageBuilder: (context, state) {
-                final noteId = state.pathParameters['id']!;
-                return _buildFadeTransitionPage(
-                  key: state.pageKey,
-                  child: NoteScreen(noteId: noteId),
-                );
-              },
-            ),
-            GoRoute(
-              path: '/notes/users',
-              name: 'online-users',
-              pageBuilder: (context, state) => _buildFadeTransitionPage(
-                key: state.pageKey,
-                child: const OnlineUsersScreen(),
+                  child: const NotesHomeView(),
+                ),
               ),
-            ),
-            GoRoute(
-              path: '/notes/sessions',
-              name: 'sessions',
-              pageBuilder: (context, state) => _buildFadeTransitionPage(
-                key: state.pageKey,
-                child: const SessionDashboard(),
-              ),
-            ),
-            GoRoute(
-              path: '/notes/sessions/:sessionId',
-              name: 'session-chat',
-              pageBuilder: (context, state) {
-                final sessionId = Uri.decodeComponent(state.pathParameters['sessionId']!);
-                return _buildFadeTransitionPage(
+              GoRoute(
+                path: '/notes/chat',
+                name: 'chat',
+                pageBuilder: (context, state) => _buildFadeTransitionPage(
                   key: state.pageKey,
-                  child: SessionChatScreen(sessionId: sessionId),
-                );
-              },
-            ),
-          ],
-        ),
-      ],
-    ),
-  ],
+                  child: const ChatView(),
+                ),
+              ),
+              GoRoute(
+                path: '/notes/folder/:folderPath(.*)',
+                name: 'folder-contents',
+                pageBuilder: (context, state) {
+                  final encodedFolderPath = state.pathParameters['folderPath']!;
+                  final segments = encodedFolderPath.split('/');
+                  final decodedSegments = segments.map((segment) {
+                    try {
+                      return Uri.decodeComponent(segment);
+                    } catch (e) {
+                      return segment;
+                    }
+                  }).toList();
+                  final folderPath = decodedSegments.join('/');
+                  return _buildFadeTransitionPage(
+                    key: state.pageKey,
+                    child: FolderListView(folderPath: folderPath),
+                  );
+                },
+              ),
+              GoRoute(
+                path: '/notes/note/:id',
+                name: 'note',
+                pageBuilder: (context, state) {
+                  final noteId = state.pathParameters['id']!;
+                  return _buildFadeTransitionPage(
+                    key: state.pageKey,
+                    child: NoteScreen(noteId: noteId),
+                  );
+                },
+              ),
+              GoRoute(
+                path: '/notes/users',
+                name: 'online-users',
+                pageBuilder: (context, state) => _buildFadeTransitionPage(
+                  key: state.pageKey,
+                  child: const OnlineUsersScreen(),
+                ),
+              ),
+              GoRoute(
+                path: '/notes/sessions',
+                name: 'sessions',
+                pageBuilder: (context, state) => _buildFadeTransitionPage(
+                  key: state.pageKey,
+                  child: const SessionDashboard(),
+                ),
+              ),
+              GoRoute(
+                path: '/notes/sessions/:sessionId',
+                name: 'session-chat',
+                pageBuilder: (context, state) {
+                  final sessionId =
+                      Uri.decodeComponent(state.pathParameters['sessionId']!);
+                  return _buildFadeTransitionPage(
+                    key: state.pageKey,
+                    child: SessionChatScreen(sessionId: sessionId),
+                  );
+                },
+              ),
+            ],
+          ),
+        ],
+      ),
+    ],
     errorBuilder: (context, state) => Scaffold(
       body: Center(
         child: Text('Page not found: ${state.error}'),
@@ -218,5 +219,3 @@ CustomTransitionPage<void> _buildFadeTransitionPage({
     },
   );
 }
-
-

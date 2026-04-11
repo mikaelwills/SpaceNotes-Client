@@ -1,7 +1,7 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
 import 'dart:async';
-import 'package:spacetimedb_dart_sdk/spacetimedb_dart_sdk.dart';
+import 'package:spacetimedb_dart_sdk/codegen.dart';
 import 'reducer_args.dart';
 
 class Reducers {
@@ -17,34 +17,34 @@ class Reducers {
   Future<TransactionResult> acceptCall({
     required Int64 sessionId,
     List<OptimisticChange>? optimisticChanges,
-    bool isEventTable = false,
+    bool dropIfOffline = false,
   }) async {
     final encoder = BsatnEncoder();
     encoder.writeU64(sessionId);
     return await _reducerCaller.call(acceptCallDef.name, encoder.toBytes(),
-        optimisticChanges: optimisticChanges, isEventTable: isEventTable);
+        optimisticChanges: optimisticChanges, dropIfOffline: dropIfOffline);
   }
 
   Future<TransactionResult> appendToNote({
     required String path,
     required String content,
     List<OptimisticChange>? optimisticChanges,
-    bool isEventTable = false,
+    bool dropIfOffline = false,
   }) async {
     final encoder = BsatnEncoder();
     encoder.writeString(path);
     encoder.writeString(content);
     return await _reducerCaller.call(appendToNoteDef.name, encoder.toBytes(),
-        optimisticChanges: optimisticChanges, isEventTable: isEventTable);
+        optimisticChanges: optimisticChanges, dropIfOffline: dropIfOffline);
   }
 
   Future<TransactionResult> clearAll({
     List<OptimisticChange>? optimisticChanges,
-    bool isEventTable = false,
+    bool dropIfOffline = false,
   }) async {
     final encoder = BsatnEncoder();
     return await _reducerCaller.call(clearAllDef.name, encoder.toBytes(),
-        optimisticChanges: optimisticChanges, isEventTable: isEventTable);
+        optimisticChanges: optimisticChanges, dropIfOffline: dropIfOffline);
   }
 
   Future<TransactionResult> createFolder({
@@ -52,14 +52,14 @@ class Reducers {
     required String name,
     required int depth,
     List<OptimisticChange>? optimisticChanges,
-    bool isEventTable = false,
+    bool dropIfOffline = false,
   }) async {
     final encoder = BsatnEncoder();
     encoder.writeString(path);
     encoder.writeString(name);
     encoder.writeU32(depth);
     return await _reducerCaller.call(createFolderDef.name, encoder.toBytes(),
-        optimisticChanges: optimisticChanges, isEventTable: isEventTable);
+        optimisticChanges: optimisticChanges, dropIfOffline: dropIfOffline);
   }
 
   Future<TransactionResult> createNote({
@@ -74,7 +74,7 @@ class Reducers {
     required Int64 createdTime,
     required Int64 modifiedTime,
     List<OptimisticChange>? optimisticChanges,
-    bool isEventTable = false,
+    bool dropIfOffline = false,
   }) async {
     final encoder = BsatnEncoder();
     encoder.writeString(id);
@@ -88,40 +88,40 @@ class Reducers {
     encoder.writeU64(createdTime);
     encoder.writeU64(modifiedTime);
     return await _reducerCaller.call(createNoteDef.name, encoder.toBytes(),
-        optimisticChanges: optimisticChanges, isEventTable: isEventTable);
+        optimisticChanges: optimisticChanges, dropIfOffline: dropIfOffline);
   }
 
   Future<TransactionResult> deleteFolder({
     required String path,
     List<OptimisticChange>? optimisticChanges,
-    bool isEventTable = false,
+    bool dropIfOffline = false,
   }) async {
     final encoder = BsatnEncoder();
     encoder.writeString(path);
     return await _reducerCaller.call(deleteFolderDef.name, encoder.toBytes(),
-        optimisticChanges: optimisticChanges, isEventTable: isEventTable);
+        optimisticChanges: optimisticChanges, dropIfOffline: dropIfOffline);
   }
 
   Future<TransactionResult> deleteNote({
     required String id,
     List<OptimisticChange>? optimisticChanges,
-    bool isEventTable = false,
+    bool dropIfOffline = false,
   }) async {
     final encoder = BsatnEncoder();
     encoder.writeString(id);
     return await _reducerCaller.call(deleteNoteDef.name, encoder.toBytes(),
-        optimisticChanges: optimisticChanges, isEventTable: isEventTable);
+        optimisticChanges: optimisticChanges, dropIfOffline: dropIfOffline);
   }
 
   Future<TransactionResult> endCall({
     required Int64 sessionId,
     List<OptimisticChange>? optimisticChanges,
-    bool isEventTable = false,
+    bool dropIfOffline = false,
   }) async {
     final encoder = BsatnEncoder();
     encoder.writeU64(sessionId);
     return await _reducerCaller.call(endCallDef.name, encoder.toBytes(),
-        optimisticChanges: optimisticChanges, isEventTable: isEventTable);
+        optimisticChanges: optimisticChanges, dropIfOffline: dropIfOffline);
   }
 
   Future<TransactionResult> findReplaceInNote({
@@ -130,7 +130,7 @@ class Reducers {
     required String newText,
     required bool replaceAll,
     List<OptimisticChange>? optimisticChanges,
-    bool isEventTable = false,
+    bool dropIfOffline = false,
   }) async {
     final encoder = BsatnEncoder();
     encoder.writeString(path);
@@ -139,81 +139,81 @@ class Reducers {
     encoder.writeBool(replaceAll);
     return await _reducerCaller.call(
         findReplaceInNoteDef.name, encoder.toBytes(),
-        optimisticChanges: optimisticChanges, isEventTable: isEventTable);
+        optimisticChanges: optimisticChanges, dropIfOffline: dropIfOffline);
   }
 
   Future<TransactionResult> getRecentNotes({
     required int limit,
     List<OptimisticChange>? optimisticChanges,
-    bool isEventTable = false,
+    bool dropIfOffline = false,
   }) async {
     final encoder = BsatnEncoder();
     encoder.writeU32(limit);
     return await _reducerCaller.call(getRecentNotesDef.name, encoder.toBytes(),
-        optimisticChanges: optimisticChanges, isEventTable: isEventTable);
+        optimisticChanges: optimisticChanges, dropIfOffline: dropIfOffline);
   }
 
   Future<TransactionResult> moveFolder({
     required String oldPath,
     required String newPath,
     List<OptimisticChange>? optimisticChanges,
-    bool isEventTable = false,
+    bool dropIfOffline = false,
   }) async {
     final encoder = BsatnEncoder();
     encoder.writeString(oldPath);
     encoder.writeString(newPath);
     return await _reducerCaller.call(moveFolderDef.name, encoder.toBytes(),
-        optimisticChanges: optimisticChanges, isEventTable: isEventTable);
+        optimisticChanges: optimisticChanges, dropIfOffline: dropIfOffline);
   }
 
   Future<TransactionResult> moveNote({
     required String oldPath,
     required String newPath,
     List<OptimisticChange>? optimisticChanges,
-    bool isEventTable = false,
+    bool dropIfOffline = false,
   }) async {
     final encoder = BsatnEncoder();
     encoder.writeString(oldPath);
     encoder.writeString(newPath);
     return await _reducerCaller.call(moveNoteDef.name, encoder.toBytes(),
-        optimisticChanges: optimisticChanges, isEventTable: isEventTable);
+        optimisticChanges: optimisticChanges, dropIfOffline: dropIfOffline);
   }
 
   Future<TransactionResult> prependToNote({
     required String path,
     required String content,
     List<OptimisticChange>? optimisticChanges,
-    bool isEventTable = false,
+    bool dropIfOffline = false,
   }) async {
     final encoder = BsatnEncoder();
     encoder.writeString(path);
     encoder.writeString(content);
     return await _reducerCaller.call(prependToNoteDef.name, encoder.toBytes(),
-        optimisticChanges: optimisticChanges, isEventTable: isEventTable);
+        optimisticChanges: optimisticChanges, dropIfOffline: dropIfOffline);
   }
 
   Future<TransactionResult> renameNote({
     required String id,
     required String newPath,
     List<OptimisticChange>? optimisticChanges,
-    bool isEventTable = false,
+    bool dropIfOffline = false,
   }) async {
     final encoder = BsatnEncoder();
     encoder.writeString(id);
     encoder.writeString(newPath);
     return await _reducerCaller.call(renameNoteDef.name, encoder.toBytes(),
-        optimisticChanges: optimisticChanges, isEventTable: isEventTable);
+        optimisticChanges: optimisticChanges, dropIfOffline: dropIfOffline);
   }
 
   Future<TransactionResult> requestCall({
     required Identity callee,
     List<OptimisticChange>? optimisticChanges,
-    bool isEventTable = false,
+    bool dropIfOffline = false,
   }) async {
     final encoder = BsatnEncoder();
     encoder.writeIdentity(callee);
     return await _reducerCaller.call(requestCallDef.name, encoder.toBytes(),
-        optimisticChanges: optimisticChanges, isEventTable: isEventTable);
+        optimisticChanges: optimisticChanges, dropIfOffline: dropIfOffline);
   }
 
   Future<TransactionResult> sendAudioFrame({
@@ -221,14 +221,14 @@ class Reducers {
     required int seq,
     required List<int> pcm,
     List<OptimisticChange>? optimisticChanges,
-    bool isEventTable = false,
+    bool dropIfOffline = false,
   }) async {
     final encoder = BsatnEncoder();
     encoder.writeU64(sessionId);
     encoder.writeU32(seq);
     encoder.writeByteArray(pcm);
     return await _reducerCaller.call(sendAudioFrameDef.name, encoder.toBytes(),
-        optimisticChanges: optimisticChanges, isEventTable: isEventTable);
+        optimisticChanges: optimisticChanges, dropIfOffline: dropIfOffline);
   }
 
   Future<TransactionResult> sendVideoFrame({
@@ -238,7 +238,7 @@ class Reducers {
     required bool isKeyframe,
     required List<int> data,
     List<OptimisticChange>? optimisticChanges,
-    bool isEventTable = false,
+    bool dropIfOffline = false,
   }) async {
     final encoder = BsatnEncoder();
     encoder.writeU64(sessionId);
@@ -247,18 +247,18 @@ class Reducers {
     encoder.writeBool(isKeyframe);
     encoder.writeByteArray(data);
     return await _reducerCaller.call(sendVideoFrameDef.name, encoder.toBytes(),
-        optimisticChanges: optimisticChanges, isEventTable: isEventTable);
+        optimisticChanges: optimisticChanges, dropIfOffline: dropIfOffline);
   }
 
   Future<TransactionResult> setDisplayName({
     required String name,
     List<OptimisticChange>? optimisticChanges,
-    bool isEventTable = false,
+    bool dropIfOffline = false,
   }) async {
     final encoder = BsatnEncoder();
     encoder.writeString(name);
     return await _reducerCaller.call(setDisplayNameDef.name, encoder.toBytes(),
-        optimisticChanges: optimisticChanges, isEventTable: isEventTable);
+        optimisticChanges: optimisticChanges, dropIfOffline: dropIfOffline);
   }
 
   Future<TransactionResult> updateNoteContent({
@@ -268,7 +268,7 @@ class Reducers {
     required Int64 size,
     required Int64 modifiedTime,
     List<OptimisticChange>? optimisticChanges,
-    bool isEventTable = false,
+    bool dropIfOffline = false,
   }) async {
     final encoder = BsatnEncoder();
     encoder.writeString(id);
@@ -278,20 +278,20 @@ class Reducers {
     encoder.writeU64(modifiedTime);
     return await _reducerCaller.call(
         updateNoteContentDef.name, encoder.toBytes(),
-        optimisticChanges: optimisticChanges, isEventTable: isEventTable);
+        optimisticChanges: optimisticChanges, dropIfOffline: dropIfOffline);
   }
 
   Future<TransactionResult> updateNotePath({
     required String id,
     required String newPath,
     List<OptimisticChange>? optimisticChanges,
-    bool isEventTable = false,
+    bool dropIfOffline = false,
   }) async {
     final encoder = BsatnEncoder();
     encoder.writeString(id);
     encoder.writeString(newPath);
     return await _reducerCaller.call(updateNotePathDef.name, encoder.toBytes(),
-        optimisticChanges: optimisticChanges, isEventTable: isEventTable);
+        optimisticChanges: optimisticChanges, dropIfOffline: dropIfOffline);
   }
 
   Future<TransactionResult> upsertFolder({
@@ -299,14 +299,14 @@ class Reducers {
     required String name,
     required int depth,
     List<OptimisticChange>? optimisticChanges,
-    bool isEventTable = false,
+    bool dropIfOffline = false,
   }) async {
     final encoder = BsatnEncoder();
     encoder.writeString(path);
     encoder.writeString(name);
     encoder.writeU32(depth);
     return await _reducerCaller.call(upsertFolderDef.name, encoder.toBytes(),
-        optimisticChanges: optimisticChanges, isEventTable: isEventTable);
+        optimisticChanges: optimisticChanges, dropIfOffline: dropIfOffline);
   }
 
   Future<TransactionResult> upsertNote({
@@ -321,7 +321,7 @@ class Reducers {
     required Int64 createdTime,
     required Int64 modifiedTime,
     List<OptimisticChange>? optimisticChanges,
-    bool isEventTable = false,
+    bool dropIfOffline = false,
   }) async {
     final encoder = BsatnEncoder();
     encoder.writeString(id);
@@ -335,7 +335,7 @@ class Reducers {
     encoder.writeU64(createdTime);
     encoder.writeU64(modifiedTime);
     return await _reducerCaller.call(upsertNoteDef.name, encoder.toBytes(),
-        optimisticChanges: optimisticChanges, isEventTable: isEventTable);
+        optimisticChanges: optimisticChanges, dropIfOffline: dropIfOffline);
   }
 
   StreamSubscription<void> onAcceptCall(

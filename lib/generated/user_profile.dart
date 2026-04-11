@@ -1,6 +1,6 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-import 'package:spacetimedb_dart_sdk/spacetimedb_dart_sdk.dart';
+import 'package:spacetimedb_dart_sdk/codegen.dart';
 
 class UserProfile {
   UserProfile({
@@ -36,6 +36,34 @@ class UserProfile {
       'identity': identity.toJson(),
       'name': name,
     };
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        other is UserProfile &&
+            identity == other.identity &&
+            name == other.name;
+  }
+
+  @override
+  int get hashCode {
+    return Object.hash(identity, name);
+  }
+
+  @override
+  String toString() {
+    return 'UserProfile(identity: $identity, name: $name)';
+  }
+
+  UserProfile copyWith({
+    Identity? identity,
+    String? name,
+  }) {
+    return UserProfile(
+      identity: identity ?? this.identity,
+      name: name ?? this.name,
+    );
   }
 }
 

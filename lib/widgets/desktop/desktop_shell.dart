@@ -54,17 +54,23 @@ class _DesktopShellState extends ConsumerState<DesktopShell> {
                 ? SystemMouseCursors.basic
                 : SystemMouseCursors.resizeColumn,
             child: GestureDetector(
-              onHorizontalDragStart: isCollapsed ? null : (_) {
-                setState(() => _isResizing = true);
-              },
-              onHorizontalDragUpdate: isCollapsed ? null : (details) {
-                final newWidth = sidebarWidth + details.delta.dx;
-                ref.read(sidebarWidthProvider.notifier).state =
-                    newWidth.clamp(_minSidebarWidth, _maxSidebarWidth);
-              },
-              onHorizontalDragEnd: isCollapsed ? null : (_) {
-                setState(() => _isResizing = false);
-              },
+              onHorizontalDragStart: isCollapsed
+                  ? null
+                  : (_) {
+                      setState(() => _isResizing = true);
+                    },
+              onHorizontalDragUpdate: isCollapsed
+                  ? null
+                  : (details) {
+                      final newWidth = sidebarWidth + details.delta.dx;
+                      ref.read(sidebarWidthProvider.notifier).state =
+                          newWidth.clamp(_minSidebarWidth, _maxSidebarWidth);
+                    },
+              onHorizontalDragEnd: isCollapsed
+                  ? null
+                  : (_) {
+                      setState(() => _isResizing = false);
+                    },
               child: Container(
                 width: _dividerWidth,
                 color: _isResizing
@@ -97,15 +103,18 @@ class _DesktopContentArea extends StatelessWidget {
 
     return Column(
       children: [
-        _DesktopTopBar(showTabs: !isChat && !isSettings && !isConnect && !isSessions),
+        _DesktopTopBar(
+            showTabs: !isChat && !isSettings && !isConnect && !isSessions),
         Expanded(
-          child: _buildContent(context, isChat, isSettings, isConnect, isSessions),
+          child:
+              _buildContent(context, isChat, isSettings, isConnect, isSessions),
         ),
       ],
     );
   }
 
-  Widget _buildContent(BuildContext context, bool isChat, bool isSettings, bool isConnect, bool isSessions) {
+  Widget _buildContent(BuildContext context, bool isChat, bool isSettings,
+      bool isConnect, bool isSessions) {
     if (isChat || isSettings || isConnect || isSessions) {
       return child;
     }
@@ -121,8 +130,8 @@ class _DesktopTopBar extends ConsumerWidget {
   String _getBreadcrumb(String location, WidgetRef ref) {
     if (location.startsWith('/notes/note/')) {
       final noteId = location.substring('/notes/note/'.length);
-      final note = ref.watch(notesListProvider).valueOrNull
-          ?.firstWhereOrNull((n) => n.id == noteId);
+      final note =
+          ref.watch(notesListProvider).firstWhereOrNull((n) => n.id == noteId);
       if (note != null) {
         return '/${note.path}';
       }
@@ -143,7 +152,9 @@ class _DesktopTopBar extends ConsumerWidget {
   }
 
   bool _shouldShowBackButton(String location) {
-    return location == '/notes/chat' || location == '/settings' || location.startsWith('/notes/sessions');
+    return location == '/notes/chat' ||
+        location == '/settings' ||
+        location.startsWith('/notes/sessions');
   }
 
   @override
@@ -198,4 +209,3 @@ class _DesktopTopBar extends ConsumerWidget {
     );
   }
 }
-
