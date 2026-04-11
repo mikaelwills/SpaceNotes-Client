@@ -70,7 +70,8 @@ class NotesListDialogs {
               ),
               onTap: () {
                 Navigator.of(dialogContext).pop();
-                print('🗑️  Context Menu DELETE: No navigation path (staying on list)');
+                print(
+                    '🗑️  Context Menu DELETE: No navigation path (staying on list)');
                 showDeleteNoteConfirmation(context, ref, note);
               },
             ),
@@ -250,12 +251,15 @@ class NotesListDialogs {
                           } else {
                             // Inside a folder: create subfolder
                             final normalizedPath = currentPath.endsWith('/')
-                                ? currentPath.substring(0, currentPath.length - 1)
+                                ? currentPath.substring(
+                                    0, currentPath.length - 1)
                                 : currentPath;
                             fullFolderPath = '$normalizedPath/$folderName';
                           }
 
-                          ref.read(notesRepositoryProvider).createFolder(fullFolderPath);
+                          ref
+                              .read(notesRepositoryProvider)
+                              .createFolder(fullFolderPath);
                         }
                       },
                       style: const TextStyle(
@@ -327,7 +331,9 @@ class NotesListDialogs {
                           fullFolderPath = '$normalizedPath/$folderName';
                         }
 
-                        ref.read(notesRepositoryProvider).createFolder(fullFolderPath);
+                        ref
+                            .read(notesRepositoryProvider)
+                            .createFolder(fullFolderPath);
                       }
                     },
                     child: const Text('Create'),
@@ -389,7 +395,8 @@ class NotesListDialogs {
               Navigator.of(dialogContext).pop();
 
               print('🗑️  DELETE: Deleting note ${note.path}');
-              print('🗑️  DELETE: navigateToAfterDelete = $navigateToAfterDelete');
+              print(
+                  '🗑️  DELETE: navigateToAfterDelete = $navigateToAfterDelete');
 
               // Delete the note
               ref.read(notesRepositoryProvider).deleteNote(note.id);
@@ -475,9 +482,9 @@ class NotesListDialogs {
     WidgetRef ref,
     Note note,
   ) {
-    final foldersAsync = ref.read(foldersListProvider);
+    final folders = ref.read(foldersListProvider);
 
-    foldersAsync.whenData((folders) {
+    () {
       // Sort folders alphabetically by name
       final sortedFolders = folders.toList()
         ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
@@ -556,15 +563,20 @@ class NotesListDialogs {
                 return ListTile(
                   leading: Icon(
                     isCurrentFolder ? Icons.folder : Icons.folder_outlined,
-                    color: isCurrentFolder ? SpaceNotesTheme.primary : SpaceNotesTheme.text,
+                    color: isCurrentFolder
+                        ? SpaceNotesTheme.primary
+                        : SpaceNotesTheme.text,
                   ),
                   title: Text(
                     folder.name,
                     style: TextStyle(
                       fontFamily: 'FiraCode',
                       fontSize: 14,
-                      color: isCurrentFolder ? SpaceNotesTheme.textSecondary : SpaceNotesTheme.text,
-                      fontStyle: isCurrentFolder ? FontStyle.italic : FontStyle.normal,
+                      color: isCurrentFolder
+                          ? SpaceNotesTheme.textSecondary
+                          : SpaceNotesTheme.text,
+                      fontStyle:
+                          isCurrentFolder ? FontStyle.italic : FontStyle.normal,
                     ),
                   ),
                   subtitle: isCurrentFolder
@@ -589,7 +601,9 @@ class NotesListDialogs {
 
                           print('📦 Moving note: ${note.path} -> $newPath');
 
-                          final success = await ref.read(notesRepositoryProvider).renameNote(note.id, newPath);
+                          final success = await ref
+                              .read(notesRepositoryProvider)
+                              .renameNote(note.id, newPath);
 
                           if (!success && context.mounted) {
                             // Show error if move failed
@@ -600,7 +614,8 @@ class NotesListDialogs {
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.zero,
                                   side: BorderSide(
-                                    color: SpaceNotesTheme.error.withValues(alpha: 0.3),
+                                    color: SpaceNotesTheme.error
+                                        .withValues(alpha: 0.3),
                                     width: 1,
                                   ),
                                 ),
@@ -623,7 +638,8 @@ class NotesListDialogs {
                                 ),
                                 actions: [
                                   TextButton(
-                                    onPressed: () => Navigator.of(errorContext).pop(),
+                                    onPressed: () =>
+                                        Navigator.of(errorContext).pop(),
                                     child: const Text('OK'),
                                   ),
                                 ],
@@ -646,7 +662,7 @@ class NotesListDialogs {
           ],
         ),
       );
-    });
+    }();
   }
 
   /// Show dialog to select a destination folder to move a folder to
@@ -655,9 +671,9 @@ class NotesListDialogs {
     WidgetRef ref,
     Folder folderToMove,
   ) {
-    final foldersAsync = ref.read(foldersListProvider);
+    final folders = ref.read(foldersListProvider);
 
-    foldersAsync.whenData((folders) {
+    () {
       // Filter out the folder being moved and its subfolders, then sort alphabetically
       final availableFolders = folders.where((folder) {
         // Can't move a folder into itself
@@ -695,7 +711,8 @@ class NotesListDialogs {
             width: double.maxFinite,
             child: ListView.builder(
               shrinkWrap: true,
-              itemCount: availableFolders.length + 1, // +1 for "Top Level" option
+              itemCount:
+                  availableFolders.length + 1, // +1 for "Top Level" option
               itemBuilder: (context, index) {
                 // First item is "Move to Top Level"
                 if (index == 0) {
@@ -703,15 +720,21 @@ class NotesListDialogs {
                   return ListTile(
                     leading: Icon(
                       isAlreadyTopLevel ? Icons.home : Icons.home_outlined,
-                      color: isAlreadyTopLevel ? SpaceNotesTheme.textSecondary : SpaceNotesTheme.primary,
+                      color: isAlreadyTopLevel
+                          ? SpaceNotesTheme.textSecondary
+                          : SpaceNotesTheme.primary,
                     ),
                     title: Text(
                       'Top Level',
                       style: TextStyle(
                         fontFamily: 'FiraCode',
                         fontSize: 14,
-                        color: isAlreadyTopLevel ? SpaceNotesTheme.textSecondary : SpaceNotesTheme.text,
-                        fontStyle: isAlreadyTopLevel ? FontStyle.italic : FontStyle.normal,
+                        color: isAlreadyTopLevel
+                            ? SpaceNotesTheme.textSecondary
+                            : SpaceNotesTheme.text,
+                        fontStyle: isAlreadyTopLevel
+                            ? FontStyle.italic
+                            : FontStyle.normal,
                       ),
                     ),
                     subtitle: isAlreadyTopLevel
@@ -733,12 +756,15 @@ class NotesListDialogs {
                             // Move to top level (just the folder name)
                             final newPath = folderToMove.name;
 
-                            print('📦 Moving folder to top level: ${folderToMove.path} -> $newPath');
+                            print(
+                                '📦 Moving folder to top level: ${folderToMove.path} -> $newPath');
 
-                            final success = await ref.read(notesRepositoryProvider).moveFolder(
-                              folderToMove.path,
-                              newPath,
-                            );
+                            final success = await ref
+                                .read(notesRepositoryProvider)
+                                .moveFolder(
+                                  folderToMove.path,
+                                  newPath,
+                                );
 
                             if (!success && context.mounted) {
                               // Show error if move failed
@@ -749,7 +775,8 @@ class NotesListDialogs {
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.zero,
                                     side: BorderSide(
-                                      color: SpaceNotesTheme.error.withValues(alpha: 0.3),
+                                      color: SpaceNotesTheme.error
+                                          .withValues(alpha: 0.3),
                                       width: 1,
                                     ),
                                   ),
@@ -772,7 +799,8 @@ class NotesListDialogs {
                                   ),
                                   actions: [
                                     TextButton(
-                                      onPressed: () => Navigator.of(errorContext).pop(),
+                                      onPressed: () =>
+                                          Navigator.of(errorContext).pop(),
                                       child: const Text('OK'),
                                     ),
                                   ],
@@ -807,10 +835,11 @@ class NotesListDialogs {
 
                     print('📦 Moving folder: ${folderToMove.path} -> $newPath');
 
-                    final success = await ref.read(notesRepositoryProvider).moveFolder(
-                      folderToMove.path,
-                      newPath,
-                    );
+                    final success =
+                        await ref.read(notesRepositoryProvider).moveFolder(
+                              folderToMove.path,
+                              newPath,
+                            );
 
                     if (!success && context.mounted) {
                       // Show error if move failed
@@ -821,7 +850,8 @@ class NotesListDialogs {
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.zero,
                             side: BorderSide(
-                              color: SpaceNotesTheme.error.withValues(alpha: 0.3),
+                              color:
+                                  SpaceNotesTheme.error.withValues(alpha: 0.3),
                               width: 1,
                             ),
                           ),
@@ -867,7 +897,7 @@ class NotesListDialogs {
           ],
         ),
       );
-    });
+    }();
   }
 
   /// Show dialog to rename a folder
@@ -945,11 +975,14 @@ class NotesListDialogs {
 
                           // Build new folder path
                           final parentPath = folder.path.contains('/')
-                              ? folder.path.substring(0, folder.path.lastIndexOf('/') + 1)
+                              ? folder.path.substring(
+                                  0, folder.path.lastIndexOf('/') + 1)
                               : '';
                           final newPath = '$parentPath$newName';
 
-                          ref.read(notesRepositoryProvider).moveFolder(folder.path, newPath);
+                          ref
+                              .read(notesRepositoryProvider)
+                              .moveFolder(folder.path, newPath);
                         }
                       },
                       style: const TextStyle(
@@ -1010,11 +1043,14 @@ class NotesListDialogs {
 
                         // Build new folder path
                         final parentPath = folder.path.contains('/')
-                            ? folder.path.substring(0, folder.path.lastIndexOf('/') + 1)
+                            ? folder.path
+                                .substring(0, folder.path.lastIndexOf('/') + 1)
                             : '';
                         final newPath = '$parentPath$newName';
 
-                        ref.read(notesRepositoryProvider).moveFolder(folder.path, newPath);
+                        ref
+                            .read(notesRepositoryProvider)
+                            .moveFolder(folder.path, newPath);
                       }
                     },
                     child: const Text('Rename'),

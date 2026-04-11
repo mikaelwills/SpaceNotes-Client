@@ -24,7 +24,11 @@ class CallService {
     _client = client;
   }
 
-  Future<void> startCapture(Int64 sessionId, {int fps = 10, int width = 320, int height = 240, String codec = 'h264'}) async {
+  Future<void> startCapture(Int64 sessionId,
+      {int fps = 10,
+      int width = 320,
+      int height = 240,
+      String codec = 'h264'}) async {
     _activeSessionId = sessionId;
     _videoSeq = 0;
     videoStats = VideoStats();
@@ -36,8 +40,10 @@ class CallService {
       if (_client == null || _activeSessionId == null) return;
       _videoSeq++;
       if (_videoSeq % 300 == 0) {
-        final elapsed = DateTime.now().difference(txStart).inMilliseconds / 1000.0;
-        debugLogger.info('VIDEO_TX', 'Frame #$_videoSeq | fps: ${(_videoSeq / elapsed).toStringAsFixed(1)} | size: ${frame.data.length ~/ 1024}KB');
+        final elapsed =
+            DateTime.now().difference(txStart).inMilliseconds / 1000.0;
+        debugLogger.info('VIDEO_TX',
+            'Frame #$_videoSeq | fps: ${(_videoSeq / elapsed).toStringAsFixed(1)} | size: ${frame.data.length ~/ 1024}KB');
       }
       videoStats?.recordSend(seq: _videoSeq, sizeBytes: frame.data.length);
       _client!.reducers.sendVideoFrame(
@@ -46,7 +52,7 @@ class CallService {
         codec: frame.codec,
         isKeyframe: frame.isKeyframe,
         data: frame.data.toList(),
-        isEventTable: true,
+        dropIfOffline: true,
       );
     });
 
@@ -55,8 +61,16 @@ class CallService {
       width: width,
       height: height,
       codec: codec,
-      onFrameTiming: ({required int totalMs, int? yuvMs, int? encodeMs, required int sizeBytes}) {
-        videoStats?.recordCapture(totalMs: totalMs, yuvMs: yuvMs, encodeMs: encodeMs, sizeBytes: sizeBytes);
+      onFrameTiming: (
+          {required int totalMs,
+          int? yuvMs,
+          int? encodeMs,
+          required int sizeBytes}) {
+        videoStats?.recordCapture(
+            totalMs: totalMs,
+            yuvMs: yuvMs,
+            encodeMs: encodeMs,
+            sizeBytes: sizeBytes);
       },
     );
 
@@ -67,13 +81,14 @@ class CallService {
         sessionId: _activeSessionId!,
         seq: seq,
         pcm: pcm.toList(),
-        isEventTable: true,
+        dropIfOffline: true,
       );
     };
     await audioService!.startPlayback();
     await audioService!.startCapture();
 
-    debugLogger.info('CALL', 'Started capture at ${fps}fps ${width}x$height for session $sessionId');
+    debugLogger.info('CALL',
+        'Started capture at ${fps}fps ${width}x$height for session $sessionId');
   }
 
   void stopCapture() {
@@ -92,7 +107,8 @@ class CallService {
   Future<void> requestCall(Identity callee) async {
     if (_client == null) return;
     await _client!.reducers.requestCall(callee: callee);
-    debugLogger.info('CALL', 'Requested call to ${callee.toHexString.substring(0, 8)}');
+    debugLogger.info(
+        'CALL', 'Requested call to ${callee.toHexString.substring(0, 8)}');
   }
 
   Future<void> acceptCall(Int64 sessionId) async {

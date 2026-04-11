@@ -45,7 +45,8 @@ class _NoteBottomBarState extends ConsumerState<NoteBottomBar> {
   @override
   Widget build(BuildContext context) {
     final isDesktop = PlatformUtils.isDesktopLayout(context);
-    final isChatConnected = ref.watch(chatConnectedProvider).valueOrNull ?? false;
+    final isChatConnected =
+        ref.watch(chatConnectedProvider).valueOrNull ?? false;
 
     if (isDesktop) {
       return _buildDesktopBar(isChatConnected);
@@ -295,8 +296,8 @@ class _NoteBottomBarState extends ConsumerState<NoteBottomBar> {
 
   Note? _getCurrentNote() {
     if (widget.notePath == null) return null;
-    final notes = ref.read(notesListProvider).valueOrNull;
-    return notes?.firstWhereOrNull((n) => n.path == widget.notePath);
+    final notes = ref.read(notesListProvider);
+    return notes.firstWhereOrNull((n) => n.path == widget.notePath);
   }
 
   void _handleMoveNote() {

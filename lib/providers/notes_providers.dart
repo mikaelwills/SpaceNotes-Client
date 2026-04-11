@@ -1,6 +1,6 @@
 import 'package:spacenotes_client/repositories/spacetimedb_notes_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show ValueListenable, kIsWeb;
 import '../generated/client.dart';
 import '../generated/folder.dart';
 import '../generated/note.dart';
@@ -25,18 +25,40 @@ final notesRepositoryProvider = Provider<SpacetimeDbNotesRepository>((ref) {
   return repository;
 });
 
-/// Provider that exposes the SpacetimeDB client for connection status monitoring
-final spacetimeClientProvider =
-    StreamProvider.autoDispose<SpacetimeDbClient?>((ref) {
-  final repository = ref.watch(notesRepositoryProvider);
+/// Subscribe [ref] to a [ValueListenable] so the provider rebuilds on change.
+/// Returns the current value.
+T watchListenable<T>(Ref ref, ValueListenable<T> listenable) {
+  void listener() {
+    ref.invalidateSelf();
+  }
 
-  // Watch the client stream - emits when client is created or reset
-  return repository.watchClient();
+  listenable.addListener(listener);
+  ref.onDispose(() => listenable.removeListener(listener));
+  return listenable.value;
+}
+
+/// Current SpacetimeDB client (null before connect, null after reset)
+final spacetimeClientProvider = Provider<SpacetimeDbClient?>((ref) {
+  final repository = ref.watch(notesRepositoryProvider);
+  return watchListenable(ref, repository.clientNotifier);
 });
 
-final notesListProvider = StreamProvider<List<Note>>((ref) {
-  final repository = ref.watch(notesRepositoryProvider);
-  return repository.watchNotesList();
+final notesListProvider = Provider<List<Note>>((ref) {
+  final client = ref.watch(spacetimeClientProvider);
+  if (client == null) return const [];
+  final rows = watchListenable(ref, client.note.rows);
+  final sorted = rows.toList()
+    ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+  return sorted;
+});
+
+final foldersListProvider = Provider<List<Folder>>((ref) {
+  final client = ref.watch(spacetimeClientProvider);
+  if (client == null) return const [];
+  final rows = watchListenable(ref, client.folder.rows);
+  final sorted = rows.toList()
+    ..sort((a, b) => a.path.toLowerCase().compareTo(b.path.toLowerCase()));
+  return sorted;
 });
 
 final searchQueryProvider = StateProvider<String>((ref) => '');
@@ -45,119 +67,69 @@ final currentFolderPathProvider = StateProvider<String>((ref) => '');
 
 final currentNotePathProvider = StateProvider<String?>((ref) => null);
 
-final filteredNotesProvider =
-    Provider.autoDispose<AsyncValue<List<Note>>>((ref) {
-  final notesAsync = ref.watch(notesListProvider);
+final filteredNotesProvider = Provider.autoDispose<List<Note>>((ref) {
+  final notes = ref.watch(notesListProvider);
   final searchQuery = ref.watch(searchQueryProvider);
 
-  return notesAsync.when(
-    loading: () => const AsyncValue.loading(),
-    error: (error, stack) => AsyncValue.error(error, stack),
-    data: (notes) {
-      if (searchQuery.trim().isEmpty) {
-        return AsyncValue.data(notes);
-      }
+  if (searchQuery.trim().isEmpty) return notes;
 
-      final queryLower = searchQuery.toLowerCase();
-      final filteredNotes = notes.where((note) {
-        return note.name.toLowerCase().contains(queryLower) ||
-            note.path.toLowerCase().contains(queryLower);
-      }).toList();
-
-      return AsyncValue.data(filteredNotes);
-    },
-  );
-});
-
-// Folder-specific providers for TopFolderListScreen
-final foldersListProvider = StreamProvider<List<Folder>>((ref) {
-  final repository = ref.watch(notesRepositoryProvider);
-  return repository.watchFoldersList();
+  final queryLower = searchQuery.toLowerCase();
+  return notes.where((note) {
+    return note.name.toLowerCase().contains(queryLower) ||
+        note.path.toLowerCase().contains(queryLower);
+  }).toList();
 });
 
 final folderSearchQueryProvider = StateProvider<String>((ref) => '');
 
-final filteredFoldersProvider =
-    Provider.autoDispose<AsyncValue<List<Folder>>>((ref) {
-  final foldersAsync = ref.watch(foldersListProvider);
+final filteredFoldersProvider = Provider.autoDispose<List<Folder>>((ref) {
+  final folders = ref.watch(foldersListProvider);
   final searchQuery = ref.watch(folderSearchQueryProvider);
 
-  return foldersAsync.when(
-    loading: () => const AsyncValue.loading(),
-    error: (error, stack) => AsyncValue.error(error, stack),
-    data: (folders) {
-      if (searchQuery.trim().isEmpty) {
-        return AsyncValue.data(folders);
-      }
+  if (searchQuery.trim().isEmpty) return folders;
 
-      final queryLower = searchQuery.toLowerCase();
-      final filteredFolders = folders.where((folder) {
-        return folder.name.toLowerCase().contains(queryLower);
-      }).toList();
-
-      return AsyncValue.data(filteredFolders);
-    },
-  );
+  final queryLower = searchQuery.toLowerCase();
+  return folders.where((folder) {
+    return folder.name.toLowerCase().contains(queryLower);
+  }).toList();
 });
 
-// Dynamic folder contents provider - works for any folder path (including root "")
-final dynamicFolderContentsProvider = Provider.family.autoDispose<
-    AsyncValue<({List<Folder> folders, List<Note> notes})>,
-    String>((ref, currentPath) {
-  final foldersAsync = ref.watch(foldersListProvider);
-  final notesAsync = ref.watch(notesListProvider);
+final dynamicFolderContentsProvider = Provider.family
+    .autoDispose<({List<Folder> folders, List<Note> notes}), String>(
+        (ref, currentPath) {
+  final allFolders = ref.watch(foldersListProvider);
+  final allNotes = ref.watch(notesListProvider);
   final searchQuery = ref.watch(folderSearchQueryProvider);
 
-  // If either is loading, return loading
-  if (foldersAsync.isLoading || notesAsync.isLoading) {
-    return const AsyncValue.loading();
-  }
-
-  // If either has an error, return the first error
-  if (foldersAsync.hasError) {
-    return AsyncValue.error(
-        foldersAsync.error!, foldersAsync.stackTrace ?? StackTrace.current);
-  }
-  if (notesAsync.hasError) {
-    return AsyncValue.error(
-        notesAsync.error!, notesAsync.stackTrace ?? StackTrace.current);
-  }
-
-  final allFolders = foldersAsync.valueOrNull ?? [];
-  final allNotes = notesAsync.valueOrNull ?? [];
-
-  // Normalize current path (empty string = root/top level)
-  final normalizedPath = currentPath.isEmpty ? '' :
-      (currentPath.endsWith('/') ? currentPath.substring(0, currentPath.length - 1) : currentPath);
+  final normalizedPath = currentPath.isEmpty
+      ? ''
+      : (currentPath.endsWith('/')
+          ? currentPath.substring(0, currentPath.length - 1)
+          : currentPath);
 
   if (searchQuery.trim().isEmpty) {
-    // Show direct children only (no search)
     List<Folder> childFolders;
     List<Note> childNotes;
 
     if (normalizedPath.isEmpty) {
-      // Root level: show folders with depth 0
       childFolders = allFolders.where((folder) => folder.depth == 0).toList();
       childNotes = allNotes.where((note) => note.depth == 0).toList();
     } else {
-      // Inside a folder: show direct subfolders and notes
       childFolders = allFolders.where((folder) {
-        // Must start with current path + /
         if (!folder.path.startsWith('$normalizedPath/')) return false;
-        // Get the part after current path
         final remainder = folder.path.substring(normalizedPath.length + 1);
-        // Must not contain slashes (direct child only)
         return !remainder.contains('/');
       }).toList();
 
       final folderPathWithSlash = '$normalizedPath/';
-      childNotes = allNotes.where((note) => note.folderPath == folderPathWithSlash).toList();
+      childNotes = allNotes
+          .where((note) => note.folderPath == folderPathWithSlash)
+          .toList();
     }
 
-    return AsyncValue.data((folders: childFolders, notes: childNotes));
+    return (folders: childFolders, notes: childNotes);
   }
 
-  // Search mode: search ALL folders and notes (not relative to current path)
   final queryLower = searchQuery.toLowerCase();
 
   final filteredFolders = allFolders.where((folder) {
@@ -169,78 +141,37 @@ final dynamicFolderContentsProvider = Provider.family.autoDispose<
         note.path.toLowerCase().contains(queryLower);
   }).toList();
 
-  return AsyncValue.data((folders: filteredFolders, notes: filteredNotes));
+  return (folders: filteredFolders, notes: filteredNotes);
 });
 
-// Provider for notes in a specific folder
-final folderNotesProvider = Provider.family
-    .autoDispose<AsyncValue<List<Note>>, String>((ref, folderPath) {
-  final notesAsync = ref.watch(notesListProvider);
-
-  return notesAsync.when(
-    loading: () => const AsyncValue.loading(),
-    error: (error, stack) => AsyncValue.error(error, stack),
-    data: (notes) {
-      // Ensure folder path has trailing slash for comparison
-      final folderPathWithSlash =
-          folderPath.endsWith('/') ? folderPath : '$folderPath/';
-      final folderNotes = notes
-          .where((note) => note.folderPath == folderPathWithSlash)
-          .toList();
-      return AsyncValue.data(folderNotes);
-    },
-  );
+final folderNotesProvider =
+    Provider.family.autoDispose<List<Note>, String>((ref, folderPath) {
+  final notes = ref.watch(notesListProvider);
+  final folderPathWithSlash =
+      folderPath.endsWith('/') ? folderPath : '$folderPath/';
+  return notes.where((note) => note.folderPath == folderPathWithSlash).toList();
 });
 
-// Provider for subfolders within a specific folder
-final folderSubfoldersProvider = Provider.family
-    .autoDispose<AsyncValue<List<Folder>>, String>((ref, folderPath) {
-  final foldersAsync = ref.watch(foldersListProvider);
+final folderSubfoldersProvider =
+    Provider.family.autoDispose<List<Folder>, String>((ref, folderPath) {
+  final folders = ref.watch(foldersListProvider);
+  final normalizedPath = folderPath.endsWith('/')
+      ? folderPath.substring(0, folderPath.length - 1)
+      : folderPath;
 
-  return foldersAsync.when(
-    loading: () => const AsyncValue.loading(),
-    error: (error, stack) => AsyncValue.error(error, stack),
-    data: (folders) {
-      // Normalize the parent folder path (no trailing slash)
-      final normalizedPath = folderPath.endsWith('/')
-          ? folderPath.substring(0, folderPath.length - 1)
-          : folderPath;
-
-      // Find direct subfolders (folders whose path starts with parentPath/
-      // and has no additional slashes after that)
-      final subfolders = folders.where((folder) {
-        // Must start with parent path + /
-        if (!folder.path.startsWith('$normalizedPath/')) return false;
-
-        // Get the part after the parent path
-        final remainder = folder.path.substring(normalizedPath.length + 1);
-
-        // Must not contain any slashes (direct child only)
-        return !remainder.contains('/');
-      }).toList();
-
-      return AsyncValue.data(subfolders);
-    },
-  );
+  return folders.where((folder) {
+    if (!folder.path.startsWith('$normalizedPath/')) return false;
+    final remainder = folder.path.substring(normalizedPath.length + 1);
+    return !remainder.contains('/');
+  }).toList();
 });
 
-// Provider for recently edited notes (top 20)
-// Reactively updates when notes change in the cache
-final recentNotesProvider = Provider<AsyncValue<List<Note>>>((ref) {
-  final notesAsync = ref.watch(notesListProvider);
+/// Recently edited notes (top 20, by modifiedTime desc).
+final recentNotesProvider = Provider<List<Note>>((ref) {
+  final notes = ref.watch(notesListProvider);
+  if (notes.isEmpty) return const [];
 
-  return notesAsync.when(
-    loading: () => const AsyncValue.loading(),
-    error: (error, stack) => AsyncValue.error(error, stack),
-    data: (notes) {
-      if (notes.isEmpty) {
-        return const AsyncValue.data([]);
-      }
-
-      final sortedNotes = notes.toList();
-      sortedNotes.sort((a, b) => b.modifiedTime.compareTo(a.modifiedTime));
-
-      return AsyncValue.data(sortedNotes.take(20).toList());
-    },
-  );
+  final sorted = notes.toList()
+    ..sort((a, b) => b.modifiedTime.compareTo(a.modifiedTime));
+  return sorted.take(20).toList();
 });

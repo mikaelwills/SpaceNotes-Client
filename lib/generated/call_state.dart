@@ -1,6 +1,6 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-import 'package:spacetimedb_dart_sdk/spacetimedb_dart_sdk.dart';
+import 'package:spacetimedb_dart_sdk/codegen.dart';
 
 sealed class CallState {
   const CallState();
@@ -57,6 +57,21 @@ class CallStateRinging extends CallState {
   Map<String, dynamic> toJson() {
     return {'type': 'Ringing'};
   }
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) || other is CallStateRinging;
+  }
+
+  @override
+  int get hashCode {
+    return runtimeType.hashCode;
+  }
+
+  @override
+  String toString() {
+    return 'CallStateRinging()';
+  }
 }
 
 class CallStateActive extends CallState {
@@ -79,6 +94,21 @@ class CallStateActive extends CallState {
   Map<String, dynamic> toJson() {
     return {'type': 'Active'};
   }
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) || other is CallStateActive;
+  }
+
+  @override
+  int get hashCode {
+    return runtimeType.hashCode;
+  }
+
+  @override
+  String toString() {
+    return 'CallStateActive()';
+  }
 }
 
 class CallStateEnded extends CallState {
@@ -100,5 +130,20 @@ class CallStateEnded extends CallState {
   @override
   Map<String, dynamic> toJson() {
     return {'type': 'Ended'};
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) || other is CallStateEnded;
+  }
+
+  @override
+  int get hashCode {
+    return runtimeType.hashCode;
+  }
+
+  @override
+  String toString() {
+    return 'CallStateEnded()';
   }
 }

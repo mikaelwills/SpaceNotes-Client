@@ -1,6 +1,6 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-import 'package:spacetimedb_dart_sdk/spacetimedb_dart_sdk.dart';
+import 'package:spacetimedb_dart_sdk/codegen.dart';
 
 class Note {
   Note({
@@ -99,6 +99,62 @@ class Note {
       'modifiedTime': modifiedTime.toInt(),
       'dbUpdatedAt': dbUpdatedAt.toInt(),
     };
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        other is Note &&
+            id == other.id &&
+            path == other.path &&
+            name == other.name &&
+            content == other.content &&
+            folderPath == other.folderPath &&
+            depth == other.depth &&
+            frontmatter == other.frontmatter &&
+            size == other.size &&
+            createdTime == other.createdTime &&
+            modifiedTime == other.modifiedTime &&
+            dbUpdatedAt == other.dbUpdatedAt;
+  }
+
+  @override
+  int get hashCode {
+    return Object.hash(id, path, name, content, folderPath, depth, frontmatter,
+        size, createdTime, modifiedTime, dbUpdatedAt);
+  }
+
+  @override
+  String toString() {
+    return 'Note(id: $id, path: $path, name: $name, content: $content, folderPath: $folderPath, depth: $depth, frontmatter: $frontmatter, size: $size, createdTime: $createdTime, modifiedTime: $modifiedTime, dbUpdatedAt: $dbUpdatedAt)';
+  }
+
+  Note copyWith({
+    String? id,
+    String? path,
+    String? name,
+    String? content,
+    String? folderPath,
+    int? depth,
+    String? frontmatter,
+    Int64? size,
+    Int64? createdTime,
+    Int64? modifiedTime,
+    Int64? dbUpdatedAt,
+  }) {
+    return Note(
+      id: id ?? this.id,
+      path: path ?? this.path,
+      name: name ?? this.name,
+      content: content ?? this.content,
+      folderPath: folderPath ?? this.folderPath,
+      depth: depth ?? this.depth,
+      frontmatter: frontmatter ?? this.frontmatter,
+      size: size ?? this.size,
+      createdTime: createdTime ?? this.createdTime,
+      modifiedTime: modifiedTime ?? this.modifiedTime,
+      dbUpdatedAt: dbUpdatedAt ?? this.dbUpdatedAt,
+    );
   }
 }
 

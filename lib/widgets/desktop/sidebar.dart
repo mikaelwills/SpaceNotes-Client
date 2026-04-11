@@ -234,178 +234,161 @@ class _FolderTreeState extends ConsumerState<_FolderTree> {
 
   @override
   Widget build(BuildContext context) {
-    final foldersAsync = ref.watch(foldersListProvider);
-    final notesAsync = ref.watch(notesListProvider);
+    final folders = ref.watch(foldersListProvider);
+    final notes = ref.watch(notesListProvider);
     final searchQuery = ref.watch(folderSearchQueryProvider).toLowerCase();
     final isSearching = searchQuery.isNotEmpty;
 
-    return foldersAsync.when(
-      loading: () => const Center(
-        child: CircularProgressIndicator(
-          valueColor: AlwaysStoppedAnimation<Color>(SpaceNotesTheme.primary),
-        ),
-      ),
-      error: (error, _) => Center(
-        child: Text(
-          'Error: $error',
-          style: SpaceNotesTextStyles.terminal.copyWith(
-            color: SpaceNotesTheme.error,
-            fontSize: 12,
-          ),
-        ),
-      ),
-      data: (folders) {
-        final notes = notesAsync.valueOrNull ?? [];
+    Set<String> visibleFolderPaths = {};
+    Set<String> foldersToExpand = {};
+    Set<String> matchingNotePaths = {};
+    Set<String> matchingFolderPaths = {};
 
-        Set<String> visibleFolderPaths = {};
-        Set<String> foldersToExpand = {};
-        Set<String> matchingNotePaths = {};
-        Set<String> matchingFolderPaths = {};
-
-        if (isSearching) {
-          for (final note in notes) {
-            if (note.name.toLowerCase().contains(searchQuery)) {
-              matchingNotePaths.add(note.path);
-              String parentPath = note.folderPath;
-              while (parentPath.isNotEmpty) {
-                if (parentPath.endsWith('/')) {
-                  parentPath = parentPath.substring(0, parentPath.length - 1);
-                }
-                if (parentPath.isNotEmpty) {
-                  visibleFolderPaths.add(parentPath);
-                  foldersToExpand.add(parentPath);
-                }
-                final lastSlash = parentPath.lastIndexOf('/');
-                parentPath = lastSlash > 0 ? parentPath.substring(0, lastSlash) : '';
-              }
+    if (isSearching) {
+      for (final note in notes) {
+        if (note.name.toLowerCase().contains(searchQuery)) {
+          matchingNotePaths.add(note.path);
+          String parentPath = note.folderPath;
+          while (parentPath.isNotEmpty) {
+            if (parentPath.endsWith('/')) {
+              parentPath = parentPath.substring(0, parentPath.length - 1);
             }
-          }
-
-          for (final folder in folders) {
-            if (folder.name.toLowerCase().contains(searchQuery)) {
-              matchingFolderPaths.add(folder.path);
-              visibleFolderPaths.add(folder.path);
-              String parentPath = folder.path;
-              while (parentPath.contains('/')) {
-                final lastSlash = parentPath.lastIndexOf('/');
-                parentPath = parentPath.substring(0, lastSlash);
-                if (parentPath.isNotEmpty) {
-                  visibleFolderPaths.add(parentPath);
-                  foldersToExpand.add(parentPath);
-                }
-              }
+            if (parentPath.isNotEmpty) {
+              visibleFolderPaths.add(parentPath);
+              foldersToExpand.add(parentPath);
             }
+            final lastSlash = parentPath.lastIndexOf('/');
+            parentPath =
+                lastSlash > 0 ? parentPath.substring(0, lastSlash) : '';
           }
-
-          if (matchingNotePaths.isEmpty && matchingFolderPaths.isEmpty) {
-            _lastSearchQuery = searchQuery;
-            return Center(
-              child: Text(
-                'No results',
-                style: SpaceNotesTextStyles.terminal.copyWith(
-                  color: SpaceNotesTheme.textSecondary,
-                  fontSize: 12,
-                ),
-              ),
-            );
-          }
-
-          if (_lastSearchQuery.isEmpty && searchQuery.isNotEmpty) {
-            _expandedBeforeSearch = Set.from(ref.read(expandedFoldersProvider));
-          }
-          if (searchQuery != _lastSearchQuery) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              ref.read(expandedFoldersProvider.notifier).state =
-                  Set.from(foldersToExpand);
-            });
-          }
-          _lastSearchQuery = searchQuery;
-        } else if (_lastSearchQuery.isNotEmpty) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            ref.read(expandedFoldersProvider.notifier).state = _expandedBeforeSearch;
-          });
-          _lastSearchQuery = '';
         }
+      }
 
-        final rootFolders = folders.where((f) {
-          if (f.depth != 0) return false;
-          if (!isSearching) return true;
-          return visibleFolderPaths.contains(f.path) || matchingFolderPaths.contains(f.path);
-        }).toList()
-          ..sort((a, b) => a.name.compareTo(b.name));
-        final rootNotes = notes.where((n) {
-          if (n.depth != 0) return false;
-          if (!isSearching) return true;
-          return matchingNotePaths.contains(n.path);
-        }).toList()
-          ..sort((a, b) => a.name.compareTo(b.name));
+      for (final folder in folders) {
+        if (folder.name.toLowerCase().contains(searchQuery)) {
+          matchingFolderPaths.add(folder.path);
+          visibleFolderPaths.add(folder.path);
+          String parentPath = folder.path;
+          while (parentPath.contains('/')) {
+            final lastSlash = parentPath.lastIndexOf('/');
+            parentPath = parentPath.substring(0, lastSlash);
+            if (parentPath.isNotEmpty) {
+              visibleFolderPaths.add(parentPath);
+              foldersToExpand.add(parentPath);
+            }
+          }
+        }
+      }
 
-        return ScrollConfiguration(
-          behavior: ScrollConfiguration.of(context).copyWith(scrollbars: false),
-          child: Stack(
-            children: [
-              ListView(
-                padding: const EdgeInsets.symmetric(horizontal: 4),
-                children: [
-                  ...rootFolders.map((folder) => _FolderTreeItem(
-                        folder: folder,
-                        allFolders: folders,
-                        allNotes: notes,
-                        indentLevel: 0,
-                        searchQuery: searchQuery,
-                        visibleFolderPaths: visibleFolderPaths,
-                        matchingNotePaths: matchingNotePaths,
-                        matchingFolderPaths: matchingFolderPaths,
-                      )),
-                  ...rootNotes.map((note) => _NoteTreeItem(
-                        note: note,
-                        allFolders: folders,
-                        indentLevel: 0,
-                        isMatch: matchingNotePaths.contains(note.path),
-                      )),
-                ],
-              ),
-              Positioned(
-                left: 0,
-                top: 0,
-                bottom: 0,
-                width: 16,
-                child: DragTarget<_DraggableData>(
-                  onWillAcceptWithDetails: (details) {
-                    final canAccept = _canAcceptAtRoot(details.data);
-                    if (canAccept && !_isDragOverRoot) {
-                      setState(() => _isDragOverRoot = true);
-                    }
-                    return canAccept;
-                  },
-                  onLeave: (_) => setState(() => _isDragOverRoot = false),
-                  onAcceptWithDetails: (details) {
-                    setState(() => _isDragOverRoot = false);
-                    _handleDropAtRoot(details.data);
-                  },
-                  builder: (context, candidateData, rejectedData) {
-                    return const SizedBox.expand();
-                  },
-                ),
-              ),
-              if (_isDragOverRoot)
-                Positioned.fill(
-                  child: IgnorePointer(
-                    child: Container(
-                      decoration: BoxDecoration(
-                        border: Border.all(
-                          color: SpaceNotesTheme.primary.withValues(alpha: 0.6),
-                          width: 2,
-                        ),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                    ),
-                  ),
-                ),
-            ],
+      if (matchingNotePaths.isEmpty && matchingFolderPaths.isEmpty) {
+        _lastSearchQuery = searchQuery;
+        return Center(
+          child: Text(
+            'No results',
+            style: SpaceNotesTextStyles.terminal.copyWith(
+              color: SpaceNotesTheme.textSecondary,
+              fontSize: 12,
+            ),
           ),
         );
-      },
+      }
+
+      if (_lastSearchQuery.isEmpty && searchQuery.isNotEmpty) {
+        _expandedBeforeSearch = Set.from(ref.read(expandedFoldersProvider));
+      }
+      if (searchQuery != _lastSearchQuery) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          ref.read(expandedFoldersProvider.notifier).state =
+              Set.from(foldersToExpand);
+        });
+      }
+      _lastSearchQuery = searchQuery;
+    } else if (_lastSearchQuery.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ref.read(expandedFoldersProvider.notifier).state =
+            _expandedBeforeSearch;
+      });
+      _lastSearchQuery = '';
+    }
+
+    final rootFolders = folders.where((f) {
+      if (f.depth != 0) return false;
+      if (!isSearching) return true;
+      return visibleFolderPaths.contains(f.path) ||
+          matchingFolderPaths.contains(f.path);
+    }).toList()
+      ..sort((a, b) => a.name.compareTo(b.name));
+    final rootNotes = notes.where((n) {
+      if (n.depth != 0) return false;
+      if (!isSearching) return true;
+      return matchingNotePaths.contains(n.path);
+    }).toList()
+      ..sort((a, b) => a.name.compareTo(b.name));
+
+    return ScrollConfiguration(
+      behavior: ScrollConfiguration.of(context).copyWith(scrollbars: false),
+      child: Stack(
+        children: [
+          ListView(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            children: [
+              ...rootFolders.map((folder) => _FolderTreeItem(
+                    folder: folder,
+                    allFolders: folders,
+                    allNotes: notes,
+                    indentLevel: 0,
+                    searchQuery: searchQuery,
+                    visibleFolderPaths: visibleFolderPaths,
+                    matchingNotePaths: matchingNotePaths,
+                    matchingFolderPaths: matchingFolderPaths,
+                  )),
+              ...rootNotes.map((note) => _NoteTreeItem(
+                    note: note,
+                    allFolders: folders,
+                    indentLevel: 0,
+                    isMatch: matchingNotePaths.contains(note.path),
+                  )),
+            ],
+          ),
+          Positioned(
+            left: 0,
+            top: 0,
+            bottom: 0,
+            width: 16,
+            child: DragTarget<_DraggableData>(
+              onWillAcceptWithDetails: (details) {
+                final canAccept = _canAcceptAtRoot(details.data);
+                if (canAccept && !_isDragOverRoot) {
+                  setState(() => _isDragOverRoot = true);
+                }
+                return canAccept;
+              },
+              onLeave: (_) => setState(() => _isDragOverRoot = false),
+              onAcceptWithDetails: (details) {
+                setState(() => _isDragOverRoot = false);
+                _handleDropAtRoot(details.data);
+              },
+              builder: (context, candidateData, rejectedData) {
+                return const SizedBox.expand();
+              },
+            ),
+          ),
+          if (_isDragOverRoot)
+            Positioned.fill(
+              child: IgnorePointer(
+                child: Container(
+                  decoration: BoxDecoration(
+                    border: Border.all(
+                      color: SpaceNotesTheme.primary.withValues(alpha: 0.6),
+                      width: 2,
+                    ),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 
@@ -471,15 +454,20 @@ class _FolderTreeItemState extends ConsumerState<_FolderTreeItem> {
     final isSearching = widget.searchQuery.isNotEmpty;
     final isExpanded = expandedFolders.contains(widget.folder.path);
 
-    final thisFolderMatches = widget.matchingFolderPaths.contains(widget.folder.path);
+    final thisFolderMatches =
+        widget.matchingFolderPaths.contains(widget.folder.path);
     final normalizedPath = widget.folder.path.endsWith('/')
         ? widget.folder.path.substring(0, widget.folder.path.length - 1)
         : widget.folder.path;
     final folderPathWithSlash = '$normalizedPath/';
-    final hasMatchingNotesInside = widget.matchingNotePaths.any((p) => p.startsWith(folderPathWithSlash));
-    final hasMatchingFoldersInside = widget.matchingFolderPaths.any((p) => p != widget.folder.path && p.startsWith(folderPathWithSlash));
-    final hasMatchingChildrenInside = hasMatchingNotesInside || hasMatchingFoldersInside;
-    final shouldShowAllChildren = widget.showAllChildren || (thisFolderMatches && !hasMatchingChildrenInside);
+    final hasMatchingNotesInside =
+        widget.matchingNotePaths.any((p) => p.startsWith(folderPathWithSlash));
+    final hasMatchingFoldersInside = widget.matchingFolderPaths.any(
+        (p) => p != widget.folder.path && p.startsWith(folderPathWithSlash));
+    final hasMatchingChildrenInside =
+        hasMatchingNotesInside || hasMatchingFoldersInside;
+    final shouldShowAllChildren = widget.showAllChildren ||
+        (thisFolderMatches && !hasMatchingChildrenInside);
 
     final childFolders = widget.allFolders.where((f) {
       if (!f.path.startsWith(folderPathWithSlash)) return false;
@@ -487,7 +475,7 @@ class _FolderTreeItemState extends ConsumerState<_FolderTreeItem> {
       if (remainder.contains('/')) return false;
       if (!isSearching || shouldShowAllChildren) return true;
       return widget.visibleFolderPaths.contains(f.path) ||
-             widget.matchingFolderPaths.contains(f.path);
+          widget.matchingFolderPaths.contains(f.path);
     }).toList()
       ..sort((a, b) => a.name.compareTo(b.name));
 
@@ -690,7 +678,8 @@ class _FolderTreeItemState extends ConsumerState<_FolderTreeItem> {
         );
         if (result != null && result.isNotEmpty && context.mounted) {
           final newFolderPath = '${folder.path}/$result';
-          final existingFolder = widget.allFolders.any((f) => f.path == newFolderPath);
+          final existingFolder =
+              widget.allFolders.any((f) => f.path == newFolderPath);
           if (existingFolder) {
             if (context.mounted) {
               showDialog(
@@ -747,7 +736,10 @@ class _FolderTreeItemState extends ConsumerState<_FolderTreeItem> {
             ],
           ),
         );
-        if (result != null && result.isNotEmpty && result != folder.name && context.mounted) {
+        if (result != null &&
+            result.isNotEmpty &&
+            result != folder.name &&
+            context.mounted) {
           final parentPath = folder.path.contains('/')
               ? folder.path.substring(0, folder.path.lastIndexOf('/'))
               : '';
@@ -756,10 +748,10 @@ class _FolderTreeItemState extends ConsumerState<_FolderTreeItem> {
         }
         break;
       case 'delete':
-        final childFolders = widget.allFolders.where((f) =>
-            f.path.startsWith('${folder.path}/'));
-        final childNotes = widget.allNotes.where((n) =>
-            n.path.startsWith('${folder.path}/'));
+        final childFolders = widget.allFolders
+            .where((f) => f.path.startsWith('${folder.path}/'));
+        final childNotes =
+            widget.allNotes.where((n) => n.path.startsWith('${folder.path}/'));
         final hasChildren = childFolders.isNotEmpty || childNotes.isNotEmpty;
 
         if (hasChildren) {
@@ -865,7 +857,10 @@ class _NoteTreeItem extends ConsumerWidget {
             ],
           ),
         );
-        if (result != null && result.isNotEmpty && result != nameWithoutExt && context.mounted) {
+        if (result != null &&
+            result.isNotEmpty &&
+            result != nameWithoutExt &&
+            context.mounted) {
           final newName = result.endsWith('.md') ? result : '$result.md';
           final folderPath = note.path.contains('/')
               ? note.path.substring(0, note.path.lastIndexOf('/'))
@@ -1075,7 +1070,8 @@ class _TreeItemRowState extends State<_TreeItemRow> {
                                 ? SpaceNotesTheme.text
                                 : _isHovered
                                     ? SpaceNotesTheme.primary
-                                    : SpaceNotesTheme.text.withValues(alpha: 0.75),
+                                    : SpaceNotesTheme.text
+                                        .withValues(alpha: 0.75),
                           ),
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -1084,9 +1080,7 @@ class _TreeItemRowState extends State<_TreeItemRow> {
                   ),
                 ),
               ),
-              if (widget.isFolder &&
-                  _isHovered &&
-                  widget.onAddNote != null)
+              if (widget.isFolder && _isHovered && widget.onAddNote != null)
                 MouseRegion(
                   cursor: SystemMouseCursors.click,
                   child: GestureDetector(
@@ -1300,7 +1294,7 @@ class _SidebarFooter extends ConsumerWidget {
       ),
     );
     if (result != null && result.isNotEmpty && context.mounted) {
-      final folders = ref.read(foldersListProvider).valueOrNull ?? [];
+      final folders = ref.read(foldersListProvider);
       final existingFolder = folders.any((f) => f.path == result);
       if (existingFolder) {
         if (context.mounted) {

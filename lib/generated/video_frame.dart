@@ -1,6 +1,6 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-import 'package:spacetimedb_dart_sdk/spacetimedb_dart_sdk.dart';
+import 'package:spacetimedb_dart_sdk/codegen.dart';
 
 class VideoFrame {
   VideoFrame({
@@ -64,6 +64,46 @@ class VideoFrame {
       'isKeyframe': isKeyframe,
       'data': data,
     };
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        other is VideoFrame &&
+            sessionId == other.sessionId &&
+            from == other.from &&
+            seq == other.seq &&
+            codec == other.codec &&
+            isKeyframe == other.isKeyframe &&
+            data == other.data;
+  }
+
+  @override
+  int get hashCode {
+    return Object.hash(sessionId, from, seq, codec, isKeyframe, data);
+  }
+
+  @override
+  String toString() {
+    return 'VideoFrame(sessionId: $sessionId, from: $from, seq: $seq, codec: $codec, isKeyframe: $isKeyframe, data: $data)';
+  }
+
+  VideoFrame copyWith({
+    Int64? sessionId,
+    Identity? from,
+    int? seq,
+    int? codec,
+    bool? isKeyframe,
+    List<int>? data,
+  }) {
+    return VideoFrame(
+      sessionId: sessionId ?? this.sessionId,
+      from: from ?? this.from,
+      seq: seq ?? this.seq,
+      codec: codec ?? this.codec,
+      isKeyframe: isKeyframe ?? this.isKeyframe,
+      data: data ?? this.data,
+    );
   }
 }
 

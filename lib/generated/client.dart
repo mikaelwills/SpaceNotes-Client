@@ -2,16 +2,16 @@
 // ignore_for_file: avoid_print
 
 import 'dart:async';
-import 'package:spacetimedb_dart_sdk/spacetimedb_dart_sdk.dart';
+import 'package:spacetimedb_dart_sdk/codegen.dart';
 import 'reducers.dart';
 import 'reducer_args.dart';
-import 'connected_user.dart';
-import 'folder.dart';
-import 'audio_frame.dart';
-import 'note.dart';
-import 'user_profile.dart';
-import 'video_frame.dart';
 import 'call_session.dart';
+import 'connected_user.dart';
+import 'audio_frame.dart';
+import 'user_profile.dart';
+import 'folder.dart';
+import 'note.dart';
+import 'video_frame.dart';
 
 class SpacetimeDbClient {
   SpacetimeDbClient._({
@@ -66,45 +66,42 @@ class SpacetimeDbClient {
     return subscriptions.onMutationSyncResult;
   }
 
+  TableCache<CallSession> get callSession {
+    return subscriptions.cache.getTableByTypedName<CallSession>('call_session');
+  }
+
   TableCache<ConnectedUser> get connectedUser {
     return subscriptions.cache
         .getTableByTypedName<ConnectedUser>('connected_user');
-  }
-
-  TableCache<Folder> get folder {
-    return subscriptions.cache.getTableByTypedName<Folder>('folder');
   }
 
   TableCache<AudioFrame> get audioFrame {
     return subscriptions.cache.getTableByTypedName<AudioFrame>('audio_frame');
   }
 
-  TableCache<Note> get note {
-    return subscriptions.cache.getTableByTypedName<Note>('note');
-  }
-
   TableCache<UserProfile> get userProfile {
     return subscriptions.cache.getTableByTypedName<UserProfile>('user_profile');
+  }
+
+  TableCache<Folder> get folder {
+    return subscriptions.cache.getTableByTypedName<Folder>('folder');
+  }
+
+  TableCache<Note> get note {
+    return subscriptions.cache.getTableByTypedName<Note>('note');
   }
 
   TableCache<VideoFrame> get videoFrame {
     return subscriptions.cache.getTableByTypedName<VideoFrame>('video_frame');
   }
 
-  TableCache<CallSession> get callSession {
-    return subscriptions.cache.getTableByTypedName<CallSession>('call_session');
-  }
-
-  static Future<SpacetimeDbClient> connect({
+  static Future<SpacetimeDbClient> create({
     required String host,
     required String database,
     AuthTokenStore? authStorage,
     OfflineStorage? offlineStorage,
     bool ssl = false,
     ConnectionConfig config = const ConnectionConfig(),
-    List<String>? initialSubscriptions,
-    Duration subscriptionTimeout = const Duration(seconds: 10),
-    void Function(SpacetimeDbClient client)? onCacheLoaded,
   }) async {
     final storage = authStorage ?? InMemoryTokenStore();
     final savedToken = await storage.loadToken();
@@ -118,26 +115,22 @@ class SpacetimeDbClient {
     final subscriptionManager =
         SubscriptionManager(connection, offlineStorage: offlineStorage);
 
-// Auto-register table decoders
+    subscriptionManager.cache
+        .registerDecoder<CallSession>('call_session', CallSessionDecoder());
     subscriptionManager.cache.registerDecoder<ConnectedUser>(
         'connected_user', ConnectedUserDecoder());
-    subscriptionManager.cache
-        .registerDecoder<Folder>('folder', FolderDecoder());
     subscriptionManager.cache.registerDecoder<AudioFrame>(
         'audio_frame', AudioFrameDecoder(),
         isEvent: true);
-    subscriptionManager.cache.registerDecoder<Note>('note', NoteDecoder());
     subscriptionManager.cache
         .registerDecoder<UserProfile>('user_profile', UserProfileDecoder());
+    subscriptionManager.cache
+        .registerDecoder<Folder>('folder', FolderDecoder());
+    subscriptionManager.cache.registerDecoder<Note>('note', NoteDecoder());
     subscriptionManager.cache.registerDecoder<VideoFrame>(
         'video_frame', VideoFrameDecoder(),
         isEvent: true);
-    subscriptionManager.cache
-        .registerDecoder<CallSession>('call_session', CallSessionDecoder());
 
-// Auto-register view decoders
-
-// Auto-register reducer argument decoders
     subscriptionManager.reducerRegistry.register(acceptCallDef);
     subscriptionManager.reducerRegistry.register(appendToNoteDef);
     subscriptionManager.reducerRegistry.register(clearAllDef);
@@ -175,25 +168,21 @@ class SpacetimeDbClient {
 
     if (offlineStorage != null) {
       await subscriptionManager.loadFromOfflineCache();
-      onCacheLoaded?.call(client);
-    }
-
-    try {
-      await connection.connect().timeout(config.connectTimeout);
-      if (initialSubscriptions != null && initialSubscriptions.isNotEmpty) {
-        await subscriptionManager
-            .subscribe(initialSubscriptions)
-            .timeout(subscriptionTimeout);
-      }
-    } catch (e) {
-      if (offlineStorage != null) {
-        print('📴 Connection failed, operating in offline mode: $e');
-      } else {
-        rethrow;
-      }
     }
 
     return client;
+  }
+
+  Future<void> connect({
+    List<String>? initialSubscriptions,
+    Duration subscriptionTimeout = const Duration(seconds: 10),
+  }) async {
+    await connection.connect().timeout(connection.config.connectTimeout);
+    if (initialSubscriptions != null && initialSubscriptions.isNotEmpty) {
+      await subscriptions
+          .subscribe(initialSubscriptions)
+          .timeout(subscriptionTimeout);
+    }
   }
 
   Future<void> disconnect() async {

@@ -1,6 +1,6 @@
 // GENERATED REDUCER ARGUMENT CLASSES AND DECODERS - DO NOT MODIFY BY HAND
 
-import 'package:spacetimedb_dart_sdk/spacetimedb_dart_sdk.dart';
+import 'package:spacetimedb_dart_sdk/codegen.dart';
 
 class AcceptCallArgs {
   AcceptCallArgs({required this.sessionId});
@@ -12,15 +12,11 @@ class AcceptCallArgsDecoder implements ReducerArgDecoder<AcceptCallArgs> {
   const AcceptCallArgsDecoder();
 
   @override
-  AcceptCallArgs? decode(BsatnDecoder decoder) {
-    try {
-      final sessionId = decoder.readU64();
-      return AcceptCallArgs(
-        sessionId: sessionId,
-      );
-    } catch (e) {
-      return null;
-    }
+  AcceptCallArgs decode(BsatnDecoder decoder) {
+    final sessionId = decoder.readU64();
+    return AcceptCallArgs(
+      sessionId: sessionId,
+    );
   }
 }
 
@@ -39,17 +35,13 @@ class AppendToNoteArgsDecoder implements ReducerArgDecoder<AppendToNoteArgs> {
   const AppendToNoteArgsDecoder();
 
   @override
-  AppendToNoteArgs? decode(BsatnDecoder decoder) {
-    try {
-      final path = decoder.readString();
-      final content = decoder.readString();
-      return AppendToNoteArgs(
-        path: path,
-        content: content,
-      );
-    } catch (e) {
-      return null;
-    }
+  AppendToNoteArgs decode(BsatnDecoder decoder) {
+    final path = decoder.readString();
+    final content = decoder.readString();
+    return AppendToNoteArgs(
+      path: path,
+      content: content,
+    );
   }
 }
 
@@ -61,12 +53,8 @@ class ClearAllArgsDecoder implements ReducerArgDecoder<ClearAllArgs> {
   const ClearAllArgsDecoder();
 
   @override
-  ClearAllArgs? decode(BsatnDecoder decoder) {
-    try {
-      return ClearAllArgs();
-    } catch (e) {
-      return null;
-    }
+  ClearAllArgs decode(BsatnDecoder decoder) {
+    return ClearAllArgs();
   }
 }
 
@@ -88,19 +76,15 @@ class CreateFolderArgsDecoder implements ReducerArgDecoder<CreateFolderArgs> {
   const CreateFolderArgsDecoder();
 
   @override
-  CreateFolderArgs? decode(BsatnDecoder decoder) {
-    try {
-      final path = decoder.readString();
-      final name = decoder.readString();
-      final depth = decoder.readU32();
-      return CreateFolderArgs(
-        path: path,
-        name: name,
-        depth: depth,
-      );
-    } catch (e) {
-      return null;
-    }
+  CreateFolderArgs decode(BsatnDecoder decoder) {
+    final path = decoder.readString();
+    final name = decoder.readString();
+    final depth = decoder.readU32();
+    return CreateFolderArgs(
+      path: path,
+      name: name,
+      depth: depth,
+    );
   }
 }
 
@@ -143,33 +127,29 @@ class CreateNoteArgsDecoder implements ReducerArgDecoder<CreateNoteArgs> {
   const CreateNoteArgsDecoder();
 
   @override
-  CreateNoteArgs? decode(BsatnDecoder decoder) {
-    try {
-      final id = decoder.readString();
-      final path = decoder.readString();
-      final name = decoder.readString();
-      final content = decoder.readString();
-      final folderPath = decoder.readString();
-      final depth = decoder.readU32();
-      final frontmatter = decoder.readString();
-      final size = decoder.readU64();
-      final createdTime = decoder.readU64();
-      final modifiedTime = decoder.readU64();
-      return CreateNoteArgs(
-        id: id,
-        path: path,
-        name: name,
-        content: content,
-        folderPath: folderPath,
-        depth: depth,
-        frontmatter: frontmatter,
-        size: size,
-        createdTime: createdTime,
-        modifiedTime: modifiedTime,
-      );
-    } catch (e) {
-      return null;
-    }
+  CreateNoteArgs decode(BsatnDecoder decoder) {
+    final id = decoder.readString();
+    final path = decoder.readString();
+    final name = decoder.readString();
+    final content = decoder.readString();
+    final folderPath = decoder.readString();
+    final depth = decoder.readU32();
+    final frontmatter = decoder.readString();
+    final size = decoder.readU64();
+    final createdTime = decoder.readU64();
+    final modifiedTime = decoder.readU64();
+    return CreateNoteArgs(
+      id: id,
+      path: path,
+      name: name,
+      content: content,
+      folderPath: folderPath,
+      depth: depth,
+      frontmatter: frontmatter,
+      size: size,
+      createdTime: createdTime,
+      modifiedTime: modifiedTime,
+    );
   }
 }
 
@@ -183,15 +163,11 @@ class DeleteFolderArgsDecoder implements ReducerArgDecoder<DeleteFolderArgs> {
   const DeleteFolderArgsDecoder();
 
   @override
-  DeleteFolderArgs? decode(BsatnDecoder decoder) {
-    try {
-      final path = decoder.readString();
-      return DeleteFolderArgs(
-        path: path,
-      );
-    } catch (e) {
-      return null;
-    }
+  DeleteFolderArgs decode(BsatnDecoder decoder) {
+    final path = decoder.readString();
+    return DeleteFolderArgs(
+      path: path,
+    );
   }
 }
 
@@ -205,15 +181,11 @@ class DeleteNoteArgsDecoder implements ReducerArgDecoder<DeleteNoteArgs> {
   const DeleteNoteArgsDecoder();
 
   @override
-  DeleteNoteArgs? decode(BsatnDecoder decoder) {
-    try {
-      final id = decoder.readString();
-      return DeleteNoteArgs(
-        id: id,
-      );
-    } catch (e) {
-      return null;
-    }
+  DeleteNoteArgs decode(BsatnDecoder decoder) {
+    final id = decoder.readString();
+    return DeleteNoteArgs(
+      id: id,
+    );
   }
 }
 
@@ -227,15 +199,11 @@ class EndCallArgsDecoder implements ReducerArgDecoder<EndCallArgs> {
   const EndCallArgsDecoder();
 
   @override
-  EndCallArgs? decode(BsatnDecoder decoder) {
-    try {
-      final sessionId = decoder.readU64();
-      return EndCallArgs(
-        sessionId: sessionId,
-      );
-    } catch (e) {
-      return null;
-    }
+  EndCallArgs decode(BsatnDecoder decoder) {
+    final sessionId = decoder.readU64();
+    return EndCallArgs(
+      sessionId: sessionId,
+    );
   }
 }
 
@@ -261,21 +229,17 @@ class FindReplaceInNoteArgsDecoder
   const FindReplaceInNoteArgsDecoder();
 
   @override
-  FindReplaceInNoteArgs? decode(BsatnDecoder decoder) {
-    try {
-      final path = decoder.readString();
-      final oldText = decoder.readString();
-      final newText = decoder.readString();
-      final replaceAll = decoder.readBool();
-      return FindReplaceInNoteArgs(
-        path: path,
-        oldText: oldText,
-        newText: newText,
-        replaceAll: replaceAll,
-      );
-    } catch (e) {
-      return null;
-    }
+  FindReplaceInNoteArgs decode(BsatnDecoder decoder) {
+    final path = decoder.readString();
+    final oldText = decoder.readString();
+    final newText = decoder.readString();
+    final replaceAll = decoder.readBool();
+    return FindReplaceInNoteArgs(
+      path: path,
+      oldText: oldText,
+      newText: newText,
+      replaceAll: replaceAll,
+    );
   }
 }
 
@@ -290,15 +254,11 @@ class GetRecentNotesArgsDecoder
   const GetRecentNotesArgsDecoder();
 
   @override
-  GetRecentNotesArgs? decode(BsatnDecoder decoder) {
-    try {
-      final limit = decoder.readU32();
-      return GetRecentNotesArgs(
-        limit: limit,
-      );
-    } catch (e) {
-      return null;
-    }
+  GetRecentNotesArgs decode(BsatnDecoder decoder) {
+    final limit = decoder.readU32();
+    return GetRecentNotesArgs(
+      limit: limit,
+    );
   }
 }
 
@@ -317,17 +277,13 @@ class MoveFolderArgsDecoder implements ReducerArgDecoder<MoveFolderArgs> {
   const MoveFolderArgsDecoder();
 
   @override
-  MoveFolderArgs? decode(BsatnDecoder decoder) {
-    try {
-      final oldPath = decoder.readString();
-      final newPath = decoder.readString();
-      return MoveFolderArgs(
-        oldPath: oldPath,
-        newPath: newPath,
-      );
-    } catch (e) {
-      return null;
-    }
+  MoveFolderArgs decode(BsatnDecoder decoder) {
+    final oldPath = decoder.readString();
+    final newPath = decoder.readString();
+    return MoveFolderArgs(
+      oldPath: oldPath,
+      newPath: newPath,
+    );
   }
 }
 
@@ -346,17 +302,13 @@ class MoveNoteArgsDecoder implements ReducerArgDecoder<MoveNoteArgs> {
   const MoveNoteArgsDecoder();
 
   @override
-  MoveNoteArgs? decode(BsatnDecoder decoder) {
-    try {
-      final oldPath = decoder.readString();
-      final newPath = decoder.readString();
-      return MoveNoteArgs(
-        oldPath: oldPath,
-        newPath: newPath,
-      );
-    } catch (e) {
-      return null;
-    }
+  MoveNoteArgs decode(BsatnDecoder decoder) {
+    final oldPath = decoder.readString();
+    final newPath = decoder.readString();
+    return MoveNoteArgs(
+      oldPath: oldPath,
+      newPath: newPath,
+    );
   }
 }
 
@@ -375,17 +327,13 @@ class PrependToNoteArgsDecoder implements ReducerArgDecoder<PrependToNoteArgs> {
   const PrependToNoteArgsDecoder();
 
   @override
-  PrependToNoteArgs? decode(BsatnDecoder decoder) {
-    try {
-      final path = decoder.readString();
-      final content = decoder.readString();
-      return PrependToNoteArgs(
-        path: path,
-        content: content,
-      );
-    } catch (e) {
-      return null;
-    }
+  PrependToNoteArgs decode(BsatnDecoder decoder) {
+    final path = decoder.readString();
+    final content = decoder.readString();
+    return PrependToNoteArgs(
+      path: path,
+      content: content,
+    );
   }
 }
 
@@ -404,17 +352,13 @@ class RenameNoteArgsDecoder implements ReducerArgDecoder<RenameNoteArgs> {
   const RenameNoteArgsDecoder();
 
   @override
-  RenameNoteArgs? decode(BsatnDecoder decoder) {
-    try {
-      final id = decoder.readString();
-      final newPath = decoder.readString();
-      return RenameNoteArgs(
-        id: id,
-        newPath: newPath,
-      );
-    } catch (e) {
-      return null;
-    }
+  RenameNoteArgs decode(BsatnDecoder decoder) {
+    final id = decoder.readString();
+    final newPath = decoder.readString();
+    return RenameNoteArgs(
+      id: id,
+      newPath: newPath,
+    );
   }
 }
 
@@ -428,15 +372,11 @@ class RequestCallArgsDecoder implements ReducerArgDecoder<RequestCallArgs> {
   const RequestCallArgsDecoder();
 
   @override
-  RequestCallArgs? decode(BsatnDecoder decoder) {
-    try {
-      final callee = decoder.readIdentity();
-      return RequestCallArgs(
-        callee: callee,
-      );
-    } catch (e) {
-      return null;
-    }
+  RequestCallArgs decode(BsatnDecoder decoder) {
+    final callee = decoder.readIdentity();
+    return RequestCallArgs(
+      callee: callee,
+    );
   }
 }
 
@@ -459,19 +399,15 @@ class SendAudioFrameArgsDecoder
   const SendAudioFrameArgsDecoder();
 
   @override
-  SendAudioFrameArgs? decode(BsatnDecoder decoder) {
-    try {
-      final sessionId = decoder.readU64();
-      final seq = decoder.readU32();
-      final pcm = decoder.readByteArray();
-      return SendAudioFrameArgs(
-        sessionId: sessionId,
-        seq: seq,
-        pcm: pcm,
-      );
-    } catch (e) {
-      return null;
-    }
+  SendAudioFrameArgs decode(BsatnDecoder decoder) {
+    final sessionId = decoder.readU64();
+    final seq = decoder.readU32();
+    final pcm = decoder.readByteArray();
+    return SendAudioFrameArgs(
+      sessionId: sessionId,
+      seq: seq,
+      pcm: pcm,
+    );
   }
 }
 
@@ -500,23 +436,19 @@ class SendVideoFrameArgsDecoder
   const SendVideoFrameArgsDecoder();
 
   @override
-  SendVideoFrameArgs? decode(BsatnDecoder decoder) {
-    try {
-      final sessionId = decoder.readU64();
-      final seq = decoder.readU32();
-      final codec = decoder.readU8();
-      final isKeyframe = decoder.readBool();
-      final data = decoder.readByteArray();
-      return SendVideoFrameArgs(
-        sessionId: sessionId,
-        seq: seq,
-        codec: codec,
-        isKeyframe: isKeyframe,
-        data: data,
-      );
-    } catch (e) {
-      return null;
-    }
+  SendVideoFrameArgs decode(BsatnDecoder decoder) {
+    final sessionId = decoder.readU64();
+    final seq = decoder.readU32();
+    final codec = decoder.readU8();
+    final isKeyframe = decoder.readBool();
+    final data = decoder.readByteArray();
+    return SendVideoFrameArgs(
+      sessionId: sessionId,
+      seq: seq,
+      codec: codec,
+      isKeyframe: isKeyframe,
+      data: data,
+    );
   }
 }
 
@@ -531,15 +463,11 @@ class SetDisplayNameArgsDecoder
   const SetDisplayNameArgsDecoder();
 
   @override
-  SetDisplayNameArgs? decode(BsatnDecoder decoder) {
-    try {
-      final name = decoder.readString();
-      return SetDisplayNameArgs(
-        name: name,
-      );
-    } catch (e) {
-      return null;
-    }
+  SetDisplayNameArgs decode(BsatnDecoder decoder) {
+    final name = decoder.readString();
+    return SetDisplayNameArgs(
+      name: name,
+    );
   }
 }
 
@@ -568,23 +496,19 @@ class UpdateNoteContentArgsDecoder
   const UpdateNoteContentArgsDecoder();
 
   @override
-  UpdateNoteContentArgs? decode(BsatnDecoder decoder) {
-    try {
-      final id = decoder.readString();
-      final content = decoder.readString();
-      final frontmatter = decoder.readString();
-      final size = decoder.readU64();
-      final modifiedTime = decoder.readU64();
-      return UpdateNoteContentArgs(
-        id: id,
-        content: content,
-        frontmatter: frontmatter,
-        size: size,
-        modifiedTime: modifiedTime,
-      );
-    } catch (e) {
-      return null;
-    }
+  UpdateNoteContentArgs decode(BsatnDecoder decoder) {
+    final id = decoder.readString();
+    final content = decoder.readString();
+    final frontmatter = decoder.readString();
+    final size = decoder.readU64();
+    final modifiedTime = decoder.readU64();
+    return UpdateNoteContentArgs(
+      id: id,
+      content: content,
+      frontmatter: frontmatter,
+      size: size,
+      modifiedTime: modifiedTime,
+    );
   }
 }
 
@@ -604,17 +528,13 @@ class UpdateNotePathArgsDecoder
   const UpdateNotePathArgsDecoder();
 
   @override
-  UpdateNotePathArgs? decode(BsatnDecoder decoder) {
-    try {
-      final id = decoder.readString();
-      final newPath = decoder.readString();
-      return UpdateNotePathArgs(
-        id: id,
-        newPath: newPath,
-      );
-    } catch (e) {
-      return null;
-    }
+  UpdateNotePathArgs decode(BsatnDecoder decoder) {
+    final id = decoder.readString();
+    final newPath = decoder.readString();
+    return UpdateNotePathArgs(
+      id: id,
+      newPath: newPath,
+    );
   }
 }
 
@@ -636,19 +556,15 @@ class UpsertFolderArgsDecoder implements ReducerArgDecoder<UpsertFolderArgs> {
   const UpsertFolderArgsDecoder();
 
   @override
-  UpsertFolderArgs? decode(BsatnDecoder decoder) {
-    try {
-      final path = decoder.readString();
-      final name = decoder.readString();
-      final depth = decoder.readU32();
-      return UpsertFolderArgs(
-        path: path,
-        name: name,
-        depth: depth,
-      );
-    } catch (e) {
-      return null;
-    }
+  UpsertFolderArgs decode(BsatnDecoder decoder) {
+    final path = decoder.readString();
+    final name = decoder.readString();
+    final depth = decoder.readU32();
+    return UpsertFolderArgs(
+      path: path,
+      name: name,
+      depth: depth,
+    );
   }
 }
 
@@ -691,33 +607,29 @@ class UpsertNoteArgsDecoder implements ReducerArgDecoder<UpsertNoteArgs> {
   const UpsertNoteArgsDecoder();
 
   @override
-  UpsertNoteArgs? decode(BsatnDecoder decoder) {
-    try {
-      final id = decoder.readString();
-      final path = decoder.readString();
-      final name = decoder.readString();
-      final content = decoder.readString();
-      final folderPath = decoder.readString();
-      final depth = decoder.readU32();
-      final frontmatter = decoder.readString();
-      final size = decoder.readU64();
-      final createdTime = decoder.readU64();
-      final modifiedTime = decoder.readU64();
-      return UpsertNoteArgs(
-        id: id,
-        path: path,
-        name: name,
-        content: content,
-        folderPath: folderPath,
-        depth: depth,
-        frontmatter: frontmatter,
-        size: size,
-        createdTime: createdTime,
-        modifiedTime: modifiedTime,
-      );
-    } catch (e) {
-      return null;
-    }
+  UpsertNoteArgs decode(BsatnDecoder decoder) {
+    final id = decoder.readString();
+    final path = decoder.readString();
+    final name = decoder.readString();
+    final content = decoder.readString();
+    final folderPath = decoder.readString();
+    final depth = decoder.readU32();
+    final frontmatter = decoder.readString();
+    final size = decoder.readU64();
+    final createdTime = decoder.readU64();
+    final modifiedTime = decoder.readU64();
+    return UpsertNoteArgs(
+      id: id,
+      path: path,
+      name: name,
+      content: content,
+      folderPath: folderPath,
+      depth: depth,
+      frontmatter: frontmatter,
+      size: size,
+      createdTime: createdTime,
+      modifiedTime: modifiedTime,
+    );
   }
 }
 

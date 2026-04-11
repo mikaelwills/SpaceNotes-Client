@@ -1,6 +1,6 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-import 'package:spacetimedb_dart_sdk/spacetimedb_dart_sdk.dart';
+import 'package:spacetimedb_dart_sdk/codegen.dart';
 
 class ConnectedUser {
   ConnectedUser({
@@ -43,6 +43,37 @@ class ConnectedUser {
       'connectedAt': connectedAt.toInt(),
       'name': name,
     };
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        other is ConnectedUser &&
+            identity == other.identity &&
+            connectedAt == other.connectedAt &&
+            name == other.name;
+  }
+
+  @override
+  int get hashCode {
+    return Object.hash(identity, connectedAt, name);
+  }
+
+  @override
+  String toString() {
+    return 'ConnectedUser(identity: $identity, connectedAt: $connectedAt, name: $name)';
+  }
+
+  ConnectedUser copyWith({
+    Identity? identity,
+    Int64? connectedAt,
+    String? name,
+  }) {
+    return ConnectedUser(
+      identity: identity ?? this.identity,
+      connectedAt: connectedAt ?? this.connectedAt,
+      name: name ?? this.name,
+    );
   }
 }
 

@@ -8,7 +8,8 @@ final chatConnectedProvider = StreamProvider<bool>((ref) {
   final chatBloc = GetIt.I<ChatBloc>();
 
   Stream<bool> stateStream() async* {
-    yield chatBloc.state is ChatReady && (chatBloc.state as ChatReady).isConnected;
+    yield chatBloc.state is ChatReady &&
+        (chatBloc.state as ChatReady).isConnected;
     await for (final state in chatBloc.stream) {
       if (state is ChatReady) {
         yield state.isConnected;
@@ -21,7 +22,7 @@ final chatConnectedProvider = StreamProvider<bool>((ref) {
 
 final spacetimeConnectedProvider = Provider<bool>((ref) {
   final client = ref.watch(spacetimeClientProvider);
-  return client.hasValue && client.valueOrNull != null;
+  return client != null;
 });
 
 final isFullyConnectedProvider = Provider<bool>((ref) {

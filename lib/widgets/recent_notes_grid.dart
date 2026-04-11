@@ -15,31 +15,11 @@ class RecentNotesGrid extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final recentNotesAsync = ref.watch(recentNotesProvider);
-
-    return recentNotesAsync.when(
-      loading: () => const Center(
-        child: CircularProgressIndicator(
-          valueColor: AlwaysStoppedAnimation<Color>(SpaceNotesTheme.primary),
-        ),
-      ),
-      error: (_, __) => const Center(
-        child: Text(
-          'Failed to load recent notes',
-          style: TextStyle(
-            fontFamily: 'FiraCode',
-            fontSize: 14,
-            color: SpaceNotesTheme.textSecondary,
-          ),
-        ),
-      ),
-      data: (notes) {
-        if (notes.isEmpty) {
-          return _buildEmptyState();
-        }
-        return _buildNotesGrid(context, ref, notes);
-      },
-    );
+    final notes = ref.watch(recentNotesProvider);
+    if (notes.isEmpty) {
+      return _buildEmptyState();
+    }
+    return _buildNotesGrid(context, ref, notes);
   }
 
   Widget _buildEmptyState() {
@@ -76,46 +56,49 @@ class RecentNotesGrid extends ConsumerWidget {
     );
   }
 
-  Widget _buildNotesGrid(BuildContext context, WidgetRef ref, List<Note> notes) {
+  Widget _buildNotesGrid(
+      BuildContext context, WidgetRef ref, List<Note> notes) {
     return KeyboardDismissOnScroll(
       child: CustomScrollView(
-      slivers: [
-        SliverPadding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-          sliver: SliverToBoxAdapter(
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                Text(
-                  'Folders',
-                  style: TextStyle(
-                    fontFamily: 'FiraCode',
-                    fontSize: 12,
+        slivers: [
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+            sliver: SliverToBoxAdapter(
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  Text(
+                    'Folders',
+                    style: TextStyle(
+                      fontFamily: 'FiraCode',
+                      fontSize: 12,
+                      color:
+                          SpaceNotesTheme.textSecondary.withValues(alpha: 0.7),
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  Icon(
+                    Icons.chevron_right,
+                    size: 16,
                     color: SpaceNotesTheme.textSecondary.withValues(alpha: 0.7),
                   ),
-                ),
-                const SizedBox(width: 4),
-                Icon(
-                  Icons.chevron_right,
-                  size: 16,
-                  color: SpaceNotesTheme.textSecondary.withValues(alpha: 0.7),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
-        ),
-        SliverPadding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 120),
-          sliver: SliverToBoxAdapter(
-            child: _buildStaggeredGrid(context, ref, notes),
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 120),
+            sliver: SliverToBoxAdapter(
+              child: _buildStaggeredGrid(context, ref, notes),
+            ),
           ),
-        ),
-      ],
-    ),
+        ],
+      ),
     );
   }
 
-  Widget _buildStaggeredGrid(BuildContext context, WidgetRef ref, List<Note> notes) {
+  Widget _buildStaggeredGrid(
+      BuildContext context, WidgetRef ref, List<Note> notes) {
     final leftColumn = <Note>[];
     final rightColumn = <Note>[];
 

@@ -1,6 +1,6 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-import 'package:spacetimedb_dart_sdk/spacetimedb_dart_sdk.dart';
+import 'package:spacetimedb_dart_sdk/codegen.dart';
 
 class Folder {
   Folder({
@@ -43,6 +43,37 @@ class Folder {
       'name': name,
       'depth': depth,
     };
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        other is Folder &&
+            path == other.path &&
+            name == other.name &&
+            depth == other.depth;
+  }
+
+  @override
+  int get hashCode {
+    return Object.hash(path, name, depth);
+  }
+
+  @override
+  String toString() {
+    return 'Folder(path: $path, name: $name, depth: $depth)';
+  }
+
+  Folder copyWith({
+    String? path,
+    String? name,
+    int? depth,
+  }) {
+    return Folder(
+      path: path ?? this.path,
+      name: name ?? this.name,
+      depth: depth ?? this.depth,
+    );
   }
 }
 

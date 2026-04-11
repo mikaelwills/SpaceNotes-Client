@@ -45,82 +45,85 @@ class MobileNavBar extends ConsumerWidget {
     final isOnNote = _isOnNoteScreen(currentLocation);
 
     return Container(
-          height: 60,
-          padding: const EdgeInsets.symmetric(horizontal: 10),
-          decoration: const BoxDecoration(
-            color: SpaceNotesTheme.background,
-          ),
-          child: Row(
-            children: [
-              if (currentLocation == '/settings') ...[
-                GestureDetector(
-                  onTap: () => context.go("/notes"),
-                  child:
-                      const Icon(Icons.arrow_back, color: SpaceNotesTheme.text),
-                ),
-              ],
-
-              if (currentLocation.startsWith('/notes/folder/')) ...[
-                GestureDetector(
-                  onTap: () => _navigateToParentFolder(context, _extractFullFolderPath(currentLocation)),
-                  child: const Icon(Icons.arrow_back, color: SpaceNotesTheme.text),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: _EditableFolderName(
-                    folderPath: _extractFullFolderPath(currentLocation),
-                    currentName: _extractFolderName(currentLocation),
-                  ),
-                ),
-                const SizedBox(width: 16),
-              ],
-
-              if (isOnNote) ...[
-                Builder(builder: (context) {
-                  final noteId = _extractNoteIdFromLocation(currentLocation);
-                  final note = ref.watch(notesListProvider).valueOrNull
-                      ?.firstWhereOrNull((n) => n.id == noteId);
-                  final notePath = note?.path ?? '';
-                  return GestureDetector(
-                    onTap: () => _navigateBackFromNote(context, notePath),
-                    child: const Icon(Icons.arrow_back, color: SpaceNotesTheme.text),
-                  );
-                }),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Builder(builder: (context) {
-                    final noteId = _extractNoteIdFromLocation(currentLocation);
-                    final note = ref.watch(notesListProvider).valueOrNull
-                        ?.firstWhereOrNull((n) => n.id == noteId);
-                    final notePath = note?.path ?? '';
-                    final noteName = notePath.split('/').last.replaceAll('.md', '');
-                    return _EditableNoteName(
-                      notePath: notePath,
-                      currentName: noteName,
-                    );
-                  }),
-                ),
-                const SizedBox(width: 16),
-              ],
-
-              if (!isOnNote && !currentLocation.startsWith('/notes/folder/') && currentLocation != '/settings')
-                ..._buildNavIcons(context, currentLocation),
-
-              if (!isOnNote && !currentLocation.startsWith('/notes/folder/') && !currentLocation.startsWith('/notes/chat'))
-                const Expanded(
-                  child: Center(
-                    child: SyncStateIndicator(),
-                  ),
-                ),
-              GestureDetector(
-                onTap: () => context.go("/settings"),
-                child: const Icon(Icons.settings, color: SpaceNotesTheme.text),
+      height: 60,
+      padding: const EdgeInsets.symmetric(horizontal: 10),
+      decoration: const BoxDecoration(
+        color: SpaceNotesTheme.background,
+      ),
+      child: Row(
+        children: [
+          if (currentLocation == '/settings') ...[
+            GestureDetector(
+              onTap: () => context.go("/notes"),
+              child: const Icon(Icons.arrow_back, color: SpaceNotesTheme.text),
+            ),
+          ],
+          if (currentLocation.startsWith('/notes/folder/')) ...[
+            GestureDetector(
+              onTap: () => _navigateToParentFolder(
+                  context, _extractFullFolderPath(currentLocation)),
+              child: const Icon(Icons.arrow_back, color: SpaceNotesTheme.text),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: _EditableFolderName(
+                folderPath: _extractFullFolderPath(currentLocation),
+                currentName: _extractFolderName(currentLocation),
               ),
-              const SizedBox(width: 16),
-              const ConnectionIndicator(),
-            ],
+            ),
+            const SizedBox(width: 16),
+          ],
+          if (isOnNote) ...[
+            Builder(builder: (context) {
+              final noteId = _extractNoteIdFromLocation(currentLocation);
+              final note = ref
+                  .watch(notesListProvider)
+                  .firstWhereOrNull((n) => n.id == noteId);
+              final notePath = note?.path ?? '';
+              return GestureDetector(
+                onTap: () => _navigateBackFromNote(context, notePath),
+                child:
+                    const Icon(Icons.arrow_back, color: SpaceNotesTheme.text),
+              );
+            }),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Builder(builder: (context) {
+                final noteId = _extractNoteIdFromLocation(currentLocation);
+                final note = ref
+                    .watch(notesListProvider)
+                    .firstWhereOrNull((n) => n.id == noteId);
+                final notePath = note?.path ?? '';
+                final noteName = notePath.split('/').last.replaceAll('.md', '');
+                return _EditableNoteName(
+                  notePath: notePath,
+                  currentName: noteName,
+                );
+              }),
+            ),
+            const SizedBox(width: 16),
+          ],
+          if (!isOnNote &&
+              !currentLocation.startsWith('/notes/folder/') &&
+              currentLocation != '/settings')
+            ..._buildNavIcons(context, currentLocation),
+          if (!isOnNote &&
+              !currentLocation.startsWith('/notes/folder/') &&
+              !currentLocation.startsWith('/notes/chat'))
+            const Expanded(
+              child: Center(
+                child: SyncStateIndicator(),
+              ),
+            ),
+          GestureDetector(
+            onTap: () => context.go("/settings"),
+            child: const Icon(Icons.settings, color: SpaceNotesTheme.text),
           ),
-        );
+          const SizedBox(width: 16),
+          const ConnectionIndicator(),
+        ],
+      ),
+    );
   }
 
   static const _mainScreens = [
@@ -146,7 +149,8 @@ class MobileNavBar extends ConsumerWidget {
       icons.add(
         GestureDetector(
           onTap: isActive ? null : () => context.go(route),
-          child: Icon(icon, color: isActive ? SpaceNotesTheme.primary : SpaceNotesTheme.text),
+          child: Icon(icon,
+              color: isActive ? SpaceNotesTheme.primary : SpaceNotesTheme.text),
         ),
       );
     }
@@ -174,7 +178,8 @@ class MobileNavBar extends ConsumerWidget {
       context.go('/notes');
     } else {
       final folderPath = notePath.substring(0, lastSlash);
-      final encodedPath = folderPath.split('/').map(Uri.encodeComponent).join('/');
+      final encodedPath =
+          folderPath.split('/').map(Uri.encodeComponent).join('/');
       context.go('/notes/folder/$encodedPath');
     }
   }
@@ -190,7 +195,8 @@ class MobileNavBar extends ConsumerWidget {
       context.go('/notes');
     } else {
       final parentPath = currentPath.substring(0, lastSlash);
-      final encodedPath = parentPath.split('/').map(Uri.encodeComponent).join('/');
+      final encodedPath =
+          parentPath.split('/').map(Uri.encodeComponent).join('/');
       context.go('/notes/folder/$encodedPath');
     }
   }
@@ -221,7 +227,6 @@ class MobileNavBar extends ConsumerWidget {
 
     return 'Folder';
   }
-
 }
 
 class _EditableNoteName extends ConsumerStatefulWidget {
@@ -370,9 +375,8 @@ class _EditableNoteNameState extends ConsumerState<_EditableNoteName> {
       return;
     }
 
-    final notesAsync = ref.read(notesListProvider);
-    final note = notesAsync.valueOrNull
-        ?.firstWhereOrNull((n) => n.path == widget.notePath);
+    final notes = ref.read(notesListProvider);
+    final note = notes.firstWhereOrNull((n) => n.path == widget.notePath);
 
     if (note == null) return;
 
@@ -557,4 +561,3 @@ class _EditableFolderNameState extends ConsumerState<_EditableFolderName> {
     return widget.folderPath.substring(0, lastSlash);
   }
 }
-

@@ -6,7 +6,7 @@ import 'package:flutter_quill/flutter_quill.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart' hide Provider;
 import 'package:get_it/get_it.dart';
 import 'package:spacenotes_client/providers/notes_providers.dart';
-import 'package:spacetimedb_dart_sdk/spacetimedb_dart_sdk.dart' show SdkLogger;
+import 'package:spacetimedb_dart_sdk/src/utils/sdk_logger.dart' show SdkLogger;
 
 import 'theme/spacenotes_theme.dart';
 import 'services/debug_logger.dart';
@@ -76,7 +76,8 @@ class SpaceNotesApp extends StatefulWidget {
   State<SpaceNotesApp> createState() => _SpaceNotesAppState();
 }
 
-class _SpaceNotesAppState extends State<SpaceNotesApp> with WidgetsBindingObserver {
+class _SpaceNotesAppState extends State<SpaceNotesApp>
+    with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();

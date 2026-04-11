@@ -51,73 +51,72 @@ class _CallScreenState extends ConsumerState<CallScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final sessionAsync = ref.watch(activeCallSessionProvider);
+    final session = ref.watch(activeCallSessionProvider);
+
+    if (session == null || session.state is CallStateEnded) {
+      if (!_popping) {
+        _popping = true;
+        debugLogger.info('CALL_SCREEN', 'Session ended/null, popping');
+        _callService?.stopCapture();
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            GoRouter.of(context).go('/notes');
+          }
+        });
+      }
+      return const Scaffold(
+        backgroundColor: SpaceNotesTheme.background,
+        body: Center(
+          child: Text('Call ended',
+              style: TextStyle(color: SpaceNotesTheme.textSecondary)),
+        ),
+      );
+    }
+
+    if (session.state is CallStateActive && !_captureStarted) {
+      _startCapture();
+    }
+
+    final remoteFrame = ref.watch(remoteVideoFrameProvider);
+    final callService = ref.read(callServiceProvider);
+
+    if (session.state is CallStateActive) {
+      ref.listen(remoteAudioFrameProvider, (prev, next) {
+        final audioData = next.valueOrNull;
+        if (audioData != null && callService.audioService != null) {
+          callService.audioService!.feedRemoteAudio(audioData);
+          callService.videoStats?.audioLatencyMs =
+              callService.audioService!.audioLatencyMs.average;
+        }
+      });
+    }
 
     return Scaffold(
       backgroundColor: SpaceNotesTheme.background,
-      body: sessionAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator(color: SpaceNotesTheme.primary)),
-        error: (e, _) => Center(
-          child: Text('Error: $e', style: const TextStyle(color: SpaceNotesTheme.error)),
-        ),
-        data: (session) {
-          if (session == null || session.state is CallStateEnded) {
-            if (!_popping) {
-              _popping = true;
-              debugLogger.info('CALL_SCREEN', 'Session ended/null, popping');
-              _callService?.stopCapture();
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                if (mounted) {
-                  GoRouter.of(context).go('/notes');
-                }
-              });
-            }
-            return const Center(
-              child: Text('Call ended', style: TextStyle(color: SpaceNotesTheme.textSecondary)),
-            );
-          }
-
-        if (session.state is CallStateActive && !_captureStarted) {
-          _startCapture();
-        }
-
-        final remoteFrame = ref.watch(remoteVideoFrameProvider);
-
-        final callService = ref.read(callServiceProvider);
-
-        if (session.state is CallStateActive) {
-          ref.listen(remoteAudioFrameProvider, (prev, next) {
-            final audioData = next.valueOrNull;
-            if (audioData != null && callService.audioService != null) {
-              callService.audioService!.feedRemoteAudio(audioData);
-              callService.videoStats?.audioLatencyMs = callService.audioService!.audioLatencyMs.average;
-            }
-          });
-        }
-
-        return Stack(
-          children: [
-            _RemoteVideo(remoteFrame: remoteFrame, videoStats: callService.videoStats),
-            if (session.state is CallStateRinging)
-              _RingingOverlay(session: session),
-            if (session.state is CallStateActive)
-              _LocalPreview(callService: callService),
-            if (session.state is CallStateActive)
-              _CallControls(
-                onEnd: () => _endCall(session),
-                onFlipCamera: () => _flipCamera(),
-                isMuted: _muted,
-                onToggleMute: () => _toggleMute(),
+      body: Stack(
+        children: [
+          _RemoteVideo(
+              remoteFrame: remoteFrame, videoStats: callService.videoStats),
+          if (session.state is CallStateRinging)
+            _RingingOverlay(session: session),
+          if (session.state is CallStateActive)
+            _LocalPreview(callService: callService),
+          if (session.state is CallStateActive)
+            _CallControls(
+              onEnd: () => _endCall(session),
+              onFlipCamera: () => _flipCamera(),
+              isMuted: _muted,
+              onToggleMute: () => _toggleMute(),
+            ),
+          if (session.state is CallStateActive)
+            Positioned(
+              top: 16,
+              left: 16,
+              child: SafeArea(
+                child: VideoStatsOverlay(videoStats: callService.videoStats),
               ),
-            if (session.state is CallStateActive)
-              Positioned(
-                top: 16,
-                left: 16,
-                child: SafeArea(child: VideoStatsOverlay(videoStats: callService.videoStats)),
-              ),
-          ],
-        );
-      },
+            ),
+        ],
       ),
     );
   }
@@ -143,7 +142,8 @@ class _CallScreenState extends ConsumerState<CallScreen> {
     final callService = ref.read(callServiceProvider);
     final repo = ref.read(notesRepositoryProvider);
     callService.setClient(repo.client);
-    await callService.startCapture(widget.sessionId, fps: 25, width: 2560, height: 1440);
+    await callService.startCapture(widget.sessionId,
+        fps: 25, width: 2560, height: 1440);
     if (mounted) setState(() {});
   }
 
@@ -210,7 +210,8 @@ class _RemoteVideoState extends State<_RemoteVideo> {
       loading: () => Container(
         color: SpaceNotesTheme.background,
         child: const Center(
-          child: Text('Waiting for video...', style: TextStyle(color: SpaceNotesTheme.textSecondary)),
+          child: Text('Waiting for video...',
+              style: TextStyle(color: SpaceNotesTheme.textSecondary)),
         ),
       ),
       error: (_, __) => Container(color: SpaceNotesTheme.background),
@@ -222,9 +223,11 @@ class _RemoteVideoState extends State<_RemoteVideo> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.videocam_off, size: 64, color: SpaceNotesTheme.textSecondary),
+                  Icon(Icons.videocam_off,
+                      size: 64, color: SpaceNotesTheme.textSecondary),
                   SizedBox(height: 16),
-                  Text('No video yet', style: TextStyle(color: SpaceNotesTheme.textSecondary)),
+                  Text('No video yet',
+                      style: TextStyle(color: SpaceNotesTheme.textSecondary)),
                 ],
               ),
             ),
@@ -234,7 +237,8 @@ class _RemoteVideoState extends State<_RemoteVideo> {
           if (kIsWeb) {
             return const SizedBox.expand(child: WebH264View());
           }
-          if (_h264NativeDecoder != null && _h264NativeDecoder!.textureId >= 0) {
+          if (_h264NativeDecoder != null &&
+              _h264NativeDecoder!.textureId >= 0) {
             return SizedBox.expand(
               child: FittedBox(
                 fit: BoxFit.cover,
@@ -310,7 +314,8 @@ class _RingingOverlay extends ConsumerWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.phone_in_talk, size: 80, color: SpaceNotesTheme.primary),
+            const Icon(Icons.phone_in_talk,
+                size: 80, color: SpaceNotesTheme.primary),
             const SizedBox(height: 24),
             Text(
               isCaller ? 'Calling...' : 'Incoming call',
@@ -321,7 +326,8 @@ class _RingingOverlay extends ConsumerWidget {
               isCaller
                   ? session.callee.toHexString.substring(0, 16)
                   : session.caller.toHexString.substring(0, 16),
-              style: const TextStyle(fontSize: 14, color: SpaceNotesTheme.textSecondary),
+              style: const TextStyle(
+                  fontSize: 14, color: SpaceNotesTheme.textSecondary),
             ),
             const SizedBox(height: 48),
             if (!isCaller) ...[
@@ -389,7 +395,9 @@ class _LocalPreview extends StatelessWidget {
             borderRadius: BorderRadius.circular(12),
           ),
           child: const Center(
-            child: Text('You', style: TextStyle(color: SpaceNotesTheme.textSecondary, fontSize: 12)),
+            child: Text('You',
+                style: TextStyle(
+                    color: SpaceNotesTheme.textSecondary, fontSize: 12)),
           ),
         ),
       );
@@ -444,7 +452,8 @@ class _LocalPreview extends StatelessWidget {
             borderRadius: BorderRadius.circular(12),
           ),
           child: const Center(
-            child: Icon(Icons.videocam_off, color: SpaceNotesTheme.textSecondary),
+            child:
+                Icon(Icons.videocam_off, color: SpaceNotesTheme.textSecondary),
           ),
         ),
       );
@@ -472,7 +481,11 @@ class _CallControls extends StatelessWidget {
   final bool isMuted;
   final VoidCallback? onToggleMute;
 
-  const _CallControls({required this.onEnd, this.onFlipCamera, this.isMuted = false, this.onToggleMute});
+  const _CallControls(
+      {required this.onEnd,
+      this.onFlipCamera,
+      this.isMuted = false,
+      this.onToggleMute});
 
   @override
   Widget build(BuildContext context) {
@@ -485,19 +498,29 @@ class _CallControls extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
             if (!kIsWeb && onFlipCamera != null)
-              _CircleButton(icon: Icons.flip_camera_ios, color: SpaceNotesTheme.inputSurface, size: 52, onTap: onFlipCamera!)
+              _CircleButton(
+                  icon: Icons.flip_camera_ios,
+                  color: SpaceNotesTheme.inputSurface,
+                  size: 52,
+                  onTap: onFlipCamera!)
             else
               const SizedBox(width: 52),
             if (onToggleMute != null)
               _CircleButton(
                 icon: isMuted ? Icons.mic_off : Icons.mic,
-                color: isMuted ? SpaceNotesTheme.warning : SpaceNotesTheme.inputSurface,
+                color: isMuted
+                    ? SpaceNotesTheme.warning
+                    : SpaceNotesTheme.inputSurface,
                 size: 52,
                 onTap: onToggleMute!,
               )
             else
               const SizedBox(width: 52),
-            _CircleButton(icon: Icons.call_end, color: SpaceNotesTheme.error, size: 64, onTap: onEnd),
+            _CircleButton(
+                icon: Icons.call_end,
+                color: SpaceNotesTheme.error,
+                size: 64,
+                onTap: onEnd),
             const SizedBox(width: 52),
           ],
         ),
