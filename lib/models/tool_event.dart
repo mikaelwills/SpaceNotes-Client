@@ -17,14 +17,15 @@ class ToolEvent extends Equatable {
 
   factory ToolEvent.fromJson(Map<String, dynamic> json) {
     final ts = json['ts'];
+    final String baseSession = json['session'] ?? '';
+    final String host = json['host'] ?? '';
     return ToolEvent(
-      session: json['session'] ?? '',
+      session: host.isEmpty ? baseSession : '$baseSession@$host',
       task: json['task'] ?? '',
       tool: json['tool'] ?? '',
       input: json['input'] ?? {},
-      timestamp: ts != null
-          ? DateTime.fromMillisecondsSinceEpoch(ts)
-          : DateTime.now(),
+      timestamp:
+          ts != null ? DateTime.fromMillisecondsSinceEpoch(ts) : DateTime.now(),
     );
   }
 
