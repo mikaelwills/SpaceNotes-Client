@@ -16,8 +16,6 @@ class SSEService {
 
   SSEService({required ConfigCubit configCubit}) : _configCubit = configCubit;
 
-
-
   Stream<SpaceEvent> connectToEventStream() {
     if (_eventController != null && !_eventController!.isClosed) {
       return _eventController!.stream;
@@ -34,13 +32,12 @@ class SSEService {
     debugLogger.sse('Connecting', 'attempt=$_reconnectAttempts, url=$sseUrl');
 
     _subscription = SSEClient.subscribeToSSE(
-            method: SSERequestType.GET,
-            url: sseUrl,
-            header: {
-              "Accept": "text/event-stream",
-              "Cache-Control": "no-cache",
-            })
-        .listen(
+        method: SSERequestType.GET,
+        url: sseUrl,
+        header: {
+          "Accept": "text/event-stream",
+          "Cache-Control": "no-cache",
+        }).listen(
       (event) {
         if (!_isConnected) {
           _isConnected = true;
@@ -51,7 +48,7 @@ class SSEService {
         if (event.data != null && event.data!.isNotEmpty) {
           try {
             final spaceEvent = _tryFastTextExtraction(event.data!) ??
-                                  _parseFullEvent(event.data!);
+                _parseFullEvent(event.data!);
 
             if (spaceEvent != null) {
               if (_eventController?.isClosed == false) {
@@ -104,9 +101,9 @@ class SSEService {
   }
 
   bool get isConnected => _isConnected;
-  
+
   bool get isActive => _eventController != null && !_eventController!.isClosed;
-  
+
   void restartConnection() {
     debugLogger.sse('Restart: Cleaning up old connection');
     _reconnectTimer?.cancel();
@@ -130,24 +127,32 @@ class SSEService {
           (!rawData.contains('"text":') && !rawData.contains('"delta":'))) {
         return null;
       }
-      
+
       // Extract key fields using regex for performance
       final typeMatch = RegExp(r'"type":"([^"]+)"').firstMatch(rawData);
-      final sessionIdMatch = RegExp(r'"sessionId":"([^"]+)"').firstMatch(rawData);
-      final messageIdMatch = RegExp(r'"messageId":"([^"]+)"').firstMatch(rawData);
-      
-      if (typeMatch == null || sessionIdMatch == null || messageIdMatch == null) {
+      final sessionIdMatch =
+          RegExp(r'"sessionId":"([^"]+)"').firstMatch(rawData);
+      final messageIdMatch =
+          RegExp(r'"messageId":"([^"]+)"').firstMatch(rawData);
+
+      if (typeMatch == null ||
+          sessionIdMatch == null ||
+          messageIdMatch == null) {
         return null; // Missing required fields, use full parsing
       }
-      
+
       final type = typeMatch.group(1)!;
       final sessionId = sessionIdMatch.group(1)!;
       final messageId = messageIdMatch.group(1)!;
-      
-      final textMatch = RegExp(r'"text":"([^"]*(?:\\.[^"]*)*)"').firstMatch(rawData);
-      final deltaMatch = RegExp(r'"delta":"([^"]*(?:\\.[^"]*)*)"').firstMatch(rawData);
-      final partIdMatch = RegExp(r'"part":\s*\{[^}]*"id":"([^"]+)"').firstMatch(rawData);
-      final partTypeMatch = RegExp(r'"part":\s*\{[^}]*"type":"([^"]+)"').firstMatch(rawData);
+
+      final textMatch =
+          RegExp(r'"text":"([^"]*(?:\\.[^"]*)*)"').firstMatch(rawData);
+      final deltaMatch =
+          RegExp(r'"delta":"([^"]*(?:\\.[^"]*)*)"').firstMatch(rawData);
+      final partIdMatch =
+          RegExp(r'"part":\s*\{[^}]*"id":"([^"]+)"').firstMatch(rawData);
+      final partTypeMatch =
+          RegExp(r'"part":\s*\{[^}]*"type":"([^"]+)"').firstMatch(rawData);
 
       if ((textMatch != null || deltaMatch != null) && partIdMatch != null) {
         final text = textMatch?.group(1)?.replaceAll('\\"', '"');
@@ -174,14 +179,14 @@ class SSEService {
           },
         );
       }
-      
+
       return null; // Couldn't extract text, use full parsing
     } catch (e) {
       // Fast path failed - silently fall back to full parsing
       return null;
     }
   }
-  
+
   SpaceEvent? _parseFullEvent(String rawData) {
     try {
       final Map<String, dynamic> eventData = json.decode(rawData);

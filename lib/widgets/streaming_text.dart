@@ -24,7 +24,8 @@ class StreamingText extends StatefulWidget {
   State<StreamingText> createState() => _StreamingTextState();
 }
 
-class _StreamingTextState extends State<StreamingText> with SingleTickerProviderStateMixin {
+class _StreamingTextState extends State<StreamingText>
+    with SingleTickerProviderStateMixin {
   String _displayedText = '';
   String _sanitizedFullText = '';
   Timer? _timer;
@@ -39,9 +40,11 @@ class _StreamingTextState extends State<StreamingText> with SingleTickerProvider
       duration: const Duration(milliseconds: 530),
       vsync: this,
     )..repeat(reverse: true);
-    _cursorAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(_cursorController);
+    _cursorAnimation =
+        Tween<double>(begin: 0.0, end: 1.0).animate(_cursorController);
 
-    _sanitizedFullText = _safeTextSanitize(widget.text, preserveMarkdown: widget.useMarkdown);
+    _sanitizedFullText =
+        _safeTextSanitize(widget.text, preserveMarkdown: widget.useMarkdown);
 
     if (widget.isStreaming) {
       _startStreaming();
@@ -55,7 +58,8 @@ class _StreamingTextState extends State<StreamingText> with SingleTickerProvider
     super.didUpdateWidget(oldWidget);
 
     if (widget.text != oldWidget.text) {
-      final newSanitizedText = _safeTextSanitize(widget.text, preserveMarkdown: widget.useMarkdown);
+      final newSanitizedText =
+          _safeTextSanitize(widget.text, preserveMarkdown: widget.useMarkdown);
 
       _timer?.cancel();
       if (widget.isStreaming) {
@@ -104,7 +108,8 @@ class _StreamingTextState extends State<StreamingText> with SingleTickerProvider
                 borderRadius: BorderRadius.circular(4),
               ),
               codeblockPadding: const EdgeInsets.all(8),
-              blockquote: (widget.style ?? SpaceNotesTextStyles.terminal).copyWith(
+              blockquote:
+                  (widget.style ?? SpaceNotesTextStyles.terminal).copyWith(
                 color: SpaceNotesTheme.textSecondary,
               ),
               blockquoteDecoration: const BoxDecoration(
@@ -161,8 +166,9 @@ class _StreamingTextState extends State<StreamingText> with SingleTickerProvider
           child: Text(
             '▌',
             style: widget.style?.copyWith(
-              color: SpaceNotesTheme.primary,
-            ) ?? const TextStyle(color: SpaceNotesTheme.primary),
+                  color: SpaceNotesTheme.primary,
+                ) ??
+                const TextStyle(color: SpaceNotesTheme.primary),
           ),
         );
       },
@@ -176,7 +182,7 @@ class _StreamingTextState extends State<StreamingText> with SingleTickerProvider
         setState(() {
           _currentIndex++;
           while (_currentIndex < _sanitizedFullText.length &&
-                 _isLowSurrogate(_sanitizedFullText.codeUnitAt(_currentIndex))) {
+              _isLowSurrogate(_sanitizedFullText.codeUnitAt(_currentIndex))) {
             _currentIndex++;
           }
           _displayedText = _sanitizedFullText.substring(0, _currentIndex);
@@ -195,7 +201,8 @@ class _StreamingTextState extends State<StreamingText> with SingleTickerProvider
     try {
       return TextSanitizer.sanitize(text, preserveMarkdown: preserveMarkdown);
     } catch (e) {
-      print('⚠️ [StreamingText] Text sanitization failed, using ASCII fallback: $e');
+      print(
+          '⚠️ [StreamingText] Text sanitization failed, using ASCII fallback: $e');
       return TextSanitizer.sanitizeToAscii(text);
     }
   }

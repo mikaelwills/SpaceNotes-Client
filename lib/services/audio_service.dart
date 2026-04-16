@@ -8,10 +8,14 @@ import 'video_stats.dart';
 const int kTimestampBytes = 8;
 
 class AudioService {
-  static const _captureControl = MethodChannel('spacenotes/native_audio_control');
-  static const _captureChannel = BasicMessageChannel<ByteData>('spacenotes/native_audio', BinaryCodec());
-  static const _playbackControl = MethodChannel('spacenotes/native_audio_playback_control');
-  static const _playbackChannel = BasicMessageChannel<ByteData>('spacenotes/native_audio_playback', BinaryCodec());
+  static const _captureControl =
+      MethodChannel('spacenotes/native_audio_control');
+  static const _captureChannel =
+      BasicMessageChannel<ByteData>('spacenotes/native_audio', BinaryCodec());
+  static const _playbackControl =
+      MethodChannel('spacenotes/native_audio_playback_control');
+  static const _playbackChannel = BasicMessageChannel<ByteData>(
+      'spacenotes/native_audio_playback', BinaryCodec());
 
   bool _muted = false;
   bool _capturing = false;
@@ -39,14 +43,17 @@ class AudioService {
 
     _captureChannel.setMessageHandler((ByteData? message) async {
       if (message == null || _muted) return ByteData(0);
-      final pcm = message.buffer.asUint8List(message.offsetInBytes, message.lengthInBytes);
+      final pcm = message.buffer
+          .asUint8List(message.offsetInBytes, message.lengthInBytes);
       _audioSeq++;
       if (_audioSeq <= 3 || _audioSeq % 250 == 0) {
         debugLogger.info('AUDIO_TX', 'Chunk #$_audioSeq | ${pcm.length}B');
       }
       final stamped = ByteData(kTimestampBytes + pcm.length);
       stamped.setInt64(0, DateTime.now().millisecondsSinceEpoch, Endian.little);
-      stamped.buffer.asUint8List().setRange(kTimestampBytes, kTimestampBytes + pcm.length, pcm);
+      stamped.buffer
+          .asUint8List()
+          .setRange(kTimestampBytes, kTimestampBytes + pcm.length, pcm);
       onAudioChunk?.call(stamped.buffer.asUint8List(), _audioSeq);
       return ByteData(0);
     });
@@ -75,7 +82,8 @@ class AudioService {
       audioLatencyMs.add(latency.toDouble());
 
       if (_feedCount <= 3 || _feedCount % 250 == 0) {
-        debugLogger.info('AUDIO_RX', 'Feed #$_feedCount | ${pcm.length}B | latency=${latency}ms');
+        debugLogger.info('AUDIO_RX',
+            'Feed #$_feedCount | ${pcm.length}B | latency=${latency}ms');
       }
 
       final audioOnly = pcm.sublist(kTimestampBytes);

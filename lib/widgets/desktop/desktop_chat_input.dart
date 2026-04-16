@@ -84,7 +84,9 @@ class _DesktopChatInputState extends ConsumerState<DesktopChatInput> {
                     ),
                     child: IconButton(
                       onPressed: isWorking
-                          ? () => context.read<ChatBloc>().add(CancelCurrentOperation())
+                          ? () => context
+                              .read<ChatBloc>()
+                              .add(CancelCurrentOperation())
                           : _onSend,
                       tooltip: isWorking ? 'Cancel' : 'Send to AI',
                       icon: Icon(
@@ -108,10 +110,10 @@ class _DesktopChatInputState extends ConsumerState<DesktopChatInput> {
     if (message.isEmpty && _pendingImageBase64 == null) return;
 
     context.read<ChatBloc>().add(SendChatMessage(
-      message.isEmpty ? 'What is in this image?' : message,
-      imageBase64: _pendingImageBase64,
-      imageMimeType: _pendingImageMimeType,
-    ));
+          message.isEmpty ? 'What is in this image?' : message,
+          imageBase64: _pendingImageBase64,
+          imageMimeType: _pendingImageMimeType,
+        ));
     _controller.clear();
     setState(() {
       _pendingImageBase64 = null;
@@ -125,7 +127,8 @@ class _DesktopChatInputState extends ConsumerState<DesktopChatInput> {
       final XFile? image = await picker.pickImage(source: ImageSource.gallery);
       if (image == null) return;
 
-      debugPrint('[DesktopChatInput] Image selected: ${image.path}, name: ${image.name}');
+      debugPrint(
+          '[DesktopChatInput] Image selected: ${image.path}, name: ${image.name}');
 
       final bytes = await image.readAsBytes();
       debugPrint('[DesktopChatInput] Read ${bytes.length} bytes');

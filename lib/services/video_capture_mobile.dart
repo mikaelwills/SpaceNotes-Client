@@ -31,7 +31,12 @@ class MobileVideoCaptureService implements VideoCaptureService {
   }
 
   @override
-  Future<void> start({int fps = 10, int width = 320, int height = 240, String codec = 'jpeg', FrameTimingCallback? onFrameTiming}) async {
+  Future<void> start(
+      {int fps = 10,
+      int width = 320,
+      int height = 240,
+      String codec = 'jpeg',
+      FrameTimingCallback? onFrameTiming}) async {
     _targetFps = fps;
     _onFrameTiming = onFrameTiming;
     final cameras = await availableCameras();
@@ -46,7 +51,8 @@ class MobileVideoCaptureService implements VideoCaptureService {
     );
 
     final preset = _resolutionForSize(width, height);
-    debugLogger.info('CAPTURE', 'Using resolution preset: $preset for ${width}x$height');
+    debugLogger.info(
+        'CAPTURE', 'Using resolution preset: $preset for ${width}x$height');
 
     _camera = CameraController(
       front,
@@ -83,11 +89,17 @@ class MobileVideoCaptureService implements VideoCaptureService {
 
       _frameCount++;
       if (_frameCount <= 2 || _frameCount % 300 == 0) {
-        debugLogger.info('CAPTURE', 'YUV: ${yuvMs}ms, JPEG: ${encodeMs}ms, Total: ${totalMs}ms, Size: ${jpeg.length ~/ 1024}KB');
+        debugLogger.info('CAPTURE',
+            'YUV: ${yuvMs}ms, JPEG: ${encodeMs}ms, Total: ${totalMs}ms, Size: ${jpeg.length ~/ 1024}KB');
       }
 
-      _onFrameTiming?.call(totalMs: totalMs, yuvMs: yuvMs, encodeMs: encodeMs, sizeBytes: jpeg.length);
-      _frameController.add(CapturedFrame(data: jpeg, codec: 0, isKeyframe: true));
+      _onFrameTiming?.call(
+          totalMs: totalMs,
+          yuvMs: yuvMs,
+          encodeMs: encodeMs,
+          sizeBytes: jpeg.length);
+      _frameController
+          .add(CapturedFrame(data: jpeg, codec: 0, isKeyframe: true));
     } catch (e) {
       debugLogger.error('CAPTURE', 'Frame encode error: $e');
     }
@@ -115,7 +127,9 @@ class MobileVideoCaptureService implements VideoCaptureService {
           final vVal = uvPlane[uvIndex + 1];
 
           int r = (yVal + 1.370705 * (vVal - 128)).round().clamp(0, 255);
-          int g = (yVal - 0.337633 * (uVal - 128) - 0.698001 * (vVal - 128)).round().clamp(0, 255);
+          int g = (yVal - 0.337633 * (uVal - 128) - 0.698001 * (vVal - 128))
+              .round()
+              .clamp(0, 255);
           int b = (yVal + 1.732446 * (uVal - 128)).round().clamp(0, 255);
 
           image.setPixelRgba(x, y, r, g, b, 255);
@@ -137,7 +151,9 @@ class MobileVideoCaptureService implements VideoCaptureService {
           final vVal = vPlane[uvIndex];
 
           int r = (yVal + 1.370705 * (vVal - 128)).round().clamp(0, 255);
-          int g = (yVal - 0.337633 * (uVal - 128) - 0.698001 * (vVal - 128)).round().clamp(0, 255);
+          int g = (yVal - 0.337633 * (uVal - 128) - 0.698001 * (vVal - 128))
+              .round()
+              .clamp(0, 255);
           int b = (yVal + 1.732446 * (uVal - 128)).round().clamp(0, 255);
 
           image.setPixelRgba(x, y, r, g, b, 255);

@@ -24,7 +24,8 @@ class MobileBottomInputBar extends ConsumerStatefulWidget {
   const MobileBottomInputBar({super.key});
 
   @override
-  ConsumerState<MobileBottomInputBar> createState() => _MobileBottomInputBarState();
+  ConsumerState<MobileBottomInputBar> createState() =>
+      _MobileBottomInputBarState();
 }
 
 class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
@@ -43,7 +44,8 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
   @override
   Widget build(BuildContext context) {
     final viewType = _getCurrentViewType();
-    final isChat = viewType == HomeViewType.chat || viewType == HomeViewType.sessionChat;
+    final isChat =
+        viewType == HomeViewType.chat || viewType == HomeViewType.sessionChat;
 
     final searchQuery = ref.watch(folderSearchQueryProvider);
     if (!isChat && searchQuery.isEmpty && _searchController.text.isNotEmpty) {
@@ -90,8 +92,7 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
     required String folderPath,
     required String? notePath,
   }) {
-    if (viewType == HomeViewType.note ||
-        viewType == HomeViewType.sessions) {
+    if (viewType == HomeViewType.note || viewType == HomeViewType.sessions) {
       return const SizedBox.shrink();
     }
 
@@ -125,7 +126,8 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
 
   Widget _buildSearchBar(bool isChat) {
     final chatState = GetIt.I<ChatBloc>().state;
-    final targetSession = chatState is ChatReady ? chatState.targetSession : 'note-assistant';
+    final targetSession =
+        chatState is ChatReady ? chatState.targetSession : 'note-assistant';
 
     String hintText;
     if (!isChat) {
@@ -207,7 +209,6 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
       );
     }
   }
-
 
   Widget _buildRoundedButton({
     required VoidCallback onPressed,
@@ -321,11 +322,14 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
 
     var resized = img;
     if (img.width > 2048 || img.height > 2048) {
-      resized = image_lib.copyResize(img, width: img.width > img.height ? 2048 : -1, height: img.height >= img.width ? 2048 : -1);
+      resized = image_lib.copyResize(img,
+          width: img.width > img.height ? 2048 : -1,
+          height: img.height >= img.width ? 2048 : -1);
     }
 
     for (final quality in [90, 80, 70, 60]) {
-      final jpeg = Uint8List.fromList(image_lib.encodeJpg(resized, quality: quality));
+      final jpeg =
+          Uint8List.fromList(image_lib.encodeJpg(resized, quality: quality));
       if (jpeg.length <= 4 * 1024 * 1024) return jpeg;
     }
 
@@ -333,7 +337,8 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
   }
 
   Future<void> _createQuickNote(String folderPath) async {
-    debugPrint('[MobileBottomInputBar] _createQuickNote called, folderPath: "$folderPath"');
+    debugPrint(
+        '[MobileBottomInputBar] _createQuickNote called, folderPath: "$folderPath"');
     final now = DateTime.now();
     final timestamp =
         '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}-${now.hour.toString().padLeft(2, '0')}-${now.minute.toString().padLeft(2, '0')}-${now.second.toString().padLeft(2, '0')}';
@@ -351,12 +356,12 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
         debugPrint('[MobileBottomInputBar] Navigating to /notes/note/$noteId');
         context.go('/notes/note/$noteId');
       } else {
-        debugPrint('[MobileBottomInputBar] noteId is null or widget not mounted');
+        debugPrint(
+            '[MobileBottomInputBar] noteId is null or widget not mounted');
       }
     } catch (e, stack) {
       debugPrint('[MobileBottomInputBar] Error creating note: $e');
       debugPrint('[MobileBottomInputBar] Stack trace: $stack');
     }
   }
-
 }

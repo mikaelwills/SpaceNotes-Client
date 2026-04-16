@@ -27,7 +27,8 @@ class ConfigCubit extends Cubit<ConfigState> {
         }
       }
 
-      if ((savedIP == null || savedIP == _defaultServerIp || savedIP.isEmpty) && kIsWeb) {
+      if ((savedIP == null || savedIP == _defaultServerIp || savedIP.isEmpty) &&
+          kIsWeb) {
         final webHostname = WebHostnameService.getCurrentHostname();
         if (webHostname != null) {
           savedIP = webHostname;
@@ -37,7 +38,8 @@ class ConfigCubit extends Cubit<ConfigState> {
       savedIP ??= _defaultServerIp;
       final selectedProviderID = prefs.getString('selected_provider_id');
       final selectedModelID = prefs.getString('selected_model_id');
-      final defaultAgent = prefs.getString('default_agent') ?? _defaultAgentName;
+      final defaultAgent =
+          prefs.getString('default_agent') ?? _defaultAgentName;
       final backendTypeStr = prefs.getString('backend_type') ?? 'space';
       final backendType = backendTypeStr == 'claudecode'
           ? BackendType.claudecode
@@ -59,13 +61,15 @@ class ConfigCubit extends Cubit<ConfigState> {
     try {
       final currentState = state;
       if (currentState is! ConfigLoaded) {
-        emit(const ConfigError('Cannot update server when config is not loaded'));
+        emit(const ConfigError(
+            'Cannot update server when config is not loaded'));
         return;
       }
 
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('server_ip', serverIp);
-      await prefs.setString('spacenotes_host', '$serverIp:${ConfigLoaded.spacetimeDbPort}');
+      await prefs.setString(
+          'spacenotes_host', '$serverIp:${ConfigLoaded.spacetimeDbPort}');
 
       emit(currentState.copyWith(serverIp: serverIp));
     } catch (e) {
@@ -95,7 +99,8 @@ class ConfigCubit extends Cubit<ConfigState> {
     try {
       final currentState = state;
       if (currentState is! ConfigLoaded) {
-        emit(const ConfigError('Cannot update provider when config is not loaded'));
+        emit(const ConfigError(
+            'Cannot update provider when config is not loaded'));
         return;
       }
 
@@ -116,7 +121,8 @@ class ConfigCubit extends Cubit<ConfigState> {
     try {
       final currentState = state;
       if (currentState is! ConfigLoaded) {
-        emit(const ConfigError('Cannot update agent when config is not loaded'));
+        emit(
+            const ConfigError('Cannot update agent when config is not loaded'));
         return;
       }
 
@@ -139,7 +145,8 @@ class ConfigCubit extends Cubit<ConfigState> {
       if (currentState is! ConfigLoaded) return;
 
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('backend_type', type == BackendType.claudecode ? 'claudecode' : 'space');
+      await prefs.setString('backend_type',
+          type == BackendType.claudecode ? 'claudecode' : 'space');
 
       emit(currentState.copyWith(backendType: type));
     } catch (e) {

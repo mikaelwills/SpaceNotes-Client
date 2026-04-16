@@ -100,7 +100,8 @@ class _TerminalInputFieldState extends State<TerminalInputField> {
         child: Stack(
           children: [
             Padding(
-              padding: EdgeInsets.only(right: widget.suffixIcon != null ? 80 : 0),
+              padding:
+                  EdgeInsets.only(right: widget.suffixIcon != null ? 80 : 0),
               child: _buildTextField(expands: false, maxLines: 8, minLines: 1),
             ),
             if (widget.suffixIcon != null)
@@ -115,7 +116,11 @@ class _TerminalInputFieldState extends State<TerminalInputField> {
     );
   }
 
-  Widget _buildTextField({required bool expands, int? maxLines, int? minLines, bool centerVertically = false}) {
+  Widget _buildTextField(
+      {required bool expands,
+      int? maxLines,
+      int? minLines,
+      bool centerVertically = false}) {
     const textStyle = TextStyle(
       fontFamily: 'FiraCode',
       fontSize: 14,
@@ -182,4 +187,3 @@ class _TerminalInputFieldState extends State<TerminalInputField> {
     );
   }
 }
-

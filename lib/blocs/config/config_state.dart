@@ -33,7 +33,13 @@ class ConfigLoaded extends ConfigState {
   String get claudeCodeWsUrl => 'ws://$serverIp:$claudeCodePort/ws';
 
   @override
-  List<Object?> get props => [serverIp, selectedProviderID, selectedModelID, defaultAgent, backendType];
+  List<Object?> get props => [
+        serverIp,
+        selectedProviderID,
+        selectedModelID,
+        defaultAgent,
+        backendType
+      ];
 
   ConfigLoaded copyWith({
     String? serverIp,

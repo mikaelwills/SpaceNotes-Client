@@ -63,7 +63,8 @@ class DesktopNotesBloc extends Bloc<DesktopNotesEvent, DesktopNotesState> {
     }
   }
 
-  void _onSetMaxOpenNotes(SetMaxOpenNotes event, Emitter<DesktopNotesState> emit) {
+  void _onSetMaxOpenNotes(
+      SetMaxOpenNotes event, Emitter<DesktopNotesState> emit) {
     final currentIds = List<String>.from(state.openNoteIds);
 
     while (currentIds.length > event.maxNotes) {

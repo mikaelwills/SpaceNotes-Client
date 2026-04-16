@@ -3,8 +3,10 @@ import 'package:flutter/services.dart';
 import 'debug_logger.dart';
 
 class H264DecoderService {
-  static const _controlChannel = MethodChannel('spacenotes/h264_decoder_control');
-  static const _frameChannel = BasicMessageChannel<ByteData>('spacenotes/h264_decoder_frame', BinaryCodec());
+  static const _controlChannel =
+      MethodChannel('spacenotes/h264_decoder_control');
+  static const _frameChannel = BasicMessageChannel<ByteData>(
+      'spacenotes/h264_decoder_frame', BinaryCodec());
 
   int _textureId = -1;
   bool _started = false;

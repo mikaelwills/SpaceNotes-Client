@@ -12,8 +12,8 @@ class WebConfigService {
 
     try {
       final response = await http.get(Uri.parse('/config.json')).timeout(
-        const Duration(seconds: 2),
-      );
+            const Duration(seconds: 2),
+          );
       if (response.statusCode == 200) {
         final decoded = jsonDecode(response.body);
         if (decoded is! Map<String, dynamic>) return null;
@@ -26,7 +26,8 @@ class WebConfigService {
     return null;
   }
 
-  static Future<void> tryAutoConfigureFromServer(SpacetimeDbNotesRepository repo) async {
+  static Future<void> tryAutoConfigureFromServer(
+      SpacetimeDbNotesRepository repo) async {
     try {
       final currentHost = web.window.location.hostname;
       final config = await _fetchConfig();

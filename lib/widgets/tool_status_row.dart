@@ -93,9 +93,7 @@ class ToolStatusRow extends StatelessWidget {
 
     final pattern = input['pattern'];
     if (pattern != null && pattern is String && pattern.isNotEmpty) {
-      return pattern.length > 30
-          ? '${pattern.substring(0, 30)}...'
-          : pattern;
+      return pattern.length > 30 ? '${pattern.substring(0, 30)}...' : pattern;
     }
 
     final query = input['query'];

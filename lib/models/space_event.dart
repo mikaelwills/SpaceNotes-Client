@@ -16,20 +16,14 @@ class SpaceEvent extends Equatable {
   });
 
   factory SpaceEvent.fromJson(Map<String, dynamic> json) {
-    
     final eventType = json['type'] ?? '';
     String? sessionId;
     String? messageId;
 
-    sessionId = json['sessionId'] ??
-                json['sessionID'] ??
-                json['session_id'];
+    sessionId = json['sessionId'] ?? json['sessionID'] ?? json['session_id'];
 
-    messageId = json['messageId'] ??
-                json['messageID'] ??
-                json['message_id'];
-    
-    
+    messageId = json['messageId'] ?? json['messageID'] ?? json['message_id'];
+
     // If not found at root level, check nested properties based on event type
     if (sessionId == null || messageId == null) {
       if (json['properties'] is Map<String, dynamic>) {
@@ -68,13 +62,13 @@ class SpaceEvent extends Equatable {
         }
       }
     }
-    
+
     return SpaceEvent(
       type: eventType,
       sessionId: sessionId,
       messageId: messageId,
-      data: json,  // Store the entire JSON for later processing
-      timestamp: json['timestamp'] != null 
+      data: json, // Store the entire JSON for later processing
+      timestamp: json['timestamp'] != null
           ? DateTime.parse(json['timestamp'] ?? '')
           : DateTime.now(),
     );

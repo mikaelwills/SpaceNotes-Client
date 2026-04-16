@@ -34,23 +34,24 @@ class TerminalMessage extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (message.role == 'user') _buildUserMessage(context),
-        if (message.role == 'assistant')
-          _buildAssistantMessage(context),
+        if (message.role == 'assistant') _buildAssistantMessage(context),
       ],
     );
   }
 
   Widget _buildUserMessage(BuildContext context) {
-    final content = message.parts.isNotEmpty && message.parts.first.content != null
-        ? message.parts.first.content!
-        : '';
+    final content =
+        message.parts.isNotEmpty && message.parts.first.content != null
+            ? message.parts.first.content!
+            : '';
 
     return GestureDetector(
       onLongPress: () => _copyToClipboard(context, content),
       child: Row(
         children: [
           const Spacer(),
-          if (message.sendStatus == MessageSendStatus.failed || message.sendStatus == MessageSendStatus.queued)
+          if (message.sendStatus == MessageSendStatus.failed ||
+              message.sendStatus == MessageSendStatus.queued)
             _buildStatusIcons(context),
           Container(
             margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -97,8 +98,7 @@ class TerminalMessage extends StatelessWidget {
     if (isPreview) return _buildPreviewMessage(context);
 
     final hasContent = message.parts.any((p) =>
-      (p.content != null && p.content!.isNotEmpty) || p.type == 'tool'
-    );
+        (p.content != null && p.content!.isNotEmpty) || p.type == 'tool');
 
     final color = _sourceLabelColor;
 
@@ -161,8 +161,7 @@ class TerminalMessage extends StatelessWidget {
             ],
             const SizedBox(height: 6),
             ...message.parts.map((part) => _buildMessagePart(part)),
-            if (isStreaming && !hasContent)
-              const _BlinkingCursor(),
+            if (isStreaming && !hasContent) const _BlinkingCursor(),
           ],
         ),
       ),
@@ -212,7 +211,8 @@ class TerminalMessage extends StatelessWidget {
                           fontFamily: 'FiraCode',
                         ),
                       ),
-                      if (message.session != null && message.session!.isNotEmpty) ...[
+                      if (message.session != null &&
+                          message.session!.isNotEmpty) ...[
                         const SizedBox(width: 8),
                         Text(
                           message.session!.toUpperCase(),
@@ -288,7 +288,8 @@ class TerminalMessage extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Icon(Icons.shield_outlined, size: 14, color: SpaceNotesTheme.warning),
+              const Icon(Icons.shield_outlined,
+                  size: 14, color: SpaceNotesTheme.warning),
               const SizedBox(width: 6),
               Text(
                 toolName,
@@ -302,7 +303,9 @@ class TerminalMessage extends StatelessWidget {
           if (inputPreview.isNotEmpty) ...[
             const SizedBox(height: 4),
             Text(
-              inputPreview.length > 120 ? '${inputPreview.substring(0, 120)}...' : inputPreview,
+              inputPreview.length > 120
+                  ? '${inputPreview.substring(0, 120)}...'
+                  : inputPreview,
               style: SpaceNotesTextStyles.terminal.copyWith(
                 color: const Color(0xFF999999),
                 fontFamily: 'FiraCode',
@@ -315,24 +318,30 @@ class TerminalMessage extends StatelessWidget {
             Text(
               responded == 'allow' ? '✓ Allowed' : '✗ Denied',
               style: SpaceNotesTextStyles.terminal.copyWith(
-                color: responded == 'allow' ? const Color(0xFF4CAF50) : SpaceNotesTheme.error,
+                color: responded == 'allow'
+                    ? const Color(0xFF4CAF50)
+                    : SpaceNotesTheme.error,
                 fontWeight: FontWeight.w600,
               ),
             )
           else
             Row(
               children: [
-                Builder(builder: (ctx) => _PermissionButton(
-                  label: 'Allow',
-                  color: const Color(0xFF4CAF50),
-                  onTap: () => _respondToPermission(ctx, requestId, PermissionResponse.once),
-                )),
+                Builder(
+                    builder: (ctx) => _PermissionButton(
+                          label: 'Allow',
+                          color: const Color(0xFF4CAF50),
+                          onTap: () => _respondToPermission(
+                              ctx, requestId, PermissionResponse.once),
+                        )),
                 const SizedBox(width: 12),
-                Builder(builder: (ctx) => _PermissionButton(
-                  label: 'Deny',
-                  color: SpaceNotesTheme.error,
-                  onTap: () => _respondToPermission(ctx, requestId, PermissionResponse.reject),
-                )),
+                Builder(
+                    builder: (ctx) => _PermissionButton(
+                          label: 'Deny',
+                          color: SpaceNotesTheme.error,
+                          onTap: () => _respondToPermission(
+                              ctx, requestId, PermissionResponse.reject),
+                        )),
               ],
             ),
         ],
@@ -352,17 +361,20 @@ class TerminalMessage extends StatelessWidget {
       if (content.isEmpty) return const SizedBox.shrink();
     }
     final isLastPart = message.parts.last == part;
-    final shouldStream = isStreaming && isLastPart && message.role == 'assistant';
-    final contentColor = (message.sourceType == 'session' || message.sourceType == 'webhook')
-        ? const Color(0xFF999999)
-        : SpaceNotesTheme.text;
+    final shouldStream =
+        isStreaming && isLastPart && message.role == 'assistant';
+    final contentColor =
+        (message.sourceType == 'session' || message.sourceType == 'webhook')
+            ? const Color(0xFF999999)
+            : SpaceNotesTheme.text;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 4),
       child: shouldStream
           ? StreamingText(
               text: _safeTextSanitize(content, preserveMarkdown: true),
-              style: SpaceNotesTextStyles.terminal.copyWith(color: contentColor),
+              style:
+                  SpaceNotesTextStyles.terminal.copyWith(color: contentColor),
               isStreaming: true,
               useMarkdown: true,
             )
@@ -418,11 +430,15 @@ class TerminalMessage extends StatelessWidget {
     if (statusValue is String) {
       state = statusValue;
     } else if (statusValue is Map) {
-      state = (statusValue['status'] ?? statusValue['state'] ?? 'pending')?.toString() ?? 'pending';
+      state = (statusValue['status'] ?? statusValue['state'] ?? 'pending')
+              ?.toString() ??
+          'pending';
     } else if (stateValue is String) {
       state = stateValue;
     } else if (stateValue is Map) {
-      state = (stateValue['status'] ?? stateValue['state'] ?? 'pending')?.toString() ?? 'pending';
+      state = (stateValue['status'] ?? stateValue['state'] ?? 'pending')
+              ?.toString() ??
+          'pending';
     }
 
     String? error;
@@ -439,8 +455,8 @@ class TerminalMessage extends StatelessWidget {
       print('🔴 [ToolError] state=$state metadata=${part.metadata}');
     }
 
-    final output = part.metadata?['output'] ??
-                   part.metadata?['result']?['content'];
+    final output =
+        part.metadata?['output'] ?? part.metadata?['result']?['content'];
 
     String? commandDetails;
 
@@ -448,8 +464,7 @@ class TerminalMessage extends StatelessWidget {
 
     if (part.metadata?['input'] is Map) {
       input = part.metadata!['input'];
-    }
-    else if (stateValue is Map && stateValue['input'] is Map) {
+    } else if (stateValue is Map && stateValue['input'] is Map) {
       input = stateValue['input'];
     }
 
@@ -468,7 +483,8 @@ class TerminalMessage extends StatelessWidget {
         commandDetails = input['id'] ?? '';
       } else if (input['old_string'] != null) {
         final old = input['old_string'] ?? '';
-        commandDetails = '"${old.length > 40 ? '${old.substring(0, 40)}...' : old}"';
+        commandDetails =
+            '"${old.length > 40 ? '${old.substring(0, 40)}...' : old}"';
       } else {
         final keys = input.keys.where((k) => k != 'type').toList();
         if (keys.length == 1) {
@@ -518,20 +534,26 @@ class TerminalMessage extends StatelessWidget {
                   text: TextSpan(
                     children: [
                       TextSpan(
-                        text: _safeTextSanitize(toolName, preserveMarkdown: false),
+                        text: _safeTextSanitize(toolName,
+                            preserveMarkdown: false),
                         style: SpaceNotesTextStyles.terminal.copyWith(
                           color: color,
                           fontSize: 12,
-                          fontWeight: state == 'running' ? FontWeight.w600 : FontWeight.w400,
+                          fontWeight: state == 'running'
+                              ? FontWeight.w600
+                              : FontWeight.w400,
                         ),
                       ),
-                      if (commandDetails != null && commandDetails.isNotEmpty) ...[
+                      if (commandDetails != null &&
+                          commandDetails.isNotEmpty) ...[
                         TextSpan(
                           text: ' ',
-                          style: SpaceNotesTextStyles.terminal.copyWith(fontSize: 12),
+                          style: SpaceNotesTextStyles.terminal
+                              .copyWith(fontSize: 12),
                         ),
                         TextSpan(
-                          text: _safeTextSanitize(commandDetails, preserveMarkdown: false),
+                          text: _safeTextSanitize(commandDetails,
+                              preserveMarkdown: false),
                           style: SpaceNotesTextStyles.terminal.copyWith(
                             color: SpaceNotesTheme.text,
                             fontSize: 11,
@@ -571,7 +593,9 @@ class TerminalMessage extends StatelessWidget {
               ),
             ),
           ],
-          if ((state == 'completed' || state == 'error') && output != null && output.isNotEmpty) ...[
+          if ((state == 'completed' || state == 'error') &&
+              output != null &&
+              output.isNotEmpty) ...[
             const SizedBox(height: 2),
             Padding(
               padding: const EdgeInsets.only(left: 20),
@@ -709,7 +733,8 @@ class TerminalMessage extends StatelessWidget {
               style: SpaceNotesTextStyles.terminal.copyWith(
                 color: color,
                 fontSize: 12,
-                fontWeight: status == 'active' ? FontWeight.w600 : FontWeight.w400,
+                fontWeight:
+                    status == 'active' ? FontWeight.w600 : FontWeight.w400,
               ),
             ),
           ),
@@ -764,7 +789,8 @@ class TerminalMessage extends StatelessWidget {
   }
 
   Widget _buildStatusIcons(BuildContext context) {
-    final content = message.parts.isNotEmpty ? message.parts.first.content : null;
+    final content =
+        message.parts.isNotEmpty ? message.parts.first.content : null;
 
     if (content == null) return const SizedBox.shrink();
 
@@ -857,16 +883,18 @@ class TerminalMessage extends StatelessWidget {
     try {
       return TextSanitizer.sanitize(text, preserveMarkdown: preserveMarkdown);
     } catch (e) {
-      print('⚠️ [TerminalMessage] Text sanitization failed, using ASCII fallback: $e');
+      print(
+          '⚠️ [TerminalMessage] Text sanitization failed, using ASCII fallback: $e');
       return TextSanitizer.sanitizeToAscii(text);
     }
   }
 
-  void _respondToPermission(BuildContext context, String requestId, PermissionResponse response) {
+  void _respondToPermission(
+      BuildContext context, String requestId, PermissionResponse response) {
     context.read<ChatBloc>().add(RespondToPermission(
-      permissionId: message.id,
-      response: response,
-    ));
+          permissionId: message.id,
+          response: response,
+        ));
   }
 }
 
@@ -875,7 +903,8 @@ class _PermissionButton extends StatelessWidget {
   final Color color;
   final VoidCallback onTap;
 
-  const _PermissionButton({required this.label, required this.color, required this.onTap});
+  const _PermissionButton(
+      {required this.label, required this.color, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -907,7 +936,8 @@ class _BlinkingCursor extends StatefulWidget {
   State<_BlinkingCursor> createState() => _BlinkingCursorState();
 }
 
-class _BlinkingCursorState extends State<_BlinkingCursor> with SingleTickerProviderStateMixin {
+class _BlinkingCursorState extends State<_BlinkingCursor>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _animation;
 

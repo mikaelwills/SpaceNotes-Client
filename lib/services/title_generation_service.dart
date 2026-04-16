@@ -1,6 +1,7 @@
 import 'dart:async';
 import '../models/space_event.dart';
-import '../repositories/spacetimedb_notes_repository.dart' show SpacetimeDbNotesRepository;
+import '../repositories/spacetimedb_notes_repository.dart'
+    show SpacetimeDbNotesRepository;
 import 'space_client.dart';
 import 'sse_service.dart';
 import 'debug_logger.dart';
@@ -46,7 +47,8 @@ class TitleGenerationService {
     final fileName = path.split('/').last.replaceAll('.md', '');
     if (!fileName.toLowerCase().startsWith('untitled')) return;
     if (content.length < 10) return;
-    if (_completedNotes.contains(noteId) || _pendingNotes.containsKey(noteId)) return;
+    if (_completedNotes.contains(noteId) || _pendingNotes.containsKey(noteId))
+      return;
 
     _noteContents[noteId] = content;
     _notePaths[noteId] = path;
@@ -59,7 +61,8 @@ class TitleGenerationService {
   }
 
   void triggerImmediate(String noteId, {String? content, String? path}) {
-    if (_completedNotes.contains(noteId) || _pendingNotes.containsKey(noteId)) return;
+    if (_completedNotes.contains(noteId) || _pendingNotes.containsKey(noteId))
+      return;
 
     if (content != null && path != null) {
       _noteContents[noteId] = content;
@@ -88,7 +91,8 @@ class TitleGenerationService {
     required String currentPath,
   }) async {
     if (content.length < 10) return;
-    if (_pendingNotes.containsKey(noteId) || _completedNotes.contains(noteId)) return;
+    if (_pendingNotes.containsKey(noteId) || _completedNotes.contains(noteId))
+      return;
     if (_repo == null) return;
 
     final fileName = currentPath.split('/').last.replaceAll('.md', '');
@@ -107,9 +111,9 @@ class TitleGenerationService {
         currentPath: currentPath,
       );
 
-      final truncatedContent = content.length > 500 ? content.substring(0, 500) : content;
-      final prompt =
-          'Generate a short, descriptive filename for this note. '
+      final truncatedContent =
+          content.length > 500 ? content.substring(0, 500) : content;
+      final prompt = 'Generate a short, descriptive filename for this note. '
           'Reply with ONLY the filename, no extension, no quotes, no explanation. '
           'Max 60 characters.\n\n'
           '---\n$truncatedContent';
@@ -117,7 +121,8 @@ class TitleGenerationService {
       await _spaceClient.sendMessageAsync(
         _titleSessionId!,
         prompt,
-        system: 'You are a filename generator. Reply with ONLY a short descriptive filename. '
+        system:
+            'You are a filename generator. Reply with ONLY a short descriptive filename. '
             'No file extension, no quotes, no explanation, no markdown. Just the filename text.',
       );
 
@@ -201,7 +206,9 @@ class TitleGenerationService {
   void _handleSessionIdle() {
     _timeoutTimer?.cancel();
 
-    if (_accumulatedText.isEmpty || _pendingNotes.isEmpty || !_seenAssistantMessage) {
+    if (_accumulatedText.isEmpty ||
+        _pendingNotes.isEmpty ||
+        !_seenAssistantMessage) {
       _resetState();
       _pendingNotes.clear();
       return;

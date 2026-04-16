@@ -5,7 +5,7 @@ import '../services/performance_tracker.dart';
 
 class PerformanceMonitor extends StatefulWidget {
   final bool showInProduction;
-  
+
   const PerformanceMonitor({
     super.key,
     this.showInProduction = false,
@@ -80,20 +80,30 @@ class _PerformanceMonitorState extends State<PerformanceMonitor> {
             ],
           ),
           const SizedBox(height: 8),
-          _buildMetricRow('Avg Latency', '${_lastReport.averageLatencyMs.toStringAsFixed(1)}ms', 
-                         _getLatencyColor(_lastReport.averageLatencyMs)),
-          _buildMetricRow('P95 Latency', '${_lastReport.p95LatencyMs.toStringAsFixed(1)}ms', 
-                         _getLatencyColor(_lastReport.p95LatencyMs)),
-          _buildMetricRow('Max Latency', '${_lastReport.maxLatencyMs.toStringAsFixed(1)}ms', 
-                         _getLatencyColor(_lastReport.maxLatencyMs)),
-          _buildMetricRow('Updates/sec', _lastReport.averageUpdateFrequency.toStringAsFixed(1), 
-                         _getFrequencyColor(_lastReport.averageUpdateFrequency)),
+          _buildMetricRow(
+              'Avg Latency',
+              '${_lastReport.averageLatencyMs.toStringAsFixed(1)}ms',
+              _getLatencyColor(_lastReport.averageLatencyMs)),
+          _buildMetricRow(
+              'P95 Latency',
+              '${_lastReport.p95LatencyMs.toStringAsFixed(1)}ms',
+              _getLatencyColor(_lastReport.p95LatencyMs)),
+          _buildMetricRow(
+              'Max Latency',
+              '${_lastReport.maxLatencyMs.toStringAsFixed(1)}ms',
+              _getLatencyColor(_lastReport.maxLatencyMs)),
+          _buildMetricRow(
+              'Updates/sec',
+              _lastReport.averageUpdateFrequency.toStringAsFixed(1),
+              _getFrequencyColor(_lastReport.averageUpdateFrequency)),
           const SizedBox(height: 8),
           Row(
             children: [
-              _buildStatusIndicator('Target: <5ms', _lastReport.averageLatencyMs < 5),
+              _buildStatusIndicator(
+                  'Target: <5ms', _lastReport.averageLatencyMs < 5),
               const SizedBox(width: 16),
-              _buildStatusIndicator('60fps', _lastReport.averageUpdateFrequency <= 60),
+              _buildStatusIndicator(
+                  '60fps', _lastReport.averageUpdateFrequency <= 60),
             ],
           ),
         ],

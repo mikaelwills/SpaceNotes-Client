@@ -21,7 +21,8 @@ class Session extends Equatable {
 
   factory Session.fromJson(Map<String, dynamic> json) {
     final timeMap = json['time'] ?? {};
-    final created = DateTime.fromMillisecondsSinceEpoch(timeMap['created'] ?? 0);
+    final created =
+        DateTime.fromMillisecondsSinceEpoch(timeMap['created'] ?? 0);
     final updated = timeMap['updated'] != null
         ? DateTime.fromMillisecondsSinceEpoch(timeMap['updated'] ?? 0)
         : created;
@@ -29,21 +30,21 @@ class Session extends Equatable {
     String description = json['description'] ?? '';
     if (description.isEmpty && json['title'] != null) {
       String title = json['title'] ?? '';
-      
+
       // Clean up generic titles but keep meaningful ones
       if (title.startsWith('New Session -') ||
           (title.startsWith('Session ') && title.length < 50) ||
           title == 'Starting a new conversation' ||
           title == 'Starting new conversation' ||
-          (title.length < 10 && 
-           (title.toLowerCase().contains('session') || 
-            title.toLowerCase().contains('chat')))) {
+          (title.length < 10 &&
+              (title.toLowerCase().contains('session') ||
+                  title.toLowerCase().contains('chat')))) {
         description = ''; // Keep empty for generic sessions
       } else {
         description = title;
       }
     }
-    
+
     return Session(
       id: json['id'] ?? '',
       created: created,
@@ -94,6 +95,13 @@ class Session extends Equatable {
   }
 
   @override
-  List<Object?> get props => [id, created, lastActivity, isActive, description, lastUpdated, isLoadingSummary];
+  List<Object?> get props => [
+        id,
+        created,
+        lastActivity,
+        isActive,
+        description,
+        lastUpdated,
+        isLoadingSummary
+      ];
 }
-

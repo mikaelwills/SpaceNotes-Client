@@ -61,7 +61,11 @@ class VideoStats {
   int _lastArrivalMs = 0;
   final arrivalToDisplayMs = RollingBuffer(60);
 
-  void recordCapture({required int totalMs, int? yuvMs, int? encodeMs, required int sizeBytes}) {
+  void recordCapture(
+      {required int totalMs,
+      int? yuvMs,
+      int? encodeMs,
+      required int sizeBytes}) {
     captureMs.add(totalMs.toDouble());
     if (yuvMs != null) yuvToRgbMs.add(yuvMs.toDouble());
     if (encodeMs != null) jpegEncodeMs.add(encodeMs.toDouble());

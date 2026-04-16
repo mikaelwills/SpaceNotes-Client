@@ -50,7 +50,7 @@ class _TerminalButtonState extends State<TerminalButton>
       duration: const Duration(milliseconds: 1000),
       vsync: this,
     );
-    
+
     _glowAnimation = Tween<double>(
       begin: 0.3,
       end: 1.0,
@@ -104,8 +104,8 @@ class _TerminalButtonState extends State<TerminalButton>
               borderRadius: BorderRadius.circular(4),
               boxShadow: [
                 BoxShadow(
-                  color: _borderColor.withValues(alpha:
-                    _isHovered ? _glowAnimation.value * 0.3 : 0.1,
+                  color: _borderColor.withValues(
+                    alpha: _isHovered ? _glowAnimation.value * 0.3 : 0.1,
                   ),
                   blurRadius: _isHovered ? 8 : 4,
                   spreadRadius: _isHovered ? 1 : 0,
@@ -129,7 +129,6 @@ class _TerminalButtonState extends State<TerminalButton>
                         _buildSpinner(),
                         const SizedBox(width: 8),
                       ],
-                      
                       Text(
                         _displayText,
                         style: TextStyle(

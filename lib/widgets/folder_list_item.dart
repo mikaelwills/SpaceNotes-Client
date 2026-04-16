@@ -4,8 +4,8 @@ import 'package:flutter/services.dart';
 import '../theme/spacenotes_theme.dart';
 import '../generated/folder.dart';
 
-class _LeftOnlyHorizontalDragGestureRecognizer extends HorizontalDragGestureRecognizer {
-
+class _LeftOnlyHorizontalDragGestureRecognizer
+    extends HorizontalDragGestureRecognizer {
   @override
   bool isFlingGesture(VelocityEstimate estimate, PointerDeviceKind kind) {
     final minVelocity = minFlingVelocity ?? kMinFlingVelocity;
@@ -13,7 +13,8 @@ class _LeftOnlyHorizontalDragGestureRecognizer extends HorizontalDragGestureReco
   }
 
   @override
-  bool hasSufficientGlobalDistanceToAccept(PointerDeviceKind pointerDeviceKind, double? deviceTouchSlop) {
+  bool hasSufficientGlobalDistanceToAccept(
+      PointerDeviceKind pointerDeviceKind, double? deviceTouchSlop) {
     return globalDistanceMoved < -kTouchSlop;
   }
 }
@@ -40,7 +41,8 @@ class FolderListItem extends StatefulWidget {
   State<FolderListItem> createState() => _FolderListItemState();
 }
 
-class _FolderListItemState extends State<FolderListItem> with SingleTickerProviderStateMixin {
+class _FolderListItemState extends State<FolderListItem>
+    with SingleTickerProviderStateMixin {
   double _swipeOffset = 0;
   late AnimationController _animationController;
   late Animation<double> _animation;
@@ -116,7 +118,9 @@ class _FolderListItemState extends State<FolderListItem> with SingleTickerProvid
           AnimatedBuilder(
             animation: _animationController,
             builder: (context, child) {
-              final offset = _animationController.isAnimating ? _animation.value : _swipeOffset;
+              final offset = _animationController.isAnimating
+                  ? _animation.value
+                  : _swipeOffset;
               return Transform.translate(
                 offset: Offset(offset, 0),
                 child: child,
@@ -124,13 +128,16 @@ class _FolderListItemState extends State<FolderListItem> with SingleTickerProvid
             },
             child: RawGestureDetector(
               gestures: {
-                _LeftOnlyHorizontalDragGestureRecognizer: GestureRecognizerFactoryWithHandlers<_LeftOnlyHorizontalDragGestureRecognizer>(
+                _LeftOnlyHorizontalDragGestureRecognizer:
+                    GestureRecognizerFactoryWithHandlers<
+                        _LeftOnlyHorizontalDragGestureRecognizer>(
                   () => _LeftOnlyHorizontalDragGestureRecognizer(),
                   (_LeftOnlyHorizontalDragGestureRecognizer instance) {
                     instance
                       ..onUpdate = (details) {
                         setState(() {
-                          _swipeOffset = (_swipeOffset + details.delta.dx).clamp(-_maxSwipe, 0);
+                          _swipeOffset = (_swipeOffset + details.delta.dx)
+                              .clamp(-_maxSwipe, 0);
                         });
                       }
                       ..onEnd = (details) {
@@ -151,7 +158,8 @@ class _FolderListItemState extends State<FolderListItem> with SingleTickerProvid
                   onTap: _handleTap,
                   onLongPress: _handleLongPress,
                   splashColor: SpaceNotesTheme.primary.withValues(alpha: 0.1),
-                  highlightColor: SpaceNotesTheme.primary.withValues(alpha: 0.05),
+                  highlightColor:
+                      SpaceNotesTheme.primary.withValues(alpha: 0.05),
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 200),
                     padding: const EdgeInsets.all(16),
@@ -159,7 +167,8 @@ class _FolderListItemState extends State<FolderListItem> with SingleTickerProvid
                       border: Border.all(
                         color: widget.isSelected
                             ? SpaceNotesTheme.primary
-                            : SpaceNotesTheme.textSecondary.withValues(alpha: 0.1),
+                            : SpaceNotesTheme.textSecondary
+                                .withValues(alpha: 0.1),
                         width: widget.isSelected ? 2 : 1,
                       ),
                     ),

@@ -47,7 +47,8 @@ class _ChatViewState extends ConsumerState<ChatView> {
   @override
   Widget build(BuildContext context) {
     final isDesktop = PlatformUtils.isDesktopLayout(context);
-    final showDefaultInput = widget.showInput && isDesktop && widget.customInput == null;
+    final showDefaultInput =
+        widget.showInput && isDesktop && widget.customInput == null;
 
     return BlocListener<ChatBloc, ChatState>(
       listener: (context, state) {
@@ -55,7 +56,8 @@ class _ChatViewState extends ConsumerState<ChatView> {
           FocusManager.instance.primaryFocus?.unfocus();
           _messageListKey.currentState?.forceScrollToBottom();
         } else if (state is ChatReady) {
-          _messageListKey.currentState?.onMessagesChanged(state.allMessages.length);
+          _messageListKey.currentState
+              ?.onMessagesChanged(state.allMessages.length);
         }
       },
       child: Stack(
@@ -95,7 +97,8 @@ class _ChatViewState extends ConsumerState<ChatView> {
               children: [
                 CircularProgressIndicator(color: SpaceNotesTheme.primary),
                 SizedBox(height: 16),
-                Text('Starting session...', style: SpaceNotesTextStyles.terminal),
+                Text('Starting session...',
+                    style: SpaceNotesTextStyles.terminal),
               ],
             ),
           );
@@ -106,42 +109,55 @@ class _ChatViewState extends ConsumerState<ChatView> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.error_outline, color: SpaceNotesTheme.error, size: 48),
+                const Icon(Icons.error_outline,
+                    color: SpaceNotesTheme.error, size: 48),
                 const SizedBox(height: 16),
-                Text(state.error, style: SpaceNotesTextStyles.terminal, textAlign: TextAlign.center),
+                Text(state.error,
+                    style: SpaceNotesTextStyles.terminal,
+                    textAlign: TextAlign.center),
               ],
             ),
           );
         }
 
-        final messages = state is ChatReady ? state.allMessages : <SpaceMessage>[];
-        final targetSession = state is ChatReady ? state.targetSession : 'note-assistant';
+        final messages =
+            state is ChatReady ? state.allMessages : <SpaceMessage>[];
+        final targetSession =
+            state is ChatReady ? state.targetSession : 'note-assistant';
 
         return ChatMessageList(
           key: _messageListKey,
           messages: messages,
-          padding: widget.messagePadding ?? const EdgeInsets.fromLTRB(4, 8, 4, 120),
+          padding:
+              widget.messagePadding ?? const EdgeInsets.fromLTRB(4, 8, 4, 120),
           emptyText: 'Ask me anything...',
           scrollController: widget.scrollController,
           itemBuilder: (message, index) {
             final session = message.session;
-            final isOtherSession = session != null && session.isNotEmpty && session != 'note-assistant';
+            final isOtherSession = session != null &&
+                session.isNotEmpty &&
+                session != 'note-assistant';
 
             if (isOtherSession && message.role == 'assistant') {
               return TerminalMessage(
                 message: message,
                 isPreview: true,
-                onTap: () => context.push('/notes/sessions/${Uri.encodeComponent(session)}'),
+                onTap: () => context
+                    .push('/notes/sessions/${Uri.encodeComponent(session)}'),
               );
             }
 
             return TerminalMessage(
               message: message,
-              isTargeted: session != null && session == targetSession && targetSession != 'note-assistant',
-              onTap: (session != null && session.isNotEmpty && message.role == 'assistant')
+              isTargeted: session != null &&
+                  session == targetSession &&
+                  targetSession != 'note-assistant',
+              onTap: (session != null &&
+                      session.isNotEmpty &&
+                      message.role == 'assistant')
                   ? () => context.read<ChatBloc>().add(SetTargetSession(
-                      session == targetSession ? 'note-assistant' : session,
-                    ))
+                        session == targetSession ? 'note-assistant' : session,
+                      ))
                   : null,
             );
           },

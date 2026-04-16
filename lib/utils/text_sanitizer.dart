@@ -1,5 +1,6 @@
 class TextSanitizer {
-  static final RegExp _plainTextControlCharsRegex = RegExp(r'[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]');
+  static final RegExp _plainTextControlCharsRegex =
+      RegExp(r'[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]');
 
   // Cache for sanitized strings to avoid re-processing
   static final Map<String, String> _cache = {};
@@ -67,7 +68,7 @@ class TextSanitizer {
   /// Caches result with size management
   static void _cacheResult(String key, String value) {
     _cache[key] = value;
-    
+
     // Prevent cache from growing too large
     if (_cache.length > _maxCacheSize) {
       final keys = _cache.keys.toList();
@@ -75,9 +76,11 @@ class TextSanitizer {
     }
   }
 
-  static String sanitizeForStreaming(String fullText, int currentIndex, {bool preserveMarkdown = true}) {
+  static String sanitizeForStreaming(String fullText, int currentIndex,
+      {bool preserveMarkdown = true}) {
     if (fullText.isEmpty || currentIndex <= 0) return '';
-    if (currentIndex >= fullText.length) return sanitize(fullText, preserveMarkdown: preserveMarkdown);
+    if (currentIndex >= fullText.length)
+      return sanitize(fullText, preserveMarkdown: preserveMarkdown);
 
     try {
       final codeUnits = fullText.codeUnits;
@@ -85,7 +88,8 @@ class TextSanitizer {
       if (safeIndex > 0 && _isHighSurrogate(codeUnits[safeIndex - 1])) {
         return String.fromCharCodes(codeUnits.sublist(0, safeIndex));
       }
-      return sanitize(String.fromCharCodes(codeUnits.sublist(0, safeIndex)), preserveMarkdown: preserveMarkdown);
+      return sanitize(String.fromCharCodes(codeUnits.sublist(0, safeIndex)),
+          preserveMarkdown: preserveMarkdown);
     } catch (e) {
       return _sanitizeCodeUnits(fullText);
     }

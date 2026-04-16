@@ -33,7 +33,8 @@ class _SessionChatScreenState extends State<SessionChatScreen> {
                 prevInfo?.recentToolEvents != currInfo?.recentToolEvents;
           },
           builder: (context, state) {
-            final info = state is ChatReady ? state.sessions[widget.sessionId] : null;
+            final info =
+                state is ChatReady ? state.sessions[widget.sessionId] : null;
             final projectName = widget.sessionId;
             return _buildHeader(projectName, info);
           },
@@ -71,7 +72,8 @@ class _SessionChatScreenState extends State<SessionChatScreen> {
   }
 
   Widget _buildHeader(String projectName, SessionInfo? sessionInfo) {
-    final activityState = sessionInfo?.activityState ?? SessionActivityState.idle;
+    final activityState =
+        sessionInfo?.activityState ?? SessionActivityState.idle;
     final isActive = activityState != SessionActivityState.idle;
     final latestTool = sessionInfo?.recentToolEvents.isNotEmpty == true
         ? sessionInfo!.recentToolEvents.last
@@ -87,7 +89,12 @@ class _SessionChatScreenState extends State<SessionChatScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  projectName.split(' ').map((w) => w.isEmpty ? w : '${w[0].toUpperCase()}${w.substring(1)}').join(' '),
+                  projectName
+                      .split(' ')
+                      .map((w) => w.isEmpty
+                          ? w
+                          : '${w[0].toUpperCase()}${w.substring(1)}')
+                      .join(' '),
                   style: const TextStyle(
                     fontFamily: 'FiraCode',
                     fontSize: 14,
@@ -96,7 +103,9 @@ class _SessionChatScreenState extends State<SessionChatScreen> {
                   ),
                 ),
                 ToolStatusRow(
-                  toolEvent: activityState == SessionActivityState.toolUse ? latestTool : null,
+                  toolEvent: activityState == SessionActivityState.toolUse
+                      ? latestTool
+                      : null,
                   isThinking: isThinking,
                 ),
               ],
@@ -107,7 +116,9 @@ class _SessionChatScreenState extends State<SessionChatScreen> {
             height: 8,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: isActive ? SpaceNotesTheme.primary : SpaceNotesTheme.secondary,
+              color: isActive
+                  ? SpaceNotesTheme.primary
+                  : SpaceNotesTheme.secondary,
             ),
           ),
         ],

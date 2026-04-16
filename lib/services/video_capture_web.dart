@@ -5,7 +5,8 @@ import 'package:web/web.dart' as web;
 import 'video_capture.dart';
 
 @JS('SpaceNotesCodecs.startEncoder')
-external void _jsStartEncoder(int width, int height, int fps, int keyframeInterval, JSFunction onFrame);
+external void _jsStartEncoder(
+    int width, int height, int fps, int keyframeInterval, JSFunction onFrame);
 
 @JS('SpaceNotesCodecs.stopEncoder')
 external void _jsStopEncoder();
@@ -26,7 +27,12 @@ class WebVideoCaptureService implements VideoCaptureService {
   bool get isCapturing => _isCapturing;
 
   @override
-  Future<void> start({int fps = 10, int width = 320, int height = 240, String codec = 'jpeg', FrameTimingCallback? onFrameTiming}) async {
+  Future<void> start(
+      {int fps = 10,
+      int width = 320,
+      int height = 240,
+      String codec = 'jpeg',
+      FrameTimingCallback? onFrameTiming}) async {
     _onFrameTiming = onFrameTiming;
     _codecMode = codec;
     _isCapturing = true;
@@ -43,7 +49,8 @@ class WebVideoCaptureService implements VideoCaptureService {
       if (!_isCapturing) return;
       final data = jsData.toDart;
       _onFrameTiming?.call(totalMs: 0, sizeBytes: data.length);
-      _frameController.add(CapturedFrame(data: Uint8List.fromList(data), codec: 1, isKeyframe: isKeyframe));
+      _frameController.add(CapturedFrame(
+          data: Uint8List.fromList(data), codec: 1, isKeyframe: isKeyframe));
     }).toJS;
 
     _jsStartEncoder(width, height, fps, fps, onFrame);
@@ -62,7 +69,9 @@ class WebVideoCaptureService implements VideoCaptureService {
       }.jsify()!,
     );
 
-    final stream = await web.window.navigator.mediaDevices.getUserMedia(constraints).toDart;
+    final stream = await web.window.navigator.mediaDevices
+        .getUserMedia(constraints)
+        .toDart;
     _video!.srcObject = stream;
     await _video!.play().toDart;
 
@@ -98,7 +107,8 @@ class WebVideoCaptureService implements VideoCaptureService {
     final totalMs = sw.elapsedMilliseconds;
     _onFrameTiming?.call(totalMs: totalMs, sizeBytes: bytes.length);
 
-    _frameController.add(CapturedFrame(data: bytes, codec: 0, isKeyframe: true));
+    _frameController
+        .add(CapturedFrame(data: bytes, codec: 0, isKeyframe: true));
   }
 
   @override
