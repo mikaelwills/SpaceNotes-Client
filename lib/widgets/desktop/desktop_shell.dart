@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:collection/collection.dart';
 
 import '../../providers/notes_providers.dart';
 import '../../theme/spacenotes_theme.dart';
@@ -130,8 +129,7 @@ class _DesktopTopBar extends ConsumerWidget {
   String _getBreadcrumb(String location, WidgetRef ref) {
     if (location.startsWith('/notes/note/')) {
       final noteId = location.substring('/notes/note/'.length);
-      final note =
-          ref.watch(notesListProvider).firstWhereOrNull((n) => n.id == noteId);
+      final note = ref.watch(noteByIdProvider(noteId));
       if (note != null) {
         return '/${note.path}';
       }

@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:collection/collection.dart';
 import 'package:spacetimedb_sdk/spacetimedb_sdk.dart';
 import '../generated/client.dart';
 import '../generated/note.dart';
@@ -40,7 +39,8 @@ class _NoteScreenState extends ConsumerState<NoteScreen> {
 
   Timer? _debounceTimer;
   SpacetimeDbClient? _listenedClient;
-  VoidCallback? _batchListener;
+  StreamSubscription<TableUpdateEvent<Note>>? _contentSubscription;
+  StreamSubscription<TableUpdateEvent<Note>>? _pathSubscription;
 
   @override
   void initState() {
@@ -75,16 +75,14 @@ class _NoteScreenState extends ConsumerState<NoteScreen> {
         path: _currentPath,
       );
     }
-    _detachBatchListener();
+    _detachSubscriptions();
     _repo.clientNotifier.removeListener(_onClientChanged);
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final note = ref
-        .watch(notesListProvider)
-        .firstWhereOrNull((n) => n.id == widget.noteId);
+    final note = ref.watch(noteByIdProvider(widget.noteId));
 
     if (note != null && note.path != _currentPath) {
       _currentPath = note.path;
@@ -252,9 +250,7 @@ class _NoteScreenState extends ConsumerState<NoteScreen> {
   void _initNote() {
     _debounceTimer?.cancel();
 
-    final note = ref
-        .read(notesListProvider)
-        .firstWhereOrNull((n) => n.id == widget.noteId);
+    final note = ref.read(noteByIdProvider(widget.noteId));
 
     if (note != null) {
       _currentPath = note.path;
@@ -281,7 +277,7 @@ class _NoteScreenState extends ConsumerState<NoteScreen> {
 
   void _onClientChanged() {
     if (!mounted) return;
-    debugLogger.debug('NOTE', 'Client changed, rewiring batch listener');
+    debugLogger.debug('NOTE', 'Client changed, rewiring subscriptions');
     _attachToCurrentClient();
   }
 
@@ -289,46 +285,26 @@ class _NoteScreenState extends ConsumerState<NoteScreen> {
     final client = _repo.client;
     if (identical(client, _listenedClient)) return;
 
-    _detachBatchListener();
+    _detachSubscriptions();
     _listenedClient = client;
 
     if (client == null) return;
 
-    final notifier = client.note.lastBatch;
-    void listener() {
-      final batch = notifier.value;
-      if (batch == null) return;
-      _handleNoteBatch(batch);
-    }
+    _pathSubscription = client.note.onUpdate.listen((event) {
+      if (event.newRow.id != widget.noteId) return;
+      if (event.newRow.path == _currentPath) return;
+      _currentPath = event.newRow.path;
+      ref.read(currentNotePathProvider.notifier).state = _currentPath;
+    });
 
-    notifier.addListener(listener);
-    _batchListener = listener;
-  }
-
-  void _detachBatchListener() {
-    final client = _listenedClient;
-    final listener = _batchListener;
-    if (client != null && listener != null) {
-      client.note.lastBatch.removeListener(listener);
-    }
-    _batchListener = null;
-    _listenedClient = null;
-  }
-
-  void _handleNoteBatch(TransactionBatch<Note> batch) {
-    for (final event in batch.updates) {
-      if (event.newRow.id != widget.noteId) continue;
+    _contentSubscription = client.note.onUpdate.listen((event) {
+      if (event.newRow.id != widget.noteId) return;
 
       debugLogger.info(
         'SYNC_DEBUG',
         'NoteScreen update',
         'isMyTransaction=${event.context.isMyTransaction}, isOptimistic=${event.context.isOptimistic}, contentChanged=${event.newRow.content != _currentContent}, name=${event.newRow.name}',
       );
-
-      if (event.newRow.path != _currentPath) {
-        _currentPath = event.newRow.path;
-        ref.read(currentNotePathProvider.notifier).state = _currentPath;
-      }
 
       if (event.context.isMyTransaction) {
         debugLogger.info('SYNC_DEBUG', 'Dropped as local echo');
@@ -346,8 +322,15 @@ class _NoteScreenState extends ConsumerState<NoteScreen> {
       } else {
         debugLogger.info('SYNC_DEBUG', 'Content identical, skipping');
       }
-      return;
-    }
+    });
+  }
+
+  void _detachSubscriptions() {
+    _contentSubscription?.cancel();
+    _contentSubscription = null;
+    _pathSubscription?.cancel();
+    _pathSubscription = null;
+    _listenedClient = null;
   }
 
   Future<void> _saveAndExit() async {

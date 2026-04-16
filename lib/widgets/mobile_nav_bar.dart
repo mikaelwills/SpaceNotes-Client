@@ -76,9 +76,7 @@ class MobileNavBar extends ConsumerWidget {
           if (isOnNote) ...[
             Builder(builder: (context) {
               final noteId = _extractNoteIdFromLocation(currentLocation);
-              final note = ref
-                  .watch(notesListProvider)
-                  .firstWhereOrNull((n) => n.id == noteId);
+              final note = ref.watch(noteByIdProvider(noteId));
               final notePath = note?.path ?? '';
               return GestureDetector(
                 onTap: () => _navigateBackFromNote(context, notePath),
@@ -90,9 +88,7 @@ class MobileNavBar extends ConsumerWidget {
             Expanded(
               child: Builder(builder: (context) {
                 final noteId = _extractNoteIdFromLocation(currentLocation);
-                final note = ref
-                    .watch(notesListProvider)
-                    .firstWhereOrNull((n) => n.id == noteId);
+                final note = ref.watch(noteByIdProvider(noteId));
                 final notePath = note?.path ?? '';
                 final noteName = notePath.split('/').last.replaceAll('.md', '');
                 return _EditableNoteName(
