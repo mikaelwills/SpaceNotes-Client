@@ -5,10 +5,10 @@ import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart' show kIsWeb, ValueNotifier;
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:spacetimedb_dart_sdk/spacetimedb_dart_sdk.dart' as stdb;
+import 'package:spacetimedb_sdk/spacetimedb_sdk.dart' as stdb;
 import '../services/debug_logger.dart';
 import '../services/title_generation_service.dart';
-import 'package:spacetimedb_dart_sdk/spacetimedb_dart_sdk.dart'
+import 'package:spacetimedb_sdk/spacetimedb_sdk.dart'
     show
         ConnectionConfig,
         Int64,
@@ -17,6 +17,7 @@ import 'package:spacetimedb_dart_sdk/spacetimedb_dart_sdk.dart'
         InMemoryOfflineStorage,
         SyncState,
         OptimisticChange,
+        SpacetimeDbException,
         SpacetimeDbAuthException;
 import 'package:uuid/uuid.dart';
 import '../generated/client.dart';
@@ -237,7 +238,7 @@ class SpacetimeDbNotesRepository {
       if (isConnected) {
         await ensureGeneralNotesFolder();
       }
-    } catch (e) {
+    } on SpacetimeDbException catch (e) {
       debugLogger.error(
           'CONN', 'Error connecting to SpacetimeDB', e.toString());
       rethrow;
@@ -338,7 +339,7 @@ class SpacetimeDbNotesRepository {
       final note = noteTable.find(id);
 
       return note;
-    } catch (e) {
+    } on SpacetimeDbException catch (e) {
       debugLogger.error('REPO', 'Error loading note: $e');
       return null;
     }
@@ -456,7 +457,7 @@ class SpacetimeDbNotesRepository {
       _titleService?.onNoteSaved(id, content, oldNote.path);
 
       return true;
-    } catch (e) {
+    } on SpacetimeDbException catch (e) {
       debugLogger.error('SAVE', 'Error updating note content: $e');
       return false;
     }
@@ -488,7 +489,7 @@ class SpacetimeDbNotesRepository {
 
       debugLogger.save('Note deleted: $id');
       return true;
-    } catch (e) {
+    } on SpacetimeDbException catch (e) {
       debugLogger.error('SAVE', 'Error deleting note: $e');
       return false;
     }
@@ -538,7 +539,7 @@ class SpacetimeDbNotesRepository {
       );
 
       return true;
-    } catch (e) {
+    } on SpacetimeDbException catch (e) {
       debugLogger.error('SAVE', 'Error renaming note: $e');
       return false;
     }
@@ -585,7 +586,7 @@ class SpacetimeDbNotesRepository {
       }
 
       _generalNotesFolderEnsured = true;
-    } catch (e) {
+    } on SpacetimeDbException catch (e) {
       debugLogger.error('FOLDER', 'Error ensuring All Notes folder: $e');
     }
   }
@@ -626,7 +627,7 @@ class SpacetimeDbNotesRepository {
 
       debugLogger.info('FOLDER', 'Created folder: $normalizedPath');
       return true;
-    } catch (e) {
+    } on SpacetimeDbException catch (e) {
       debugLogger.error('FOLDER', 'Error creating folder: $e');
       return false;
     }
@@ -651,7 +652,7 @@ class SpacetimeDbNotesRepository {
 
       debugLogger.info('FOLDER', 'Deleted folder: $normalizedPath');
       return true;
-    } catch (e) {
+    } on SpacetimeDbException catch (e) {
       debugLogger.error('FOLDER', 'Error deleting folder: $e');
       return false;
     }
@@ -684,7 +685,7 @@ class SpacetimeDbNotesRepository {
       debugLogger.info(
           'FOLDER', 'Moved folder: $normalizedOldPath -> $normalizedNewPath');
       return true;
-    } catch (e) {
+    } on SpacetimeDbException catch (e) {
       debugLogger.error('FOLDER', 'Error moving folder: $e');
       return false;
     }
@@ -708,7 +709,7 @@ class SpacetimeDbNotesRepository {
 
       debugLogger.save('Moved note: $oldPath -> $newPath');
       return true;
-    } catch (e) {
+    } on SpacetimeDbException catch (e) {
       debugLogger.error('SAVE', 'Error moving note: $e');
       return false;
     }
@@ -732,7 +733,7 @@ class SpacetimeDbNotesRepository {
       }).toList();
 
       return matchingNotes;
-    } catch (e) {
+    } on SpacetimeDbException catch (e) {
       debugLogger.error('REPO', 'Error searching notes: $e');
       return [];
     }
@@ -763,7 +764,7 @@ class SpacetimeDbNotesRepository {
       await storage.clearToken();
       await _client!.connection.reconnect();
       debugLogger.connection('Reconnected with fresh identity');
-    } catch (e) {
+    } on SpacetimeDbException catch (e) {
       debugLogger.warning('CONN', 'Reconnection failed: $e, retrying in 2s');
       Future.delayed(const Duration(seconds: 2), () {
         if (_client != null) {
@@ -803,7 +804,7 @@ class SpacetimeDbNotesRepository {
     if (_client != null) {
       try {
         _client!.disconnect();
-      } catch (e) {
+      } on SpacetimeDbException catch (e) {
         debugLogger.error('CONN', 'Error disconnecting client: $e');
       }
       _client = null;
