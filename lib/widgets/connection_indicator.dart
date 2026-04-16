@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:spacetimedb_dart_sdk/spacetimedb_dart_sdk.dart' as stdb;
+import 'package:spacetimedb_sdk/spacetimedb_sdk.dart' as stdb;
 import '../theme/spacenotes_theme.dart';
 import '../providers/notes_providers.dart';
 

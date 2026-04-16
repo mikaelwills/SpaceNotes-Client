@@ -2,7 +2,7 @@
 // ignore_for_file: avoid_print
 
 import 'dart:async';
-import 'package:spacetimedb_dart_sdk/codegen.dart';
+import 'package:spacetimedb_sdk/codegen.dart';
 import 'reducers.dart';
 import 'reducer_args.dart';
 import 'call_session.dart';

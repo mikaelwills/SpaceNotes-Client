@@ -61,7 +61,7 @@ dependencies:
   rxdart: ^0.28.0 # Reactive extensions for Dart (debouncing)
 
   # SpacetimeDB feature dependencies
-  spacetimedb_dart_sdk:
+  spacetimedb_sdk:
     path: ../../Dart/spacetimedb_dart_sdk # Local SDK path
 
   # The following adds the Cupertino Icons font to your application.
