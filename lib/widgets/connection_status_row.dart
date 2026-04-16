@@ -46,18 +46,16 @@ class _ConnectionStatusRowState extends State<ConnectionStatusRow>
     return BlocBuilder<ChatBloc, ChatState>(
       builder: (context, chatState) {
         final isConnected = chatState is ChatReady && chatState.isConnected;
-        final targetSession = chatState is ChatReady
-            ? chatState.targetSession
-            : 'note-assistant';
-        final toolEvent = chatState is ChatReady
-            ? chatState.activeToolEvent
-            : null;
+        final targetSession =
+            chatState is ChatReady ? chatState.targetSession : 'note-assistant';
+        final toolEvent =
+            chatState is ChatReady ? chatState.activeToolEvent : null;
         final isThinking = chatState is ChatReady && chatState.isThinking;
 
         final displayName = targetSession
             .split('-')
-            .map((w) =>
-                w.isEmpty ? w : '${w[0].toUpperCase()}${w.substring(1)}')
+            .map(
+                (w) => w.isEmpty ? w : '${w[0].toUpperCase()}${w.substring(1)}')
             .join(' ');
 
         return Container(
@@ -94,8 +92,7 @@ class _ConnectionStatusRowState extends State<ConnectionStatusRow>
                 ),
               ),
               GestureDetector(
-                onTap: () =>
-                    context.read<ChatBloc>().add(ClearMessages()),
+                onTap: () => context.read<ChatBloc>().add(ClearMessages()),
                 child: const Icon(
                   Icons.delete_outline,
                   size: 18,

@@ -1,4 +1,4 @@
-import 'package:spacetimedb_dart_sdk/spacetimedb_dart_sdk.dart' as stdb;
+import 'package:spacetimedb_sdk/spacetimedb_sdk.dart' as stdb;
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// SharedPreferences-based AuthTokenStore for persistent token storage

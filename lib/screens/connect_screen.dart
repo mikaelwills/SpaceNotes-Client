@@ -59,7 +59,8 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
                     color: SpaceNotesTheme.textSecondary,
                   ),
                   border: InputBorder.none,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 ),
                 onSubmitted: (_) => _connect(),
               ),

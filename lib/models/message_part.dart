@@ -15,48 +15,48 @@ class MessagePart extends Equatable {
 
   factory MessagePart.fromJson(Map<String, dynamic> json) {
     // print('🔍 [MessagePart] Parsing part: $json'); // REMOVED: Too verbose, can contain large content
-    
+
     final id = json['id'] ?? DateTime.now().millisecondsSinceEpoch.toString();
     final type = json['type'] ?? '';
     final content = json['text'] ?? json['content'];
 
     Map<String, dynamic>? metadata = json['metadata'];
-    
+
     // Add additional fields as metadata if they exist
     metadata ??= <String, dynamic>{};
-    
+
     // Add time information if present
     if (json['time'] != null) {
       metadata['time'] = json['time'];
     }
-    
+
     // Add tokens information if present
     if (json['tokens'] != null) {
       metadata['tokens'] = json['tokens'];
     }
-    
+
     // Add cost information if present
     if (json['cost'] != null) {
       metadata['cost'] = json['cost'];
     }
-    
+
     // For tool parts, preserve all tool-related fields as metadata
     if (type == 'tool') {
       // Add tool name if present
       if (json['tool'] != null) {
         metadata['tool'] = json['tool'];
       }
-      
+
       // Add call ID if present
       if (json['callID'] != null) {
         metadata['callID'] = json['callID'];
       }
-      
+
       // Add state information if present
       if (json['state'] != null) {
         metadata['state'] = json['state'];
       }
-      
+
       // Add any other tool-specific fields
       for (final field in ['name', 'status', 'input', 'output', 'args']) {
         if (json.containsKey(field) && json[field] != null) {
@@ -64,8 +64,7 @@ class MessagePart extends Equatable {
         }
       }
     }
-    
-    
+
     return MessagePart(
       id: id,
       type: type,

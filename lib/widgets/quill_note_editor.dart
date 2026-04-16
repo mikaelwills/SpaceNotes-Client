@@ -139,138 +139,138 @@ class QuillNoteEditorState extends State<QuillNoteEditor> {
       child: QuillEditor.basic(
         controller: _controller,
         focusNode: _focusNode,
-      config: QuillEditorConfig(
-        contextMenuBuilder: SpaceNotesContextMenu.buildForQuill,
-        padding: const EdgeInsets.all(16),
-        placeholder: 'Start writing...',
-        embedBuilders: [
-          _DividerEmbedBuilder(),
-        ],
-        unknownEmbedBuilder: _UnknownEmbedBuilder(),
-        customStyles: DefaultStyles(
-          paragraph: const DefaultTextBlockStyle(
-            TextStyle(
-              fontFamily: 'FiraCode',
-              fontSize: 14,
-              color: SpaceNotesTheme.text,
-              height: 1.6,
+        config: QuillEditorConfig(
+          contextMenuBuilder: SpaceNotesContextMenu.buildForQuill,
+          padding: const EdgeInsets.all(16),
+          placeholder: 'Start writing...',
+          embedBuilders: [
+            _DividerEmbedBuilder(),
+          ],
+          unknownEmbedBuilder: _UnknownEmbedBuilder(),
+          customStyles: DefaultStyles(
+            paragraph: const DefaultTextBlockStyle(
+              TextStyle(
+                fontFamily: 'FiraCode',
+                fontSize: 14,
+                color: SpaceNotesTheme.text,
+                height: 1.6,
+              ),
+              HorizontalSpacing(0, 0),
+              VerticalSpacing(0, 8),
+              VerticalSpacing(0, 0),
+              null,
             ),
-            HorizontalSpacing(0, 0),
-            VerticalSpacing(0, 8),
-            VerticalSpacing(0, 0),
-            null,
-          ),
-          h1: const DefaultTextBlockStyle(
-            TextStyle(
-              fontFamily: 'FiraCode',
-              fontSize: 28,
-              fontWeight: FontWeight.bold,
-              color: SpaceNotesTheme.text,
-              height: 1.4,
+            h1: const DefaultTextBlockStyle(
+              TextStyle(
+                fontFamily: 'FiraCode',
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
+                color: SpaceNotesTheme.text,
+                height: 1.4,
+              ),
+              HorizontalSpacing(0, 0),
+              VerticalSpacing(16, 8),
+              VerticalSpacing(0, 0),
+              null,
             ),
-            HorizontalSpacing(0, 0),
-            VerticalSpacing(16, 8),
-            VerticalSpacing(0, 0),
-            null,
-          ),
-          h2: const DefaultTextBlockStyle(
-            TextStyle(
-              fontFamily: 'FiraCode',
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-              color: SpaceNotesTheme.text,
-              height: 1.4,
+            h2: const DefaultTextBlockStyle(
+              TextStyle(
+                fontFamily: 'FiraCode',
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: SpaceNotesTheme.text,
+                height: 1.4,
+              ),
+              HorizontalSpacing(0, 0),
+              VerticalSpacing(12, 6),
+              VerticalSpacing(0, 0),
+              null,
             ),
-            HorizontalSpacing(0, 0),
-            VerticalSpacing(12, 6),
-            VerticalSpacing(0, 0),
-            null,
-          ),
-          h3: const DefaultTextBlockStyle(
-            TextStyle(
-              fontFamily: 'FiraCode',
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: SpaceNotesTheme.text,
-              height: 1.4,
+            h3: const DefaultTextBlockStyle(
+              TextStyle(
+                fontFamily: 'FiraCode',
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: SpaceNotesTheme.text,
+                height: 1.4,
+              ),
+              HorizontalSpacing(0, 0),
+              VerticalSpacing(8, 4),
+              VerticalSpacing(0, 0),
+              null,
             ),
-            HorizontalSpacing(0, 0),
-            VerticalSpacing(8, 4),
-            VerticalSpacing(0, 0),
-            null,
-          ),
-          code: DefaultTextBlockStyle(
-            const TextStyle(
-              fontFamily: 'FiraCode',
-              fontSize: 13,
-              color: SpaceNotesTheme.primary,
-              backgroundColor: SpaceNotesTheme.inputSurface,
+            code: DefaultTextBlockStyle(
+              const TextStyle(
+                fontFamily: 'FiraCode',
+                fontSize: 13,
+                color: SpaceNotesTheme.primary,
+                backgroundColor: SpaceNotesTheme.inputSurface,
+              ),
+              const HorizontalSpacing(0, 0),
+              const VerticalSpacing(8, 8),
+              const VerticalSpacing(0, 0),
+              BoxDecoration(
+                color: SpaceNotesTheme.inputSurface,
+                borderRadius: BorderRadius.circular(4),
+              ),
             ),
-            const HorizontalSpacing(0, 0),
-            const VerticalSpacing(8, 8),
-            const VerticalSpacing(0, 0),
-            BoxDecoration(
-              color: SpaceNotesTheme.inputSurface,
-              borderRadius: BorderRadius.circular(4),
-            ),
-          ),
-          quote: DefaultTextBlockStyle(
-            TextStyle(
-              fontFamily: 'FiraCode',
-              fontSize: 14,
-              color: SpaceNotesTheme.text.withValues(alpha: 0.8),
-              fontStyle: FontStyle.italic,
-            ),
-            const HorizontalSpacing(0, 0),
-            const VerticalSpacing(8, 8),
-            const VerticalSpacing(0, 0),
-            BoxDecoration(
-              border: Border(
-                left: BorderSide(
-                  color: SpaceNotesTheme.primary.withValues(alpha: 0.5),
-                  width: 3,
+            quote: DefaultTextBlockStyle(
+              TextStyle(
+                fontFamily: 'FiraCode',
+                fontSize: 14,
+                color: SpaceNotesTheme.text.withValues(alpha: 0.8),
+                fontStyle: FontStyle.italic,
+              ),
+              const HorizontalSpacing(0, 0),
+              const VerticalSpacing(8, 8),
+              const VerticalSpacing(0, 0),
+              BoxDecoration(
+                border: Border(
+                  left: BorderSide(
+                    color: SpaceNotesTheme.primary.withValues(alpha: 0.5),
+                    width: 3,
+                  ),
                 ),
               ),
             ),
-          ),
-          lists: const DefaultListBlockStyle(
-            TextStyle(
-              fontFamily: 'FiraCode',
-              fontSize: 14,
-              color: SpaceNotesTheme.text,
-              height: 1.6,
+            lists: const DefaultListBlockStyle(
+              TextStyle(
+                fontFamily: 'FiraCode',
+                fontSize: 14,
+                color: SpaceNotesTheme.text,
+                height: 1.6,
+              ),
+              HorizontalSpacing(0, 0),
+              VerticalSpacing(0, 4),
+              VerticalSpacing(0, 0),
+              null,
+              null,
             ),
-            HorizontalSpacing(0, 0),
-            VerticalSpacing(0, 4),
-            VerticalSpacing(0, 0),
-            null,
-            null,
-          ),
-          inlineCode: InlineCodeStyle(
-            style: const TextStyle(
-              fontFamily: 'FiraCode',
-              fontSize: 13,
+            inlineCode: InlineCodeStyle(
+              style: const TextStyle(
+                fontFamily: 'FiraCode',
+                fontSize: 13,
+                color: SpaceNotesTheme.primary,
+                backgroundColor: SpaceNotesTheme.inputSurface,
+              ),
+            ),
+            link: const TextStyle(
               color: SpaceNotesTheme.primary,
-              backgroundColor: SpaceNotesTheme.inputSurface,
+              decoration: TextDecoration.underline,
             ),
-          ),
-          link: const TextStyle(
-            color: SpaceNotesTheme.primary,
-            decoration: TextDecoration.underline,
-          ),
-          placeHolder: const DefaultTextBlockStyle(
-            TextStyle(
-              fontFamily: 'FiraCode',
-              fontSize: 14,
-              color: SpaceNotesTheme.textSecondary,
+            placeHolder: const DefaultTextBlockStyle(
+              TextStyle(
+                fontFamily: 'FiraCode',
+                fontSize: 14,
+                color: SpaceNotesTheme.textSecondary,
+              ),
+              HorizontalSpacing(0, 0),
+              VerticalSpacing(0, 0),
+              VerticalSpacing(0, 0),
+              null,
             ),
-            HorizontalSpacing(0, 0),
-            VerticalSpacing(0, 0),
-            VerticalSpacing(0, 0),
-            null,
           ),
         ),
-      ),
       ),
     );
   }
@@ -281,7 +281,8 @@ class QuillNoteEditorState extends State<QuillNoteEditor> {
       child: Row(
         children: [
           IconButton(
-            onPressed: () => setState(() => _toolbarExpanded = !_toolbarExpanded),
+            onPressed: () =>
+                setState(() => _toolbarExpanded = !_toolbarExpanded),
             icon: AnimatedRotation(
               turns: _toolbarExpanded ? 0.5 : 0,
               duration: const Duration(milliseconds: 200),
@@ -345,7 +346,8 @@ class QuillNoteEditorState extends State<QuillNoteEditor> {
                         // ignore: experimental_member_use
                         showClipboardPaste: false,
                         color: Colors.transparent,
-                        sectionDividerColor: SpaceNotesTheme.textSecondary.withValues(alpha: 0.2),
+                        sectionDividerColor: SpaceNotesTheme.textSecondary
+                            .withValues(alpha: 0.2),
                         customButtons: [
                           QuillToolbarCustomButtonOptions(
                             icon: Icon(
@@ -353,7 +355,9 @@ class QuillNoteEditorState extends State<QuillNoteEditor> {
                               size: 18,
                               color: SpaceNotesTheme.text,
                             ),
-                            tooltip: _isRawMode ? 'Show Preview' : 'Show Raw Markdown',
+                            tooltip: _isRawMode
+                                ? 'Show Preview'
+                                : 'Show Raw Markdown',
                             onPressed: _toggleRawMode,
                           ),
                         ],

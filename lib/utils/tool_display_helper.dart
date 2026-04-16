@@ -5,7 +5,7 @@ import '../models/message_part.dart';
 class ToolDisplayHelper {
   // Cache for computed display names to avoid recalculation on rebuilds
   static final Map<String, String> _cache = {};
-  
+
   static const Map<String, String> _toolNameMap = {
     'read': 'read',
     'write': 'write',
@@ -45,22 +45,22 @@ class ToolDisplayHelper {
     // Create cache key based on part ID and metadata hash
     final metadataHash = part.metadata?.toString().hashCode ?? 0;
     final cacheKey = '${part.id}_$metadataHash';
-    
+
     // Return cached result if available
     if (_cache.containsKey(cacheKey)) {
       return _cache[cacheKey]!;
     }
-    
+
     // Compute and cache the display name
     final displayName = _computeDisplayName(part);
     _cache[cacheKey] = displayName;
-    
+
     // Prevent cache from growing too large (keep last 100 entries)
     if (_cache.length > 100) {
       final keys = _cache.keys.toList();
       _cache.remove(keys.first);
     }
-    
+
     return displayName;
   }
 
@@ -91,16 +91,17 @@ class ToolDisplayHelper {
   static String? _extractToolName(Map<String, dynamic> metadata) {
     // Primary sources in order of preference
     return metadata['tool'] ??
-           metadata['name'] ??
-           metadata['tool_name'] ??
-           metadata['function_name'];
+        metadata['name'] ??
+        metadata['tool_name'] ??
+        metadata['function_name'];
   }
 
   /// Gets contextual name by examining tool input parameters
-  static String? _getContextualName(String toolName, Map<String, dynamic> metadata) {
+  static String? _getContextualName(
+      String toolName, Map<String, dynamic> metadata) {
     final state = metadata['state'];
     final input = state?['input'];
-    
+
     if (input == null) return null;
 
     // File operations - show filename
@@ -121,18 +122,16 @@ class ToolDisplayHelper {
     // Search operations - show pattern
     final pattern = input['pattern'];
     if (pattern != null && pattern.isNotEmpty) {
-      final displayPattern = pattern.length > 30
-          ? '${pattern.substring(0, 30)}...'
-          : pattern;
+      final displayPattern =
+          pattern.length > 30 ? '${pattern.substring(0, 30)}...' : pattern;
       return 'search "$displayPattern"';
     }
 
     // Query operations (MCP tools like search_notes)
     final query = input['query'];
     if (query != null && query.isNotEmpty) {
-      final displayQuery = query.length > 30
-          ? '${query.substring(0, 30)}...'
-          : query;
+      final displayQuery =
+          query.length > 30 ? '${query.substring(0, 30)}...' : query;
       final cleanToolName = _formatToolName(toolName);
       return '$cleanToolName "$displayQuery"';
     }
@@ -150,7 +149,7 @@ class ToolDisplayHelper {
   /// Optimized filename extraction without creating array
   static String _getFileName(String path) {
     if (path.isEmpty) return path;
-    
+
     final lastSlash = path.lastIndexOf('/');
     return lastSlash == -1 ? path : path.substring(lastSlash + 1);
   }
@@ -158,7 +157,7 @@ class ToolDisplayHelper {
   /// Optimized first word extraction
   static String _getFirstWord(String text) {
     if (text.isEmpty) return text;
-    
+
     final spaceIndex = text.indexOf(' ');
     return spaceIndex == -1 ? text : text.substring(0, spaceIndex);
   }

@@ -1,8 +1,10 @@
 import 'package:flutter/foundation.dart';
 
-import 'debug_logger_io.dart' if (dart.library.js_interop) 'debug_logger_web.dart' as platform;
+import 'debug_logger_io.dart'
+    if (dart.library.js_interop) 'debug_logger_web.dart' as platform;
 
-export 'debug_logger_io.dart' if (dart.library.js_interop) 'debug_logger_web.dart' show LogFileData;
+export 'debug_logger_io.dart'
+    if (dart.library.js_interop) 'debug_logger_web.dart' show LogFileData;
 
 class DebugLogger {
   static final DebugLogger _instance = DebugLogger._internal();
@@ -42,10 +44,14 @@ class DebugLogger {
     if (kDebugMode) debugPrint(line);
   }
 
-  void debug(String category, String msg, [String? details]) => log('D', category, msg, details);
-  void info(String category, String msg, [String? details]) => log('I', category, msg, details);
-  void warning(String category, String msg, [String? details]) => log('W', category, msg, details);
-  void error(String category, String msg, [String? details]) => log('E', category, msg, details);
+  void debug(String category, String msg, [String? details]) =>
+      log('D', category, msg, details);
+  void info(String category, String msg, [String? details]) =>
+      log('I', category, msg, details);
+  void warning(String category, String msg, [String? details]) =>
+      log('W', category, msg, details);
+  void error(String category, String msg, [String? details]) =>
+      log('E', category, msg, details);
 
   void sync(String msg, [String? details]) => info('SYNC', msg, details);
   void save(String msg, [String? details]) => info('SAVE', msg, details);

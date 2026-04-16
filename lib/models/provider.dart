@@ -13,7 +13,7 @@ class Provider {
     // Handle models as either a Map<String, dynamic> or List<dynamic>
     final modelsData = json['models'];
     List<Model> modelsList;
-    
+
     if (modelsData is Map<String, dynamic>) {
       // Models is a map where keys are model IDs
       modelsList = modelsData.entries.map((entry) {
@@ -32,7 +32,7 @@ class Provider {
     } else {
       modelsList = [];
     }
-    
+
     return Provider(
       id: json['id'] ?? '',
       name: json['name'] ?? '',
@@ -92,7 +92,7 @@ class ProvidersResponse {
     // Handle providers as either a Map<String, dynamic> or List<dynamic>
     final providersData = json['providers'];
     List<Provider> providersList;
-    
+
     if (providersData is Map<String, dynamic>) {
       // Providers is a map where keys are provider IDs
       providersList = providersData.entries.map((entry) {
@@ -122,9 +122,11 @@ class ProvidersResponse {
 
       if (defaultProviderId != null) {
         try {
-          defaultProvider = providersList.firstWhere((p) => p.id == defaultProviderId);
+          defaultProvider =
+              providersList.firstWhere((p) => p.id == defaultProviderId);
           if (defaultModelId != null) {
-            defaultModel = defaultProvider.models.firstWhere((m) => m.id == defaultModelId);
+            defaultModel = defaultProvider.models
+                .firstWhere((m) => m.id == defaultModelId);
           }
         } catch (e) {
           // Default provider/model not found in list

@@ -145,20 +145,24 @@ class _ProviderListScreenState extends State<ProviderListScreen> {
             ),
           ),
         ),
-        
+
         // Models list
         ...provider.models.map((model) => _buildModelTile(provider, model)),
-        
+
         const SizedBox(height: 16),
       ],
     );
   }
 
-  Widget _buildModelTile(provider_models.Provider provider, provider_models.Model model) {
-    final isSelected = _currentProviderID == provider.id && _currentModelID == model.id;
-    
+  Widget _buildModelTile(
+      provider_models.Provider provider, provider_models.Model model) {
+    final isSelected =
+        _currentProviderID == provider.id && _currentModelID == model.id;
+
     return Card(
-      color: isSelected ? SpaceNotesTheme.primary.withValues(alpha: 0.1) : SpaceNotesTheme.surface,
+      color: isSelected
+          ? SpaceNotesTheme.primary.withValues(alpha: 0.1)
+          : SpaceNotesTheme.surface,
       margin: const EdgeInsets.only(bottom: 8),
       child: InkWell(
         onTap: () => _selectProvider(provider.id, model.id),
@@ -174,9 +178,12 @@ class _ProviderListScreenState extends State<ProviderListScreen> {
                     Text(
                       model.name,
                       style: TextStyle(
-                        color: isSelected ? SpaceNotesTheme.primary : SpaceNotesTheme.text,
+                        color: isSelected
+                            ? SpaceNotesTheme.primary
+                            : SpaceNotesTheme.text,
                         fontSize: 16,
-                        fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                        fontWeight:
+                            isSelected ? FontWeight.w600 : FontWeight.w500,
                       ),
                     ),
                     if (model.description != null) ...[

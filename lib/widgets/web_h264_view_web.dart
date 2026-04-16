@@ -19,7 +19,8 @@ class _WebH264ViewState extends State<WebH264View> {
       ui_web.platformViewRegistry.registerViewFactory(
         'spacenotes-h264-decoder-view',
         (int viewId) {
-          final existing = web.document.getElementById('spacenotes-h264-decoder');
+          final existing =
+              web.document.getElementById('spacenotes-h264-decoder');
           if (existing != null) {
             final el = existing as web.HTMLElement;
             el.style.display = 'block';
@@ -28,7 +29,8 @@ class _WebH264ViewState extends State<WebH264View> {
             (el as web.HTMLCanvasElement).style.objectFit = 'cover';
             return el;
           }
-          final canvas = web.document.createElement('canvas') as web.HTMLCanvasElement;
+          final canvas =
+              web.document.createElement('canvas') as web.HTMLCanvasElement;
           canvas.id = 'spacenotes-h264-decoder';
           canvas.style.width = '100%';
           canvas.style.height = '100%';

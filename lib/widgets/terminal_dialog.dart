@@ -77,7 +77,6 @@ class TerminalDialog extends StatelessWidget {
                 ],
               ),
             ),
-
             Flexible(
               child: Padding(
                 padding: const EdgeInsets.all(16),
@@ -88,7 +87,6 @@ class TerminalDialog extends StatelessWidget {
                 ),
               ),
             ),
-
             if (actions.isNotEmpty)
               Container(
                 padding: const EdgeInsets.all(16),

@@ -87,7 +87,8 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
             'thinking' => SessionActivityState.thinking,
             _ => SessionActivityState.idle,
           };
-          add(InternalStatusChanged(session: s.session, activityState: activityState));
+          add(InternalStatusChanged(
+              session: s.session, activityState: activityState));
       }
     });
 
@@ -104,9 +105,13 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       created: e.ts != null
           ? DateTime.fromMillisecondsSinceEpoch(e.ts!)
           : DateTime.now(),
-      parts: [MessagePart(id: '${e.id}-p0', type: 'text', content: e.text ?? '')],
+      parts: [
+        MessagePart(id: '${e.id}-p0', type: 'text', content: e.text ?? '')
+      ],
       isStreaming: false,
-      sourceType: e.sourceType == SpaceChannelSourceType.webhook ? 'webhook' : 'session',
+      sourceType: e.sourceType == SpaceChannelSourceType.webhook
+          ? 'webhook'
+          : 'session',
       task: e.task,
       session: sessionId,
     );
@@ -161,7 +166,8 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
         if (event.from == 'assistant' ||
             event.sourceType == SpaceChannelSourceType.session ||
             event.sourceType == SpaceChannelSourceType.webhook) {
-          final effectiveSession = sessionId.isNotEmpty ? sessionId : _targetSession;
+          final effectiveSession =
+              sessionId.isNotEmpty ? sessionId : _targetSession;
           final message = _convertEvent(event, effectiveSession);
           add(InternalMessageReceived(effectiveSession, message));
         }
@@ -170,7 +176,8 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
         final permData = event.permissionData ?? {};
         final toolName = permData['tool_name'] ?? 'unknown';
         final description = permData['description'] ?? '';
-        final effectiveSession = sessionId.isNotEmpty ? sessionId : _targetSession;
+        final effectiveSession =
+            sessionId.isNotEmpty ? sessionId : _targetSession;
         final permMessage = SpaceMessage(
           id: event.id,
           sessionId: effectiveSession,
@@ -208,7 +215,9 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
             messages[idx] = existing.copyWith(
               parts: [
                 MessagePart(
-                  id: existing.parts.isNotEmpty ? existing.parts.first.id : event.id,
+                  id: existing.parts.isNotEmpty
+                      ? existing.parts.first.id
+                      : event.id,
                   type: 'text',
                   content: event.text,
                 ),
@@ -221,16 +230,20 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     }
   }
 
-  void _onMessageReceived(InternalMessageReceived event, Emitter<ChatState> emit) {
+  void _onMessageReceived(
+      InternalMessageReceived event, Emitter<ChatState> emit) {
     _addMessage(event.sessionId, event.message);
-    _chatStatus = _chatStatus.copyWith(isSending: false, clearErrorMessage: true);
+    _chatStatus =
+        _chatStatus.copyWith(isSending: false, clearErrorMessage: true);
     emit(_buildReady());
   }
 
-  void _onHistoryReceived(InternalHistoryReceived event, Emitter<ChatState> emit) {
+  void _onHistoryReceived(
+      InternalHistoryReceived event, Emitter<ChatState> emit) {
     final info = _ensureSession(event.sessionId);
     final existingIds = info.messages.map((m) => m.id).toSet();
-    final newMessages = event.messages.where((m) => !existingIds.contains(m.id)).toList();
+    final newMessages =
+        event.messages.where((m) => !existingIds.contains(m.id)).toList();
     if (newMessages.isEmpty) return;
 
     final merged = [...newMessages, ...info.messages];
@@ -251,7 +264,8 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     emit(_buildReady());
   }
 
-  void _onSessionConnected(InternalSessionConnected event, Emitter<ChatState> emit) {
+  void _onSessionConnected(
+      InternalSessionConnected event, Emitter<ChatState> emit) {
     final now = DateTime.now();
     final existing = _sessions[event.session];
     _sessions[event.session] = SessionInfo(
@@ -266,13 +280,15 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     emit(_buildReady());
   }
 
-  void _onSessionDisconnected(InternalSessionDisconnected event, Emitter<ChatState> emit) {
+  void _onSessionDisconnected(
+      InternalSessionDisconnected event, Emitter<ChatState> emit) {
     _sessions.remove(event.session);
     _messageIndices.remove(event.session);
     emit(_buildReady());
   }
 
-  void _onToolEventReceived(InternalToolEventReceived event, Emitter<ChatState> emit) {
+  void _onToolEventReceived(
+      InternalToolEventReceived event, Emitter<ChatState> emit) {
     final toolEvent = event.toolEvent;
     final info = _ensureSession(toolEvent.session);
 
@@ -313,7 +329,8 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     emit(_buildReady());
   }
 
-  void _onConnectionChanged(InternalConnectionChanged event, Emitter<ChatState> emit) {
+  void _onConnectionChanged(
+      InternalConnectionChanged event, Emitter<ChatState> emit) {
     _chatStatus = _chatStatus.copyWith(isConnected: event.isConnected);
     if (!event.isConnected) {
       _chatStatus = _chatStatus.copyWith(isSending: false);
@@ -346,7 +363,8 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     _spaceChannel.sendMessageToSession(_targetSession, event.message);
   }
 
-  void _onSendSessionMessage(SendSessionMessage event, Emitter<ChatState> emit) {
+  void _onSendSessionMessage(
+      SendSessionMessage event, Emitter<ChatState> emit) {
     final msgId = 'u${DateTime.now().millisecondsSinceEpoch}';
     final userMessage = SpaceMessage(
       id: msgId,
@@ -362,9 +380,11 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     _spaceChannel.sendMessageToSession(event.sessionId, event.text);
   }
 
-  void _onCancelOperation(CancelCurrentOperation event, Emitter<ChatState> emit) {
+  void _onCancelOperation(
+      CancelCurrentOperation event, Emitter<ChatState> emit) {
     debugLogger.info('CC', 'Cancel operation requested');
-    _chatStatus = _chatStatus.copyWith(isSending: false, clearErrorMessage: true);
+    _chatStatus =
+        _chatStatus.copyWith(isSending: false, clearErrorMessage: true);
     emit(_buildReady());
   }
 
@@ -384,9 +404,11 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     _spaceChannel.sendMessageToSession(_targetSession, event.messageContent);
   }
 
-  void _onDeleteQueuedMessage(DeleteQueuedMessage event, Emitter<ChatState> emit) {}
+  void _onDeleteQueuedMessage(
+      DeleteQueuedMessage event, Emitter<ChatState> emit) {}
 
-  void _onRespondToPermission(RespondToPermission event, Emitter<ChatState> emit) {
+  void _onRespondToPermission(
+      RespondToPermission event, Emitter<ChatState> emit) {
     for (final entry in _sessions.entries) {
       final messages = entry.value.messages;
       final idx = messages.indexWhere((m) => m.id == event.permissionId);
@@ -403,7 +425,9 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
               ...?p.metadata,
               'pending_permission': false,
               'permission_responded':
-                  event.response == PermissionResponse.reject ? 'deny' : 'allow',
+                  event.response == PermissionResponse.reject
+                      ? 'deny'
+                      : 'allow',
             },
           );
         }

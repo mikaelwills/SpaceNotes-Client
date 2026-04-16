@@ -133,7 +133,8 @@ class InternalStatusChanged extends ChatEvent {
   final String session;
   final SessionActivityState activityState;
 
-  const InternalStatusChanged({required this.session, required this.activityState});
+  const InternalStatusChanged(
+      {required this.session, required this.activityState});
 
   @override
   List<Object> get props => [session, activityState];

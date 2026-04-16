@@ -76,7 +76,8 @@ class _NoteChatInputState extends State<NoteChatInput> {
                 ),
                 child: IconButton(
                   onPressed: isWorking
-                      ? () => context.read<ChatBloc>().add(CancelCurrentOperation())
+                      ? () =>
+                          context.read<ChatBloc>().add(CancelCurrentOperation())
                       : _sendMessage,
                   tooltip: isWorking ? 'Cancel' : 'Send to AI',
                   icon: Icon(

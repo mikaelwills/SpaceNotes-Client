@@ -21,7 +21,8 @@ class DesktopNotesState extends Equatable {
   }) {
     return DesktopNotesState(
       openNoteIds: openNoteIds ?? this.openNoteIds,
-      activeNoteId: clearActiveNote ? null : (activeNoteId ?? this.activeNoteId),
+      activeNoteId:
+          clearActiveNote ? null : (activeNoteId ?? this.activeNoteId),
       maxOpenNotes: maxOpenNotes ?? this.maxOpenNotes,
     );
   }

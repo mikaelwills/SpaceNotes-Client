@@ -85,15 +85,18 @@ class ChatMessageListState extends State<ChatMessageList> {
               child: ConstrainedBox(
                 constraints: BoxConstraints(maxWidth: widget.maxWidth),
                 child: ScrollConfiguration(
-                  behavior: ScrollConfiguration.of(context).copyWith(scrollbars: false),
+                  behavior: ScrollConfiguration.of(context)
+                      .copyWith(scrollbars: false),
                   child: ListView.builder(
                     controller: _scrollController,
-                    keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+                    keyboardDismissBehavior:
+                        ScrollViewKeyboardDismissBehavior.onDrag,
                     padding: widget.padding,
                     itemCount: widget.messages.length,
                     itemBuilder: (context, index) {
                       if (widget.itemBuilder != null) {
-                        return widget.itemBuilder!(widget.messages[index], index);
+                        return widget.itemBuilder!(
+                            widget.messages[index], index);
                       }
                       return TerminalMessage(message: widget.messages[index]);
                     },
@@ -103,7 +106,8 @@ class ChatMessageListState extends State<ChatMessageList> {
             ),
           ),
         ),
-        if (widget.showScrollToBottom && _showScrollButton) _buildScrollToBottomButton(),
+        if (widget.showScrollToBottom && _showScrollButton)
+          _buildScrollToBottomButton(),
       ],
     );
   }

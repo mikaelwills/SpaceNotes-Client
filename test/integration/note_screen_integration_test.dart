@@ -30,7 +30,8 @@ void main() {
       late ProviderContainer container;
 
       const uuid = Uuid();
-      final testPath = 'Test Notes/regression-test-${uuid.v4().substring(0, 8)}.md';
+      final testPath =
+          'Test Notes/regression-test-${uuid.v4().substring(0, 8)}.md';
       const testContent = '# Regression Test\n\nThis is a test note.';
 
       String? createdNoteId;
@@ -209,7 +210,8 @@ void main() {
       late ProviderContainer container;
 
       const uuid = Uuid();
-      final testPath = 'Test Notes/external-test-${uuid.v4().substring(0, 8)}.md';
+      final testPath =
+          'Test Notes/external-test-${uuid.v4().substring(0, 8)}.md';
       const initialContent = '# Initial Content\n\nOriginal text.';
 
       String? createdNoteId;
@@ -260,7 +262,8 @@ void main() {
         await tester.pump();
 
         // WHEN: External change happens (simulating another device/client)
-        const externalContent = '# Changed Externally\n\nThis was changed by another device.';
+        const externalContent =
+            '# Changed Externally\n\nThis was changed by another device.';
         await repository.updateNote(createdNoteId!, externalContent);
 
         // Wait for change to propagate
@@ -294,7 +297,8 @@ void main() {
       late ProviderContainer container;
 
       const uuid = Uuid();
-      final testPath = 'Test Notes/conflict-test-${uuid.v4().substring(0, 8)}.md';
+      final testPath =
+          'Test Notes/conflict-test-${uuid.v4().substring(0, 8)}.md';
       const initialContent = '# Initial Content\n\nOriginal text.';
 
       String? createdNoteId;
@@ -347,7 +351,8 @@ void main() {
         expect(textFieldWidget.focusNode?.hasFocus, true);
 
         // WHEN: External change happens while editing
-        const externalContent = '# External Change\n\nChanged by another device.';
+        const externalContent =
+            '# External Change\n\nChanged by another device.';
         await repository.updateNote(createdNoteId!, externalContent);
 
         // Wait for change to propagate
@@ -380,13 +385,13 @@ void main() {
   });
 
   group('Rename Flow -', () {
-    testWidgets('Note renames when title changes',
-        (WidgetTester tester) async {
+    testWidgets('Note renames when title changes', (WidgetTester tester) async {
       late SpacetimeDbNotesRepository repository;
       late ProviderContainer container;
 
       const uuid = Uuid();
-      final initialPath = 'Test Notes/original-name-${uuid.v4().substring(0, 8)}.md';
+      final initialPath =
+          'Test Notes/original-name-${uuid.v4().substring(0, 8)}.md';
       const initialContent = '# Original Name\n\nContent.';
 
       String? createdNoteId;
@@ -401,7 +406,8 @@ void main() {
           );
           await repository.connectAndGetInitialData();
 
-          createdNoteId = await repository.createNote(initialPath, initialContent);
+          createdNoteId =
+              await repository.createNote(initialPath, initialContent);
           expect(createdNoteId, isNotNull);
           await Future.delayed(const Duration(seconds: 2));
         });

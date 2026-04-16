@@ -43,6 +43,10 @@ class SpaceChannelEvent {
         ? SpaceChannelEventType.edit
         : SpaceChannelEventType.msg;
 
+    final baseSession = json['session'] ?? '';
+    final host = json['host'] ?? '';
+    final sessionKey = host.isEmpty ? baseSession : '$baseSession@$host';
+
     return SpaceChannelEvent(
       type: eventType,
       id: json['id'] ?? 'msg-${DateTime.now().millisecondsSinceEpoch}',
@@ -55,7 +59,7 @@ class SpaceChannelEvent {
           : null,
       sourceType: sourceType,
       task: json['task'] ?? '',
-      session: json['session'] ?? '',
+      session: sessionKey,
     );
   }
 }

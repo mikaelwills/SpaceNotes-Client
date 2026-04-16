@@ -43,7 +43,8 @@ class PlatformLogStorage {
   void _rotateIfNeeded() {
     if (_charCount >= _maxChars && _currentSession != null) {
       final timestamp = _formatTimestamp(DateTime.now());
-      final header = '=== SESSION (continued): ${DateTime.now().toIso8601String()} ===\n';
+      final header =
+          '=== SESSION (continued): ${DateTime.now().toIso8601String()} ===\n';
 
       _currentSession = _LogSession(timestamp: timestamp, lines: [header]);
       _sessions.add(_currentSession!);
@@ -60,11 +61,13 @@ class PlatformLogStorage {
   Future<void> close() async {}
 
   Future<List<LogFileData>> getLogFiles() async {
-    return _sessions.map((s) => LogFileData(
-      path: 'debug_${s.timestamp}.log',
-      timestamp: s.timestamp,
-      content: s.lines.join('\n'),
-    )).toList();
+    return _sessions
+        .map((s) => LogFileData(
+              path: 'debug_${s.timestamp}.log',
+              timestamp: s.timestamp,
+              content: s.lines.join('\n'),
+            ))
+        .toList();
   }
 
   Future<String?> getCurrentLogContent() async {
@@ -75,7 +78,8 @@ class PlatformLogStorage {
   Future<void> clearLogs() async {
     _sessions.clear();
     await startNewLogFile();
-    _currentSession?.lines.add('=== LOG CLEARED: ${DateTime.now().toIso8601String()} ===\n');
+    _currentSession?.lines
+        .add('=== LOG CLEARED: ${DateTime.now().toIso8601String()} ===\n');
   }
 
   Future<void> exportLogs() async {
@@ -113,7 +117,8 @@ class LogFileData {
   final String timestamp;
   final String content;
 
-  LogFileData({required this.path, required this.timestamp, required this.content});
+  LogFileData(
+      {required this.path, required this.timestamp, required this.content});
 }
 
 PlatformLogStorage createPlatformStorage() => PlatformLogStorage();

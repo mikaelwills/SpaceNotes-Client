@@ -55,7 +55,8 @@ class PlatformLogStorage {
       _currentTimestamp = _formatTimestamp(DateTime.now());
       _currentLogFile = File('${_logDir!.path}/debug_$_currentTimestamp.log');
       _sink = _currentLogFile!.openWrite(mode: FileMode.append);
-      final header = '=== SESSION (continued): ${DateTime.now().toIso8601String()} ===\n';
+      final header =
+          '=== SESSION (continued): ${DateTime.now().toIso8601String()} ===\n';
       _sink!.writeln(header);
       _charCount = header.length;
 
@@ -84,7 +85,8 @@ class PlatformLogStorage {
 
     final files = await _logDir!
         .list()
-        .where((e) => e is File && e.path.contains('debug_') && e.path.endsWith('.log'))
+        .where((e) =>
+            e is File && e.path.contains('debug_') && e.path.endsWith('.log'))
         .cast<File>()
         .toList();
 
@@ -93,9 +95,11 @@ class PlatformLogStorage {
     final results = <LogFileData>[];
     for (final file in files) {
       final filename = file.path.split('/').last;
-      final timestamp = filename.replaceAll('debug_', '').replaceAll('.log', '');
+      final timestamp =
+          filename.replaceAll('debug_', '').replaceAll('.log', '');
       final content = await file.readAsString();
-      results.add(LogFileData(path: file.path, timestamp: timestamp, content: content));
+      results.add(
+          LogFileData(path: file.path, timestamp: timestamp, content: content));
     }
     return results;
   }
@@ -124,7 +128,8 @@ class PlatformLogStorage {
     }
 
     await startNewLogFile();
-    _sink!.writeln('=== LOG CLEARED: ${DateTime.now().toIso8601String()} ===\n');
+    _sink!
+        .writeln('=== LOG CLEARED: ${DateTime.now().toIso8601String()} ===\n');
   }
 
   Future<void> exportLogs() async {
@@ -153,7 +158,8 @@ class LogFileData {
   final String timestamp;
   final String content;
 
-  LogFileData({required this.path, required this.timestamp, required this.content});
+  LogFileData(
+      {required this.path, required this.timestamp, required this.content});
 }
 
 PlatformLogStorage createPlatformStorage() => PlatformLogStorage();

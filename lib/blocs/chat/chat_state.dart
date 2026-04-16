@@ -76,7 +76,8 @@ class ChatStatus extends Equatable {
     return ChatStatus(
       isSending: isSending ?? this.isSending,
       isConnected: isConnected ?? this.isConnected,
-      errorMessage: clearErrorMessage ? null : (errorMessage ?? this.errorMessage),
+      errorMessage:
+          clearErrorMessage ? null : (errorMessage ?? this.errorMessage),
     );
   }
 

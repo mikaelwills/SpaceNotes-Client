@@ -16,7 +16,8 @@ class ApiFolder extends Equatable {
 
   factory ApiFolder.fromPath(String path) {
     // Calculate depth from path
-    final cleanPath = path.endsWith('/') ? path.substring(0, path.length - 1) : path;
+    final cleanPath =
+        path.endsWith('/') ? path.substring(0, path.length - 1) : path;
     final depth = cleanPath.isEmpty ? 0 : cleanPath.split('/').length - 1;
 
     // Extract folder name

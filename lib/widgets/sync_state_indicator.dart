@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:spacetimedb_dart_sdk/spacetimedb_dart_sdk.dart' show SyncState;
+import 'package:spacetimedb_sdk/spacetimedb_sdk.dart' show SyncState;
 import '../providers/notes_providers.dart';
 import '../theme/spacenotes_theme.dart';
 import '../services/debug_logger.dart';

@@ -28,7 +28,8 @@ class TerminalIPInput extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      constraints: maxWidth != null ? BoxConstraints(maxWidth: maxWidth!) : null,
+      constraints:
+          maxWidth != null ? BoxConstraints(maxWidth: maxWidth!) : null,
       child: Row(
         children: [
           Expanded(child: _buildTerminalInput()),
@@ -203,6 +204,8 @@ class TerminalIPInput extends StatelessWidget {
     );
   }
 
-  Color get _accentColor => isConnected ? SpaceNotesTheme.primary : SpaceNotesTheme.textSecondary;
-  Color get _textColor => isConnected ? SpaceNotesTheme.text : SpaceNotesTheme.textSecondary;
+  Color get _accentColor =>
+      isConnected ? SpaceNotesTheme.primary : SpaceNotesTheme.textSecondary;
+  Color get _textColor =>
+      isConnected ? SpaceNotesTheme.text : SpaceNotesTheme.textSecondary;
 }

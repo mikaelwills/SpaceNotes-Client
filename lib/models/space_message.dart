@@ -46,17 +46,14 @@ class SpaceMessage extends Equatable {
     final time = info?['time'];
 
     final id = info?['id'] ??
-               json['id'] ??
-               DateTime.now().millisecondsSinceEpoch.toString();
+        json['id'] ??
+        DateTime.now().millisecondsSinceEpoch.toString();
 
-    final sessionId = info?['sessionID'] ??
-                      json['sessionID'] ??
-                      json['sessionId'] ?? '';
+    final sessionId =
+        info?['sessionID'] ?? json['sessionID'] ?? json['sessionId'] ?? '';
 
-    final role = info?['role'] ??
-                 json['role'] ??
-                 'assistant';
-    
+    final role = info?['role'] ?? json['role'] ?? 'assistant';
+
     // Handle timestamps (could be milliseconds or ISO strings)
     DateTime createdTime;
     try {
@@ -71,7 +68,7 @@ class SpaceMessage extends Equatable {
     } catch (e) {
       createdTime = DateTime.now();
     }
-    
+
     DateTime? completedTime;
     try {
       final completedValue = time?['completed'] ?? json['completed'];
@@ -91,14 +88,12 @@ class SpaceMessage extends Equatable {
       created: createdTime,
       completed: completedTime,
       parts: (json['parts'] ?? [])
-              .map((part) => MessagePart.fromJson(part ?? {}))
-              .toList(),
-      isStreaming: json['isStreaming'] ??
-                   (completedTime == null && role == 'assistant'),
+          .map((part) => MessagePart.fromJson(part ?? {}))
+          .toList(),
+      isStreaming:
+          json['isStreaming'] ?? (completedTime == null && role == 'assistant'),
     );
   }
-
-
 
   /// Factory constructor specifically for Space API responses
   factory SpaceMessage.fromApiResponse(Map<String, dynamic> json) {
@@ -107,17 +102,16 @@ class SpaceMessage extends Equatable {
     final timeData = info?['time'] ?? json['time'];
 
     final messageId = info?['id'] ??
-                      json['id'] ??
-                      DateTime.now().millisecondsSinceEpoch.toString();
+        json['id'] ??
+        DateTime.now().millisecondsSinceEpoch.toString();
 
     final sessionId = info?['sessionID'] ??
-                      json['sessionID'] ??
-                      json['sessionId'] ??
-                      json['session_id'] ?? '';
+        json['sessionID'] ??
+        json['sessionId'] ??
+        json['session_id'] ??
+        '';
 
-    final role = info?['role'] ??
-                 json['role'] ??
-                 'assistant';
+    final role = info?['role'] ?? json['role'] ?? 'assistant';
 
     // Handle timestamps
     DateTime createdTime = DateTime.now();
@@ -126,26 +120,27 @@ class SpaceMessage extends Equatable {
     if (timeData != null) {
       try {
         if (timeData['created'] != null) {
-          createdTime = DateTime.fromMillisecondsSinceEpoch(timeData['created'] ?? 0);
+          createdTime =
+              DateTime.fromMillisecondsSinceEpoch(timeData['created'] ?? 0);
         }
         if (timeData['completed'] != null) {
-          completedTime = DateTime.fromMillisecondsSinceEpoch(timeData['completed'] ?? 0);
+          completedTime =
+              DateTime.fromMillisecondsSinceEpoch(timeData['completed'] ?? 0);
         }
       } catch (e) {
         print('❌ [SpaceMessage] Error parsing time: $e');
       }
     }
-    
+
     // Parse parts - this is the key part that was missing
     final partsList = json['parts'] ?? [];
     final parts = partsList.map((partData) {
       return MessagePart.fromJson(partData ?? {});
     }).toList();
-    
-    
+
     // A message is only streaming if:
     // 1. It's an assistant message AND
-    // 2. It has no completed time AND  
+    // 2. It has no completed time AND
     // 3. At least one part doesn't have an end time
     bool isMessageStreaming = false;
     if (role == 'assistant' && completedTime == null) {
@@ -160,7 +155,7 @@ class SpaceMessage extends Equatable {
         }
       }
     }
-    
+
     final message = SpaceMessage(
       id: messageId,
       sessionId: sessionId,
@@ -170,7 +165,7 @@ class SpaceMessage extends Equatable {
       parts: parts,
       isStreaming: isMessageStreaming,
     );
-    
+
     return message;
   }
 
@@ -228,5 +223,17 @@ class SpaceMessage extends Equatable {
   }
 
   @override
-  List<Object?> get props => [id, sessionId, role, created, completed, parts, isStreaming, sendStatus, sourceType, task, session];
+  List<Object?> get props => [
+        id,
+        sessionId,
+        role,
+        created,
+        completed,
+        parts,
+        isStreaming,
+        sendStatus,
+        sourceType,
+        task,
+        session
+      ];
 }

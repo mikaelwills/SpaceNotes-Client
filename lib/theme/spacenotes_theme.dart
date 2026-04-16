@@ -14,7 +14,8 @@ class SpaceNotesTheme {
   static const Color textSecondary = Color(0xFF888888); // Gray text
   static const Color error = Color(0xFFFF5555); // Bright red for errors
   static const Color warning = Color(0xFFFFB86C); // Orange for warnings
-  static const Color success = Color(0xFF00D9FF); // Cyan for success (same as primary)
+  static const Color success =
+      Color(0xFF00D9FF); // Cyan for success (same as primary)
 
   /// Get the main theme data for the app
   static ThemeData get themeData {

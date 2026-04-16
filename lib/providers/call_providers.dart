@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:spacetimedb_dart_sdk/spacetimedb_dart_sdk.dart';
+import 'package:spacetimedb_sdk/spacetimedb_sdk.dart';
 import '../generated/call_session.dart';
 import '../generated/call_state.dart';
 import '../services/call_service.dart';

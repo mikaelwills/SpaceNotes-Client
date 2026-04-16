@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'dart:typed_data';
-import 'package:spacetimedb_dart_sdk/spacetimedb_dart_sdk.dart';
+import 'package:spacetimedb_sdk/spacetimedb_sdk.dart';
 import '../generated/client.dart';
 import 'audio_service.dart';
 import 'debug_logger.dart';

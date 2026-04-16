@@ -6,7 +6,7 @@ import 'package:uuid/uuid.dart';
 import 'package:spacenotes_client/screens/note_screen.dart';
 import 'package:spacenotes_client/repositories/spacetimedb_notes_repository.dart';
 import 'package:spacenotes_client/providers/notes_providers.dart';
-import 'package:spacetimedb_dart_sdk/spacetimedb_dart_sdk.dart' show AuthTokenStore;
+import 'package:spacetimedb_sdk/spacetimedb_sdk.dart' show AuthTokenStore;
 
 // Helper to enter edit mode robustly
 Future<void> enterEditMode(WidgetTester tester) async {
@@ -32,7 +32,7 @@ void main() {
 
   group('Full Stack Reliability', () {
     testWidgets('CRITICAL: Focus is RETAINED when save echo comes back',
-    (tester) async {
+        (tester) async {
       final testId = uuid.v4();
       final testPath = 'Test Notes/focus-${testId.substring(0, 8)}.md';
 
@@ -45,7 +45,8 @@ void main() {
       late String noteId;
       await tester.runAsync(() async {
         await uiRepository.connectAndGetInitialData();
-        noteId = (await uiRepository.createNote(testPath, '# Focus Test\n\nStart.'))!;
+        noteId = (await uiRepository.createNote(
+            testPath, '# Focus Test\n\nStart.'))!;
         await Future.delayed(const Duration(seconds: 2));
       });
 
@@ -60,7 +61,8 @@ void main() {
       // 1. Enter Edit Mode
       await enterEditMode(tester);
       final textField = find.byType(TextField);
-      expect(textField, findsOneWidget, reason: "TextField did not appear after tap");
+      expect(textField, findsOneWidget,
+          reason: "TextField did not appear after tap");
 
       // 2. Type & Check Focus
       await tester.enterText(textField, '# Focus Test\n\nTyping...');
@@ -75,16 +77,17 @@ void main() {
 
       // 4. Verify Focus Retained
       expect(FocusScope.of(tester.element(textField)).hasFocus, isTrue,
-        reason: "Focus lost after echo!");
+          reason: "Focus lost after echo!");
 
       // Cleanup
       await tester.runAsync(() async {
-        try { uiRepository.dispose(); } catch (_) {}
+        try {
+          uiRepository.dispose();
+        } catch (_) {}
       });
     });
 
-    testWidgets('REGRESSION: Multiple edits save successfully',
-    (tester) async {
+    testWidgets('REGRESSION: Multiple edits save successfully', (tester) async {
       final testId = uuid.v4();
       final testPath = 'Test Notes/save-${testId.substring(0, 8)}.md';
 
@@ -97,7 +100,8 @@ void main() {
       late String noteId;
       await tester.runAsync(() async {
         await uiRepository.connectAndGetInitialData();
-        noteId = (await uiRepository.createNote(testPath, '# Save Test\n\nInit.'))!;
+        noteId =
+            (await uiRepository.createNote(testPath, '# Save Test\n\nInit.'))!;
         await Future.delayed(const Duration(seconds: 2));
       });
 
@@ -115,12 +119,16 @@ void main() {
       // Edit 1
       await tester.enterText(textField, '# Save Test\n\nEdit 1.');
       await tester.pump(const Duration(milliseconds: 200));
-      await tester.runAsync(() async { await Future.delayed(const Duration(seconds: 2)); });
+      await tester.runAsync(() async {
+        await Future.delayed(const Duration(seconds: 2));
+      });
 
       // Edit 2
       await tester.enterText(textField, '# Save Test\n\nEdit 2.');
       await tester.pump(const Duration(milliseconds: 200));
-      await tester.runAsync(() async { await Future.delayed(const Duration(seconds: 2)); });
+      await tester.runAsync(() async {
+        await Future.delayed(const Duration(seconds: 2));
+      });
 
       // Verify by checking the text field still contains Edit 2
       // (If saves weren't working, it would have reverted)
@@ -129,7 +137,9 @@ void main() {
           reason: 'Second edit should persist');
 
       await tester.runAsync(() async {
-        try { uiRepository.dispose(); } catch (_) {}
+        try {
+          uiRepository.dispose();
+        } catch (_) {}
       });
     });
   });

@@ -125,7 +125,8 @@ class _NotesSearchBarState extends State<NotesSearchBar> {
                 widget.onClearImage?.call();
               },
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
                 decoration: BoxDecoration(
                   color: SpaceNotesTheme.primary.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(18),

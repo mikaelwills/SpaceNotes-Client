@@ -17,7 +17,8 @@ class SpaceChannelService {
   StreamController<SpaceChannelEvent>? _eventController;
   StreamController<HistoryBatchEvent>? _historyController;
   StreamController<SessionActivityEvent>? _activityController;
-  final StreamController<bool> _connectionController = StreamController<bool>.broadcast();
+  final StreamController<bool> _connectionController =
+      StreamController<bool>.broadcast();
   StreamSubscription? _subscription;
   StreamSubscription? _configSub;
   Timer? _reconnectTimer;
@@ -44,6 +45,13 @@ class SpaceChannelService {
   Stream<SessionActivityEvent> get sessionActivity {
     _activityController ??= StreamController<SessionActivityEvent>.broadcast();
     return _activityController!.stream;
+  }
+
+  void forceReconnect() {
+    final url = _url;
+    if (url == null) return;
+    debugLogger.info('WS', 'Force reconnect (app resume)', url);
+    _connectToUrl(url);
   }
 
   void initialize() {
@@ -84,19 +92,28 @@ class SpaceChannelService {
     if (_channel == null) return;
     final id = 'u${DateTime.now().millisecondsSinceEpoch}-${++_seq}';
     debugLogger.info('WS', 'SendToSession', 'session=$sessionId, id=$id');
+    final split = _splitSessionKey(sessionId);
     _channel!.sink.add(jsonEncode({
       'type': 'chat',
       'id': id,
       'text': text,
-      'session': sessionId,
+      'session': split.base,
+      if (split.host.isNotEmpty) 'host': split.host,
     }));
+  }
+
+  ({String base, String host}) _splitSessionKey(String key) {
+    final idx = key.indexOf('@');
+    if (idx < 0) return (base: key, host: '');
+    return (base: key.substring(0, idx), host: key.substring(idx + 1));
   }
 
   void _connectWebSocket() {
     if (_url == null) return;
 
     _reconnectAttempts++;
-    debugLogger.info('WS', 'Connecting', 'attempt=$_reconnectAttempts, url=$_url');
+    debugLogger.info(
+        'WS', 'Connecting', 'attempt=$_reconnectAttempts, url=$_url');
 
     try {
       _channel = WebSocketChannel.connect(Uri.parse(_url!));
@@ -160,19 +177,24 @@ class SpaceChannelService {
     });
   }
 
-  void sendPermissionResponse(String session, String requestId, String behavior) {
+  void sendPermissionResponse(
+      String session, String requestId, String behavior) {
     if (_channel == null) return;
-    debugLogger.info('WS', 'Permission response', 'id=$requestId, behavior=$behavior');
+    debugLogger.info(
+        'WS', 'Permission response', 'id=$requestId, behavior=$behavior');
+    final split = _splitSessionKey(session);
     _channel!.sink.add(jsonEncode({
       'type': 'permission_response',
-      'session': session,
+      'session': split.base,
+      if (split.host.isNotEmpty) 'host': split.host,
       'request_id': requestId,
       'behavior': behavior,
     }));
   }
 
   void handleRawMessage(String raw) {
-    debugLogger.debug('WS', 'RAW', raw.length > 200 ? raw.substring(0, 200) : raw);
+    debugLogger.debug(
+        'WS', 'RAW', raw.length > 200 ? raw.substring(0, 200) : raw);
     try {
       final decoded = jsonDecode(raw);
       if (decoded is! Map<String, dynamic>) return;
@@ -215,21 +237,28 @@ class SpaceChannelService {
 
   void _handleSessionEvent(Map<String, dynamic> json) {
     final sessionEvent = SessionEvent.fromJson(json);
-    debugLogger.info('WS', 'Session event', 'action=${sessionEvent.action}, session=${sessionEvent.session}');
+    debugLogger.info('WS', 'Session event',
+        'action=${sessionEvent.action}, session=${sessionEvent.session}');
 
     if (_activityController?.isClosed == false) {
-      _activityController!.add(SessionActivityEvent.fromSessionEvent(sessionEvent));
+      _activityController!
+          .add(SessionActivityEvent.fromSessionEvent(sessionEvent));
     }
   }
 
   void _handlePermissionRequest(Map<String, dynamic> json) {
-    final requestId = json['request_id'] ?? json['id'] ?? 'perm-${DateTime.now().millisecondsSinceEpoch}';
+    final requestId = json['request_id'] ??
+        json['id'] ??
+        'perm-${DateTime.now().millisecondsSinceEpoch}';
     final toolName = json['tool_name'] ?? json['permission'] ?? '';
     final description = json['description'] ?? '';
     final inputPreview = json['input_preview'] ?? '';
-    final session = json['session'] ?? '';
+    final baseSession = json['session'] ?? '';
+    final host = json['host'] ?? '';
+    final session = host.isEmpty ? baseSession : '$baseSession@$host';
 
-    debugLogger.info('WS', 'Permission request', 'id=$requestId, tool=$toolName');
+    debugLogger.info(
+        'WS', 'Permission request', 'id=$requestId, tool=$toolName');
 
     final event = SpaceChannelEvent(
       type: SpaceChannelEventType.permissionRequest,
@@ -256,7 +285,8 @@ class SpaceChannelService {
 
   void _handleToolEvent(Map<String, dynamic> json) {
     final toolEvent = ToolEvent.fromJson(json);
-    debugLogger.info('WS', 'Tool event', 'tool=${toolEvent.tool}, session=${toolEvent.session}');
+    debugLogger.info('WS', 'Tool event',
+        'tool=${toolEvent.tool}, session=${toolEvent.session}');
 
     if (_activityController?.isClosed == false) {
       _activityController!.add(SessionActivityEvent.fromToolEvent(toolEvent));
@@ -264,7 +294,9 @@ class SpaceChannelService {
   }
 
   void _handleStatusEvent(Map<String, dynamic> json) {
-    final session = json['session'] ?? '';
+    final baseSession = json['session'] ?? '';
+    final host = json['host'] ?? '';
+    final session = host.isEmpty ? baseSession : '$baseSession@$host';
     final sessionState = json['state'] ?? '';
     if (session.isEmpty || sessionState.isEmpty) return;
 
@@ -272,16 +304,20 @@ class SpaceChannelService {
 
     final statusEvent = StatusEvent(session: session, state: sessionState);
     if (_activityController?.isClosed == false) {
-      _activityController!.add(SessionActivityEvent.fromStatusEvent(statusEvent));
+      _activityController!
+          .add(SessionActivityEvent.fromStatusEvent(statusEvent));
     }
   }
 
   void _handleHistoryBatch(Map<String, dynamic> json) {
-    final String session = json['session'] ?? '';
+    final String baseSession = json['session'] ?? '';
+    final String host = json['host'] ?? '';
+    final String sessionKey = host.isEmpty ? baseSession : '$baseSession@$host';
     final List<dynamic> messages = json['messages'] ?? [];
-    if (session.isEmpty || messages.isEmpty) return;
+    if (sessionKey.isEmpty || messages.isEmpty) return;
 
-    debugLogger.info('WS', 'History batch', 'session=$session, count=${messages.length}');
+    debugLogger.info(
+        'WS', 'History batch', 'session=$sessionKey, count=${messages.length}');
 
     final events = <SpaceChannelEvent>[];
     for (final m in messages) {
@@ -291,7 +327,8 @@ class SpaceChannelService {
     }
 
     if (_historyController?.isClosed == false) {
-      _historyController!.add(HistoryBatchEvent(session: session, events: events));
+      _historyController!
+          .add(HistoryBatchEvent(session: sessionKey, events: events));
     }
   }
 

@@ -95,7 +95,15 @@ class _SessionDashboardState extends State<SessionDashboard> {
                       itemCount: sessions.length,
                       separatorBuilder: (_, __) => const SizedBox(height: 8),
                       itemBuilder: (context, index) {
-                        return _SessionTile(sessionInfo: sessions[index]);
+                        final info = sessions[index];
+                        final base = _baseName(info.session);
+                        final baseCount = sessions
+                            .where((s) => _baseName(s.session) == base)
+                            .length;
+                        return _SessionTile(
+                          sessionInfo: info,
+                          showHost: baseCount > 1,
+                        );
                       },
                     ),
             ),
@@ -106,145 +114,181 @@ class _SessionDashboardState extends State<SessionDashboard> {
   }
 }
 
+String _baseName(String sessionKey) {
+  final idx = sessionKey.indexOf('@');
+  return idx < 0 ? sessionKey : sessionKey.substring(0, idx);
+}
+
+String _hostPart(String sessionKey) {
+  final idx = sessionKey.indexOf('@');
+  return idx < 0 ? '' : sessionKey.substring(idx + 1);
+}
+
 class _SessionTile extends StatelessWidget {
   final SessionInfo sessionInfo;
+  final bool showHost;
 
-  const _SessionTile({required this.sessionInfo});
+  const _SessionTile({required this.sessionInfo, this.showHost = false});
 
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      onTap: () => context.push('/notes/sessions/${Uri.encodeComponent(sessionInfo.session)}'),
+      onTap: () => context
+          .push('/notes/sessions/${Uri.encodeComponent(sessionInfo.session)}'),
       borderRadius: BorderRadius.circular(10),
       child: Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(
-        color: SpaceNotesTheme.surface,
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: sessionInfo.activityState != SessionActivityState.idle
-                      ? SpaceNotesTheme.primary.withValues(alpha: 0.15)
-                      : SpaceNotesTheme.secondary.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: sessionInfo.activityState != SessionActivityState.idle
-                    ? SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: Center(
-                          child: SizedBox(
-                            width: 14,
-                            height: 14,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 1.5,
-                              color: SpaceNotesTheme.primary.withValues(alpha: 0.8),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: SpaceNotesTheme.surface,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color:
+                        sessionInfo.activityState != SessionActivityState.idle
+                            ? SpaceNotesTheme.primary.withValues(alpha: 0.15)
+                            : SpaceNotesTheme.secondary.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: sessionInfo.activityState != SessionActivityState.idle
+                      ? SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: Center(
+                            child: SizedBox(
+                              width: 14,
+                              height: 14,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 1.5,
+                                color: SpaceNotesTheme.primary
+                                    .withValues(alpha: 0.8),
+                              ),
                             ),
                           ),
+                        )
+                      : const Icon(
+                          Icons.terminal_outlined,
+                          size: 18,
+                          color: SpaceNotesTheme.secondary,
                         ),
-                      )
-                    : const Icon(
-                        Icons.terminal_outlined,
-                        size: 18,
-                        color: SpaceNotesTheme.secondary,
-                      ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      sessionInfo.session,
-                      style: const TextStyle(
-                        fontFamily: 'FiraCode',
-                        fontSize: 13,
-                        color: SpaceNotesTheme.text,
-                        fontWeight: FontWeight.w500,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      'connected ${_timeAgo(sessionInfo.connectedAt)} · active ${_timeAgo(sessionInfo.lastActivity)}',
-                      style: const TextStyle(
-                        color: SpaceNotesTheme.textSecondary,
-                        fontSize: 11,
-                      ),
-                    ),
-                  ],
                 ),
-              ),
-            ],
-          ),
-          if (sessionInfo.task.isNotEmpty) ...[
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 6,
-              runSpacing: 4,
-              children: [
-                _InfoChip(label: 'task', value: sessionInfo.task),
-              ],
-            ),
-          ],
-          if (sessionInfo.recentToolEvents.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: SpaceNotesTheme.inputSurface,
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: sessionInfo.recentToolEvents
-                    .take(5)
-                    .map(
-                      (event) => Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 1),
-                        child: Row(
-                          children: [
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.baseline,
+                        textBaseline: TextBaseline.alphabetic,
+                        children: [
+                          Flexible(
+                            child: Text(
+                              _baseName(sessionInfo.session),
+                              style: const TextStyle(
+                                fontFamily: 'FiraCode',
+                                fontSize: 13,
+                                color: SpaceNotesTheme.text,
+                                fontWeight: FontWeight.w500,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          if (showHost &&
+                              _hostPart(sessionInfo.session).isNotEmpty) ...[
+                            const SizedBox(width: 6),
                             Text(
-                              event.tool,
+                              _hostPart(sessionInfo.session),
                               style: const TextStyle(
                                 fontFamily: 'FiraCode',
                                 fontSize: 10,
-                                color: SpaceNotesTheme.secondary,
-                                fontWeight: FontWeight.w500,
+                                color: SpaceNotesTheme.textSecondary,
+                                fontWeight: FontWeight.w400,
                               ),
+                              overflow: TextOverflow.ellipsis,
                             ),
-                            const SizedBox(width: 6),
-                            Expanded(
-                              child: Text(
-                                _formatToolInput(event.input),
+                          ],
+                        ],
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'connected ${_timeAgo(sessionInfo.connectedAt)} · active ${_timeAgo(sessionInfo.lastActivity)}',
+                        style: const TextStyle(
+                          color: SpaceNotesTheme.textSecondary,
+                          fontSize: 11,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            if (sessionInfo.task.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 6,
+                runSpacing: 4,
+                children: [
+                  _InfoChip(label: 'task', value: sessionInfo.task),
+                ],
+              ),
+            ],
+            if (sessionInfo.recentToolEvents.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: SpaceNotesTheme.inputSurface,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: sessionInfo.recentToolEvents
+                      .take(5)
+                      .map(
+                        (event) => Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 1),
+                          child: Row(
+                            children: [
+                              Text(
+                                event.tool,
                                 style: const TextStyle(
                                   fontFamily: 'FiraCode',
                                   fontSize: 10,
-                                  color: SpaceNotesTheme.textSecondary,
+                                  color: SpaceNotesTheme.secondary,
+                                  fontWeight: FontWeight.w500,
                                 ),
-                                overflow: TextOverflow.ellipsis,
-                                maxLines: 1,
                               ),
-                            ),
-                          ],
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: Text(
+                                  _formatToolInput(event.input),
+                                  style: const TextStyle(
+                                    fontFamily: 'FiraCode',
+                                    fontSize: 10,
+                                    color: SpaceNotesTheme.textSecondary,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                  maxLines: 1,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                    )
-                    .toList(),
+                      )
+                      .toList(),
+                ),
               ),
-            ),
+            ],
           ],
-        ],
+        ),
       ),
-    ),
     );
   }
 

@@ -67,7 +67,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   Widget _buildServerSection() {
     final isSpacetimeConnected = ref.watch(spacetimeConnectedProvider);
-    final isChatConnected = ref.watch(chatConnectedProvider).valueOrNull ?? false;
+    final isChatConnected =
+        ref.watch(chatConnectedProvider).valueOrNull ?? false;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -113,7 +114,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       color: SpaceNotesTheme.textSecondary,
                     ),
                     border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 12),
                   ),
                   onSubmitted: (_) => _saveServerConfig(),
                 ),
@@ -334,7 +336,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       final repository = ref.read(notesRepositoryProvider);
       await repository.configure(host: '$ip:${ConfigLoaded.spacetimeDbPort}');
       await repository.connectAndGetInitialData();
-
     } catch (e) {
       debugLogger.error('SETTINGS', 'Failed to connect: $e');
     } finally {
@@ -405,7 +406,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       for (var i = 0; i < nonEmptyLogs.length; i++) {
         final logFile = nonEmptyLogs[i];
         final partNum = i + 1;
-        final path = 'Software Development/SpaceNotes/ClientLogs/${logFile.timestamp}.md';
+        final path =
+            'Software Development/SpaceNotes/ClientLogs/${logFile.timestamp}.md';
 
         final header = StringBuffer();
         if (description.isNotEmpty) {
@@ -435,17 +437,21 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         await debugLogger.clearLogs();
         await _loadLogFileCount();
         if (!mounted) return;
-        _showResultDialog('Success', 'Saved ${savedPaths.length} log file(s) to ClientLogs/');
+        _showResultDialog(
+            'Success', 'Saved ${savedPaths.length} log file(s) to ClientLogs/');
       } else if (savedPaths.isNotEmpty) {
         if (!mounted) return;
-        _showResultDialog('Partial Save', 'Saved ${savedPaths.length} of $total logs. Local files kept - try again when you have better signal.');
+        _showResultDialog('Partial Save',
+            'Saved ${savedPaths.length} of $total logs. Local files kept - try again when you have better signal.');
       } else {
         if (!mounted) return;
-        _showResultDialog('Save Failed', 'Could not save logs. Local files kept - try again when you have signal.');
+        _showResultDialog('Save Failed',
+            'Could not save logs. Local files kept - try again when you have signal.');
       }
     } catch (e) {
       if (!mounted) return;
-      _showResultDialog('Save Failed', 'Could not save logs: $e\n\nCheck your connection and try again.');
+      _showResultDialog('Save Failed',
+          'Could not save logs: $e\n\nCheck your connection and try again.');
     }
   }
 
@@ -468,7 +474,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               controller: controller,
               maxLines: 4,
               decoration: const InputDecoration(
-                hintText: 'e.g., Chat messages timed out, app froze after opening note...',
+                hintText:
+                    'e.g., Chat messages timed out, app froze after opening note...',
                 border: OutlineInputBorder(),
               ),
               autofocus: true,
