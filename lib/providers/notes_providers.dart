@@ -61,6 +61,18 @@ final foldersListProvider = Provider<List<Folder>>((ref) {
   return sorted;
 });
 
+final noteByIdProvider = Provider.family<Note?, String>((ref, id) {
+  final client = ref.watch(spacetimeClientProvider);
+  if (client == null) return null;
+  return watchListenable(ref, client.note.rowNotifier(id));
+});
+
+final folderByIdProvider = Provider.family<Folder?, String>((ref, path) {
+  final client = ref.watch(spacetimeClientProvider);
+  if (client == null) return null;
+  return watchListenable(ref, client.folder.rowNotifier(path));
+});
+
 final searchQueryProvider = StateProvider<String>((ref) => '');
 
 final currentFolderPathProvider = StateProvider<String>((ref) => '');

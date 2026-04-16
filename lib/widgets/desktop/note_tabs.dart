@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:collection/collection.dart';
 import '../../blocs/desktop_notes/desktop_notes_bloc.dart';
 import '../../blocs/desktop_notes/desktop_notes_event.dart';
 import '../../blocs/desktop_notes/desktop_notes_state.dart';
@@ -119,8 +118,7 @@ class _NoteTabState extends ConsumerState<_NoteTab> {
   }
 
   String get _displayName {
-    final notes = ref.watch(notesListProvider);
-    final note = notes.firstWhereOrNull((n) => n.id == widget.noteId);
+    final note = ref.watch(noteByIdProvider(widget.noteId));
     if (note == null) return 'Loading...';
 
     final name = note.path.split('/').last;
