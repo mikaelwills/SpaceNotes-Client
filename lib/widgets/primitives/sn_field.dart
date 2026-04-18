@@ -37,9 +37,10 @@ class SnField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final autoGrow = expands || maxLines == null || (maxLines ?? 1) > 1;
     return Container(
-      height: expands ? null : height,
-      constraints: expands ? const BoxConstraints(minHeight: 44) : null,
+      height: autoGrow ? null : height,
+      constraints: autoGrow ? BoxConstraints(minHeight: height) : null,
       decoration: BoxDecoration(
         color: background,
         border: Border.all(color: borderColor, width: 1),
@@ -47,12 +48,17 @@ class SnField extends StatelessWidget {
       ),
       padding: const EdgeInsets.symmetric(horizontal: 13),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
+        crossAxisAlignment:
+            autoGrow ? CrossAxisAlignment.end : CrossAxisAlignment.center,
         children: [
           if (leading != null) ...[
-            IconTheme(
-              data: const IconThemeData(size: 14, color: SpaceNotesTheme.muted),
-              child: leading!,
+            Padding(
+              padding: EdgeInsets.only(bottom: autoGrow ? 14 : 0),
+              child: IconTheme(
+                data:
+                    const IconThemeData(size: 14, color: SpaceNotesTheme.muted),
+                child: leading!,
+              ),
             ),
             const SizedBox(width: 10),
           ],
@@ -93,10 +99,13 @@ class SnField extends StatelessWidget {
           ),
           if (trailing != null) ...[
             const SizedBox(width: 8),
-            IconTheme(
-              data:
-                  const IconThemeData(size: 14, color: SpaceNotesTheme.accent),
-              child: trailing!,
+            Padding(
+              padding: EdgeInsets.only(bottom: autoGrow ? 14 : 0),
+              child: IconTheme(
+                data: const IconThemeData(
+                    size: 14, color: SpaceNotesTheme.accent),
+                child: trailing!,
+              ),
             ),
           ],
         ],
