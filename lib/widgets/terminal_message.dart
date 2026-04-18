@@ -29,9 +29,9 @@ class TerminalMessage extends StatelessWidget {
           builder: (context, constraints) {
             final maxTextWidth = (constraints.maxWidth - 14) * 0.82;
             return Row(
+              mainAxisAlignment: MainAxisAlignment.end,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Spacer(),
                 Flexible(
                   child: ConstrainedBox(
                     constraints: BoxConstraints(maxWidth: maxTextWidth),
