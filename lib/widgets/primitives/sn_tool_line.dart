@@ -95,7 +95,7 @@ class _SnToolLineState extends State<SnToolLine>
 
   Color get _color => switch (widget.status) {
         SnToolStatus.running => SpaceNotesTheme.accent2,
-        SnToolStatus.done => SpaceNotesTheme.muted,
+        SnToolStatus.done => SpaceNotesTheme.accent2,
         SnToolStatus.denied => SpaceNotesTheme.offline,
         SnToolStatus.ask => SpaceNotesTheme.accent2,
       };
