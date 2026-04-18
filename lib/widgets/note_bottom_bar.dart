@@ -10,7 +10,7 @@ import '../dialogs/notes_list_dialogs.dart';
 import '../generated/note.dart';
 import 'quill_note_editor.dart';
 import 'adaptive/platform_utils.dart';
-import 'notes_search_bar.dart';
+import 'primitives/primitives.dart';
 
 class NoteBottomBar extends ConsumerStatefulWidget {
   final String? notePath;
@@ -31,7 +31,6 @@ class NoteBottomBar extends ConsumerStatefulWidget {
 }
 
 class _NoteBottomBarState extends ConsumerState<NoteBottomBar> {
-  static const _radius = 14.0;
   final TextEditingController _controller = TextEditingController();
 
   @override
@@ -52,16 +51,13 @@ class _NoteBottomBarState extends ConsumerState<NoteBottomBar> {
   }
 
   Widget _buildDesktopBar(bool isChatConnected) {
-    const buttonSize = 36.0;
-    const iconSize = 20.0;
-
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
       decoration: const BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [Colors.transparent, SpaceNotesTheme.background],
+          colors: [Color(0x000D0D0F), Color(0xD90D0D0F)],
         ),
       ),
       child: SafeArea(
@@ -69,21 +65,19 @@ class _NoteBottomBarState extends ConsumerState<NoteBottomBar> {
         child: Row(
           children: [
             const Spacer(),
-            _buildIconButton(
-              onPressed: () => widget.quillKey?.currentState?.undo(),
-              tooltip: 'Undo',
+            _buildTile(
               icon: Icons.undo,
-              size: buttonSize,
-              iconSize: iconSize,
+              onTap: () => widget.quillKey?.currentState?.undo(),
+              semanticLabel: 'undo',
+              size: 36,
             ),
             if (isChatConnected) ...[
               const SizedBox(width: 8),
-              _buildIconButton(
-                onPressed: widget.onChatTap,
-                tooltip: 'Chat about note',
+              _buildTile(
                 icon: Icons.chat_bubble_outline,
-                size: buttonSize,
-                iconSize: iconSize,
+                onTap: widget.onChatTap,
+                semanticLabel: 'chat about note',
+                size: 36,
               ),
             ],
           ],
@@ -94,36 +88,40 @@ class _NoteBottomBarState extends ConsumerState<NoteBottomBar> {
 
   Widget _buildMobileBar(bool isChatConnected) {
     return Container(
-      color: SpaceNotesTheme.background,
+      color: SpaceNotesTheme.bg,
       child: SafeArea(
         top: false,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+          padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              _buildIconButton(
-                onPressed: () => _showNoteActions(context),
-                tooltip: 'More actions',
+              _buildTile(
                 icon: Icons.more_horiz,
-                size: 44,
-                iconSize: 24,
+                onTap: () => _showNoteActions(context),
+                semanticLabel: 'more actions',
               ),
               const SizedBox(width: 8),
-              _buildIconButton(
-                onPressed: () => widget.quillKey?.currentState?.undo(),
-                tooltip: 'Undo',
+              _buildTile(
                 icon: Icons.undo,
-                size: 44,
-                iconSize: 22,
+                onTap: () => widget.quillKey?.currentState?.undo(),
+                semanticLabel: 'undo',
               ),
               if (isChatConnected) ...[
                 const SizedBox(width: 8),
                 Expanded(
-                  child: _buildChatInput(),
+                  child: SnField(
+                    controller: _controller,
+                    hint: 'ask about note…',
+                    onSubmitted: (_) => _sendMessage(),
+                  ),
                 ),
                 const SizedBox(width: 8),
-                _buildSendButton(),
+                _buildTile(
+                  icon: Icons.arrow_upward,
+                  onTap: _sendMessage,
+                  semanticLabel: 'send',
+                ),
               ],
             ],
           ),
@@ -132,65 +130,33 @@ class _NoteBottomBarState extends ConsumerState<NoteBottomBar> {
     );
   }
 
-  Widget _buildChatInput() {
-    return Container(
-      decoration: BoxDecoration(
-        color: SpaceNotesTheme.inputSurface,
-        borderRadius: BorderRadius.circular(_radius),
-      ),
-      child: NotesSearchBar(
-        controller: _controller,
-        height: 44,
-        hintText: 'Ask about note...',
-        onChanged: (_) {},
-        onSubmitted: _sendMessage,
-      ),
-    );
-  }
-
-  Widget _buildSendButton() {
-    return Container(
-      width: 44,
-      height: 44,
-      decoration: BoxDecoration(
-        color: SpaceNotesTheme.inputSurface,
-        borderRadius: BorderRadius.circular(_radius),
-      ),
-      child: IconButton(
-        onPressed: _sendMessage,
-        tooltip: 'Send',
-        padding: EdgeInsets.zero,
-        icon: const Icon(
-          Icons.arrow_upward,
-          size: 22,
-          color: SpaceNotesTheme.primary,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildIconButton({
-    required VoidCallback onPressed,
-    required String tooltip,
+  Widget _buildTile({
     required IconData icon,
-    required double size,
-    required double iconSize,
+    required VoidCallback onTap,
+    required String semanticLabel,
+    double size = 44,
   }) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        color: SpaceNotesTheme.inputSurface,
-        borderRadius: BorderRadius.circular(_radius),
-      ),
-      child: IconButton(
-        onPressed: onPressed,
-        tooltip: tooltip,
-        padding: EdgeInsets.zero,
-        icon: Icon(
-          icon,
-          size: iconSize,
-          color: SpaceNotesTheme.primary,
+    return Semantics(
+      label: semanticLabel,
+      button: true,
+      child: GestureDetector(
+        onTap: () {
+          HapticFeedback.selectionClick();
+          onTap();
+        },
+        behavior: HitTestBehavior.opaque,
+        child: Container(
+          width: size,
+          height: size,
+          decoration: BoxDecoration(
+            color: SpaceNotesTheme.bgAlt,
+            border: Border.all(
+              color: SpaceNotesTheme.hairlineStrong,
+              width: 1,
+            ),
+            borderRadius: BorderRadius.circular(SpaceNotesTheme.radiusDock),
+          ),
+          child: Icon(icon, size: 16, color: SpaceNotesTheme.accent),
         ),
       ),
     );
@@ -199,12 +165,9 @@ class _NoteBottomBarState extends ConsumerState<NoteBottomBar> {
   Widget _buildActionsSheet(BuildContext sheetContext) {
     return Container(
       decoration: const BoxDecoration(
-        color: SpaceNotesTheme.background,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+        color: SpaceNotesTheme.bg,
         border: Border(
-          top: BorderSide(color: SpaceNotesTheme.inputSurface, width: 1),
-          left: BorderSide(color: SpaceNotesTheme.inputSurface, width: 1),
-          right: BorderSide(color: SpaceNotesTheme.inputSurface, width: 1),
+          top: BorderSide(color: SpaceNotesTheme.hairlineStrong, width: 1),
         ),
       ),
       child: SafeArea(
@@ -212,20 +175,17 @@ class _NoteBottomBarState extends ConsumerState<NoteBottomBar> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              margin: const EdgeInsets.only(top: 8),
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: SpaceNotesTheme.textSecondary.withValues(alpha: 0.3),
-                borderRadius: BorderRadius.circular(2),
-              ),
+              margin: const EdgeInsets.only(top: 10),
+              width: 36,
+              height: 2,
+              color: SpaceNotesTheme.hairlineStrong,
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 14),
             _buildActionTile(
               sheetContext: sheetContext,
               icon: Icons.drive_file_move_outlined,
-              label: 'Move to folder',
-              color: SpaceNotesTheme.primary,
+              label: 'move to folder',
+              color: SpaceNotesTheme.accent,
               onTap: () {
                 Navigator.of(sheetContext).pop();
                 _handleMoveNote();
@@ -234,14 +194,14 @@ class _NoteBottomBarState extends ConsumerState<NoteBottomBar> {
             _buildActionTile(
               sheetContext: sheetContext,
               icon: Icons.delete_outline,
-              label: 'Delete note',
-              color: SpaceNotesTheme.error,
+              label: 'delete note',
+              color: SpaceNotesTheme.offline,
               onTap: () {
                 Navigator.of(sheetContext).pop();
                 _handleDeleteNote();
               },
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 12),
           ],
         ),
       ),
@@ -255,17 +215,32 @@ class _NoteBottomBarState extends ConsumerState<NoteBottomBar> {
     required Color color,
     required VoidCallback onTap,
   }) {
-    return ListTile(
-      leading: Icon(icon, color: color),
-      title: Text(
-        label,
-        style: TextStyle(
-          fontFamily: 'FiraCode',
-          fontSize: 15,
-          color: color,
+    return InkWell(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+        decoration: const BoxDecoration(
+          border: Border(
+            bottom: BorderSide(color: SpaceNotesTheme.hairline, width: 1),
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: color, size: 16),
+            const SizedBox(width: 14),
+            Text(
+              label.toUpperCase(),
+              style: TextStyle(
+                fontFamily: SpaceNotesTheme.fontMono,
+                fontSize: 11,
+                color: color,
+                letterSpacing: 1.2,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
         ),
       ),
-      onTap: onTap,
     );
   }
 
