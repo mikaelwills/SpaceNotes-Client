@@ -74,7 +74,8 @@ class MobileNavBar extends ConsumerWidget {
             ),
             const SizedBox(width: 16),
           ],
-          if (showMain) ..._buildNavIcons(context, currentLocation, isOnSettings),
+          if (showMain)
+            ..._buildNavIcons(context, currentLocation, isOnSettings),
           if (showMain) const Spacer(),
           if (!isOnSettings) ...[
             _NavIcon(

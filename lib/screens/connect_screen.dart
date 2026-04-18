@@ -116,8 +116,8 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
                               color: SpaceNotesTheme.hairlineStrong,
                               width: 1,
                             ),
-                            borderRadius: BorderRadius.circular(
-                                SpaceNotesTheme.radiusXs),
+                            borderRadius:
+                                BorderRadius.circular(SpaceNotesTheme.radiusXs),
                           ),
                           child: const Text(
                             'CONNECT',
