@@ -75,28 +75,32 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
 
     final folderPath = ref.watch(currentFolderPathProvider);
 
-    return Stack(
+    return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        _buildGradient(),
-        SafeArea(
-          top: false,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(14, 12, 14, 16),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                if (isSessionChat) ...[
-                  _DockTile(
-                    icon: Icons.arrow_back,
-                    onTap: () => context.pop(),
-                    semanticLabel: 'back',
-                  ),
+        _buildFadeAboveDock(),
+        Container(
+          color: SpaceNotesTheme.bg,
+          child: SafeArea(
+            top: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(14, 8, 14, 12),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  if (isSessionChat) ...[
+                    _DockTile(
+                      icon: Icons.arrow_back,
+                      onTap: () => context.pop(),
+                      semanticLabel: 'back',
+                    ),
+                    const SizedBox(width: 8),
+                  ],
+                  Expanded(child: _buildField(isChat)),
                   const SizedBox(width: 8),
+                  ..._buildTrailing(isChat, folderPath),
                 ],
-                Expanded(child: _buildField(isChat)),
-                const SizedBox(width: 8),
-                ..._buildTrailing(isChat, folderPath),
-              ],
+              ),
             ),
           ),
         ),
@@ -104,26 +108,16 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
     );
   }
 
-  void _onTextChanged() {
-    final hasText = _textController.text.isNotEmpty;
-    if (hasText != _hasText) {
-      setState(() => _hasText = hasText);
-    }
-  }
-
-  void _onFocusChanged() {
-    setState(() => _isFocused = _focusNode.hasFocus);
-  }
-
-  Widget _buildGradient() {
-    return const Positioned.fill(
-      child: IgnorePointer(
+  Widget _buildFadeAboveDock() {
+    return const IgnorePointer(
+      child: SizedBox(
+        height: 48,
         child: DecoratedBox(
           decoration: BoxDecoration(
             gradient: LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
-              colors: [Color(0x000D0D0F), Color(0xD90D0D0F)],
+              colors: [Color(0x000D0D0F), Color(0xFF0D0D0F)],
             ),
           ),
         ),
@@ -307,6 +301,17 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
     } catch (e) {
       debugPrint('[MobileBottomInputBar] Error creating note: $e');
     }
+  }
+
+  void _onTextChanged() {
+    final hasText = _textController.text.isNotEmpty;
+    if (hasText != _hasText) {
+      setState(() => _hasText = hasText);
+    }
+  }
+
+  void _onFocusChanged() {
+    setState(() => _isFocused = _focusNode.hasFocus);
   }
 }
 
