@@ -106,8 +106,23 @@ final permissionByIdProvider =
   return watchListenable(ref, client.permissionRequest.rowNotifier(id));
 });
 
-final targetSessionProvider =
-    StateProvider<String>((ref) => defaultTargetSession);
+/// Manual override. Null = auto-pick from sessions list (see
+/// [resolvedTargetSessionProvider]).
+final targetSessionOverrideProvider = StateProvider<String?>((ref) => null);
+
+/// The session id to send chat messages to. Auto-picks the first session
+/// whose baseName matches [defaultTargetSession]; falls back to the bare
+/// default if no matching row exists yet (pre-connect).
+final targetSessionProvider = Provider<String>((ref) {
+  final override = ref.watch(targetSessionOverrideProvider);
+  if (override != null) return override;
+  final sessions = ref.watch(sessionsProvider);
+  for (final s in sessions) {
+    if (s.baseName == defaultTargetSession) return s.id;
+  }
+  if (sessions.isNotEmpty) return sessions.first.id;
+  return defaultTargetSession;
+});
 
 final chatTimelineBySessionProvider =
     Provider.family<List<ChatItem>, String>((ref, sessionId) {
