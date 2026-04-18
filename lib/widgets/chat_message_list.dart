@@ -38,42 +38,15 @@ class ChatMessageListState<T> extends State<ChatMessageList<T>> {
   void initState() {
     super.initState();
     _previousItemCount = widget.items.length;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _jumpToBottom();
-      _syncScrollButtonVisibility();
-    });
   }
 
   @override
   void didUpdateWidget(ChatMessageList<T> oldWidget) {
     super.didUpdateWidget(oldWidget);
-    final listIdentityChanged = !identical(oldWidget.items, widget.items) &&
-        (oldWidget.items.isEmpty ||
-            widget.items.isEmpty ||
-            _firstItemIdentity(oldWidget.items) !=
-                _firstItemIdentity(widget.items));
-    if (listIdentityChanged) {
-      _autoScrollEnabled = true;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _jumpToBottom();
-      });
-    } else if (widget.items.length > _previousItemCount && _autoScrollEnabled) {
-      scrollToBottom();
-    }
     _previousItemCount = widget.items.length;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _syncScrollButtonVisibility();
     });
-  }
-
-  Object? _firstItemIdentity(List<T> items) =>
-      items.isEmpty ? null : identityHashCode(items.first);
-
-  void _jumpToBottom() {
-    if (!_scrollController.hasClients) return;
-    final pos = _scrollController.position;
-    if (!pos.hasContentDimensions) return;
-    _scrollController.jumpTo(pos.maxScrollExtent);
   }
 
   @override
@@ -121,12 +94,19 @@ class ChatMessageListState<T> extends State<ChatMessageList<T>> {
                       .copyWith(scrollbars: false),
                   child: ListView.builder(
                     controller: _scrollController,
+                    reverse: true,
                     keyboardDismissBehavior:
                         ScrollViewKeyboardDismissBehavior.onDrag,
-                    padding: widget.padding,
+                    padding: EdgeInsets.fromLTRB(
+                      widget.padding.left,
+                      widget.padding.bottom,
+                      widget.padding.right,
+                      widget.padding.top,
+                    ),
                     itemCount: widget.items.length,
                     itemBuilder: (context, index) {
-                      final item = widget.items[index];
+                      final item =
+                          widget.items[widget.items.length - 1 - index];
                       final child = widget.itemBuilder(context, item);
                       final k = widget.keyBuilder?.call(item);
                       return k == null
@@ -184,7 +164,7 @@ class ChatMessageListState<T> extends State<ChatMessageList<T>> {
     if (!_scrollController.hasClients) return;
     final pos = _scrollController.position;
     if (!pos.hasContentDimensions) return;
-    final isNearBottom = pos.pixels >= pos.maxScrollExtent - 100;
+    final isNearBottom = pos.pixels < 100;
     if (_showScrollButton == isNearBottom) {
       setState(() => _showScrollButton = !isNearBottom);
     }
@@ -194,7 +174,7 @@ class ChatMessageListState<T> extends State<ChatMessageList<T>> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
         _scrollController.animateTo(
-          _scrollController.position.maxScrollExtent,
+          0,
           duration: const Duration(milliseconds: 200),
           curve: Curves.easeOut,
         );
