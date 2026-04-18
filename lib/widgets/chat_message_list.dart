@@ -32,18 +32,10 @@ class ChatMessageListState<T> extends State<ChatMessageList<T>> {
   ScrollController? _ownScrollController;
   bool _showScrollButton = false;
   bool _autoScrollEnabled = true;
-  int _previousItemCount = 0;
-
-  @override
-  void initState() {
-    super.initState();
-    _previousItemCount = widget.items.length;
-  }
 
   @override
   void didUpdateWidget(ChatMessageList<T> oldWidget) {
     super.didUpdateWidget(oldWidget);
-    _previousItemCount = widget.items.length;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _syncScrollButtonVisibility();
     });
@@ -75,8 +67,7 @@ class ChatMessageListState<T> extends State<ChatMessageList<T>> {
           child: NotificationListener<ScrollNotification>(
             onNotification: (notification) {
               if (notification is ScrollUpdateNotification) {
-                final isNearBottom = _scrollController.position.pixels >=
-                    _scrollController.position.maxScrollExtent - 100;
+                final isNearBottom = _scrollController.position.pixels < 100;
                 if (_showScrollButton == isNearBottom) {
                   setState(() => _showScrollButton = !isNearBottom);
                 }
