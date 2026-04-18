@@ -7,6 +7,7 @@ import '../generated/permission_request.dart';
 import '../generated/tool_event.dart';
 import '../providers/chat_providers.dart';
 import '../theme/spacenotes_theme.dart';
+import 'primitives/primitives.dart';
 
 class TerminalMessage extends StatelessWidget {
   final Message message;
@@ -22,91 +23,102 @@ class TerminalMessage extends StatelessWidget {
   Widget _buildUserMessage(BuildContext context) {
     return GestureDetector(
       onLongPress: () => _copy(context, message.text),
-      child: Row(
-        children: [
-          const Spacer(),
-          Container(
-            margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-            constraints: BoxConstraints(
-              maxWidth: MediaQuery.of(context).size.width * 0.75,
-            ),
-            decoration: BoxDecoration(
-              color: const Color(0xFF0F1214),
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Flexible(
-                  child: Text(
-                    message.text,
-                    style: SpaceNotesTextStyles.terminal.copyWith(
-                      color: SpaceNotesTheme.text,
-                    ),
-                  ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(32, 14, 16, 14),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Spacer(),
+            Flexible(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxWidth: MediaQuery.of(context).size.width * 0.78,
                 ),
-                const SizedBox(width: 8),
-                Padding(
-                  padding: const EdgeInsets.only(top: 2),
-                  child: Text(
-                    _time,
-                    style: SpaceNotesTextStyles.terminal.copyWith(
-                      color: const Color(0xFF555555),
-                      fontFamily: 'FiraCode',
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      _time,
+                      style: const TextStyle(
+                        fontFamily: SpaceNotesTheme.fontMono,
+                        fontSize: 10,
+                        color: SpaceNotesTheme.dim,
+                        letterSpacing: 0.5,
+                      ),
                     ),
-                  ),
+                    const SizedBox(height: 4),
+                    Text(
+                      message.text,
+                      textAlign: TextAlign.right,
+                      style: const TextStyle(
+                        fontFamily: SpaceNotesTheme.fontSans,
+                        fontSize: 15,
+                        color: SpaceNotesTheme.fg,
+                        height: 1.55,
+                      ),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
-          ),
-        ],
+            const SizedBox(width: 12),
+            Container(width: 2, height: 28, color: SpaceNotesTheme.accent),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildAssistantMessage(BuildContext context) {
-    final sourceColor = _sourceColor;
     return GestureDetector(
       onLongPress: () => _copy(context, message.text),
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        decoration: BoxDecoration(
-          color: const Color(0xFF0F1214),
-          borderRadius: BorderRadius.circular(6),
-        ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 14, 32, 14),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                Text(
-                  _time,
-                  style: SpaceNotesTextStyles.terminal.copyWith(
-                    color: const Color(0xFF555555),
-                    fontFamily: 'FiraCode',
+                const Text(
+                  '—',
+                  style: TextStyle(
+                    fontFamily: SpaceNotesTheme.fontMono,
+                    fontSize: 10,
+                    color: SpaceNotesTheme.dim,
                   ),
                 ),
                 const SizedBox(width: 8),
                 Text(
                   message.source.toUpperCase(),
-                  style: SpaceNotesTextStyles.terminal.copyWith(
-                    color: sourceColor,
-                    fontFamily: 'FiraCode',
-                    fontWeight: FontWeight.w700,
-                    fontSize: 11,
-                    letterSpacing: 0.8,
+                  style: TextStyle(
+                    fontFamily: SpaceNotesTheme.fontMono,
+                    fontSize: 10,
+                    color: _sourceColor,
+                    letterSpacing: 1.5,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Text(
+                  _time,
+                  style: const TextStyle(
+                    fontFamily: SpaceNotesTheme.fontMono,
+                    fontSize: 10,
+                    color: SpaceNotesTheme.dim,
+                    letterSpacing: 0.5,
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 8),
             Text(
               message.text,
-              style: SpaceNotesTextStyles.terminal.copyWith(
-                color: SpaceNotesTheme.text,
+              style: const TextStyle(
+                fontFamily: SpaceNotesTheme.fontSans,
+                fontSize: 15,
+                color: SpaceNotesTheme.fg,
+                height: 1.55,
               ),
             ),
           ],
@@ -125,11 +137,10 @@ class TerminalMessage extends StatelessWidget {
   Color get _sourceColor {
     switch (message.source) {
       case 'mcp':
-        return SpaceNotesTheme.primary;
       case 'hook':
-        return const Color(0xFFF5E27A);
+        return SpaceNotesTheme.accent2;
       default:
-        return SpaceNotesTheme.textSecondary;
+        return SpaceNotesTheme.muted;
     }
   }
 
@@ -149,45 +160,26 @@ class ToolEventRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final detail = _parseDetail(event.detail);
     final summary = _summarize(detail);
+    final label = summary.isEmpty ? event.tool : '${event.tool}  $summary';
 
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
       child: Row(
         children: [
-          const Icon(Icons.play_arrow_outlined,
-              size: 14, color: SpaceNotesTheme.secondary),
-          const SizedBox(width: 6),
-          Text(
-            event.tool,
-            style: SpaceNotesTextStyles.terminal.copyWith(
-              color: SpaceNotesTheme.primary,
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
+          Expanded(
+            child: SnToolLine(
+              label: label,
+              status: SnToolStatus.done,
             ),
           ),
-          if (summary.isNotEmpty) ...[
-            const SizedBox(width: 6),
-            Expanded(
-              child: Text(
-                summary,
-                overflow: TextOverflow.ellipsis,
-                maxLines: 1,
-                style: SpaceNotesTextStyles.terminal.copyWith(
-                  color: SpaceNotesTheme.textSecondary,
-                  fontFamily: 'FiraCode',
-                  fontSize: 11,
-                ),
-              ),
-            ),
-          ],
-          const SizedBox(width: 8),
+          const SizedBox(width: 10),
           Text(
             _time,
-            style: SpaceNotesTextStyles.terminal.copyWith(
-              color: const Color(0xFF555555),
-              fontFamily: 'FiraCode',
+            style: const TextStyle(
+              fontFamily: SpaceNotesTheme.fontMono,
               fontSize: 10,
+              color: SpaceNotesTheme.dim,
+              letterSpacing: 0.5,
             ),
           ),
         ],
@@ -220,109 +212,93 @@ class PermissionRow extends ConsumerWidget {
       _ => '',
     };
 
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: const Color(0xFF0F1214),
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(
-          color: SpaceNotesTheme.warning.withValues(alpha: 0.3),
-          width: 1,
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 10, 32, 10),
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+        decoration: BoxDecoration(
+          border: Border.all(color: SpaceNotesTheme.hairlineStrong, width: 1),
         ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.shield_outlined,
-                  size: 14, color: SpaceNotesTheme.warning),
-              const SizedBox(width: 6),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Text(
+                  'PERMISSION',
+                  style: TextStyle(
+                    fontFamily: SpaceNotesTheme.fontMono,
+                    fontSize: 10,
+                    color: SpaceNotesTheme.dim,
+                    letterSpacing: 1.5,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Text(
+                  request.tool,
+                  style: const TextStyle(
+                    fontFamily: SpaceNotesTheme.fontMono,
+                    fontSize: 11,
+                    color: SpaceNotesTheme.fg,
+                    letterSpacing: 0.3,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+            if (description.isNotEmpty) ...[
+              const SizedBox(height: 8),
               Text(
-                request.tool,
-                style: SpaceNotesTextStyles.terminal.copyWith(
-                  color: SpaceNotesTheme.warning,
-                  fontWeight: FontWeight.w600,
+                description,
+                style: const TextStyle(
+                  fontFamily: SpaceNotesTheme.fontSans,
+                  fontSize: 14,
+                  color: SpaceNotesTheme.fg,
+                  height: 1.5,
                 ),
               ),
             ],
-          ),
-          if (description.isNotEmpty) ...[
-            const SizedBox(height: 4),
-            Text(
-              description,
-              style: SpaceNotesTextStyles.terminal.copyWith(
-                color: SpaceNotesTheme.text,
-                fontSize: 12,
-              ),
-            ),
-          ],
-          if (inputPreview.isNotEmpty) ...[
-            const SizedBox(height: 4),
-            Text(
-              inputPreview.length > 120
-                  ? '${inputPreview.substring(0, 120)}...'
-                  : inputPreview,
-              style: SpaceNotesTextStyles.terminal.copyWith(
-                color: SpaceNotesTheme.textSecondary,
-                fontFamily: 'FiraCode',
-                fontSize: 11,
-              ),
-            ),
-          ],
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              _PermissionButton(
-                label: 'Allow',
-                color: SpaceNotesTheme.success,
-                onTap: () => respondToPermission(ref,
-                    requestId: request.id, allow: true),
-              ),
-              const SizedBox(width: 12),
-              _PermissionButton(
-                label: 'Deny',
-                color: SpaceNotesTheme.error,
-                onTap: () => respondToPermission(ref,
-                    requestId: request.id, allow: false),
+            if (inputPreview.isNotEmpty) ...[
+              const SizedBox(height: 6),
+              Text(
+                inputPreview.length > 160
+                    ? '${inputPreview.substring(0, 160)}…'
+                    : inputPreview,
+                style: const TextStyle(
+                  fontFamily: SpaceNotesTheme.fontMono,
+                  fontSize: 11,
+                  color: SpaceNotesTheme.muted,
+                  height: 1.45,
+                ),
               ),
             ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _PermissionButton extends StatelessWidget {
-  final String label;
-  final Color color;
-  final VoidCallback onTap;
-
-  const _PermissionButton({
-    required this.label,
-    required this.color,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-        decoration: BoxDecoration(
-          border: Border.all(color: color.withValues(alpha: 0.5), width: 1),
-          borderRadius: BorderRadius.circular(4),
-        ),
-        child: Text(
-          label,
-          style: SpaceNotesTextStyles.terminal.copyWith(
-            color: color,
-            fontWeight: FontWeight.w600,
-            fontSize: 13,
-          ),
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                SnButton(
+                  label: 'allow',
+                  accent: SpaceNotesTheme.accent,
+                  variant: SnButtonVariant.outline,
+                  onPressed: () => respondToPermission(
+                    ref,
+                    requestId: request.id,
+                    allow: true,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                SnButton(
+                  label: 'deny',
+                  variant: SnButtonVariant.outline,
+                  onPressed: () => respondToPermission(
+                    ref,
+                    requestId: request.id,
+                    allow: false,
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );
@@ -345,7 +321,7 @@ String _summarize(Map<String, dynamic> detail) {
   if (input is! Map<String, dynamic>) return '';
   final command = input['command'];
   if (command is String && command.isNotEmpty) {
-    return command.length > 60 ? '${command.substring(0, 60)}...' : command;
+    return command.length > 60 ? '${command.substring(0, 60)}…' : command;
   }
   final path = input['file_path'] ?? input['path'] ?? input['filePath'];
   if (path is String && path.isNotEmpty) {
