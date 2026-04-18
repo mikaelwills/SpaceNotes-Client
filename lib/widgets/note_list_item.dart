@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../theme/spacenotes_theme.dart';
 import '../generated/note.dart';
+import 'swipe_action.dart';
 
 class _LeftOnlyHorizontalDragGestureRecognizer
     extends HorizontalDragGestureRecognizer {
@@ -50,8 +51,8 @@ class _NoteListItemState extends State<NoteListItem>
   late AnimationController _animationController;
   late Animation<double> _animation;
 
-  static const double _actionButtonWidth = 60;
-  static const double _maxSwipe = 120;
+  static const double _actionButtonWidth = 88;
+  static const double _maxSwipe = 176;
 
   @override
   void initState() {
@@ -82,38 +83,26 @@ class _NoteListItemState extends State<NoteListItem>
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
                 if (widget.onMove != null)
-                  GestureDetector(
+                  SwipeAction(
+                    icon: Icons.drive_file_move_outline,
+                    label: 'move',
+                    color: SpaceNotesTheme.accent,
+                    width: _actionButtonWidth,
                     onTap: () {
                       _animateToOffset(0);
                       widget.onMove!();
                     },
-                    child: Container(
-                      width: _actionButtonWidth,
-                      color: SpaceNotesTheme.accent,
-                      alignment: Alignment.center,
-                      child: const Icon(
-                        Icons.drive_file_move_outline,
-                        color: SpaceNotesTheme.bg,
-                        size: 20,
-                      ),
-                    ),
                   ),
                 if (widget.onDelete != null)
-                  GestureDetector(
+                  SwipeAction(
+                    icon: Icons.delete_outline,
+                    label: 'delete',
+                    color: SpaceNotesTheme.offline,
+                    width: _actionButtonWidth,
                     onTap: () {
                       _animateToOffset(0);
                       widget.onDelete!();
                     },
-                    child: Container(
-                      width: _actionButtonWidth,
-                      color: SpaceNotesTheme.offline,
-                      alignment: Alignment.center,
-                      child: const Icon(
-                        Icons.delete_outline,
-                        color: SpaceNotesTheme.bg,
-                        size: 20,
-                      ),
-                    ),
                   ),
               ],
             ),
