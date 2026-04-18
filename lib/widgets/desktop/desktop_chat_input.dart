@@ -8,7 +8,9 @@ import '../../providers/chat_providers.dart';
 import '../primitives/primitives.dart';
 
 class DesktopChatInput extends ConsumerStatefulWidget {
-  const DesktopChatInput({super.key});
+  final String? sessionId;
+
+  const DesktopChatInput({super.key, this.sessionId});
 
   @override
   ConsumerState<DesktopChatInput> createState() => _DesktopChatInputState();
@@ -69,8 +71,8 @@ class _DesktopChatInputState extends ConsumerState<DesktopChatInput> {
     if (message.isEmpty && _pendingImageBase64 == null) return;
 
     final text = message.isEmpty ? 'What is in this image?' : message;
-    final targetSession = ref.read(targetSessionProvider);
-    sendChatMessage(ref, sessionId: targetSession, text: text);
+    final session = widget.sessionId ?? ref.read(targetSessionProvider);
+    sendChatMessage(ref, sessionId: session, text: text);
     _controller.clear();
     setState(() => _pendingImageBase64 = null);
   }
