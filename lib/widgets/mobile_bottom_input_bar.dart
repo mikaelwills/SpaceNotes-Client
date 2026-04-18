@@ -111,13 +111,18 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
   Widget _buildFadeAboveDock() {
     return const IgnorePointer(
       child: SizedBox(
-        height: 48,
+        height: 96,
         child: DecoratedBox(
           decoration: BoxDecoration(
             gradient: LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
-              colors: [Color(0x000D0D0F), Color(0xFF0D0D0F)],
+              stops: [0.0, 0.55, 1.0],
+              colors: [
+                Color(0x000D0D0F),
+                Color(0xB30D0D0F),
+                Color(0xFF0D0D0F),
+              ],
             ),
           ),
         ),

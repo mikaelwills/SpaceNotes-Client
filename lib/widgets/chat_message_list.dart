@@ -13,7 +13,7 @@ class ChatMessageList extends StatefulWidget {
   const ChatMessageList({
     super.key,
     required this.items,
-    this.padding = const EdgeInsets.fromLTRB(4, 8, 4, 120),
+    this.padding = const EdgeInsets.fromLTRB(4, 8, 4, 140),
     this.emptyText = 'No messages yet',
     this.showScrollToBottom = true,
     this.maxWidth = 800,
@@ -114,7 +114,7 @@ class ChatMessageListState extends State<ChatMessageList> {
 
   Widget _buildScrollToBottomButton() {
     return Positioned(
-      bottom: 76,
+      bottom: 100,
       left: 0,
       right: 0,
       child: Center(
@@ -123,21 +123,29 @@ class ChatMessageListState extends State<ChatMessageList> {
           child: Align(
             alignment: Alignment.centerRight,
             child: Padding(
-              padding: const EdgeInsets.only(right: 16),
-              child: Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: SpaceNotesTheme.inputSurface,
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: IconButton(
-                  onPressed: forceScrollToBottom,
-                  tooltip: 'Scroll to bottom',
-                  icon: const Icon(
-                    Icons.arrow_downward,
-                    size: 24,
-                    color: SpaceNotesTheme.primary,
+              padding: const EdgeInsets.only(right: 14),
+              child: GestureDetector(
+                onTap: forceScrollToBottom,
+                behavior: HitTestBehavior.opaque,
+                child: Tooltip(
+                  message: 'scroll to bottom',
+                  child: Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: SpaceNotesTheme.bgAlt,
+                      border: Border.all(
+                        color: SpaceNotesTheme.hairlineStrong,
+                        width: 1,
+                      ),
+                      borderRadius:
+                          BorderRadius.circular(SpaceNotesTheme.radiusDock),
+                    ),
+                    child: const Icon(
+                      Icons.arrow_downward,
+                      size: 16,
+                      color: SpaceNotesTheme.accent,
+                    ),
                   ),
                 ),
               ),

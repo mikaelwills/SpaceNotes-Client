@@ -20,7 +20,7 @@ class SessionChatScreen extends ConsumerWidget {
         Expanded(
           child: ChatMessageList(
             items: items.map(_itemToWidget).toList(),
-            padding: const EdgeInsets.fromLTRB(4, 8, 4, 80),
+            padding: const EdgeInsets.fromLTRB(4, 8, 4, 140),
             maxWidth: double.infinity,
           ),
         ),
