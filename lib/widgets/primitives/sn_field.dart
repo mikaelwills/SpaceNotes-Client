@@ -38,78 +38,123 @@ class SnField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final autoGrow = expands || maxLines == null || (maxLines ?? 1) > 1;
+    if (autoGrow) return _buildAutoGrow();
+    return _buildFixedHeight();
+  }
+
+  Widget _buildFixedHeight() {
     return Container(
-      height: autoGrow ? null : height,
-      constraints: autoGrow ? BoxConstraints(minHeight: height) : null,
-      decoration: BoxDecoration(
-        color: background,
-        border: Border.all(color: borderColor, width: 1),
-        borderRadius: BorderRadius.circular(radius),
-      ),
+      height: height,
+      decoration: _decoration(),
       padding: const EdgeInsets.symmetric(horizontal: 13),
       child: Row(
-        crossAxisAlignment:
-            autoGrow ? CrossAxisAlignment.end : CrossAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           if (leading != null) ...[
-            Padding(
-              padding: EdgeInsets.only(bottom: autoGrow ? 14 : 0),
-              child: IconTheme(
-                data:
-                    const IconThemeData(size: 14, color: SpaceNotesTheme.muted),
-                child: leading!,
-              ),
+            IconTheme(
+              data: const IconThemeData(size: 14, color: SpaceNotesTheme.muted),
+              child: leading!,
             ),
             const SizedBox(width: 10),
           ],
-          Expanded(
-            child: TextField(
-              controller: controller,
-              focusNode: focusNode,
-              onChanged: onChanged,
-              onSubmitted: onSubmitted,
-              maxLines: maxLines,
-              minLines: minLines,
-              expands: expands,
-              style: const TextStyle(
-                fontFamily: SpaceNotesTheme.fontSans,
-                fontSize: 14,
-                color: SpaceNotesTheme.fg,
-                height: 1.4,
-              ),
-              textAlignVertical: TextAlignVertical.center,
-              cursorColor: SpaceNotesTheme.accent,
-              cursorWidth: 1.5,
-              decoration: InputDecoration(
-                isCollapsed: true,
-                contentPadding: const EdgeInsets.symmetric(vertical: 12),
-                hintText: hint,
-                hintStyle: const TextStyle(
-                  fontFamily: SpaceNotesTheme.fontMono,
-                  fontSize: 12,
-                  color: SpaceNotesTheme.dim,
-                  letterSpacing: 0.3,
-                ),
-                border: InputBorder.none,
-                enabledBorder: InputBorder.none,
-                focusedBorder: InputBorder.none,
-                filled: false,
-              ),
-            ),
-          ),
+          Expanded(child: _buildTextField(vCenter: true)),
           if (trailing != null) ...[
             const SizedBox(width: 8),
-            Padding(
-              padding: EdgeInsets.only(bottom: autoGrow ? 14 : 0),
-              child: IconTheme(
-                data: const IconThemeData(
-                    size: 14, color: SpaceNotesTheme.accent),
-                child: trailing!,
-              ),
+            IconTheme(
+              data:
+                  const IconThemeData(size: 14, color: SpaceNotesTheme.accent),
+              child: trailing!,
             ),
           ],
         ],
       ),
     );
   }
+
+  Widget _buildAutoGrow() {
+    final hasLeading = leading != null;
+    final hasTrailing = trailing != null;
+    return Container(
+      constraints: BoxConstraints(minHeight: height),
+      decoration: _decoration(),
+      padding: const EdgeInsets.fromLTRB(13, 12, 13, 10),
+      child: Stack(
+        children: [
+          if (hasLeading)
+            Positioned(
+              left: 0,
+              bottom: 0,
+              child: IconTheme(
+                data:
+                    const IconThemeData(size: 14, color: SpaceNotesTheme.muted),
+                child: leading!,
+              ),
+            ),
+          Padding(
+            padding: EdgeInsets.only(
+              left: hasLeading ? 24 : 0,
+              right: hasTrailing ? 28 : 0,
+            ),
+            child: _buildTextField(vCenter: false),
+          ),
+          if (hasTrailing)
+            Positioned(
+              right: 0,
+              bottom: 0,
+              child: IconTheme(
+                data: const IconThemeData(
+                    size: 14, color: SpaceNotesTheme.accent),
+                child: trailing!,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTextField({required bool vCenter}) {
+    return TextField(
+      controller: controller,
+      focusNode: focusNode,
+      onChanged: onChanged,
+      onSubmitted: onSubmitted,
+      maxLines: maxLines,
+      minLines: minLines,
+      expands: expands,
+      style: const TextStyle(
+        fontFamily: SpaceNotesTheme.fontSans,
+        fontSize: 14,
+        color: SpaceNotesTheme.fg,
+        height: 1.4,
+      ),
+      textAlignVertical:
+          vCenter ? TextAlignVertical.center : TextAlignVertical.top,
+      cursorColor: SpaceNotesTheme.accent,
+      cursorWidth: 1.5,
+      decoration: InputDecoration(
+        isDense: true,
+        contentPadding: EdgeInsets.zero,
+        hintText: hint,
+        hintStyle: const TextStyle(
+          fontFamily: SpaceNotesTheme.fontMono,
+          fontSize: 12,
+          color: SpaceNotesTheme.dim,
+          letterSpacing: 0.3,
+        ),
+        border: InputBorder.none,
+        enabledBorder: InputBorder.none,
+        focusedBorder: InputBorder.none,
+        disabledBorder: InputBorder.none,
+        errorBorder: InputBorder.none,
+        focusedErrorBorder: InputBorder.none,
+        filled: false,
+      ),
+    );
+  }
+
+  BoxDecoration _decoration() => BoxDecoration(
+        color: background,
+        border: Border.all(color: borderColor, width: 1),
+        borderRadius: BorderRadius.circular(radius),
+      );
 }
