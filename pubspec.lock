@@ -410,7 +410,7 @@ packages:
     source: hosted
     version: "0.9.3+5"
   fixnum:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: fixnum
       sha256: b6dc7065e46c974bc7c5f143080a6764ec7a4be6da1285ececdc37be96de53be
@@ -1312,7 +1312,7 @@ packages:
       path: "../../Dart/spacetimedb_dart_sdk"
       relative: true
     source: path
-    version: "1.0.1"
+    version: "1.1.0"
   sprintf:
     dependency: transitive
     description:

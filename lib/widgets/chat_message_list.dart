@@ -1,14 +1,9 @@
 import 'package:flutter/material.dart';
-import '../models/space_message.dart';
 import '../theme/spacenotes_theme.dart';
 import 'keyboard_dismiss_on_scroll.dart';
-import 'terminal_message.dart';
-
-typedef MessageItemBuilder = Widget Function(SpaceMessage message, int index);
 
 class ChatMessageList extends StatefulWidget {
-  final List<SpaceMessage> messages;
-  final MessageItemBuilder? itemBuilder;
+  final List<Widget> items;
   final EdgeInsets padding;
   final String emptyText;
   final bool showScrollToBottom;
@@ -17,8 +12,7 @@ class ChatMessageList extends StatefulWidget {
 
   const ChatMessageList({
     super.key,
-    required this.messages,
-    this.itemBuilder,
+    required this.items,
     this.padding = const EdgeInsets.fromLTRB(4, 8, 4, 120),
     this.emptyText = 'No messages yet',
     this.showScrollToBottom = true,
@@ -34,11 +28,23 @@ class ChatMessageListState extends State<ChatMessageList> {
   ScrollController? _ownScrollController;
   bool _showScrollButton = false;
   bool _autoScrollEnabled = true;
-  int _previousMessageCount = 0;
+  int _previousItemCount = 0;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _syncScrollButtonVisibility();
+    });
+  }
+
+  @override
+  void didUpdateWidget(ChatMessageList oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.items.length > _previousItemCount && _autoScrollEnabled) {
+      scrollToBottom();
+    }
+    _previousItemCount = widget.items.length;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _syncScrollButtonVisibility();
     });
@@ -52,7 +58,7 @@ class ChatMessageListState extends State<ChatMessageList> {
 
   @override
   Widget build(BuildContext context) {
-    if (widget.messages.isEmpty) {
+    if (widget.items.isEmpty) {
       return Center(
         child: Text(
           widget.emptyText,
@@ -92,14 +98,8 @@ class ChatMessageListState extends State<ChatMessageList> {
                     keyboardDismissBehavior:
                         ScrollViewKeyboardDismissBehavior.onDrag,
                     padding: widget.padding,
-                    itemCount: widget.messages.length,
-                    itemBuilder: (context, index) {
-                      if (widget.itemBuilder != null) {
-                        return widget.itemBuilder!(
-                            widget.messages[index], index);
-                      }
-                      return TerminalMessage(message: widget.messages[index]);
-                    },
+                    itemCount: widget.items.length,
+                    itemBuilder: (context, index) => widget.items[index],
                   ),
                 ),
               ),
@@ -134,11 +134,6 @@ class ChatMessageListState extends State<ChatMessageList> {
                 child: IconButton(
                   onPressed: forceScrollToBottom,
                   tooltip: 'Scroll to bottom',
-                  style: IconButton.styleFrom(
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                  ),
                   icon: const Icon(
                     Icons.arrow_downward,
                     size: 24,
@@ -155,16 +150,6 @@ class ChatMessageListState extends State<ChatMessageList> {
 
   ScrollController get _scrollController =>
       widget.scrollController ?? (_ownScrollController ??= ScrollController());
-
-  void onMessagesChanged(int newCount) {
-    if (newCount > _previousMessageCount && _autoScrollEnabled) {
-      scrollToBottom();
-    }
-    _previousMessageCount = newCount;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _syncScrollButtonVisibility();
-    });
-  }
 
   void _syncScrollButtonVisibility() {
     if (!mounted) return;

@@ -189,6 +189,31 @@ class DeleteNoteArgsDecoder implements ReducerArgDecoder<DeleteNoteArgs> {
   }
 }
 
+class EditMessageArgs {
+  EditMessageArgs({
+    required this.id,
+    required this.text,
+  });
+
+  final String id;
+
+  final String text;
+}
+
+class EditMessageArgsDecoder implements ReducerArgDecoder<EditMessageArgs> {
+  const EditMessageArgsDecoder();
+
+  @override
+  EditMessageArgs decode(BsatnDecoder decoder) {
+    final id = decoder.readString();
+    final text = decoder.readString();
+    return EditMessageArgs(
+      id: id,
+      text: text,
+    );
+  }
+}
+
 class EndCallArgs {
   EndCallArgs({required this.sessionId});
 
@@ -202,6 +227,24 @@ class EndCallArgsDecoder implements ReducerArgDecoder<EndCallArgs> {
   EndCallArgs decode(BsatnDecoder decoder) {
     final sessionId = decoder.readU64();
     return EndCallArgs(
+      sessionId: sessionId,
+    );
+  }
+}
+
+class EndSessionArgs {
+  EndSessionArgs({required this.sessionId});
+
+  final String sessionId;
+}
+
+class EndSessionArgsDecoder implements ReducerArgDecoder<EndSessionArgs> {
+  const EndSessionArgsDecoder();
+
+  @override
+  EndSessionArgs decode(BsatnDecoder decoder) {
+    final sessionId = decoder.readString();
+    return EndSessionArgs(
       sessionId: sessionId,
     );
   }
@@ -258,6 +301,24 @@ class GetRecentNotesArgsDecoder
     final limit = decoder.readU32();
     return GetRecentNotesArgs(
       limit: limit,
+    );
+  }
+}
+
+class HeartbeatArgs {
+  HeartbeatArgs({required this.sessionId});
+
+  final String sessionId;
+}
+
+class HeartbeatArgsDecoder implements ReducerArgDecoder<HeartbeatArgs> {
+  const HeartbeatArgsDecoder();
+
+  @override
+  HeartbeatArgs decode(BsatnDecoder decoder) {
+    final sessionId = decoder.readString();
+    return HeartbeatArgs(
+      sessionId: sessionId,
     );
   }
 }
@@ -337,6 +398,142 @@ class PrependToNoteArgsDecoder implements ReducerArgDecoder<PrependToNoteArgs> {
   }
 }
 
+class PushMessageArgs {
+  PushMessageArgs({
+    required this.id,
+    required this.sessionId,
+    required this.role,
+    required this.text,
+    required this.source,
+  });
+
+  final String id;
+
+  final String sessionId;
+
+  final String role;
+
+  final String text;
+
+  final String source;
+}
+
+class PushMessageArgsDecoder implements ReducerArgDecoder<PushMessageArgs> {
+  const PushMessageArgsDecoder();
+
+  @override
+  PushMessageArgs decode(BsatnDecoder decoder) {
+    final id = decoder.readString();
+    final sessionId = decoder.readString();
+    final role = decoder.readString();
+    final text = decoder.readString();
+    final source = decoder.readString();
+    return PushMessageArgs(
+      id: id,
+      sessionId: sessionId,
+      role: role,
+      text: text,
+      source: source,
+    );
+  }
+}
+
+class PushStatusArgs {
+  PushStatusArgs({
+    required this.sessionId,
+    required this.state,
+  });
+
+  final String sessionId;
+
+  final String state;
+}
+
+class PushStatusArgsDecoder implements ReducerArgDecoder<PushStatusArgs> {
+  const PushStatusArgsDecoder();
+
+  @override
+  PushStatusArgs decode(BsatnDecoder decoder) {
+    final sessionId = decoder.readString();
+    final state = decoder.readString();
+    return PushStatusArgs(
+      sessionId: sessionId,
+      state: state,
+    );
+  }
+}
+
+class PushToolEventArgs {
+  PushToolEventArgs({
+    required this.id,
+    required this.sessionId,
+    required this.tool,
+    required this.detail,
+  });
+
+  final String id;
+
+  final String sessionId;
+
+  final String tool;
+
+  final String detail;
+}
+
+class PushToolEventArgsDecoder implements ReducerArgDecoder<PushToolEventArgs> {
+  const PushToolEventArgsDecoder();
+
+  @override
+  PushToolEventArgs decode(BsatnDecoder decoder) {
+    final id = decoder.readString();
+    final sessionId = decoder.readString();
+    final tool = decoder.readString();
+    final detail = decoder.readString();
+    return PushToolEventArgs(
+      id: id,
+      sessionId: sessionId,
+      tool: tool,
+      detail: detail,
+    );
+  }
+}
+
+class RegisterSessionArgs {
+  RegisterSessionArgs({
+    required this.id,
+    required this.baseName,
+    required this.host,
+    required this.clientId,
+  });
+
+  final String id;
+
+  final String baseName;
+
+  final String host;
+
+  final String clientId;
+}
+
+class RegisterSessionArgsDecoder
+    implements ReducerArgDecoder<RegisterSessionArgs> {
+  const RegisterSessionArgsDecoder();
+
+  @override
+  RegisterSessionArgs decode(BsatnDecoder decoder) {
+    final id = decoder.readString();
+    final baseName = decoder.readString();
+    final host = decoder.readString();
+    final clientId = decoder.readString();
+    return RegisterSessionArgs(
+      id: id,
+      baseName: baseName,
+      host: host,
+      clientId: clientId,
+    );
+  }
+}
+
 class RenameNoteArgs {
   RenameNoteArgs({
     required this.id,
@@ -376,6 +573,68 @@ class RequestCallArgsDecoder implements ReducerArgDecoder<RequestCallArgs> {
     final callee = decoder.readIdentity();
     return RequestCallArgs(
       callee: callee,
+    );
+  }
+}
+
+class RequestPermissionArgs {
+  RequestPermissionArgs({
+    required this.id,
+    required this.sessionId,
+    required this.tool,
+    required this.input,
+  });
+
+  final String id;
+
+  final String sessionId;
+
+  final String tool;
+
+  final String input;
+}
+
+class RequestPermissionArgsDecoder
+    implements ReducerArgDecoder<RequestPermissionArgs> {
+  const RequestPermissionArgsDecoder();
+
+  @override
+  RequestPermissionArgs decode(BsatnDecoder decoder) {
+    final id = decoder.readString();
+    final sessionId = decoder.readString();
+    final tool = decoder.readString();
+    final input = decoder.readString();
+    return RequestPermissionArgs(
+      id: id,
+      sessionId: sessionId,
+      tool: tool,
+      input: input,
+    );
+  }
+}
+
+class ResolvePermissionArgs {
+  ResolvePermissionArgs({
+    required this.id,
+    required this.status,
+  });
+
+  final String id;
+
+  final String status;
+}
+
+class ResolvePermissionArgsDecoder
+    implements ReducerArgDecoder<ResolvePermissionArgs> {
+  const ResolvePermissionArgsDecoder();
+
+  @override
+  ResolvePermissionArgs decode(BsatnDecoder decoder) {
+    final id = decoder.readString();
+    final status = decoder.readString();
+    return ResolvePermissionArgs(
+      id: id,
+      status: status,
     );
   }
 }
@@ -468,6 +727,20 @@ class SetDisplayNameArgsDecoder
     return SetDisplayNameArgs(
       name: name,
     );
+  }
+}
+
+class SweepOldMessagesArgs {
+  SweepOldMessagesArgs();
+}
+
+class SweepOldMessagesArgsDecoder
+    implements ReducerArgDecoder<SweepOldMessagesArgs> {
+  const SweepOldMessagesArgsDecoder();
+
+  @override
+  SweepOldMessagesArgs decode(BsatnDecoder decoder) {
+    return SweepOldMessagesArgs();
   }
 }
 
@@ -647,27 +920,47 @@ const deleteFolderDef =
     ReducerDef<DeleteFolderArgs>('delete_folder', DeleteFolderArgsDecoder());
 const deleteNoteDef =
     ReducerDef<DeleteNoteArgs>('delete_note', DeleteNoteArgsDecoder());
+const editMessageDef =
+    ReducerDef<EditMessageArgs>('edit_message', EditMessageArgsDecoder());
 const endCallDef = ReducerDef<EndCallArgs>('end_call', EndCallArgsDecoder());
+const endSessionDef =
+    ReducerDef<EndSessionArgs>('end_session', EndSessionArgsDecoder());
 const findReplaceInNoteDef = ReducerDef<FindReplaceInNoteArgs>(
     'find_replace_in_note', FindReplaceInNoteArgsDecoder());
 const getRecentNotesDef = ReducerDef<GetRecentNotesArgs>(
     'get_recent_notes', GetRecentNotesArgsDecoder());
+const heartbeatDef =
+    ReducerDef<HeartbeatArgs>('heartbeat', HeartbeatArgsDecoder());
 const moveFolderDef =
     ReducerDef<MoveFolderArgs>('move_folder', MoveFolderArgsDecoder());
 const moveNoteDef =
     ReducerDef<MoveNoteArgs>('move_note', MoveNoteArgsDecoder());
 const prependToNoteDef = ReducerDef<PrependToNoteArgs>(
     'prepend_to_note', PrependToNoteArgsDecoder());
+const pushMessageDef =
+    ReducerDef<PushMessageArgs>('push_message', PushMessageArgsDecoder());
+const pushStatusDef =
+    ReducerDef<PushStatusArgs>('push_status', PushStatusArgsDecoder());
+const pushToolEventDef = ReducerDef<PushToolEventArgs>(
+    'push_tool_event', PushToolEventArgsDecoder());
+const registerSessionDef = ReducerDef<RegisterSessionArgs>(
+    'register_session', RegisterSessionArgsDecoder());
 const renameNoteDef =
     ReducerDef<RenameNoteArgs>('rename_note', RenameNoteArgsDecoder());
 const requestCallDef =
     ReducerDef<RequestCallArgs>('request_call', RequestCallArgsDecoder());
+const requestPermissionDef = ReducerDef<RequestPermissionArgs>(
+    'request_permission', RequestPermissionArgsDecoder());
+const resolvePermissionDef = ReducerDef<ResolvePermissionArgs>(
+    'resolve_permission', ResolvePermissionArgsDecoder());
 const sendAudioFrameDef = ReducerDef<SendAudioFrameArgs>(
     'send_audio_frame', SendAudioFrameArgsDecoder());
 const sendVideoFrameDef = ReducerDef<SendVideoFrameArgs>(
     'send_video_frame', SendVideoFrameArgsDecoder());
 const setDisplayNameDef = ReducerDef<SetDisplayNameArgs>(
     'set_display_name', SetDisplayNameArgsDecoder());
+const sweepOldMessagesDef = ReducerDef<SweepOldMessagesArgs>(
+    'sweep_old_messages', SweepOldMessagesArgsDecoder());
 const updateNoteContentDef = ReducerDef<UpdateNoteContentArgs>(
     'update_note_content', UpdateNoteContentArgsDecoder());
 const updateNotePathDef = ReducerDef<UpdateNotePathArgs>(

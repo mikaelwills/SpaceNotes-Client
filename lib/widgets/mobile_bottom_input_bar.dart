@@ -2,17 +2,14 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:get_it/get_it.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image/image.dart' as image_lib;
 import 'package:image_picker/image_picker.dart';
 import '../theme/spacenotes_theme.dart';
 import '../providers/notes_providers.dart';
+import '../providers/chat_providers.dart';
 import '../dialogs/notes_list_dialogs.dart';
-import '../blocs/chat/chat_bloc.dart';
-import '../blocs/chat/chat_event.dart';
-import '../blocs/chat/chat_state.dart';
 import '../screens/home_screen.dart';
 import 'notes_search_bar.dart';
 
@@ -33,7 +30,6 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
   final ImagePicker _imagePicker = ImagePicker();
   bool _isSearchFocused = false;
   String? _pendingImageBase64;
-  String? _pendingImageMimeType;
 
   @override
   void dispose() {
@@ -125,9 +121,7 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
   }
 
   Widget _buildSearchBar(bool isChat) {
-    final chatState = GetIt.I<ChatBloc>().state;
-    final targetSession =
-        chatState is ChatReady ? chatState.targetSession : 'note-assistant';
+    final targetSession = ref.watch(targetSessionProvider);
 
     String hintText;
     if (!isChat) {
@@ -163,7 +157,6 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
               onClearImage: () {
                 setState(() {
                   _pendingImageBase64 = null;
-                  _pendingImageMimeType = null;
                 });
               },
             ),
@@ -262,27 +255,23 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
 
     final sessionId = _getCurrentSessionId();
     if (sessionId != null) {
-      GetIt.I<ChatBloc>().add(SendSessionMessage(sessionId, message));
+      sendChatMessage(ref, sessionId: sessionId, text: message);
       _searchController.clear();
       setState(() {
         _pendingImageBase64 = null;
-        _pendingImageMimeType = null;
       });
       return;
     }
 
-    GetIt.I<ChatBloc>().add(SendChatMessage(
-      message.isEmpty ? 'What is in this image?' : message,
-      imageBase64: _pendingImageBase64,
-      imageMimeType: _pendingImageMimeType,
-    ));
+    final targetSession = ref.read(targetSessionProvider);
+    final text = message.isEmpty ? 'What is in this image?' : message;
+    sendChatMessage(ref, sessionId: targetSession, text: text);
     context.go('/notes/chat');
 
     _searchController.clear();
     ref.read(folderSearchQueryProvider.notifier).state = '';
     setState(() {
       _pendingImageBase64 = null;
-      _pendingImageMimeType = null;
     });
   }
 
@@ -293,23 +282,12 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
 
       var bytes = await compute(_readFileBytes, image.path);
 
-      final extension = image.path.split('.').last.toLowerCase();
-      var mimeType = switch (extension) {
-        'jpg' || 'jpeg' => 'image/jpeg',
-        'png' => 'image/png',
-        'gif' => 'image/gif',
-        'webp' => 'image/webp',
-        _ => 'image/jpeg',
-      };
-
       if (bytes.length > 4 * 1024 * 1024) {
         bytes = await compute(_compressImage, bytes);
-        mimeType = 'image/jpeg';
       }
 
       setState(() {
         _pendingImageBase64 = base64Encode(bytes);
-        _pendingImageMimeType = mimeType;
       });
     } catch (e) {
       debugPrint('[MobileBottomInputBar] Error picking image: $e');

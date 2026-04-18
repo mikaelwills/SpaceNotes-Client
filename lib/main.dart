@@ -10,12 +10,9 @@ import 'package:spacetimedb_sdk/src/utils/sdk_logger.dart' show SdkLogger;
 
 import 'theme/spacenotes_theme.dart';
 import 'services/debug_logger.dart';
-import 'blocs/chat/chat_bloc.dart';
-import 'blocs/chat/chat_event.dart';
 import 'blocs/config/config_cubit.dart';
 import 'blocs/desktop_notes/desktop_notes_bloc.dart';
 import 'router/app_router.dart';
-import 'services/space_channel_service.dart';
 import 'services/web_config_service.dart';
 
 void main() async {
@@ -29,13 +26,6 @@ void main() async {
   final configCubit = ConfigCubit();
   await configCubit.initialize();
   GetIt.I.registerSingleton<ConfigCubit>(configCubit);
-
-  final spaceChannelService = SpaceChannelService();
-  GetIt.I.registerSingleton<SpaceChannelService>(spaceChannelService);
-  spaceChannelService.initialize();
-
-  final chatBloc = ChatBloc();
-  GetIt.I.registerSingleton<ChatBloc>(chatBloc);
 
   if (kIsWeb) {
     await WebConfigService.tryAutoConfigureSpace(configCubit);
@@ -54,7 +44,6 @@ void main() async {
     container: container,
     child: SpaceNotesApp(
       configCubit: configCubit,
-      chatBloc: chatBloc,
       container: container,
     ),
   ));
@@ -62,13 +51,11 @@ void main() async {
 
 class SpaceNotesApp extends StatefulWidget {
   final ConfigCubit configCubit;
-  final ChatBloc chatBloc;
   final ProviderContainer container;
 
   const SpaceNotesApp({
     super.key,
     required this.configCubit,
-    required this.chatBloc,
     required this.container,
   });
 
@@ -99,10 +86,8 @@ class _SpaceNotesAppState extends State<SpaceNotesApp>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       debugLogger.info('APP', 'App resumed - checking connection health');
-      widget.chatBloc.add(const ClearTransientActivity());
       final repo = widget.container.read(notesRepositoryProvider);
       repo.tryReconnect();
-      GetIt.I<SpaceChannelService>().forceReconnect();
     }
   }
 
@@ -111,7 +96,6 @@ class _SpaceNotesAppState extends State<SpaceNotesApp>
     return MultiBlocProvider(
       providers: [
         BlocProvider<ConfigCubit>.value(value: widget.configCubit),
-        BlocProvider<ChatBloc>.value(value: widget.chatBloc),
         BlocProvider<DesktopNotesBloc>(
           create: (_) => DesktopNotesBloc(),
         ),

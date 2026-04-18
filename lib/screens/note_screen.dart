@@ -64,17 +64,6 @@ class _NoteScreenState extends ConsumerState<NoteScreen> {
         'NOTE', 'Dispose: $_noteName${hasPending ? " (saving pending)" : ""}');
     _debounceTimer?.cancel();
     _saveContent();
-    final fileName = _currentPath.split('/').last.replaceAll('.md', '');
-    if (fileName.toLowerCase().startsWith('untitled') &&
-        _currentContent.length >= 10) {
-      debugLogger.info(
-          'NOTE', 'Dispose trigger: requesting title for $fileName');
-      _repo.titleService?.triggerImmediate(
-        widget.noteId,
-        content: _currentContent,
-        path: _currentPath,
-      );
-    }
     _detachSubscriptions();
     _repo.clientNotifier.removeListener(_onClientChanged);
     super.dispose();
@@ -337,14 +326,6 @@ class _NoteScreenState extends ConsumerState<NoteScreen> {
     debugLogger.info('NOTE', 'Exit: $_noteName');
     _debounceTimer?.cancel();
     await _saveContent();
-    final fileName = _currentPath.split('/').last.replaceAll('.md', '');
-    if (fileName.toLowerCase().startsWith('untitled')) {
-      _repo.titleService?.triggerImmediate(
-        widget.noteId,
-        content: _currentContent,
-        path: _currentPath,
-      );
-    }
     if (mounted) Navigator.of(context).pop();
   }
 

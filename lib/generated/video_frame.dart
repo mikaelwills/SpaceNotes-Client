@@ -114,6 +114,11 @@ class VideoFrameDecoder extends RowDecoder<VideoFrame> {
   }
 
   @override
+  bool get hasPrimaryKey {
+    return false;
+  }
+
+  @override
   dynamic getPrimaryKey(VideoFrame row) {
     return null;
   }

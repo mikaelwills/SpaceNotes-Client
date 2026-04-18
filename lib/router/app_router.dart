@@ -7,7 +7,6 @@ import '../screens/incoming_call_screen.dart';
 import '../screens/connect_screen.dart';
 import '../screens/online_users_screen.dart';
 import '../screens/settings_screen.dart';
-import '../screens/provider_list_screen.dart';
 import '../screens/home_screen.dart';
 import '../screens/folder_list_view.dart';
 import '../screens/notes_home_view.dart';
@@ -93,14 +92,6 @@ GoRouter createAppRouter(ProviderContainer container) {
             pageBuilder: (context, state) => _buildFadeTransitionPage(
               key: state.pageKey,
               child: const SettingsScreen(),
-            ),
-          ),
-          GoRoute(
-            path: '/provider-list',
-            name: 'provider-list',
-            pageBuilder: (context, state) => _buildFadeTransitionPage(
-              key: state.pageKey,
-              child: const ProviderListScreen(),
             ),
           ),
           // Home shell (shared bottom input area)

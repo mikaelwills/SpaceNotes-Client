@@ -5,13 +5,18 @@ import 'dart:async';
 import 'package:spacetimedb_sdk/codegen.dart';
 import 'reducers.dart';
 import 'reducer_args.dart';
-import 'call_session.dart';
+import 'message.dart';
 import 'connected_user.dart';
 import 'audio_frame.dart';
+import 'note.dart';
+import 'session.dart';
 import 'user_profile.dart';
 import 'folder.dart';
-import 'note.dart';
 import 'video_frame.dart';
+import 'session_activity.dart';
+import 'tool_event.dart';
+import 'permission_request.dart';
+import 'call_session.dart';
 
 class SpacetimeDbClient {
   SpacetimeDbClient._({
@@ -66,8 +71,8 @@ class SpacetimeDbClient {
     return subscriptions.onMutationSyncResult;
   }
 
-  TableCache<CallSession> get callSession {
-    return subscriptions.cache.getTableByTypedName<CallSession>('call_session');
+  TableCache<Message> get message {
+    return subscriptions.cache.getTableByTypedName<Message>('message');
   }
 
   TableCache<ConnectedUser> get connectedUser {
@@ -79,6 +84,14 @@ class SpacetimeDbClient {
     return subscriptions.cache.getTableByTypedName<AudioFrame>('audio_frame');
   }
 
+  TableCache<Note> get note {
+    return subscriptions.cache.getTableByTypedName<Note>('note');
+  }
+
+  TableCache<Session> get session {
+    return subscriptions.cache.getTableByTypedName<Session>('session');
+  }
+
   TableCache<UserProfile> get userProfile {
     return subscriptions.cache.getTableByTypedName<UserProfile>('user_profile');
   }
@@ -87,12 +100,26 @@ class SpacetimeDbClient {
     return subscriptions.cache.getTableByTypedName<Folder>('folder');
   }
 
-  TableCache<Note> get note {
-    return subscriptions.cache.getTableByTypedName<Note>('note');
-  }
-
   TableCache<VideoFrame> get videoFrame {
     return subscriptions.cache.getTableByTypedName<VideoFrame>('video_frame');
+  }
+
+  TableCache<SessionActivity> get sessionActivity {
+    return subscriptions.cache
+        .getTableByTypedName<SessionActivity>('session_activity');
+  }
+
+  TableCache<ToolEvent> get toolEvent {
+    return subscriptions.cache.getTableByTypedName<ToolEvent>('tool_event');
+  }
+
+  TableCache<PermissionRequest> get permissionRequest {
+    return subscriptions.cache
+        .getTableByTypedName<PermissionRequest>('permission_request');
+  }
+
+  TableCache<CallSession> get callSession {
+    return subscriptions.cache.getTableByTypedName<CallSession>('call_session');
   }
 
   static Future<SpacetimeDbClient> create({
@@ -116,20 +143,30 @@ class SpacetimeDbClient {
         SubscriptionManager(connection, offlineStorage: offlineStorage);
 
     subscriptionManager.cache
-        .registerDecoder<CallSession>('call_session', CallSessionDecoder());
+        .registerDecoder<Message>('message', MessageDecoder());
     subscriptionManager.cache.registerDecoder<ConnectedUser>(
         'connected_user', ConnectedUserDecoder());
     subscriptionManager.cache.registerDecoder<AudioFrame>(
         'audio_frame', AudioFrameDecoder(),
         isEvent: true);
+    subscriptionManager.cache.registerDecoder<Note>('note', NoteDecoder());
+    subscriptionManager.cache
+        .registerDecoder<Session>('session', SessionDecoder());
     subscriptionManager.cache
         .registerDecoder<UserProfile>('user_profile', UserProfileDecoder());
     subscriptionManager.cache
         .registerDecoder<Folder>('folder', FolderDecoder());
-    subscriptionManager.cache.registerDecoder<Note>('note', NoteDecoder());
     subscriptionManager.cache.registerDecoder<VideoFrame>(
         'video_frame', VideoFrameDecoder(),
         isEvent: true);
+    subscriptionManager.cache.registerDecoder<SessionActivity>(
+        'session_activity', SessionActivityDecoder());
+    subscriptionManager.cache
+        .registerDecoder<ToolEvent>('tool_event', ToolEventDecoder());
+    subscriptionManager.cache.registerDecoder<PermissionRequest>(
+        'permission_request', PermissionRequestDecoder());
+    subscriptionManager.cache
+        .registerDecoder<CallSession>('call_session', CallSessionDecoder());
 
     subscriptionManager.reducerRegistry.register(acceptCallDef);
     subscriptionManager.reducerRegistry.register(appendToNoteDef);
@@ -138,17 +175,27 @@ class SpacetimeDbClient {
     subscriptionManager.reducerRegistry.register(createNoteDef);
     subscriptionManager.reducerRegistry.register(deleteFolderDef);
     subscriptionManager.reducerRegistry.register(deleteNoteDef);
+    subscriptionManager.reducerRegistry.register(editMessageDef);
     subscriptionManager.reducerRegistry.register(endCallDef);
+    subscriptionManager.reducerRegistry.register(endSessionDef);
     subscriptionManager.reducerRegistry.register(findReplaceInNoteDef);
     subscriptionManager.reducerRegistry.register(getRecentNotesDef);
+    subscriptionManager.reducerRegistry.register(heartbeatDef);
     subscriptionManager.reducerRegistry.register(moveFolderDef);
     subscriptionManager.reducerRegistry.register(moveNoteDef);
     subscriptionManager.reducerRegistry.register(prependToNoteDef);
+    subscriptionManager.reducerRegistry.register(pushMessageDef);
+    subscriptionManager.reducerRegistry.register(pushStatusDef);
+    subscriptionManager.reducerRegistry.register(pushToolEventDef);
+    subscriptionManager.reducerRegistry.register(registerSessionDef);
     subscriptionManager.reducerRegistry.register(renameNoteDef);
     subscriptionManager.reducerRegistry.register(requestCallDef);
+    subscriptionManager.reducerRegistry.register(requestPermissionDef);
+    subscriptionManager.reducerRegistry.register(resolvePermissionDef);
     subscriptionManager.reducerRegistry.register(sendAudioFrameDef);
     subscriptionManager.reducerRegistry.register(sendVideoFrameDef);
     subscriptionManager.reducerRegistry.register(setDisplayNameDef);
+    subscriptionManager.reducerRegistry.register(sweepOldMessagesDef);
     subscriptionManager.reducerRegistry.register(updateNoteContentDef);
     subscriptionManager.reducerRegistry.register(updateNotePathDef);
     subscriptionManager.reducerRegistry.register(upsertFolderDef);

@@ -1,22 +1,15 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:collection/collection.dart';
 import '../theme/spacenotes_theme.dart';
-import '../blocs/chat/chat_bloc.dart';
-import '../blocs/chat/chat_event.dart';
 import '../providers/notes_providers.dart';
 import 'connection_indicator.dart';
 import 'sync_state_indicator.dart';
 
 class MobileNavBar extends ConsumerWidget {
   const MobileNavBar({super.key});
-
-  void _onNewSessionPressed(BuildContext context) {
-    context.read<ChatBloc>().add(ClearChat());
-  }
 
   bool _isOnNoteScreen(String location) {
     return location.startsWith('/notes/note/');
@@ -149,16 +142,6 @@ class MobileNavBar extends ConsumerWidget {
               color: isActive ? SpaceNotesTheme.primary : SpaceNotesTheme.text),
         ),
       );
-    }
-    if (current == '/notes/chat') {
-      icons.add(const Spacer());
-      icons.add(
-        GestureDetector(
-          onTap: () => _onNewSessionPressed(context),
-          child: const Icon(Icons.create_outlined, color: SpaceNotesTheme.text),
-        ),
-      );
-      icons.add(const SizedBox(width: 4));
     }
     return icons;
   }

@@ -94,6 +94,11 @@ class AudioFrameDecoder extends RowDecoder<AudioFrame> {
   }
 
   @override
+  bool get hasPrimaryKey {
+    return false;
+  }
+
+  @override
   dynamic getPrimaryKey(AudioFrame row) {
     return null;
   }

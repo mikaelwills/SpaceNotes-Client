@@ -1,15 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:collection/collection.dart';
 import '../theme/spacenotes_theme.dart';
 import '../providers/notes_providers.dart';
 import '../providers/connection_providers.dart';
+import '../providers/chat_providers.dart';
 import '../dialogs/notes_list_dialogs.dart';
 import '../generated/note.dart';
-import '../blocs/chat/chat_bloc.dart';
-import '../blocs/chat/chat_event.dart';
 import 'quill_note_editor.dart';
 import 'adaptive/platform_utils.dart';
 import 'notes_search_bar.dart';
@@ -45,8 +43,7 @@ class _NoteBottomBarState extends ConsumerState<NoteBottomBar> {
   @override
   Widget build(BuildContext context) {
     final isDesktop = PlatformUtils.isDesktopLayout(context);
-    final isChatConnected =
-        ref.watch(chatConnectedProvider).valueOrNull ?? false;
+    final isChatConnected = ref.watch(spacetimeConnectedProvider);
 
     if (isDesktop) {
       return _buildDesktopBar(isChatConnected);
@@ -279,7 +276,12 @@ class _NoteBottomBarState extends ConsumerState<NoteBottomBar> {
     FocusScope.of(context).unfocus();
 
     final prefixedMessage = '[Viewing note: ${widget.notePath}]\n\n$message';
-    context.read<ChatBloc>().add(SendChatMessage(prefixedMessage));
+    final targetSession = ref.read(targetSessionProvider);
+    sendChatMessage(
+      ref,
+      sessionId: targetSession,
+      text: prefixedMessage,
+    );
     _controller.clear();
 
     widget.onSendMessage?.call();

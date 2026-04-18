@@ -67,8 +67,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   Widget _buildServerSection() {
     final isSpacetimeConnected = ref.watch(spacetimeConnectedProvider);
-    final isChatConnected =
-        ref.watch(chatConnectedProvider).valueOrNull ?? false;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -148,8 +146,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         Row(
           children: [
             _connectionDot(isSpacetimeConnected, 'SpaceNotes'),
-            const SizedBox(width: 16),
-            _connectionDot(isChatConnected, 'Claude Code'),
           ],
         ),
       ],
