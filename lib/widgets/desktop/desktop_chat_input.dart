@@ -1,10 +1,11 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../theme/spacenotes_theme.dart';
 import '../../providers/chat_providers.dart';
-import '../notes_search_bar.dart';
+import '../primitives/primitives.dart';
 
 class DesktopChatInput extends ConsumerStatefulWidget {
   const DesktopChatInput({super.key});
@@ -15,75 +16,89 @@ class DesktopChatInput extends ConsumerStatefulWidget {
 
 class _DesktopChatInputState extends ConsumerState<DesktopChatInput> {
   final TextEditingController _controller = TextEditingController();
+  final FocusNode _focusNode = FocusNode();
   String? _pendingImageBase64;
 
   @override
   void dispose() {
     _controller.dispose();
+    _focusNode.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            Colors.transparent,
-            SpaceNotesTheme.background,
-          ],
+    return Stack(
+      children: [
+        _buildFadeOverlay(),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 800),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Expanded(
+                    child: SnField(
+                      controller: _controller,
+                      focusNode: _focusNode,
+                      hint: 'ask ai…',
+                      onSubmitted: (_) => _onSend(),
+                      maxLines: 8,
+                      minLines: 1,
+                      trailing: _pendingImageBase64 != null
+                          ? GestureDetector(
+                              onTap: () {
+                                HapticFeedback.lightImpact();
+                                setState(() => _pendingImageBase64 = null);
+                              },
+                              behavior: HitTestBehavior.opaque,
+                              child: const Icon(
+                                Icons.image,
+                                size: 16,
+                                color: SpaceNotesTheme.accent,
+                              ),
+                            )
+                          : null,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  _DockTile(
+                    icon: Icons.image_outlined,
+                    onTap: _onPickImage,
+                    semanticLabel: 'attach image',
+                  ),
+                  const SizedBox(width: 8),
+                  _DockTile(
+                    icon: Icons.arrow_upward,
+                    onTap: _onSend,
+                    semanticLabel: 'send',
+                  ),
+                ],
+              ),
+            ),
+          ),
         ),
-      ),
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 800),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Expanded(
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: SpaceNotesTheme.inputSurface,
-                    borderRadius: BorderRadius.circular(28),
-                  ),
-                  child: NotesSearchBar(
-                    controller: _controller,
-                    height: 48,
-                    hintText: 'Ask AI...',
-                    onChanged: (_) {},
-                    showImagePicker: true,
-                    onImagePickerTap: _onPickImage,
-                    hasImageAttached: _pendingImageBase64 != null,
-                    onClearImage: () {
-                      setState(() {
-                        _pendingImageBase64 = null;
-                      });
-                    },
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Container(
-                width: 48,
-                height: 48,
-                decoration: const BoxDecoration(
-                  color: SpaceNotesTheme.inputSurface,
-                  shape: BoxShape.circle,
-                ),
-                child: IconButton(
-                  onPressed: _onSend,
-                  tooltip: 'Send to AI',
-                  icon: const Icon(
-                    Icons.arrow_upward,
-                    size: 24,
-                    color: SpaceNotesTheme.primary,
-                  ),
-                ),
-              ),
-            ],
+      ],
+    );
+  }
+
+  Widget _buildFadeOverlay() {
+    return const Positioned.fill(
+      child: IgnorePointer(
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              stops: [0.0, 0.35, 1.0],
+              colors: [
+                Color(0x000D0D0F),
+                Color(0xCC0D0D0F),
+                Color(0xFF0D0D0F),
+              ],
+            ),
           ),
         ),
       ),
@@ -98,9 +113,7 @@ class _DesktopChatInputState extends ConsumerState<DesktopChatInput> {
     final targetSession = ref.read(targetSessionProvider);
     sendChatMessage(ref, sessionId: targetSession, text: text);
     _controller.clear();
-    setState(() {
-      _pendingImageBase64 = null;
-    });
+    setState(() => _pendingImageBase64 = null);
   }
 
   Future<void> _onPickImage() async {
@@ -112,12 +125,50 @@ class _DesktopChatInputState extends ConsumerState<DesktopChatInput> {
       final bytes = await image.readAsBytes();
       final base64 = base64Encode(bytes);
 
-      setState(() {
-        _pendingImageBase64 = base64;
-      });
+      setState(() => _pendingImageBase64 = base64);
     } catch (e, stack) {
       debugPrint('[DesktopChatInput] Error picking image: $e');
       debugPrint('[DesktopChatInput] Stack: $stack');
     }
+  }
+}
+
+class _DockTile extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onTap;
+  final String semanticLabel;
+
+  const _DockTile({
+    required this.icon,
+    required this.onTap,
+    required this.semanticLabel,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      label: semanticLabel,
+      button: true,
+      child: GestureDetector(
+        onTap: () {
+          HapticFeedback.selectionClick();
+          onTap();
+        },
+        behavior: HitTestBehavior.opaque,
+        child: Container(
+          width: 44,
+          height: 44,
+          decoration: BoxDecoration(
+            color: SpaceNotesTheme.bgAlt,
+            border: Border.all(
+              color: SpaceNotesTheme.hairlineStrong,
+              width: 1,
+            ),
+            borderRadius: BorderRadius.circular(SpaceNotesTheme.radiusDock),
+          ),
+          child: Icon(icon, size: 16, color: SpaceNotesTheme.accent),
+        ),
+      ),
+    );
   }
 }
