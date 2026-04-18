@@ -130,8 +130,8 @@ class ChatMessageListState extends State<ChatMessageList> {
                 child: Tooltip(
                   message: 'scroll to bottom',
                   child: Container(
-                    width: 36,
-                    height: 36,
+                    width: 44,
+                    height: 44,
                     decoration: BoxDecoration(
                       color: SpaceNotesTheme.bgAlt,
                       border: Border.all(
