@@ -71,7 +71,8 @@ class _DesktopChatInputState extends ConsumerState<DesktopChatInput> {
     if (message.isEmpty && _pendingImageBase64 == null) return;
 
     final text = message.isEmpty ? 'What is in this image?' : message;
-    final session = widget.sessionId ?? ref.read(targetSessionProvider);
+    final String session =
+        widget.sessionId ?? ref.read(targetSessionProvider);
     sendChatMessage(ref, sessionId: session, text: text);
     _controller.clear();
     setState(() => _pendingImageBase64 = null);
