@@ -48,27 +48,22 @@ class SnField extends StatelessWidget {
       decoration: _decoration(),
       padding: const EdgeInsets.symmetric(horizontal: 13),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           if (leading != null) ...[
-            Center(
-              child: IconTheme(
-                data:
-                    const IconThemeData(size: 14, color: SpaceNotesTheme.muted),
-                child: leading!,
-              ),
+            IconTheme(
+              data: const IconThemeData(size: 14, color: SpaceNotesTheme.muted),
+              child: leading!,
             ),
             const SizedBox(width: 10),
           ],
-          Expanded(child: Center(child: _buildTextField(vCenter: true))),
+          Expanded(child: _buildTextField(vCenter: true)),
           if (trailing != null) ...[
             const SizedBox(width: 8),
-            Center(
-              child: IconTheme(
-                data: const IconThemeData(
-                    size: 14, color: SpaceNotesTheme.accent),
-                child: trailing!,
-              ),
+            IconTheme(
+              data:
+                  const IconThemeData(size: 14, color: SpaceNotesTheme.accent),
+              child: trailing!,
             ),
           ],
         ],
@@ -126,30 +121,28 @@ class SnField extends StatelessWidget {
       maxLines: maxLines,
       minLines: minLines,
       expands: expands,
-      style: TextStyle(
+      style: const TextStyle(
         fontFamily: SpaceNotesTheme.fontSans,
         fontSize: 14,
         color: SpaceNotesTheme.fg,
-        height: vCenter ? 1.0 : 1.4,
-        leadingDistribution: vCenter
-            ? TextLeadingDistribution.even
-            : TextLeadingDistribution.proportional,
+        height: 1.4,
       ),
       textAlignVertical:
           vCenter ? TextAlignVertical.center : TextAlignVertical.top,
       cursorColor: SpaceNotesTheme.accent,
       cursorWidth: 1.5,
       decoration: InputDecoration(
-        isDense: true,
-        contentPadding: EdgeInsets.zero,
+        isCollapsed: true,
+        contentPadding: vCenter
+            ? const EdgeInsets.symmetric(vertical: 14)
+            : EdgeInsets.zero,
         hintText: hint,
-        hintStyle: TextStyle(
+        hintStyle: const TextStyle(
           fontFamily: SpaceNotesTheme.fontMono,
           fontSize: 12,
           color: SpaceNotesTheme.dim,
           letterSpacing: 0.3,
-          height: vCenter ? 1.0 : null,
-          leadingDistribution: vCenter ? TextLeadingDistribution.even : null,
+          height: 1.4,
         ),
         border: InputBorder.none,
         enabledBorder: InputBorder.none,
