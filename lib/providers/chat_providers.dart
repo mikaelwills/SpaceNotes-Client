@@ -110,16 +110,21 @@ final chatTimelineBySessionProvider =
   void listener() => ref.invalidateSelf();
   bucket.addListener(listener);
   ref.onDispose(() => bucket.removeListener(listener));
-  return List<ChatItem>.unmodifiable(bucket.items);
+  return bucket.items;
 });
 
-/// Per-session bucket holding the merged sorted timeline.
+/// Per-session bucket holding the merged sorted timeline. Rows arrive in
+/// STDB commit order, which is effectively timestamp-ascending — a short
+/// reverse-linear insertion from the tail is almost always O(1).
 class _SessionBucket extends ChangeNotifier {
   final List<ChatItem> items = [];
 
   void add(ChatItem item) {
-    final idx = _insertionIndex(item.timestamp);
-    items.insert(idx, item);
+    var i = items.length;
+    while (i > 0 && items[i - 1].timestamp.compareTo(item.timestamp) > 0) {
+      i--;
+    }
+    items.insert(i, item);
     notifyListeners();
   }
 
@@ -129,13 +134,7 @@ class _SessionBucket extends ChangeNotifier {
       add(next);
       return;
     }
-    if (items[idx].timestamp == next.timestamp) {
-      items[idx] = next;
-    } else {
-      items.removeAt(idx);
-      final reIdx = _insertionIndex(next.timestamp);
-      items.insert(reIdx, next);
-    }
+    items[idx] = next;
     notifyListeners();
   }
 
@@ -144,20 +143,6 @@ class _SessionBucket extends ChangeNotifier {
     if (idx == -1) return;
     items.removeAt(idx);
     notifyListeners();
-  }
-
-  int _insertionIndex(Int64 ts) {
-    var lo = 0;
-    var hi = items.length;
-    while (lo < hi) {
-      final mid = (lo + hi) >>> 1;
-      if (items[mid].timestamp.compareTo(ts) <= 0) {
-        lo = mid + 1;
-      } else {
-        hi = mid;
-      }
-    }
-    return lo;
   }
 }
 
