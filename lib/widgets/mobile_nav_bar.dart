@@ -28,12 +28,14 @@ class MobileNavBar extends ConsumerWidget {
       ),
       child: Row(
         children: [
-          if (isOnSettings)
+          if (isOnSettings) ...[
             _NavIcon(
               icon: Icons.arrow_back,
               onTap: () => context.go('/notes'),
               active: false,
             ),
+            const Spacer(),
+          ],
           if (isOnFolder) ...[
             _NavIcon(
               icon: Icons.arrow_back,

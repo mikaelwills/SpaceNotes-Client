@@ -9,6 +9,7 @@ import '../blocs/desktop_notes/desktop_notes_event.dart';
 import '../providers/notes_providers.dart';
 import '../providers/connection_providers.dart';
 import '../widgets/adaptive/platform_utils.dart';
+import '../widgets/primitives/primitives.dart';
 import '../services/debug_logger.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
@@ -43,24 +44,32 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Widget build(BuildContext context) {
     return SingleChildScrollView(
       child: Center(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 500),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                _buildServerSection(),
-                if (PlatformUtils.isDesktopLayout(context)) ...[
-                  const SizedBox(height: 32),
-                  _buildMaxOpenNotesSection(),
-                ],
-                const SizedBox(height: 32),
-                _buildDebugLogsSection(),
-              ],
-            ),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 640),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _buildPageHeader(),
+              _buildServerSection(),
+              if (PlatformUtils.isDesktopLayout(context))
+                _buildMaxOpenNotesSection(),
+              _buildDebugLogsSection(),
+              const SizedBox(height: 40),
+            ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildPageHeader() {
+    return const Padding(
+      padding: EdgeInsets.fromLTRB(20, 18, 20, 14),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          SnMicroLabel('mcp · settings'),
+        ],
       ),
     );
   }
@@ -68,209 +77,140 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Widget _buildServerSection() {
     final isSpacetimeConnected = ref.watch(spacetimeConnectedProvider);
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return _Section(
+      label: 'server',
       children: [
         const Text(
-          'Server',
-          style: TextStyle(
-            fontFamily: 'FiraCode',
-            fontSize: 16,
-            color: SpaceNotesTheme.text,
-            fontWeight: FontWeight.w500,
-          ),
+          'All services run on this IP.',
+          style: _proseStyle,
         ),
-        const SizedBox(height: 8),
-        const Text(
-          'All services run on this IP. '
-          'SpaceNotes :${ConfigLoaded.spacetimeDbPort}  '
-          'Space :${ConfigLoaded.spacePort}  '
-          'Claude Code :${ConfigLoaded.claudeCodePort}',
-          style: TextStyle(
-            fontFamily: 'FiraCode',
-            fontSize: 11,
-            color: SpaceNotesTheme.textSecondary,
-          ),
+        const SizedBox(height: 6),
+        const Row(
+          children: [
+            _PortChip(label: 'spacenotes', port: ConfigLoaded.spacetimeDbPort),
+            SizedBox(width: 10),
+            _PortChip(label: 'space', port: ConfigLoaded.spacePort),
+            SizedBox(width: 10),
+            _PortChip(label: 'claude', port: ConfigLoaded.claudeCodePort),
+          ],
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 18),
         Row(
+          crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             Expanded(
-              child: Container(
-                height: 44,
-                decoration: BoxDecoration(
-                  color: SpaceNotesTheme.inputSurface,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: TextField(
-                  controller: _serverIpController,
-                  style: SpaceNotesTextStyles.terminal.copyWith(fontSize: 14),
-                  decoration: InputDecoration(
-                    hintText: 'IP Address',
-                    hintStyle: SpaceNotesTextStyles.terminal.copyWith(
-                      fontSize: 14,
-                      color: SpaceNotesTheme.textSecondary,
-                    ),
-                    border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 12),
-                  ),
-                  onSubmitted: (_) => _saveServerConfig(),
-                ),
+              child: SnField(
+                controller: _serverIpController,
+                hint: 'ip address',
+                onSubmitted: (_) => _saveServerConfig(),
               ),
             ),
-            const SizedBox(width: 12),
-            SizedBox(
-              height: 44,
-              child: ElevatedButton(
-                onPressed: _isConnecting ? null : _saveServerConfig,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: SpaceNotesTheme.inputSurface,
-                  foregroundColor: SpaceNotesTheme.text,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
+            const SizedBox(width: 10),
+            _isConnecting
+                ? _buildSpinnerTile()
+                : SnButton(
+                    label: 'connect',
+                    onPressed: _saveServerConfig,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 18, vertical: 12),
                   ),
-                ),
-                child: _isConnecting
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Text('Connect'),
-              ),
-            ),
           ],
         ),
-        const SizedBox(height: 8),
-        Row(
-          children: [
-            _connectionDot(isSpacetimeConnected, 'SpaceNotes'),
-          ],
+        const SizedBox(height: 14),
+        _ConnectionRow(
+          connected: isSpacetimeConnected,
+          label: 'spacenotes',
         ),
       ],
     );
   }
 
-  Widget _buildMaxOpenNotesSection() {
-    return Row(
-      children: [
-        Text(
-          'Max open notes',
-          style: SpaceNotesTextStyles.terminal.copyWith(
-            fontSize: 13,
-            color: SpaceNotesTheme.text,
+  Widget _buildSpinnerTile() {
+    return Container(
+      height: 44,
+      width: 44,
+      decoration: BoxDecoration(
+        border: Border.all(color: SpaceNotesTheme.hairlineStrong, width: 1),
+        borderRadius: BorderRadius.circular(SpaceNotesTheme.radiusXs),
+      ),
+      child: const Center(
+        child: SizedBox(
+          width: 16,
+          height: 16,
+          child: CircularProgressIndicator(
+            strokeWidth: 1.5,
+            valueColor: AlwaysStoppedAnimation<Color>(SpaceNotesTheme.accent),
           ),
         ),
-        const Spacer(),
-        Container(
-          width: 80,
-          height: 32,
-          decoration: BoxDecoration(
-            color: SpaceNotesTheme.inputSurface,
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Row(
-            children: [
-              const SizedBox(width: 16),
-              Expanded(
-                child: TextField(
-                  controller: _maxNotesController,
-                  style: SpaceNotesTextStyles.terminal.copyWith(fontSize: 12),
-                  keyboardType: TextInputType.number,
-                  textAlign: TextAlign.center,
-                  onChanged: (value) {
-                    final parsed = int.tryParse(value);
-                    if (parsed != null && parsed > 0) {
-                      context
-                          .read<DesktopNotesBloc>()
-                          .add(SetMaxOpenNotes(parsed));
-                    }
-                  },
-                  decoration: InputDecoration(
-                    hintText: '10',
-                    hintStyle: SpaceNotesTextStyles.terminal.copyWith(
-                      fontSize: 12,
-                      color: SpaceNotesTheme.textSecondary,
-                    ),
-                    border: InputBorder.none,
-                    enabledBorder: InputBorder.none,
-                    focusedBorder: InputBorder.none,
-                    filled: false,
-                    isDense: true,
-                    contentPadding: const EdgeInsets.symmetric(vertical: 8),
-                  ),
-                ),
+      ),
+    );
+  }
+
+  Widget _buildMaxOpenNotesSection() {
+    return _Section(
+      label: 'desktop · notes',
+      children: [
+        Row(
+          children: [
+            const Expanded(
+              child: Text('Max open notes', style: _proseStyle),
+            ),
+            SizedBox(
+              width: 96,
+              child: SnField(
+                controller: _maxNotesController,
+                hint: '10',
+                onChanged: (value) {
+                  final parsed = int.tryParse(value);
+                  if (parsed != null && parsed > 0) {
+                    context
+                        .read<DesktopNotesBloc>()
+                        .add(SetMaxOpenNotes(parsed));
+                  }
+                },
               ),
-              const SizedBox(width: 16),
-            ],
-          ),
+            ),
+          ],
         ),
       ],
     );
   }
 
   Widget _buildDebugLogsSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return _Section(
+      label: 'debug logs · $_logFileCount',
       children: [
-        Text(
-          'Debug Logs ($_logFileCount)',
-          style: const TextStyle(
-            fontFamily: 'FiraCode',
-            fontSize: 16,
-            color: SpaceNotesTheme.text,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-        const SizedBox(height: 8),
         const Text(
           'Export or save logs to help debug sync issues.',
-          style: TextStyle(
-            fontFamily: 'FiraCode',
-            fontSize: 12,
-            color: SpaceNotesTheme.textSecondary,
-          ),
+          style: _proseStyle,
         ),
         const SizedBox(height: 16),
         Row(
           children: [
             Expanded(
-              child: ElevatedButton.icon(
+              child: SnButton(
+                label: 'export',
                 onPressed: () async {
                   await debugLogger.exportToFile();
                 },
-                icon: const Icon(Icons.upload_file, size: 18),
-                label: const Text('Export'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: SpaceNotesTheme.inputSurface,
-                  foregroundColor: SpaceNotesTheme.text,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
               ),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 10),
             Expanded(
-              child: ElevatedButton.icon(
-                onPressed: () => _saveLogsToNotes(),
-                icon: const Icon(Icons.note_add, size: 18),
-                label: const Text('To Notes'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: SpaceNotesTheme.inputSurface,
-                  foregroundColor: SpaceNotesTheme.text,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
+              child: SnButton(
+                label: 'to notes',
+                onPressed: _saveLogsToNotes,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
               ),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 10),
             Expanded(
-              child: ElevatedButton.icon(
+              child: SnButton(
+                label: 'clear',
+                accent: SpaceNotesTheme.offline,
                 onPressed: () async {
                   await debugLogger.clearLogs();
                   await _loadLogFileCount();
@@ -283,16 +223,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     );
                   }
                 },
-                icon: const Icon(Icons.delete_outline, size: 18),
-                label: const Text('Clear'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: SpaceNotesTheme.inputSurface,
-                  foregroundColor: SpaceNotesTheme.error,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
               ),
             ),
           ],
@@ -300,6 +232,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       ],
     );
   }
+
+  static const TextStyle _proseStyle = TextStyle(
+    fontFamily: SpaceNotesTheme.fontSans,
+    fontSize: 14,
+    color: SpaceNotesTheme.muted,
+    height: 1.55,
+  );
 
   Future<void> _loadLogFileCount() async {
     final files = await debugLogger.getLogFiles();
@@ -339,31 +278,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         setState(() => _isConnecting = false);
       }
     }
-  }
-
-  Widget _connectionDot(bool connected, String label) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 8,
-          height: 8,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: connected ? SpaceNotesTheme.success : SpaceNotesTheme.error,
-          ),
-        ),
-        const SizedBox(width: 6),
-        Text(
-          label,
-          style: const TextStyle(
-            fontFamily: 'FiraCode',
-            fontSize: 11,
-            color: SpaceNotesTheme.textSecondary,
-          ),
-        ),
-      ],
-    );
   }
 
   void _showResultDialog(String title, String message) {
@@ -489,6 +403,88 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _Section extends StatelessWidget {
+  final String label;
+  final List<Widget> children;
+
+  const _Section({required this.label, required this.children});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(20, 22, 20, 22),
+      decoration: const BoxDecoration(
+        border: Border(
+          top: BorderSide(color: SpaceNotesTheme.hairline, width: 1),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          SnMicroLabel(label),
+          const SizedBox(height: 14),
+          ...children,
+        ],
+      ),
+    );
+  }
+}
+
+class _PortChip extends StatelessWidget {
+  final String label;
+  final int port;
+
+  const _PortChip({required this.label, required this.port});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          label.toUpperCase(),
+          style: const TextStyle(
+            fontFamily: SpaceNotesTheme.fontMono,
+            fontSize: 10,
+            color: SpaceNotesTheme.dim,
+            letterSpacing: 0.5,
+          ),
+        ),
+        const SizedBox(width: 6),
+        Text(
+          ':$port',
+          style: const TextStyle(
+            fontFamily: SpaceNotesTheme.fontMono,
+            fontSize: 10,
+            color: SpaceNotesTheme.muted,
+            letterSpacing: 0.5,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ConnectionRow extends StatelessWidget {
+  final bool connected;
+  final String label;
+
+  const _ConnectionRow({required this.connected, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        SnSyncDot(
+          state: connected ? SnSyncState.synced : SnSyncState.offline,
+          label: label,
+        ),
+      ],
     );
   }
 }
