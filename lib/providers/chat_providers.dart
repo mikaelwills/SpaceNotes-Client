@@ -1,4 +1,5 @@
 import 'package:fixnum/fixnum.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../generated/message.dart';
 import '../generated/permission_request.dart';
@@ -64,6 +65,9 @@ final messagesBySessionProvider =
   final rows = watchListenable(ref, client.message.rows);
   final filtered = rows.where((m) => m.sessionId == sessionId).toList()
     ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
+  debugPrint(
+      '[CHAT] messagesBySession($sessionId) → ${filtered.length} messages '
+      '(${filtered.map((m) => '${m.role}:${m.source}').join(',')})');
   return filtered;
 });
 
@@ -140,14 +144,26 @@ Future<void> sendChatMessage(
   required String text,
 }) async {
   final client = ref.read(spacetimeClientProvider);
-  if (client == null) return;
-  await client.reducers.pushMessage(
-    id: _mintMessageId(),
-    sessionId: sessionId,
-    role: 'user',
-    text: text,
-    source: 'flutter',
-  );
+  if (client == null) {
+    debugPrint('[CHAT] sendChatMessage aborted — client is null');
+    return;
+  }
+  final id = _mintMessageId();
+  debugPrint(
+      '[CHAT] → pushMessage id=$id session=$sessionId len=${text.length} "${text.length > 60 ? '${text.substring(0, 60)}…' : text}"');
+  try {
+    await client.reducers.pushMessage(
+      id: id,
+      sessionId: sessionId,
+      role: 'user',
+      text: text,
+      source: 'flutter',
+    );
+    debugPrint('[CHAT] ✓ pushMessage reducer dispatched id=$id');
+  } catch (e, stack) {
+    debugPrint('[CHAT] ✗ pushMessage FAILED id=$id: $e');
+    debugPrint('$stack');
+  }
 }
 
 Future<void> respondToPermission(
