@@ -9,6 +9,7 @@ import '../generated/permission_request.dart';
 import '../generated/session.dart';
 import '../generated/session_activity.dart';
 import '../generated/tool_event.dart';
+import '../services/debug_logger.dart';
 import 'notes_providers.dart';
 
 sealed class ChatItem {
@@ -93,9 +94,17 @@ final targetSessionProvider = Provider<String>((ref) {
 
 final _chatIndexProvider = Provider<_ChatIndex?>((ref) {
   final client = ref.watch(spacetimeClientProvider);
-  if (client == null) return null;
+  if (client == null) {
+    debugLogger.chat('ChatIndex provider', 'client=null -> returning null');
+    return null;
+  }
+  debugLogger.chat(
+      'ChatIndex provider', 'client present -> building ChatIndex');
   final index = _ChatIndex(client);
-  ref.onDispose(index.dispose);
+  ref.onDispose(() {
+    debugLogger.chat('ChatIndex provider', 'dispose');
+    index.dispose();
+  });
   return index;
 });
 
@@ -110,7 +119,7 @@ final chatTimelineBySessionProvider =
   void listener() => ref.invalidateSelf();
   bucket.addListener(listener);
   ref.onDispose(() => bucket.removeListener(listener));
-  return bucket.items;
+  return List<ChatItem>.unmodifiable(bucket.items);
 });
 
 /// Per-session bucket holding the merged sorted timeline. Rows arrive in
@@ -155,6 +164,12 @@ class _ChatIndex {
   final List<StreamSubscription<dynamic>> _subs = [];
 
   _ChatIndex(this.client) {
+    debugLogger.chat(
+      'ChatIndex ctor',
+      'messages=${client.message.rows.value.length} '
+          'tools=${client.toolEvent.rows.value.length} '
+          'perms=${client.permissionRequest.rows.value.length}',
+    );
     _hydrate();
     _wireListeners();
   }
@@ -178,6 +193,10 @@ class _ChatIndex {
 
   void _wireListeners() {
     _subs.add(client.message.onInsert.listen((e) {
+      debugLogger.chat(
+        'msg.onInsert',
+        'id=${e.row.id} session=${e.row.sessionId} role=${e.row.role}',
+      );
       bucketFor(e.row.sessionId).add(ChatMessageItem(e.row));
     }));
     _subs.add(client.message.onUpdate.listen((e) {
@@ -247,14 +266,58 @@ Future<void> sendChatMessage(
   required String text,
 }) async {
   final client = ref.read(spacetimeClientProvider);
-  if (client == null) return;
-  await client.reducers.pushMessage(
-    id: _mintMessageId(),
-    sessionId: sessionId,
-    role: 'user',
-    text: text,
-    source: 'flutter',
+  if (client == null) {
+    debugLogger.chatError('sendChatMessage aborted', 'client=null');
+    return;
+  }
+  final id = _mintMessageId();
+  debugLogger.chat(
+    'sendChatMessage',
+    'id=$id session=$sessionId textLen=${text.length}',
   );
+  try {
+    await client.reducers.pushMessage(
+      id: id,
+      sessionId: sessionId,
+      role: 'user',
+      text: text,
+      source: 'flutter',
+    );
+    debugLogger.chat('sendChatMessage ok', 'id=$id');
+  } catch (e, st) {
+    debugLogger.chatError('sendChatMessage threw', 'id=$id err=$e\n$st');
+    rethrow;
+  }
+}
+
+Future<void> sendChatImage(
+  WidgetRef ref, {
+  required String sessionId,
+  required String caption,
+  required Uint8List pngBytes,
+}) async {
+  final client = ref.read(spacetimeClientProvider);
+  if (client == null) {
+    debugLogger.chatError('sendChatImage aborted', 'client=null');
+    return;
+  }
+  final id = _mintMessageId();
+  debugLogger.chat(
+    'sendChatImage',
+    'id=$id session=$sessionId bytes=${pngBytes.length} captionLen=${caption.length}',
+  );
+  try {
+    await client.reducers.pushImage(
+      id: id,
+      sessionId: sessionId,
+      caption: caption,
+      bytes: pngBytes,
+    );
+    debugLogger.chat('sendChatImage ok', 'id=$id');
+  } catch (e, st) {
+    debugLogger.chatError('sendChatImage threw', 'id=$id err=$e\n$st');
+    rethrow;
+  }
 }
 
 Future<void> respondToPermission(

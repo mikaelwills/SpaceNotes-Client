@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -32,7 +31,7 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
   final ImagePicker _imagePicker = ImagePicker();
   bool _hasText = false;
   bool _isFocused = false;
-  String? _pendingImageBase64;
+  Uint8List? _pendingImageBytes;
 
   @override
   void initState() {
@@ -127,7 +126,7 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
 
   Widget _buildField(bool isChat) {
     final hint = _computeHint(isChat);
-    final hasImage = _pendingImageBase64 != null;
+    final hasImage = _pendingImageBytes != null;
 
     return SnField(
       controller: _textController,
@@ -142,7 +141,7 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
           ? GestureDetector(
               onTap: () {
                 HapticFeedback.lightImpact();
-                setState(() => _pendingImageBase64 = null);
+                setState(() => _pendingImageBytes = null);
               },
               behavior: HitTestBehavior.opaque,
               child: const Icon(
@@ -228,26 +227,36 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
 
   void _onSend() {
     final message = _textController.text.trim();
-    if (message.isEmpty && _pendingImageBase64 == null) return;
+    final image = _pendingImageBytes;
+    if (message.isEmpty && image == null) return;
 
     FocusManager.instance.primaryFocus?.unfocus();
 
     final sessionId = _getCurrentSessionId();
     if (sessionId != null) {
-      sendChatMessage(ref, sessionId: sessionId, text: message);
+      if (image != null) {
+        sendChatImage(ref,
+            sessionId: sessionId, caption: message, pngBytes: image);
+      } else {
+        sendChatMessage(ref, sessionId: sessionId, text: message);
+      }
       _textController.clear();
-      setState(() => _pendingImageBase64 = null);
+      setState(() => _pendingImageBytes = null);
       return;
     }
 
     final targetSession = ref.read(targetSessionProvider);
-    final text = message.isEmpty ? 'What is in this image?' : message;
-    sendChatMessage(ref, sessionId: targetSession, text: text);
+    if (image != null) {
+      sendChatImage(ref,
+          sessionId: targetSession, caption: message, pngBytes: image);
+    } else {
+      sendChatMessage(ref, sessionId: targetSession, text: message);
+    }
     context.go('/notes/chat');
 
     _textController.clear();
     ref.read(folderSearchQueryProvider.notifier).state = '';
-    setState(() => _pendingImageBase64 = null);
+    setState(() => _pendingImageBytes = null);
   }
 
   Future<void> _onPickImage() async {
@@ -255,35 +264,36 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
       final image = await _imagePicker.pickImage(source: ImageSource.gallery);
       if (image == null) return;
 
-      var bytes = await compute(_readFileBytes, image.path);
-      if (bytes.length > 4 * 1024 * 1024) {
-        bytes = await compute(_compressImage, bytes);
+      final raw = await compute(_readFileBytes, image.path);
+      final png = await compute(_resizeToPng, raw);
+      if (png == null) {
+        debugPrint('[MobileBottomInputBar] Image decode failed');
+        return;
+      }
+      if (png.length > 2 * 1024 * 1024) {
+        debugPrint(
+            '[MobileBottomInputBar] Image exceeds 2MB post-compress: ${png.length}');
+        return;
       }
 
-      setState(() => _pendingImageBase64 = base64Encode(bytes));
+      setState(() => _pendingImageBytes = png);
     } catch (e) {
       debugPrint('[MobileBottomInputBar] Error picking image: $e');
     }
   }
 
-  static Uint8List _compressImage(Uint8List bytes) {
+  static Uint8List? _resizeToPng(Uint8List bytes) {
     final img = image_lib.decodeImage(bytes);
-    if (img == null) return bytes;
+    if (img == null) return null;
 
     var resized = img;
-    if (img.width > 2048 || img.height > 2048) {
+    if (img.width > 1024 || img.height > 1024) {
       resized = image_lib.copyResize(img,
-          width: img.width > img.height ? 2048 : -1,
-          height: img.height >= img.width ? 2048 : -1);
+          width: img.width >= img.height ? 1024 : -1,
+          height: img.height > img.width ? 1024 : -1);
     }
 
-    for (final quality in [90, 80, 70, 60]) {
-      final jpeg =
-          Uint8List.fromList(image_lib.encodeJpg(resized, quality: quality));
-      if (jpeg.length <= 4 * 1024 * 1024) return jpeg;
-    }
-
-    return Uint8List.fromList(image_lib.encodeJpg(resized, quality: 50));
+    return Uint8List.fromList(image_lib.encodePng(resized));
   }
 
   Future<void> _createQuickNote(String folderPath) async {

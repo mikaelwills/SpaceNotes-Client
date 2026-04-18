@@ -37,7 +37,7 @@ class NoteChatPanel extends StatelessWidget {
               showConnectionStatus: false,
               showInput: false,
               customInput: DesktopChatInput(),
-              messagePadding: EdgeInsets.fromLTRB(16, 16, 16, 120),
+              messagePadding: EdgeInsets.fromLTRB(16, 16, 16, 80),
             ),
           ),
         ],

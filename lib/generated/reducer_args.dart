@@ -398,6 +398,41 @@ class PrependToNoteArgsDecoder implements ReducerArgDecoder<PrependToNoteArgs> {
   }
 }
 
+class PushImageArgs {
+  PushImageArgs({
+    required this.id,
+    required this.sessionId,
+    required this.caption,
+    required this.bytes,
+  });
+
+  final String id;
+
+  final String sessionId;
+
+  final String caption;
+
+  final List<int> bytes;
+}
+
+class PushImageArgsDecoder implements ReducerArgDecoder<PushImageArgs> {
+  const PushImageArgsDecoder();
+
+  @override
+  PushImageArgs decode(BsatnDecoder decoder) {
+    final id = decoder.readString();
+    final sessionId = decoder.readString();
+    final caption = decoder.readString();
+    final bytes = decoder.readByteArray();
+    return PushImageArgs(
+      id: id,
+      sessionId: sessionId,
+      caption: caption,
+      bytes: bytes,
+    );
+  }
+}
+
 class PushMessageArgs {
   PushMessageArgs({
     required this.id,
@@ -937,6 +972,8 @@ const moveNoteDef =
     ReducerDef<MoveNoteArgs>('move_note', MoveNoteArgsDecoder());
 const prependToNoteDef = ReducerDef<PrependToNoteArgs>(
     'prepend_to_note', PrependToNoteArgsDecoder());
+const pushImageDef =
+    ReducerDef<PushImageArgs>('push_image', PushImageArgsDecoder());
 const pushMessageDef =
     ReducerDef<PushMessageArgs>('push_message', PushMessageArgsDecoder());
 const pushStatusDef =

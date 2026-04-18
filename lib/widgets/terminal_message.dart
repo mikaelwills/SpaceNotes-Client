@@ -44,14 +44,23 @@ class TerminalMessage extends StatelessWidget {
         child: LayoutBuilder(
           builder: (context, constraints) {
             final maxTextWidth = (constraints.maxWidth - 14) * 0.82;
-            return IntrinsicHeight(
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Flexible(
-                    child: ConstrainedBox(
-                      constraints: BoxConstraints(maxWidth: maxTextWidth),
+            return Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Flexible(
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(maxWidth: maxTextWidth),
+                    child: Container(
+                      padding: const EdgeInsets.only(right: 12),
+                      decoration: const BoxDecoration(
+                        border: Border(
+                          right: BorderSide(
+                            color: SpaceNotesTheme.accent,
+                            width: 2,
+                          ),
+                        ),
+                      ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.end,
                         mainAxisSize: MainAxisSize.min,
@@ -80,10 +89,8 @@ class TerminalMessage extends StatelessWidget {
                       ),
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  Container(width: 2, color: SpaceNotesTheme.accent),
-                ],
-              ),
+                ),
+              ],
             );
           },
         ),

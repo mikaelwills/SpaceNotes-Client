@@ -339,6 +339,30 @@ class Reducers {
         optimisticChanges: optimisticChanges, dropIfOffline: dropIfOffline);
   }
 
+  /// Calls the `push_image` reducer.
+  ///
+  /// Returns a [TransactionResult] on success. Throws
+  /// [SpacetimeDbReducerException] if the reducer returns `Failed` or
+  /// `OutOfEnergy`. The returned status is one of `Committed`,
+  /// `Pending` (queued to offline storage), or `Dropped` (skipped via
+  /// `dropIfOffline: true` while offline).
+  Future<TransactionResult> pushImage({
+    required String id,
+    required String sessionId,
+    required String caption,
+    required List<int> bytes,
+    List<OptimisticChange>? optimisticChanges,
+    bool dropIfOffline = false,
+  }) async {
+    final encoder = BsatnEncoder();
+    encoder.writeString(id);
+    encoder.writeString(sessionId);
+    encoder.writeString(caption);
+    encoder.writeByteArray(bytes);
+    return await _reducerCaller.call(pushImageDef.name, encoder.toBytes(),
+        optimisticChanges: optimisticChanges, dropIfOffline: dropIfOffline);
+  }
+
   /// Calls the `push_message` reducer.
   ///
   /// Returns a [TransactionResult] on success. Throws
@@ -906,6 +930,19 @@ class Reducers {
       final args = event.reducerArgs;
       if (args is! PrependToNoteArgs) return;
       callback(ctx, args.path, args.content);
+    });
+  }
+
+  StreamSubscription<void> onPushImage(
+      void Function(EventContext ctx, String id, String sessionId,
+              String caption, List<int> bytes)
+          callback) {
+    return _reducerEmitter.on(pushImageDef).listen((EventContext ctx) {
+      final event = ctx.event;
+      if (event is! ReducerEvent) return;
+      final args = event.reducerArgs;
+      if (args is! PushImageArgs) return;
+      callback(ctx, args.id, args.sessionId, args.caption, args.bytes);
     });
   }
 

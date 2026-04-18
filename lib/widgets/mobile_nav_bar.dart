@@ -36,6 +36,7 @@ class MobileNavBar extends ConsumerWidget {
                 _extractFullFolderPath(currentLocation),
               ),
               active: false,
+              slotWidth: 40,
             ),
             const SizedBox(width: 16),
             Expanded(
@@ -55,6 +56,7 @@ class MobileNavBar extends ConsumerWidget {
                 icon: Icons.arrow_back,
                 onTap: () => _navigateBackFromNote(context, notePath),
                 active: false,
+                slotWidth: 40,
               );
             }),
             const SizedBox(width: 16),
@@ -79,8 +81,9 @@ class MobileNavBar extends ConsumerWidget {
               icon: Icons.settings_outlined,
               onTap: () => context.go('/settings'),
               active: false,
+              slotWidth: 40,
+              iconAlignment: Alignment.centerRight,
             ),
-            const SizedBox(width: 16),
           ],
           const ConnectionIndicator(),
         ],
@@ -129,12 +132,12 @@ class MobileNavBar extends ConsumerWidget {
     final icons = <Widget>[];
     for (final (route, icon) in _mainScreens) {
       final isActive = route == current;
-      if (icons.isNotEmpty) icons.add(const SizedBox(width: 22));
       icons.add(
         _NavIcon(
           icon: icon,
           onTap: isActive ? null : () => context.go(route),
           active: isActive,
+          slotWidth: 46,
         ),
       );
     }
@@ -207,11 +210,15 @@ class _NavIcon extends StatelessWidget {
   final IconData icon;
   final VoidCallback? onTap;
   final bool active;
+  final double slotWidth;
+  final AlignmentGeometry iconAlignment;
 
   const _NavIcon({
     required this.icon,
     required this.onTap,
     required this.active,
+    this.slotWidth = 24,
+    this.iconAlignment = Alignment.centerLeft,
   });
 
   @override
@@ -223,9 +230,15 @@ class _NavIcon extends StatelessWidget {
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
       child: SizedBox(
-        width: 24,
-        height: 24,
-        child: Icon(icon, size: 20, color: color),
+        width: slotWidth,
+        height: 44,
+        child: Align(
+          alignment: iconAlignment,
+          child: SizedBox(
+            width: 24,
+            child: Icon(icon, size: 20, color: color),
+          ),
+        ),
       ),
     );
   }

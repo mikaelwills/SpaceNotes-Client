@@ -88,12 +88,7 @@ class ChatMessageListState<T> extends State<ChatMessageList<T>> {
                     reverse: true,
                     keyboardDismissBehavior:
                         ScrollViewKeyboardDismissBehavior.onDrag,
-                    padding: EdgeInsets.fromLTRB(
-                      widget.padding.left,
-                      widget.padding.bottom,
-                      widget.padding.right,
-                      widget.padding.top,
-                    ),
+                    padding: widget.padding,
                     itemCount: widget.items.length,
                     itemBuilder: (context, index) {
                       final item =

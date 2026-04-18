@@ -41,7 +41,7 @@ class ChatView extends ConsumerWidget {
                 itemBuilder: chatItemToWidget,
                 keyBuilder: chatItemKey,
                 padding:
-                    messagePadding ?? const EdgeInsets.fromLTRB(4, 8, 4, 120),
+                    messagePadding ?? const EdgeInsets.fromLTRB(4, 8, 4, 80),
                 emptyText: 'Ask me anything...',
                 scrollController: scrollController,
               ),

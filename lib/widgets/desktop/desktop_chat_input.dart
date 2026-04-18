@@ -1,7 +1,8 @@
-import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image/image.dart' as image_lib;
 import 'package:image_picker/image_picker.dart';
 import '../../theme/spacenotes_theme.dart';
 import '../../providers/chat_providers.dart';
@@ -19,7 +20,7 @@ class DesktopChatInput extends ConsumerStatefulWidget {
 class _DesktopChatInputState extends ConsumerState<DesktopChatInput> {
   final TextEditingController _controller = TextEditingController();
   final FocusNode _focusNode = FocusNode();
-  String? _pendingImageBase64;
+  Uint8List? _pendingImageBytes;
 
   @override
   void dispose() {
@@ -40,11 +41,11 @@ class _DesktopChatInputState extends ConsumerState<DesktopChatInput> {
           onSend: _onSend,
           maxLines: 8,
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-          fieldTrailing: _pendingImageBase64 != null
+          fieldTrailing: _pendingImageBytes != null
               ? GestureDetector(
                   onTap: () {
                     HapticFeedback.lightImpact();
-                    setState(() => _pendingImageBase64 = null);
+                    setState(() => _pendingImageBytes = null);
                   },
                   behavior: HitTestBehavior.opaque,
                   child: const Icon(
@@ -68,14 +69,17 @@ class _DesktopChatInputState extends ConsumerState<DesktopChatInput> {
 
   void _onSend() {
     final message = _controller.text.trim();
-    if (message.isEmpty && _pendingImageBase64 == null) return;
+    final image = _pendingImageBytes;
+    if (message.isEmpty && image == null) return;
 
-    final text = message.isEmpty ? 'What is in this image?' : message;
-    final String session =
-        widget.sessionId ?? ref.read(targetSessionProvider);
-    sendChatMessage(ref, sessionId: session, text: text);
+    final String session = widget.sessionId ?? ref.read(targetSessionProvider);
+    if (image != null) {
+      sendChatImage(ref, sessionId: session, caption: message, pngBytes: image);
+    } else {
+      sendChatMessage(ref, sessionId: session, text: message);
+    }
     _controller.clear();
-    setState(() => _pendingImageBase64 = null);
+    setState(() => _pendingImageBytes = null);
   }
 
   Future<void> _onPickImage() async {
@@ -84,13 +88,36 @@ class _DesktopChatInputState extends ConsumerState<DesktopChatInput> {
       final XFile? image = await picker.pickImage(source: ImageSource.gallery);
       if (image == null) return;
 
-      final bytes = await image.readAsBytes();
-      final base64 = base64Encode(bytes);
+      final raw = await image.readAsBytes();
+      final png = await compute(_resizeToPng, raw);
+      if (png == null) {
+        debugPrint('[DesktopChatInput] Image decode failed');
+        return;
+      }
+      if (png.length > 2 * 1024 * 1024) {
+        debugPrint(
+            '[DesktopChatInput] Image exceeds 2MB post-compress: ${png.length}');
+        return;
+      }
 
-      setState(() => _pendingImageBase64 = base64);
+      setState(() => _pendingImageBytes = png);
     } catch (e, stack) {
       debugPrint('[DesktopChatInput] Error picking image: $e');
       debugPrint('[DesktopChatInput] Stack: $stack');
     }
   }
+}
+
+Uint8List? _resizeToPng(Uint8List bytes) {
+  final img = image_lib.decodeImage(bytes);
+  if (img == null) return null;
+
+  var resized = img;
+  if (img.width > 1024 || img.height > 1024) {
+    resized = image_lib.copyResize(img,
+        width: img.width >= img.height ? 1024 : -1,
+        height: img.height > img.width ? 1024 : -1);
+  }
+
+  return Uint8List.fromList(image_lib.encodePng(resized));
 }
