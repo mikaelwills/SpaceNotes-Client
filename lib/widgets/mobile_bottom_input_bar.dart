@@ -83,7 +83,7 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
           child: Padding(
             padding: const EdgeInsets.fromLTRB(14, 12, 14, 16),
             child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 if (isSessionChat) ...[
                   _DockTile(
