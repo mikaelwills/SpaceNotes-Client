@@ -53,56 +53,17 @@ class _Header extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 14),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      padding: const EdgeInsets.fromLTRB(20, 18, 20, 14),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           const SnMicroLabel('mcp · sessions'),
-          const SizedBox(height: 8),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              RichText(
-                text: const TextSpan(
-                  style: TextStyle(
-                    fontFamily: SpaceNotesTheme.fontSans,
-                    fontSize: 32,
-                    fontWeight: FontWeight.w500,
-                    color: SpaceNotesTheme.fg,
-                    letterSpacing: -0.8,
-                    height: 1.0,
-                  ),
-                  children: [
-                    TextSpan(text: 'Sessions'),
-                    TextSpan(
-                      text: '.',
-                      style: TextStyle(color: SpaceNotesTheme.accent),
-                    ),
-                  ],
-                ),
-              ),
-              const Spacer(),
-              Padding(
-                padding: const EdgeInsets.only(bottom: 4),
-                child: SnUiText(
-                  '$count / ∞',
-                  color: SpaceNotesTheme.muted,
-                  fontSize: 10,
-                  letterSpacing: 0.5,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          const Text(
-            'Conversations that persist across devices and platforms. '
-            'Tap to resume where you left off.',
-            style: TextStyle(
-              fontFamily: SpaceNotesTheme.fontSans,
-              fontSize: 13,
-              color: SpaceNotesTheme.muted,
-              height: 1.45,
-            ),
+          const Spacer(),
+          SnUiText(
+            '$count / ∞',
+            color: SpaceNotesTheme.muted,
+            fontSize: 10,
+            letterSpacing: 0.5,
           ),
         ],
       ),
