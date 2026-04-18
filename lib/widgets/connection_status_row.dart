@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/chat_providers.dart';
 import '../theme/spacenotes_theme.dart';
+import 'primitives/primitives.dart';
 
 class ConnectionStatusRow extends ConsumerWidget {
   final String? sessionId;
@@ -15,95 +16,51 @@ class ConnectionStatusRow extends ConsumerWidget {
     final activity = ref.watch(sessionActivityProvider(resolvedSession));
 
     final state = activity?.state ?? 'idle';
-    final label = switch (state) {
-      'thinking' => 'THINKING',
-      'tool_use' => 'TOOL · RUN',
-      _ => 'IDLE',
-    };
     final isActive = state == 'thinking' || state == 'tool_use';
+    final label = switch (state) {
+      'thinking' => 'thinking',
+      'tool_use' => 'running',
+      _ => 'idle',
+    };
     final accent = isActive ? SpaceNotesTheme.accent2 : SpaceNotesTheme.dim;
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-      decoration: const BoxDecoration(
-        border: Border(
-          bottom: BorderSide(color: SpaceNotesTheme.hairline, width: 1),
-        ),
-      ),
-      child: Row(
+    return SnStatusLine(
+      leading: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Expanded(child: _SessionName(session: resolvedSession)),
-          const SizedBox(width: 12),
-          _StateBadge(label: label, color: accent, pulsing: isActive),
-        ],
-      ),
-    );
-  }
-}
-
-class _SessionName extends StatelessWidget {
-  final String session;
-  const _SessionName({required this.session});
-
-  @override
-  Widget build(BuildContext context) {
-    final atIdx = session.indexOf('@');
-    final base = atIdx < 0 ? session : session.substring(0, atIdx);
-    final tail = atIdx < 0 ? '' : session.substring(atIdx);
-
-    return RichText(
-      maxLines: 1,
-      overflow: TextOverflow.ellipsis,
-      text: TextSpan(
-        style: const TextStyle(
-          fontFamily: SpaceNotesTheme.fontMono,
-          fontSize: 16,
-          color: SpaceNotesTheme.fg,
-          letterSpacing: 0.3,
-          height: 1.0,
-        ),
-        children: [
-          TextSpan(text: base),
-          if (tail.isNotEmpty)
-            TextSpan(
-              text: tail,
-              style: const TextStyle(color: SpaceNotesTheme.dim),
+          const Text(
+            '◆',
+            style: TextStyle(
+              color: SpaceNotesTheme.accent,
+              fontSize: 10,
+              fontFamily: SpaceNotesTheme.fontMono,
             ),
+          ),
+          const SizedBox(width: 10),
+          Flexible(
+            child: SnUiText(
+              resolvedSession,
+              color: SpaceNotesTheme.muted,
+              fontSize: 10,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
         ],
       ),
-    );
-  }
-}
-
-class _StateBadge extends StatelessWidget {
-  final String label;
-  final Color color;
-  final bool pulsing;
-
-  const _StateBadge({
-    required this.label,
-    required this.color,
-    required this.pulsing,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        _StateDot(color: color, pulsing: pulsing),
-        const SizedBox(width: 10),
-        Text(
-          label,
-          style: TextStyle(
-            fontFamily: SpaceNotesTheme.fontMono,
-            fontSize: 11,
-            color: color,
-            letterSpacing: 1.2,
-            fontWeight: FontWeight.w500,
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _StateDot(color: accent, pulsing: isActive),
+          const SizedBox(width: 8),
+          SnUiText(
+            label,
+            color: accent,
+            fontSize: 10,
+            letterSpacing: 1.5,
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -161,12 +118,9 @@ class _StateDotState extends State<_StateDot>
         return Opacity(
           opacity: opacity,
           child: Container(
-            width: 8,
-            height: 8,
-            decoration: BoxDecoration(
-              color: widget.color,
-              shape: BoxShape.circle,
-            ),
+            width: 5,
+            height: 5,
+            color: widget.color,
           ),
         );
       },
