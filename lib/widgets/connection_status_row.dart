@@ -40,7 +40,7 @@ class ConnectionStatusRow extends ConsumerWidget {
           Flexible(
             child: SnUiText(
               resolvedSession,
-              color: SpaceNotesTheme.muted,
+              color: SpaceNotesTheme.accent,
               fontSize: 10,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
