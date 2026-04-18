@@ -215,7 +215,7 @@ class _SidebarSearchState extends ConsumerState<_SidebarSearch> {
         ),
         padding: const EdgeInsets.symmetric(horizontal: 12),
         child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Icon(
               Icons.search,
@@ -224,34 +224,35 @@ class _SidebarSearchState extends ConsumerState<_SidebarSearch> {
             ),
             const SizedBox(width: 10),
             Expanded(
-              child: TextField(
-                controller: _controller,
-                focusNode: _focusNode,
-                onChanged: _onSearchChanged,
-                style: const TextStyle(
-                  fontFamily: SpaceNotesTheme.fontSans,
-                  fontSize: 13,
-                  color: SpaceNotesTheme.fg,
-                  height: 1.2,
-                ),
-                textAlignVertical: TextAlignVertical.center,
-                cursorColor: SpaceNotesTheme.accent,
-                cursorWidth: 1.5,
-                cursorHeight: 14,
-                decoration: const InputDecoration(
-                  isCollapsed: true,
-                  contentPadding: EdgeInsets.zero,
-                  hintText: 'search…',
-                  hintStyle: TextStyle(
-                    fontFamily: SpaceNotesTheme.fontMono,
-                    fontSize: 12,
-                    color: SpaceNotesTheme.dim,
-                    letterSpacing: 0.3,
+              child: Center(
+                child: TextField(
+                  controller: _controller,
+                  focusNode: _focusNode,
+                  onChanged: _onSearchChanged,
+                  style: const TextStyle(
+                    fontFamily: SpaceNotesTheme.fontSans,
+                    fontSize: 13,
+                    color: SpaceNotesTheme.fg,
+                    height: 1.0,
                   ),
-                  border: InputBorder.none,
-                  enabledBorder: InputBorder.none,
-                  focusedBorder: InputBorder.none,
-                  filled: false,
+                  cursorColor: SpaceNotesTheme.accent,
+                  cursorWidth: 1.5,
+                  decoration: const InputDecoration(
+                    isDense: true,
+                    contentPadding: EdgeInsets.zero,
+                    hintText: 'search…',
+                    hintStyle: TextStyle(
+                      fontFamily: SpaceNotesTheme.fontMono,
+                      fontSize: 12,
+                      color: SpaceNotesTheme.dim,
+                      letterSpacing: 0.3,
+                      height: 1.0,
+                    ),
+                    border: InputBorder.none,
+                    enabledBorder: InputBorder.none,
+                    focusedBorder: InputBorder.none,
+                    filled: false,
+                  ),
                 ),
               ),
             ),

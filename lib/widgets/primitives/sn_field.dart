@@ -48,22 +48,27 @@ class SnField extends StatelessWidget {
       decoration: _decoration(),
       padding: const EdgeInsets.symmetric(horizontal: 13),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           if (leading != null) ...[
-            IconTheme(
-              data: const IconThemeData(size: 14, color: SpaceNotesTheme.muted),
-              child: leading!,
+            Center(
+              child: IconTheme(
+                data:
+                    const IconThemeData(size: 14, color: SpaceNotesTheme.muted),
+                child: leading!,
+              ),
             ),
             const SizedBox(width: 10),
           ],
-          Expanded(child: _buildTextField(vCenter: true)),
+          Expanded(child: Center(child: _buildTextField(vCenter: true))),
           if (trailing != null) ...[
             const SizedBox(width: 8),
-            IconTheme(
-              data:
-                  const IconThemeData(size: 14, color: SpaceNotesTheme.accent),
-              child: trailing!,
+            Center(
+              child: IconTheme(
+                data: const IconThemeData(
+                    size: 14, color: SpaceNotesTheme.accent),
+                child: trailing!,
+              ),
             ),
           ],
         ],
@@ -121,11 +126,11 @@ class SnField extends StatelessWidget {
       maxLines: maxLines,
       minLines: minLines,
       expands: expands,
-      style: const TextStyle(
+      style: TextStyle(
         fontFamily: SpaceNotesTheme.fontSans,
         fontSize: 14,
         color: SpaceNotesTheme.fg,
-        height: 1.4,
+        height: vCenter ? 1.0 : 1.4,
       ),
       textAlignVertical:
           vCenter ? TextAlignVertical.center : TextAlignVertical.top,
@@ -135,11 +140,12 @@ class SnField extends StatelessWidget {
         isDense: true,
         contentPadding: EdgeInsets.zero,
         hintText: hint,
-        hintStyle: const TextStyle(
+        hintStyle: TextStyle(
           fontFamily: SpaceNotesTheme.fontMono,
           fontSize: 12,
           color: SpaceNotesTheme.dim,
           letterSpacing: 0.3,
+          height: vCenter ? 1.0 : null,
         ),
         border: InputBorder.none,
         enabledBorder: InputBorder.none,
