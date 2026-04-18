@@ -69,7 +69,8 @@ class _FolderListViewState extends ConsumerState<FolderListView> {
           if (index < folders.length) {
             return _buildFolderItem(folders[index]);
           } else {
-            return _buildNoteItem(notes[index - folders.length]);
+            final noteIndex = index - folders.length;
+            return _buildNoteItem(notes[noteIndex], noteIndex + 1);
           }
         },
       ),
@@ -165,10 +166,11 @@ class _FolderListViewState extends ConsumerState<FolderListView> {
     );
   }
 
-  Widget _buildNoteItem(Note note) {
+  Widget _buildNoteItem(Note note, int index) {
     return NoteListItem(
       key: ValueKey(note.id),
       note: note,
+      index: index,
       onTap: () {
         FocusManager.instance.primaryFocus?.unfocus();
         ref.read(folderSearchQueryProvider.notifier).state = '';
