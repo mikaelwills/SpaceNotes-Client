@@ -1078,7 +1078,7 @@ class _TreeItemRowState extends State<_TreeItemRow> {
                                 style: TextStyle(
                                   fontFamily: SpaceNotesTheme.fontMono,
                                   fontSize: 10,
-                                  color: widget.isOpen
+                                  color: widget.isFolder
                                       ? SpaceNotesTheme.accent
                                       : SpaceNotesTheme.dim,
                                   height: 1,
@@ -1092,9 +1092,11 @@ class _TreeItemRowState extends State<_TreeItemRow> {
                                 ? Icons.folder_outlined
                                 : Icons.description_outlined,
                             size: 14,
-                            color: widget.isOpen
+                            color: widget.isFolder
                                 ? SpaceNotesTheme.accent
-                                : SpaceNotesTheme.dim,
+                                : widget.isOpen
+                                    ? SpaceNotesTheme.accent
+                                    : SpaceNotesTheme.dim,
                           ),
                           const SizedBox(width: 8),
                           Expanded(
