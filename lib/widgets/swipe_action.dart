@@ -19,42 +19,29 @@ class SwipeAction extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: Container(
-        width: width,
-        decoration: BoxDecoration(
-          color: SpaceNotesTheme.bgAlt,
-          border: Border(
-            left: BorderSide(
-              color: color.withValues(alpha: 0.35),
-              width: 1,
-            ),
-            bottom: const BorderSide(
-              color: SpaceNotesTheme.hairline,
-              width: 1,
-            ),
-          ),
-        ),
-        alignment: Alignment.center,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 16, color: color),
-            const SizedBox(height: 6),
-            Text(
-              label.toUpperCase(),
-              style: TextStyle(
-                fontFamily: SpaceNotesTheme.fontMono,
-                fontSize: 9,
-                color: color,
-                letterSpacing: 1.2,
-                fontWeight: FontWeight.w500,
+    return Semantics(
+      label: label,
+      button: true,
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: Container(
+          width: width,
+          decoration: BoxDecoration(
+            color: SpaceNotesTheme.bgAlt,
+            border: Border(
+              left: BorderSide(
+                color: color.withValues(alpha: 0.35),
+                width: 1,
+              ),
+              bottom: const BorderSide(
+                color: SpaceNotesTheme.hairline,
+                width: 1,
               ),
             ),
-          ],
+          ),
+          alignment: Alignment.center,
+          child: Icon(icon, size: 18, color: color),
         ),
       ),
     );
