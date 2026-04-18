@@ -75,32 +75,28 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
 
     final folderPath = ref.watch(currentFolderPathProvider);
 
-    return Column(
-      mainAxisSize: MainAxisSize.min,
+    return Stack(
       children: [
-        _buildFadeAboveDock(),
-        Container(
-          color: SpaceNotesTheme.bg,
-          child: SafeArea(
-            top: false,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(14, 8, 14, 12),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  if (isSessionChat) ...[
-                    _DockTile(
-                      icon: Icons.arrow_back,
-                      onTap: () => context.pop(),
-                      semanticLabel: 'back',
-                    ),
-                    const SizedBox(width: 8),
-                  ],
-                  Expanded(child: _buildField(isChat)),
+        _buildFadeOverlay(),
+        SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(14, 8, 14, 12),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                if (isSessionChat) ...[
+                  _DockTile(
+                    icon: Icons.arrow_back,
+                    onTap: () => context.pop(),
+                    semanticLabel: 'back',
+                  ),
                   const SizedBox(width: 8),
-                  ..._buildTrailing(isChat, folderPath),
                 ],
-              ),
+                Expanded(child: _buildField(isChat)),
+                const SizedBox(width: 8),
+                ..._buildTrailing(isChat, folderPath),
+              ],
             ),
           ),
         ),
@@ -108,19 +104,18 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
     );
   }
 
-  Widget _buildFadeAboveDock() {
-    return const IgnorePointer(
-      child: SizedBox(
-        height: 96,
+  Widget _buildFadeOverlay() {
+    return const Positioned.fill(
+      child: IgnorePointer(
         child: DecoratedBox(
           decoration: BoxDecoration(
             gradient: LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
-              stops: [0.0, 0.55, 1.0],
+              stops: [0.0, 0.35, 1.0],
               colors: [
                 Color(0x000D0D0F),
-                Color(0xB30D0D0F),
+                Color(0xCC0D0D0F),
                 Color(0xFF0D0D0F),
               ],
             ),
