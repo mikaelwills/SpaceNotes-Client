@@ -105,24 +105,36 @@ class _SidebarHeader extends ConsumerWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(
         children: [
-          const Text(
-            'SPACENOTES',
-            style: TextStyle(
-              fontFamily: SpaceNotesTheme.fontMono,
-              fontWeight: FontWeight.w500,
-              fontSize: 11,
-              color: SpaceNotesTheme.fg,
-              letterSpacing: 2,
+          RichText(
+            text: const TextSpan(
+              style: TextStyle(
+                fontFamily: SpaceNotesTheme.fontSans,
+                fontWeight: FontWeight.w600,
+                fontSize: 16,
+                color: SpaceNotesTheme.fg,
+                letterSpacing: -0.3,
+                height: 1,
+              ),
+              children: [
+                TextSpan(text: 'Space'),
+                TextSpan(
+                  text: 'Notes',
+                  style: TextStyle(color: SpaceNotesTheme.accent),
+                ),
+              ],
             ),
           ),
-          const SizedBox(width: 10),
-          const Text(
-            appVersion,
-            style: TextStyle(
-              fontFamily: SpaceNotesTheme.fontMono,
-              fontSize: 10,
-              color: SpaceNotesTheme.dim,
-              letterSpacing: 0.3,
+          const SizedBox(width: 8),
+          const Padding(
+            padding: EdgeInsets.only(bottom: 1),
+            child: Text(
+              appVersion == 'latest' ? appVersion : 'v$appVersion',
+              style: TextStyle(
+                fontFamily: SpaceNotesTheme.fontMono,
+                fontSize: 10,
+                color: SpaceNotesTheme.dim,
+                letterSpacing: 0.3,
+              ),
             ),
           ),
           const Spacer(),
@@ -496,6 +508,11 @@ class _FolderTreeItemState extends ConsumerState<_FolderTreeItem> {
       ..sort((a, b) => a.name.compareTo(b.name));
 
     final hasChildren = childFolders.isNotEmpty || childNotes.isNotEmpty;
+    final totalDescendants = widget.allNotes
+        .where((n) =>
+            n.folderPath == folderPathWithSlash ||
+            n.folderPath.startsWith(folderPathWithSlash))
+        .length;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -548,10 +565,10 @@ class _FolderTreeItemState extends ConsumerState<_FolderTreeItem> {
               ),
               childWhenDragging: Opacity(
                 opacity: 0.4,
-                child:
-                    _buildTreeRow(hasChildren, isExpanded, isDragOver: false),
+                child: _buildTreeRow(hasChildren, isExpanded, totalDescendants,
+                    isDragOver: false),
               ),
-              child: _buildTreeRow(hasChildren, isExpanded,
+              child: _buildTreeRow(hasChildren, isExpanded, totalDescendants,
                   isDragOver: _isDragOver),
             );
           },
@@ -579,7 +596,7 @@ class _FolderTreeItemState extends ConsumerState<_FolderTreeItem> {
     );
   }
 
-  Widget _buildTreeRow(bool hasChildren, bool isExpanded,
+  Widget _buildTreeRow(bool hasChildren, bool isExpanded, int count,
       {required bool isDragOver}) {
     return _TreeItemRow(
       label: widget.folder.name,
@@ -588,6 +605,7 @@ class _FolderTreeItemState extends ConsumerState<_FolderTreeItem> {
       isExpanded: isExpanded,
       isFolder: true,
       isDragOver: isDragOver,
+      count: count,
       onTap: () {
         final current = ref.read(expandedFoldersProvider);
         if (current.contains(widget.folder.path)) {
@@ -982,6 +1000,7 @@ class _TreeItemRow extends StatefulWidget {
   final bool isFolder;
   final bool isDragOver;
   final bool isOpen;
+  final int? count;
   final VoidCallback onTap;
   final VoidCallback? onAddNote;
   final VoidCallback? onDelete;
@@ -997,6 +1016,7 @@ class _TreeItemRow extends StatefulWidget {
     required this.onTap,
     this.isDragOver = false,
     this.isOpen = false,
+    this.count,
     this.onAddNote,
     this.onDelete,
     this.contextMenuItems,
@@ -1012,7 +1032,7 @@ class _TreeItemRowState extends State<_TreeItemRow> {
 
   @override
   Widget build(BuildContext context) {
-    final indent = 8.0 + (widget.indentLevel * 16.0);
+    final indent = 12.0 + (widget.indentLevel * 16.0);
 
     return Listener(
       onPointerDown: (event) {
@@ -1023,100 +1043,122 @@ class _TreeItemRowState extends State<_TreeItemRow> {
       child: MouseRegion(
         onEnter: (_) => setState(() => _isHovered = true),
         onExit: (_) => setState(() => _isHovered = false),
-        child: Container(
-          height: 28,
-          decoration: BoxDecoration(
-            color: widget.isDragOver
-                ? SpaceNotesTheme.accent.withValues(alpha: 0.12)
-                : widget.isOpen
-                    ? SpaceNotesTheme.accent.withValues(alpha: 0.06)
-                    : _isHovered
-                        ? SpaceNotesTheme.fg.withValues(alpha: 0.03)
-                        : Colors.transparent,
-            border: widget.isDragOver
-                ? Border.all(
-                    color: SpaceNotesTheme.accent.withValues(alpha: 0.6),
-                    width: 1)
-                : widget.isOpen
-                    ? const Border(
-                        left: BorderSide(
-                          color: SpaceNotesTheme.accent,
-                          width: 2,
-                        ),
-                      )
+        child: Stack(
+          children: [
+            Container(
+              height: 32,
+              decoration: BoxDecoration(
+                color: widget.isDragOver
+                    ? SpaceNotesTheme.accent.withValues(alpha: 0.12)
+                    : widget.isOpen
+                        ? SpaceNotesTheme.accent.withValues(alpha: 0.06)
+                        : _isHovered
+                            ? SpaceNotesTheme.fg.withValues(alpha: 0.03)
+                            : Colors.transparent,
+                border: widget.isDragOver
+                    ? Border.all(
+                        color: SpaceNotesTheme.accent.withValues(alpha: 0.6),
+                        width: 1)
                     : null,
-          ),
-          padding: EdgeInsets.only(left: indent, right: 8),
-          child: Row(
-            children: [
-              Expanded(
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: widget.onTap,
-                  child: Row(
-                    children: [
-                      if (widget.hasChildren)
-                        Padding(
-                          padding: const EdgeInsets.only(right: 4),
-                          child: Text(
-                            widget.isExpanded ? '▾' : '▸',
-                            style: TextStyle(
-                              fontFamily: SpaceNotesTheme.fontMono,
-                              fontSize: 10,
-                              color: widget.isOpen
-                                  ? SpaceNotesTheme.accent
-                                  : SpaceNotesTheme.dim,
-                              height: 1,
+              ),
+              padding: EdgeInsets.only(left: indent, right: 12),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: widget.onTap,
+                      child: Row(
+                        children: [
+                          if (widget.hasChildren)
+                            Padding(
+                              padding: const EdgeInsets.only(right: 4),
+                              child: Text(
+                                widget.isExpanded ? '▾' : '▸',
+                                style: TextStyle(
+                                  fontFamily: SpaceNotesTheme.fontMono,
+                                  fontSize: 10,
+                                  color: widget.isOpen
+                                      ? SpaceNotesTheme.accent
+                                      : SpaceNotesTheme.dim,
+                                  height: 1,
+                                ),
+                              ),
+                            )
+                          else
+                            const SizedBox(width: 16),
+                          Icon(
+                            widget.isFolder
+                                ? Icons.folder_outlined
+                                : Icons.description_outlined,
+                            size: 14,
+                            color: widget.isOpen
+                                ? SpaceNotesTheme.accent
+                                : SpaceNotesTheme.dim,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              widget.label,
+                              style: TextStyle(
+                                fontFamily: SpaceNotesTheme.fontSans,
+                                fontSize: 13,
+                                color: widget.isOpen
+                                    ? SpaceNotesTheme.fg
+                                    : _isHovered
+                                        ? SpaceNotesTheme.fg
+                                        : SpaceNotesTheme.muted,
+                                letterSpacing: -0.1,
+                                fontWeight: FontWeight.w400,
+                              ),
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                        )
-                      else
-                        const SizedBox(width: 16),
-                      Icon(
-                        widget.isFolder
-                            ? Icons.folder_outlined
-                            : Icons.description_outlined,
-                        size: 14,
-                        color: widget.isOpen
-                            ? SpaceNotesTheme.accent
-                            : SpaceNotesTheme.dim,
+                        ],
                       ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          widget.label,
-                          style: TextStyle(
-                            fontFamily: SpaceNotesTheme.fontSans,
-                            fontSize: 13,
-                            color: widget.isOpen
-                                ? SpaceNotesTheme.fg
-                                : _isHovered
-                                    ? SpaceNotesTheme.fg
-                                    : SpaceNotesTheme.muted,
-                            letterSpacing: -0.1,
-                            fontWeight: FontWeight.w400,
-                          ),
-                          overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  if (widget.isFolder && _isHovered && widget.onAddNote != null)
+                    _HoverAffordance(
+                      icon: Icons.add,
+                      color: SpaceNotesTheme.accent,
+                      onTap: widget.onAddNote!,
+                    )
+                  else if (widget.isFolder && widget.count != null)
+                    Padding(
+                      padding: const EdgeInsets.only(left: 6),
+                      child: Text(
+                        widget.count.toString(),
+                        style: TextStyle(
+                          fontFamily: SpaceNotesTheme.fontMono,
+                          fontSize: 10,
+                          color: widget.isOpen
+                              ? SpaceNotesTheme.muted
+                              : SpaceNotesTheme.dim,
+                          letterSpacing: 0.3,
                         ),
                       ),
-                    ],
-                  ),
+                    ),
+                  if (!widget.isFolder && _isHovered && widget.onDelete != null)
+                    _HoverAffordance(
+                      icon: Icons.close,
+                      color: SpaceNotesTheme.offline,
+                      onTap: widget.onDelete!,
+                    ),
+                ],
+              ),
+            ),
+            if (widget.isOpen)
+              const Positioned(
+                left: 0,
+                top: 0,
+                bottom: 0,
+                child: SizedBox(
+                  width: 2,
+                  child: ColoredBox(color: SpaceNotesTheme.accent),
                 ),
               ),
-              if (widget.isFolder && _isHovered && widget.onAddNote != null)
-                _HoverAffordance(
-                  icon: Icons.add,
-                  color: SpaceNotesTheme.accent,
-                  onTap: widget.onAddNote!,
-                ),
-              if (!widget.isFolder && _isHovered && widget.onDelete != null)
-                _HoverAffordance(
-                  icon: Icons.close,
-                  color: SpaceNotesTheme.offline,
-                  onTap: widget.onDelete!,
-                ),
-            ],
-          ),
+          ],
         ),
       ),
     );
@@ -1359,12 +1401,7 @@ class _SidebarFooter extends ConsumerWidget {
     final onNotes = !onChat && !onSessions && !onSettings;
 
     return Container(
-      decoration: const BoxDecoration(
-        border: Border(
-          top: BorderSide(color: SpaceNotesTheme.hairline, width: 1),
-        ),
-      ),
-      padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
+      padding: const EdgeInsets.fromLTRB(10, 4, 10, 10),
       child: Row(
         children: [
           SnIconButton(
