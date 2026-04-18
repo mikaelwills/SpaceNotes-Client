@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import '../theme/spacenotes_theme.dart';
 import 'keyboard_dismiss_on_scroll.dart';
 
-class ChatMessageList extends StatefulWidget {
-  final List<Widget> items;
+class ChatMessageList<T> extends StatefulWidget {
+  final List<T> items;
+  final Widget Function(BuildContext, T) itemBuilder;
+  final Key Function(T)? keyBuilder;
   final EdgeInsets padding;
   final String emptyText;
   final bool showScrollToBottom;
@@ -13,6 +15,8 @@ class ChatMessageList extends StatefulWidget {
   const ChatMessageList({
     super.key,
     required this.items,
+    required this.itemBuilder,
+    this.keyBuilder,
     this.padding = const EdgeInsets.fromLTRB(4, 8, 4, 140),
     this.emptyText = 'No messages yet',
     this.showScrollToBottom = true,
@@ -21,10 +25,10 @@ class ChatMessageList extends StatefulWidget {
   });
 
   @override
-  State<ChatMessageList> createState() => ChatMessageListState();
+  State<ChatMessageList<T>> createState() => ChatMessageListState<T>();
 }
 
-class ChatMessageListState extends State<ChatMessageList> {
+class ChatMessageListState<T> extends State<ChatMessageList<T>> {
   ScrollController? _ownScrollController;
   bool _showScrollButton = false;
   bool _autoScrollEnabled = true;
@@ -39,7 +43,7 @@ class ChatMessageListState extends State<ChatMessageList> {
   }
 
   @override
-  void didUpdateWidget(ChatMessageList oldWidget) {
+  void didUpdateWidget(ChatMessageList<T> oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.items.length > _previousItemCount && _autoScrollEnabled) {
       scrollToBottom();
@@ -99,7 +103,14 @@ class ChatMessageListState extends State<ChatMessageList> {
                         ScrollViewKeyboardDismissBehavior.onDrag,
                     padding: widget.padding,
                     itemCount: widget.items.length,
-                    itemBuilder: (context, index) => widget.items[index],
+                    itemBuilder: (context, index) {
+                      final item = widget.items[index];
+                      final child = widget.itemBuilder(context, item);
+                      final k = widget.keyBuilder?.call(item);
+                      return k == null
+                          ? child
+                          : KeyedSubtree(key: k, child: child);
+                    },
                   ),
                 ),
               ),

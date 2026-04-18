@@ -23,9 +23,11 @@ class SessionChatScreen extends ConsumerWidget {
         Expanded(
           child: Stack(
             children: [
-              ChatMessageList(
-                items: items.map(_itemToWidget).toList(),
-                padding: EdgeInsets.fromLTRB(4, 8, 4, isDesktop ? 140 : 140),
+              ChatMessageList<ChatItem>(
+                items: items,
+                itemBuilder: chatItemToWidget,
+                keyBuilder: chatItemKey,
+                padding: const EdgeInsets.fromLTRB(4, 8, 4, 140),
                 maxWidth: double.infinity,
               ),
               if (isDesktop)
@@ -40,13 +42,5 @@ class SessionChatScreen extends ConsumerWidget {
         ),
       ],
     );
-  }
-
-  Widget _itemToWidget(ChatItem item) {
-    return switch (item) {
-      ChatMessageItem(:final message) => TerminalMessage(message: message),
-      ChatToolItem(:final event) => ToolEventRow(event: event),
-      ChatPermissionItem(:final request) => PermissionRow(request: request),
-    };
   }
 }

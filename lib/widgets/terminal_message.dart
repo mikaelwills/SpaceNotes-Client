@@ -9,6 +9,22 @@ import '../providers/chat_providers.dart';
 import '../theme/spacenotes_theme.dart';
 import 'primitives/primitives.dart';
 
+Widget chatItemToWidget(BuildContext context, ChatItem item) {
+  return switch (item) {
+    ChatMessageItem(:final message) => TerminalMessage(message: message),
+    ChatToolItem(:final event) => ToolEventRow(event: event),
+    ChatPermissionItem(:final request) => PermissionRow(request: request),
+  };
+}
+
+Key chatItemKey(ChatItem item) {
+  return switch (item) {
+    ChatMessageItem(:final message) => ValueKey('msg:${message.id}'),
+    ChatToolItem(:final event) => ValueKey('tool:${event.id}'),
+    ChatPermissionItem(:final request) => ValueKey('perm:${request.id}'),
+  };
+}
+
 class TerminalMessage extends StatelessWidget {
   final Message message;
 
