@@ -25,46 +25,49 @@ class TerminalMessage extends StatelessWidget {
       onLongPress: () => _copy(context, message.text),
       child: Padding(
         padding: const EdgeInsets.fromLTRB(32, 14, 16, 14),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Spacer(),
-            Flexible(
-              child: ConstrainedBox(
-                constraints: BoxConstraints(
-                  maxWidth: MediaQuery.of(context).size.width * 0.78,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      _time,
-                      style: const TextStyle(
-                        fontFamily: SpaceNotesTheme.fontMono,
-                        fontSize: 10,
-                        color: SpaceNotesTheme.dim,
-                        letterSpacing: 0.5,
-                      ),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final maxTextWidth = (constraints.maxWidth - 14) * 0.82;
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Spacer(),
+                Flexible(
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(maxWidth: maxTextWidth),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          _time,
+                          style: const TextStyle(
+                            fontFamily: SpaceNotesTheme.fontMono,
+                            fontSize: 10,
+                            color: SpaceNotesTheme.dim,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          message.text,
+                          textAlign: TextAlign.right,
+                          style: const TextStyle(
+                            fontFamily: SpaceNotesTheme.fontSans,
+                            fontSize: 15,
+                            color: SpaceNotesTheme.fg,
+                            height: 1.55,
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      message.text,
-                      textAlign: TextAlign.right,
-                      style: const TextStyle(
-                        fontFamily: SpaceNotesTheme.fontSans,
-                        fontSize: 15,
-                        color: SpaceNotesTheme.fg,
-                        height: 1.55,
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Container(width: 2, height: 28, color: SpaceNotesTheme.accent),
-          ],
+                const SizedBox(width: 12),
+                Container(width: 2, height: 28, color: SpaceNotesTheme.accent),
+              ],
+            );
+          },
         ),
       ),
     );
