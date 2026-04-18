@@ -37,7 +37,9 @@ class ChatMessageListState<T> extends State<ChatMessageList<T>> {
   @override
   void initState() {
     super.initState();
+    _previousItemCount = widget.items.length;
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      _jumpToBottom();
       _syncScrollButtonVisibility();
     });
   }
@@ -45,13 +47,33 @@ class ChatMessageListState<T> extends State<ChatMessageList<T>> {
   @override
   void didUpdateWidget(ChatMessageList<T> oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.items.length > _previousItemCount && _autoScrollEnabled) {
+    final listIdentityChanged = !identical(oldWidget.items, widget.items) &&
+        (oldWidget.items.isEmpty ||
+            widget.items.isEmpty ||
+            _firstItemIdentity(oldWidget.items) !=
+                _firstItemIdentity(widget.items));
+    if (listIdentityChanged) {
+      _autoScrollEnabled = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _jumpToBottom();
+      });
+    } else if (widget.items.length > _previousItemCount && _autoScrollEnabled) {
       scrollToBottom();
     }
     _previousItemCount = widget.items.length;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _syncScrollButtonVisibility();
     });
+  }
+
+  Object? _firstItemIdentity(List<T> items) =>
+      items.isEmpty ? null : identityHashCode(items.first);
+
+  void _jumpToBottom() {
+    if (!_scrollController.hasClients) return;
+    final pos = _scrollController.position;
+    if (!pos.hasContentDimensions) return;
+    _scrollController.jumpTo(pos.maxScrollExtent);
   }
 
   @override
