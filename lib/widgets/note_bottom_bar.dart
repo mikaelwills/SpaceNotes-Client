@@ -71,15 +71,6 @@ class _NoteBottomBarState extends ConsumerState<NoteBottomBar> {
               semanticLabel: 'undo',
               size: 36,
             ),
-            if (isChatConnected) ...[
-              const SizedBox(width: 8),
-              _buildTile(
-                icon: Icons.chat_bubble_outline,
-                onTap: widget.onChatTap,
-                semanticLabel: 'chat about note',
-                size: 36,
-              ),
-            ],
           ],
         ),
       ),

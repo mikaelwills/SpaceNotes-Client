@@ -118,12 +118,11 @@ class _NoteScreenState extends ConsumerState<NoteScreen> {
             ],
           ),
         ),
-        if (_isChatOpen)
-          NoteChatPanel(
-            notePath: _currentPath,
-            onClose: () => setState(() => _isChatOpen = false),
-            isDesktop: true,
-          ),
+        NoteChatPanel(
+          notePath: _currentPath,
+          onClose: () {},
+          isDesktop: true,
+        ),
       ],
     );
   }
