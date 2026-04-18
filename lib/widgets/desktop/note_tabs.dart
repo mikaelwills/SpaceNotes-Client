@@ -62,36 +62,55 @@ class _NoteTabState extends ConsumerState<_NoteTab> {
           context.read<DesktopNotesBloc>().add(SetActiveNote(widget.noteId));
         },
         child: Container(
-          margin: const EdgeInsets.symmetric(horizontal: 2),
-          padding: const EdgeInsets.only(left: 10, right: 4),
-          color: _isHovered && !widget.isActive
-              ? SpaceNotesTheme.textSecondary.withValues(alpha: 0.1)
-              : Colors.transparent,
+          padding: const EdgeInsets.only(left: 14, right: 10),
+          decoration: BoxDecoration(
+            color: widget.isActive
+                ? SpaceNotesTheme.bg
+                : _isHovered
+                    ? SpaceNotesTheme.bgAlt
+                    : Colors.transparent,
+            border: Border(
+              right: const BorderSide(
+                color: SpaceNotesTheme.hairline,
+                width: 1,
+              ),
+              top: BorderSide(
+                color: widget.isActive
+                    ? SpaceNotesTheme.accent
+                    : Colors.transparent,
+                width: 2,
+              ),
+            ),
+          ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(
                 Icons.description_outlined,
-                size: 14,
+                size: 13,
                 color: widget.isActive
-                    ? SpaceNotesTheme.text
-                    : SpaceNotesTheme.primary,
+                    ? SpaceNotesTheme.accent
+                    : SpaceNotesTheme.dim,
               ),
-              const SizedBox(width: 6),
+              const SizedBox(width: 8),
               ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 150),
+                constraints: const BoxConstraints(maxWidth: 160),
                 child: Text(
                   _displayName,
-                  style: SpaceNotesTextStyles.terminal.copyWith(
-                    fontSize: 12,
+                  style: TextStyle(
+                    fontFamily: SpaceNotesTheme.fontSans,
+                    fontSize: 13,
                     color: widget.isActive
-                        ? SpaceNotesTheme.text
-                        : SpaceNotesTheme.primary,
+                        ? SpaceNotesTheme.fg
+                        : SpaceNotesTheme.muted,
+                    letterSpacing: -0.1,
+                    fontWeight:
+                        widget.isActive ? FontWeight.w500 : FontWeight.w400,
                   ),
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
-              const SizedBox(width: 4),
+              const SizedBox(width: 10),
               if (_isHovered || widget.isActive)
                 GestureDetector(
                   onTap: () {
@@ -100,16 +119,16 @@ class _NoteTabState extends ConsumerState<_NoteTab> {
                         .add(CloseNote(widget.noteId));
                   },
                   child: const Padding(
-                    padding: EdgeInsets.all(2),
+                    padding: EdgeInsets.all(4),
                     child: Icon(
                       Icons.close,
                       size: 12,
-                      color: SpaceNotesTheme.primary,
+                      color: SpaceNotesTheme.muted,
                     ),
                   ),
                 )
               else
-                const SizedBox(width: 16),
+                const SizedBox(width: 20),
             ],
           ),
         ),

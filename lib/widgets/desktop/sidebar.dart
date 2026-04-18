@@ -9,8 +9,10 @@ import '../../blocs/desktop_notes/desktop_notes_state.dart';
 import '../../generated/folder.dart';
 import '../../generated/note.dart';
 import '../../providers/notes_providers.dart';
+import '../../providers/connection_providers.dart';
 import '../../theme/spacenotes_theme.dart';
 import '../../version.dart';
+import '../primitives/primitives.dart';
 import 'desktop_shell.dart';
 
 final expandedFoldersProvider = StateProvider<Set<String>>((ref) => {});
@@ -32,7 +34,12 @@ class Sidebar extends ConsumerWidget {
     final isCollapsed = ref.watch(sidebarCollapsedProvider);
 
     return Container(
-      color: const Color(0xFF121212),
+      decoration: const BoxDecoration(
+        color: SpaceNotesTheme.bgAlt,
+        border: Border(
+          right: BorderSide(color: SpaceNotesTheme.hairline, width: 1),
+        ),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -58,55 +65,89 @@ class _SidebarHeader extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     if (isCollapsed) {
       return Container(
-        height: 48,
-        padding: const EdgeInsets.symmetric(horizontal: 8),
+        height: 52,
+        decoration: const BoxDecoration(
+          border: Border(
+            bottom: BorderSide(color: SpaceNotesTheme.hairline, width: 1),
+          ),
+        ),
         child: Center(
-          child: IconButton(
-            icon: const Icon(Icons.chevron_right, size: 18),
-            color: SpaceNotesTheme.textSecondary,
-            onPressed: () {
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () {
               ref.read(sidebarCollapsedProvider.notifier).state = false;
             },
-            tooltip: 'Expand sidebar',
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+            child: const Padding(
+              padding: EdgeInsets.all(8),
+              child: Text(
+                '›',
+                style: TextStyle(
+                  fontFamily: SpaceNotesTheme.fontMono,
+                  fontSize: 14,
+                  color: SpaceNotesTheme.dim,
+                  height: 1,
+                ),
+              ),
+            ),
           ),
         ),
       );
     }
 
+    final isConnected = ref.watch(spacetimeConnectedProvider);
     return Container(
-      height: 56,
+      height: 52,
+      decoration: const BoxDecoration(
+        border: Border(
+          bottom: BorderSide(color: SpaceNotesTheme.hairline, width: 1),
+        ),
+      ),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(
         children: [
-          Text(
-            'SpaceNotes',
-            style: SpaceNotesTextStyles.terminal.copyWith(
-              fontWeight: FontWeight.w600,
-              fontSize: 16,
-              color: SpaceNotesTheme.primary,
-              letterSpacing: 0.5,
+          const Text(
+            'SPACENOTES',
+            style: TextStyle(
+              fontFamily: SpaceNotesTheme.fontMono,
+              fontWeight: FontWeight.w500,
+              fontSize: 11,
+              color: SpaceNotesTheme.fg,
+              letterSpacing: 2,
             ),
           ),
-          const SizedBox(width: 8),
-          Text(
+          const SizedBox(width: 10),
+          const Text(
             appVersion,
-            style: SpaceNotesTextStyles.terminal.copyWith(
-              fontSize: 11,
-              color: SpaceNotesTheme.textSecondary,
+            style: TextStyle(
+              fontFamily: SpaceNotesTheme.fontMono,
+              fontSize: 10,
+              color: SpaceNotesTheme.dim,
+              letterSpacing: 0.3,
             ),
           ),
           const Spacer(),
-          IconButton(
-            icon: const Icon(Icons.chevron_left, size: 18),
-            color: SpaceNotesTheme.textSecondary,
-            onPressed: () {
+          SnSyncDot(
+            state: isConnected ? SnSyncState.synced : SnSyncState.offline,
+            label: isConnected ? 'synced' : 'offline',
+          ),
+          const SizedBox(width: 14),
+          GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () {
               ref.read(sidebarCollapsedProvider.notifier).state = true;
             },
-            tooltip: 'Collapse sidebar',
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+            child: const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 4),
+              child: Text(
+                '‹',
+                style: TextStyle(
+                  fontFamily: SpaceNotesTheme.fontMono,
+                  fontSize: 14,
+                  color: SpaceNotesTheme.dim,
+                  height: 1,
+                ),
+              ),
+            ),
           ),
         ],
       ),
@@ -152,61 +193,29 @@ class _SidebarSearchState extends ConsumerState<_SidebarSearch> {
     });
 
     return Padding(
-      padding: const EdgeInsets.only(left: 12, right: 12, top: 8, bottom: 4),
-      child: Container(
-        height: 32,
-        decoration: BoxDecoration(
-          color: SpaceNotesTheme.inputSurface,
-          borderRadius: BorderRadius.circular(16),
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
+      child: SnField(
+        controller: _controller,
+        focusNode: _focusNode,
+        hint: 'search…',
+        onChanged: _onSearchChanged,
+        height: 36,
+        leading: Icon(
+          Icons.search,
+          size: 14,
+          color: hasQuery ? SpaceNotesTheme.accent : SpaceNotesTheme.muted,
         ),
-        child: Row(
-          children: [
-            const SizedBox(width: 12),
-            Icon(
-              Icons.search,
-              size: 16,
-              color: hasQuery
-                  ? SpaceNotesTheme.primary
-                  : SpaceNotesTheme.textSecondary,
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: TextField(
-                controller: _controller,
-                focusNode: _focusNode,
-                style: SpaceNotesTextStyles.terminal.copyWith(fontSize: 12),
-                onChanged: _onSearchChanged,
-                decoration: InputDecoration(
-                  hintText: 'Search...',
-                  hintStyle: SpaceNotesTextStyles.terminal.copyWith(
-                    fontSize: 12,
-                    color: SpaceNotesTheme.textSecondary,
-                  ),
-                  border: InputBorder.none,
-                  enabledBorder: InputBorder.none,
-                  focusedBorder: InputBorder.none,
-                  filled: false,
-                  isDense: true,
-                  contentPadding: const EdgeInsets.symmetric(vertical: 8),
-                ),
-              ),
-            ),
-            if (hasQuery)
-              GestureDetector(
+        trailing: hasQuery
+            ? GestureDetector(
                 onTap: _clearSearch,
-                child: const Padding(
-                  padding: EdgeInsets.only(right: 8),
-                  child: Icon(
-                    Icons.close,
-                    size: 14,
-                    color: SpaceNotesTheme.textSecondary,
-                  ),
+                behavior: HitTestBehavior.opaque,
+                child: const Icon(
+                  Icons.close,
+                  size: 14,
+                  color: SpaceNotesTheme.muted,
                 ),
               )
-            else
-              const SizedBox(width: 12),
-          ],
-        ),
+            : null,
       ),
     );
   }
@@ -1018,16 +1027,24 @@ class _TreeItemRowState extends State<_TreeItemRow> {
           height: 28,
           decoration: BoxDecoration(
             color: widget.isDragOver
-                ? SpaceNotesTheme.primary.withValues(alpha: 0.2)
-                : _isHovered
-                    ? SpaceNotesTheme.primary.withValues(alpha: 0.1)
-                    : Colors.transparent,
-            borderRadius: BorderRadius.circular(2),
+                ? SpaceNotesTheme.accent.withValues(alpha: 0.12)
+                : widget.isOpen
+                    ? SpaceNotesTheme.accent.withValues(alpha: 0.06)
+                    : _isHovered
+                        ? SpaceNotesTheme.fg.withValues(alpha: 0.03)
+                        : Colors.transparent,
             border: widget.isDragOver
                 ? Border.all(
-                    color: SpaceNotesTheme.primary.withValues(alpha: 0.5),
+                    color: SpaceNotesTheme.accent.withValues(alpha: 0.6),
                     width: 1)
-                : null,
+                : widget.isOpen
+                    ? const Border(
+                        left: BorderSide(
+                          color: SpaceNotesTheme.accent,
+                          width: 2,
+                        ),
+                      )
+                    : null,
           ),
           padding: EdgeInsets.only(left: indent, right: 8),
           child: Row(
@@ -1041,37 +1058,43 @@ class _TreeItemRowState extends State<_TreeItemRow> {
                       if (widget.hasChildren)
                         Padding(
                           padding: const EdgeInsets.only(right: 4),
-                          child: Icon(
-                            widget.isExpanded
-                                ? Icons.keyboard_arrow_down
-                                : Icons.keyboard_arrow_right,
-                            size: 16,
-                            color: SpaceNotesTheme.primary,
+                          child: Text(
+                            widget.isExpanded ? '▾' : '▸',
+                            style: TextStyle(
+                              fontFamily: SpaceNotesTheme.fontMono,
+                              fontSize: 10,
+                              color: widget.isOpen
+                                  ? SpaceNotesTheme.accent
+                                  : SpaceNotesTheme.dim,
+                              height: 1,
+                            ),
                           ),
                         )
                       else
-                        const SizedBox(width: 20),
+                        const SizedBox(width: 16),
                       Icon(
                         widget.isFolder
                             ? Icons.folder_outlined
                             : Icons.description_outlined,
-                        size: 16,
+                        size: 14,
                         color: widget.isOpen
-                            ? SpaceNotesTheme.text
-                            : SpaceNotesTheme.primary.withValues(alpha: 0.7),
+                            ? SpaceNotesTheme.accent
+                            : SpaceNotesTheme.dim,
                       ),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
                           widget.label,
-                          style: SpaceNotesTextStyles.terminal.copyWith(
-                            fontSize: 14,
+                          style: TextStyle(
+                            fontFamily: SpaceNotesTheme.fontSans,
+                            fontSize: 13,
                             color: widget.isOpen
-                                ? SpaceNotesTheme.text
+                                ? SpaceNotesTheme.fg
                                 : _isHovered
-                                    ? SpaceNotesTheme.primary
-                                    : SpaceNotesTheme.text
-                                        .withValues(alpha: 0.75),
+                                    ? SpaceNotesTheme.fg
+                                    : SpaceNotesTheme.muted,
+                            letterSpacing: -0.1,
+                            fontWeight: FontWeight.w400,
                           ),
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -1081,48 +1104,16 @@ class _TreeItemRowState extends State<_TreeItemRow> {
                 ),
               ),
               if (widget.isFolder && _isHovered && widget.onAddNote != null)
-                MouseRegion(
-                  cursor: SystemMouseCursors.click,
-                  child: GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onTap: widget.onAddNote,
-                    child: Container(
-                      width: 20,
-                      height: 20,
-                      margin: const EdgeInsets.only(left: 4),
-                      decoration: const BoxDecoration(
-                        color: SpaceNotesTheme.inputSurface,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.add,
-                        size: 14,
-                        color: SpaceNotesTheme.primary,
-                      ),
-                    ),
-                  ),
+                _HoverAffordance(
+                  icon: Icons.add,
+                  color: SpaceNotesTheme.accent,
+                  onTap: widget.onAddNote!,
                 ),
               if (!widget.isFolder && _isHovered && widget.onDelete != null)
-                MouseRegion(
-                  cursor: SystemMouseCursors.click,
-                  child: GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onTap: widget.onDelete,
-                    child: Container(
-                      width: 20,
-                      height: 20,
-                      margin: const EdgeInsets.only(left: 4),
-                      decoration: const BoxDecoration(
-                        color: SpaceNotesTheme.inputSurface,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.close,
-                        size: 14,
-                        color: SpaceNotesTheme.error,
-                      ),
-                    ),
-                  ),
+                _HoverAffordance(
+                  icon: Icons.close,
+                  color: SpaceNotesTheme.offline,
+                  onTap: widget.onDelete!,
                 ),
             ],
           ),
@@ -1143,20 +1134,56 @@ class _TreeItemRowState extends State<_TreeItemRow> {
         position.dy,
       ),
       items: widget.contextMenuItems!,
-      color: SpaceNotesTheme.inputSurface,
-      elevation: 8,
+      color: SpaceNotesTheme.card,
+      elevation: 0,
       menuPadding: EdgeInsets.zero,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8),
-        side: BorderSide(
-          color: SpaceNotesTheme.textSecondary.withValues(alpha: 0.3),
-        ),
+      shape: const RoundedRectangleBorder(
+        borderRadius:
+            BorderRadius.all(Radius.circular(SpaceNotesTheme.radiusXs)),
+        side: BorderSide(color: SpaceNotesTheme.hairlineStrong, width: 1),
       ),
     ).then((value) {
       if (value != null && widget.onContextMenuSelected != null) {
         widget.onContextMenuSelected!(value);
       }
     });
+  }
+}
+
+class _HoverAffordance extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _HoverAffordance({
+    required this.icon,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: Container(
+          width: 20,
+          height: 20,
+          margin: const EdgeInsets.only(left: 4),
+          decoration: BoxDecoration(
+            color: SpaceNotesTheme.bgAlt,
+            border: Border.all(
+              color: SpaceNotesTheme.hairlineStrong,
+              width: 1,
+            ),
+            borderRadius: BorderRadius.circular(SpaceNotesTheme.radiusXs),
+          ),
+          child: Icon(icon, size: 12, color: color),
+        ),
+      ),
+    );
   }
 }
 
@@ -1325,52 +1352,65 @@ class _SidebarFooter extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final location = GoRouterState.of(context).uri.toString();
+    final onChat = location.startsWith('/notes/chat');
+    final onSessions = location.startsWith('/notes/sessions');
+    final onSettings = location == '/settings';
+    final onNotes = !onChat && !onSessions && !onSettings;
+
     return Container(
-      height: 40,
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 12),
+      decoration: const BoxDecoration(
+        border: Border(
+          top: BorderSide(color: SpaceNotesTheme.hairline, width: 1),
+        ),
+      ),
+      padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
       child: Row(
         children: [
-          IconButton(
-            icon: const Icon(Icons.add, size: 18),
-            color: SpaceNotesTheme.textSecondary,
+          SnIconButton(
+            icon: const Icon(Icons.note_add_outlined),
             onPressed: () => _createNote(context, ref),
-            tooltip: 'New note',
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+            tooltip: 'new note',
           ),
-          IconButton(
-            icon: const Icon(Icons.create_new_folder_outlined, size: 18),
-            color: SpaceNotesTheme.textSecondary,
+          const SizedBox(width: 4),
+          SnIconButton(
+            icon: const Icon(Icons.create_new_folder_outlined),
             onPressed: () => _createFolder(context, ref),
-            tooltip: 'New folder',
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+            tooltip: 'new folder',
           ),
-          IconButton(
-            icon: const Icon(Icons.chat_bubble_outline, size: 18),
-            color: SpaceNotesTheme.textSecondary,
-            onPressed: () => context.go('/notes/chat'),
-            tooltip: 'AI Chat',
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+          const SizedBox(width: 14),
+          Container(
+            width: 1,
+            height: 16,
+            color: SpaceNotesTheme.hairlineStrong,
           ),
-          IconButton(
-            icon: const Icon(Icons.terminal_outlined, size: 18),
-            color: SpaceNotesTheme.textSecondary,
-            onPressed: () => context.go('/notes/sessions'),
-            tooltip: 'Sessions',
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+          const SizedBox(width: 14),
+          SnIconButton(
+            icon: const Icon(Icons.notes_outlined),
+            onPressed: onNotes ? null : () => context.go('/notes'),
+            active: onNotes,
+            tooltip: 'notes',
+          ),
+          const SizedBox(width: 4),
+          SnIconButton(
+            icon: const Icon(Icons.chat_bubble_outline),
+            onPressed: onChat ? null : () => context.go('/notes/chat'),
+            active: onChat,
+            tooltip: 'chat',
+          ),
+          const SizedBox(width: 4),
+          SnIconButton(
+            icon: const Icon(Icons.terminal_outlined),
+            onPressed: onSessions ? null : () => context.go('/notes/sessions'),
+            active: onSessions,
+            tooltip: 'sessions',
           ),
           const Spacer(),
-          IconButton(
-            icon: const Icon(Icons.settings, size: 18),
-            color: SpaceNotesTheme.textSecondary,
-            onPressed: () => context.go('/settings'),
-            tooltip: 'Settings',
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+          SnIconButton(
+            icon: const Icon(Icons.settings_outlined),
+            onPressed: onSettings ? null : () => context.go('/settings'),
+            active: onSettings,
+            tooltip: 'settings',
           ),
         ],
       ),
