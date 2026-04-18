@@ -137,12 +137,14 @@ class SnField extends StatelessWidget {
             ? const EdgeInsets.symmetric(vertical: 14)
             : EdgeInsets.zero,
         hintText: hint,
+        hintMaxLines: 1,
         hintStyle: const TextStyle(
           fontFamily: SpaceNotesTheme.fontMono,
           fontSize: 12,
           color: SpaceNotesTheme.dim,
           letterSpacing: 0.3,
           height: 1.4,
+          overflow: TextOverflow.ellipsis,
         ),
         border: InputBorder.none,
         enabledBorder: InputBorder.none,
