@@ -115,40 +115,27 @@ class ChatMessageListState extends State<ChatMessageList> {
   Widget _buildScrollToBottomButton() {
     return Positioned(
       bottom: 100,
-      left: 0,
-      right: 0,
-      child: Center(
-        child: ConstrainedBox(
-          constraints: BoxConstraints(maxWidth: widget.maxWidth),
-          child: Align(
-            alignment: Alignment.centerRight,
-            child: Padding(
-              padding: const EdgeInsets.only(right: 14),
-              child: GestureDetector(
-                onTap: forceScrollToBottom,
-                behavior: HitTestBehavior.opaque,
-                child: Tooltip(
-                  message: 'scroll to bottom',
-                  child: Container(
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(
-                      color: SpaceNotesTheme.bgAlt,
-                      border: Border.all(
-                        color: SpaceNotesTheme.hairlineStrong,
-                        width: 1,
-                      ),
-                      borderRadius:
-                          BorderRadius.circular(SpaceNotesTheme.radiusDock),
-                    ),
-                    child: const Icon(
-                      Icons.arrow_downward,
-                      size: 16,
-                      color: SpaceNotesTheme.accent,
-                    ),
-                  ),
-                ),
+      right: 16,
+      child: GestureDetector(
+        onTap: forceScrollToBottom,
+        behavior: HitTestBehavior.opaque,
+        child: Tooltip(
+          message: 'scroll to bottom',
+          child: Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: SpaceNotesTheme.bgAlt,
+              border: Border.all(
+                color: SpaceNotesTheme.hairlineStrong,
+                width: 1,
               ),
+              borderRadius: BorderRadius.circular(SpaceNotesTheme.radiusDock),
+            ),
+            child: const Icon(
+              Icons.arrow_downward,
+              size: 16,
+              color: SpaceNotesTheme.accent,
             ),
           ),
         ),
