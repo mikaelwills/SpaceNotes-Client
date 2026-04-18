@@ -103,18 +103,34 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
                   ),
                 ],
                 const SizedBox(height: 18),
-                Row(
-                  children: [
-                    _isConnecting
-                        ? _spinnerTile()
-                        : SnButton(
-                            label: 'connect',
-                            onPressed: _connect,
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 22, vertical: 12),
+                _isConnecting
+                    ? _spinnerTile()
+                    : GestureDetector(
+                        onTap: _connect,
+                        behavior: HitTestBehavior.opaque,
+                        child: Container(
+                          height: 44,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            border: Border.all(
+                              color: SpaceNotesTheme.hairlineStrong,
+                              width: 1,
+                            ),
+                            borderRadius: BorderRadius.circular(
+                                SpaceNotesTheme.radiusXs),
                           ),
-                  ],
-                ),
+                          child: const Text(
+                            'CONNECT',
+                            style: TextStyle(
+                              fontFamily: SpaceNotesTheme.fontMono,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: 1,
+                              color: SpaceNotesTheme.fg,
+                            ),
+                          ),
+                        ),
+                      ),
               ],
             ),
           ),
@@ -125,20 +141,18 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
 
   Widget _spinnerTile() {
     return Container(
-      height: 40,
-      padding: const EdgeInsets.symmetric(horizontal: 22),
+      height: 44,
+      alignment: Alignment.center,
       decoration: BoxDecoration(
         border: Border.all(color: SpaceNotesTheme.hairlineStrong, width: 1),
         borderRadius: BorderRadius.circular(SpaceNotesTheme.radiusXs),
       ),
-      child: const Center(
-        child: SizedBox(
-          width: 14,
-          height: 14,
-          child: CircularProgressIndicator(
-            strokeWidth: 1.5,
-            valueColor: AlwaysStoppedAnimation<Color>(SpaceNotesTheme.accent),
-          ),
+      child: const SizedBox(
+        width: 14,
+        height: 14,
+        child: CircularProgressIndicator(
+          strokeWidth: 1.5,
+          valueColor: AlwaysStoppedAnimation<Color>(SpaceNotesTheme.accent),
         ),
       ),
     );
