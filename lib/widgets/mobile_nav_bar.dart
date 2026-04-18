@@ -16,7 +16,7 @@ class MobileNavBar extends ConsumerWidget {
     final isOnNote = _isOnNoteScreen(currentLocation);
     final isOnFolder = currentLocation.startsWith('/notes/folder/');
     final isOnSettings = currentLocation == '/settings';
-    final showMain = !isOnNote && !isOnFolder && !isOnSettings;
+    final showMain = !isOnNote && !isOnFolder;
 
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 14, 20, 16),
@@ -28,14 +28,6 @@ class MobileNavBar extends ConsumerWidget {
       ),
       child: Row(
         children: [
-          if (isOnSettings) ...[
-            _NavIcon(
-              icon: Icons.arrow_back,
-              onTap: () => context.go('/notes'),
-              active: false,
-            ),
-            const Spacer(),
-          ],
           if (isOnFolder) ...[
             _NavIcon(
               icon: Icons.arrow_back,
@@ -80,14 +72,16 @@ class MobileNavBar extends ConsumerWidget {
             ),
             const SizedBox(width: 16),
           ],
-          if (showMain) ..._buildNavIcons(context, currentLocation),
+          if (showMain) ..._buildNavIcons(context, currentLocation, isOnSettings),
           if (showMain) const Spacer(),
-          _NavIcon(
-            icon: Icons.settings_outlined,
-            onTap: () => context.go('/settings'),
-            active: false,
-          ),
-          const SizedBox(width: 16),
+          if (!isOnSettings) ...[
+            _NavIcon(
+              icon: Icons.settings_outlined,
+              onTap: () => context.go('/settings'),
+              active: false,
+            ),
+            const SizedBox(width: 16),
+          ],
           const ConnectionIndicator(),
         ],
       ),
@@ -129,8 +123,9 @@ class MobileNavBar extends ConsumerWidget {
     return '/notes';
   }
 
-  List<Widget> _buildNavIcons(BuildContext context, String location) {
-    final current = _currentScreen(location);
+  List<Widget> _buildNavIcons(
+      BuildContext context, String location, bool isOnSettings) {
+    final current = isOnSettings ? null : _currentScreen(location);
     final icons = <Widget>[];
     for (final (route, icon) in _mainScreens) {
       final isActive = route == current;
