@@ -6,10 +6,91 @@ import 'package:collection/collection.dart';
 import '../theme/spacenotes_theme.dart';
 import '../providers/notes_providers.dart';
 import 'connection_indicator.dart';
-import 'sync_state_indicator.dart';
 
 class MobileNavBar extends ConsumerWidget {
   const MobileNavBar({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final currentLocation = GoRouterState.of(context).uri.toString();
+    final isOnNote = _isOnNoteScreen(currentLocation);
+    final isOnFolder = currentLocation.startsWith('/notes/folder/');
+    final isOnSettings = currentLocation == '/settings';
+    final showMain = !isOnNote && !isOnFolder;
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(20, 14, 20, 16),
+      decoration: const BoxDecoration(
+        color: SpaceNotesTheme.bg,
+        border: Border(
+          bottom: BorderSide(color: SpaceNotesTheme.hairline, width: 1),
+        ),
+      ),
+      child: Row(
+        children: [
+          if (isOnFolder) ...[
+            _NavIcon(
+              icon: Icons.arrow_back,
+              onTap: () => _navigateToParentFolder(
+                context,
+                _extractFullFolderPath(currentLocation),
+              ),
+              active: false,
+              slotWidth: 40,
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: _EditableFolderName(
+                folderPath: _extractFullFolderPath(currentLocation),
+                currentName: _extractFolderName(currentLocation),
+              ),
+            ),
+            const SizedBox(width: 16),
+          ],
+          if (isOnNote) ...[
+            Builder(builder: (context) {
+              final noteId = _extractNoteIdFromLocation(currentLocation);
+              final note = ref.watch(noteByIdProvider(noteId));
+              final notePath = note?.path ?? '';
+              return _NavIcon(
+                icon: Icons.arrow_back,
+                onTap: () => _navigateBackFromNote(context, notePath),
+                active: false,
+                slotWidth: 40,
+              );
+            }),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Builder(builder: (context) {
+                final noteId = _extractNoteIdFromLocation(currentLocation);
+                final note = ref.watch(noteByIdProvider(noteId));
+                final notePath = note?.path ?? '';
+                final noteName = notePath.split('/').last.replaceAll('.md', '');
+                return _EditableNoteName(
+                  notePath: notePath,
+                  currentName: noteName,
+                );
+              }),
+            ),
+            const SizedBox(width: 16),
+          ],
+          if (showMain)
+            ..._buildNavIcons(context, currentLocation, isOnSettings),
+          if (showMain) const Spacer(),
+          if (!isOnSettings) ...[
+            _NavIcon(
+              icon: Icons.settings_outlined,
+              onTap: () => context.go('/settings'),
+              active: false,
+              slotWidth: 40,
+              iconAlignment: Alignment.centerRight,
+            ),
+          ],
+          const ConnectionIndicator(),
+        ],
+      ),
+    );
+  }
 
   bool _isOnNoteScreen(String location) {
     return location.startsWith('/notes/note/');
@@ -32,94 +113,11 @@ class MobileNavBar extends ConsumerWidget {
     return '';
   }
 
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final currentLocation = GoRouterState.of(context).uri.toString();
-    final isOnNote = _isOnNoteScreen(currentLocation);
-
-    return Container(
-      height: 60,
-      padding: const EdgeInsets.symmetric(horizontal: 10),
-      decoration: const BoxDecoration(
-        color: SpaceNotesTheme.background,
-      ),
-      child: Row(
-        children: [
-          if (currentLocation == '/settings') ...[
-            GestureDetector(
-              onTap: () => context.go("/notes"),
-              child: const Icon(Icons.arrow_back, color: SpaceNotesTheme.text),
-            ),
-          ],
-          if (currentLocation.startsWith('/notes/folder/')) ...[
-            GestureDetector(
-              onTap: () => _navigateToParentFolder(
-                  context, _extractFullFolderPath(currentLocation)),
-              child: const Icon(Icons.arrow_back, color: SpaceNotesTheme.text),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: _EditableFolderName(
-                folderPath: _extractFullFolderPath(currentLocation),
-                currentName: _extractFolderName(currentLocation),
-              ),
-            ),
-            const SizedBox(width: 16),
-          ],
-          if (isOnNote) ...[
-            Builder(builder: (context) {
-              final noteId = _extractNoteIdFromLocation(currentLocation);
-              final note = ref.watch(noteByIdProvider(noteId));
-              final notePath = note?.path ?? '';
-              return GestureDetector(
-                onTap: () => _navigateBackFromNote(context, notePath),
-                child:
-                    const Icon(Icons.arrow_back, color: SpaceNotesTheme.text),
-              );
-            }),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Builder(builder: (context) {
-                final noteId = _extractNoteIdFromLocation(currentLocation);
-                final note = ref.watch(noteByIdProvider(noteId));
-                final notePath = note?.path ?? '';
-                final noteName = notePath.split('/').last.replaceAll('.md', '');
-                return _EditableNoteName(
-                  notePath: notePath,
-                  currentName: noteName,
-                );
-              }),
-            ),
-            const SizedBox(width: 16),
-          ],
-          if (!isOnNote &&
-              !currentLocation.startsWith('/notes/folder/') &&
-              currentLocation != '/settings')
-            ..._buildNavIcons(context, currentLocation),
-          if (!isOnNote &&
-              !currentLocation.startsWith('/notes/folder/') &&
-              !currentLocation.startsWith('/notes/chat'))
-            const Expanded(
-              child: Center(
-                child: SyncStateIndicator(),
-              ),
-            ),
-          GestureDetector(
-            onTap: () => context.go("/settings"),
-            child: const Icon(Icons.settings, color: SpaceNotesTheme.text),
-          ),
-          const SizedBox(width: 16),
-          const ConnectionIndicator(),
-        ],
-      ),
-    );
-  }
-
   static const _mainScreens = [
-    ('/notes', Icons.notes, 'notes'),
-    ('/notes/chat', Icons.chat_bubble_outline, 'chat'),
-    ('/notes/sessions', Icons.terminal_outlined, 'sessions'),
-    ('/notes/users', Icons.people_outline, 'calling'),
+    ('/notes', Icons.notes_outlined),
+    ('/notes/chat', Icons.chat_bubble_outline),
+    ('/notes/sessions', Icons.terminal_outlined),
+    ('/notes/users', Icons.people_outline),
   ];
 
   String _currentScreen(String location) {
@@ -129,17 +127,18 @@ class MobileNavBar extends ConsumerWidget {
     return '/notes';
   }
 
-  List<Widget> _buildNavIcons(BuildContext context, String location) {
-    final current = _currentScreen(location);
+  List<Widget> _buildNavIcons(
+      BuildContext context, String location, bool isOnSettings) {
+    final current = isOnSettings ? null : _currentScreen(location);
     final icons = <Widget>[];
-    for (final (route, icon, _) in _mainScreens) {
+    for (final (route, icon) in _mainScreens) {
       final isActive = route == current;
-      if (icons.isNotEmpty) icons.add(const SizedBox(width: 16));
       icons.add(
-        GestureDetector(
+        _NavIcon(
+          icon: icon,
           onTap: isActive ? null : () => context.go(route),
-          child: Icon(icon,
-              color: isActive ? SpaceNotesTheme.primary : SpaceNotesTheme.text),
+          active: isActive,
+          slotWidth: 46,
         ),
       );
     }
@@ -208,6 +207,44 @@ class MobileNavBar extends ConsumerWidget {
   }
 }
 
+class _NavIcon extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback? onTap;
+  final bool active;
+  final double slotWidth;
+  final AlignmentGeometry iconAlignment;
+
+  const _NavIcon({
+    required this.icon,
+    required this.onTap,
+    required this.active,
+    this.slotWidth = 24,
+    this.iconAlignment = Alignment.centerLeft,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final color = active
+        ? SpaceNotesTheme.accent
+        : SpaceNotesTheme.fg.withValues(alpha: 0.5);
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: SizedBox(
+        width: slotWidth,
+        height: 44,
+        child: Align(
+          alignment: iconAlignment,
+          child: SizedBox(
+            width: 24,
+            child: Icon(icon, size: 20, color: color),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _EditableNoteName extends ConsumerStatefulWidget {
   final String notePath;
   final String currentName;
@@ -260,11 +297,14 @@ class _EditableNoteNameState extends ConsumerState<_EditableNoteName> {
             controller: _controller,
             focusNode: _focusNode,
             style: const TextStyle(
-              fontFamily: 'FiraCode',
+              fontFamily: SpaceNotesTheme.fontSans,
               fontSize: 16,
-              color: SpaceNotesTheme.text,
+              color: SpaceNotesTheme.fg,
               fontWeight: FontWeight.w500,
+              letterSpacing: -0.2,
             ),
+            cursorColor: SpaceNotesTheme.accent,
+            cursorWidth: 1.5,
             decoration: const InputDecoration(
               border: InputBorder.none,
               enabledBorder: InputBorder.none,
@@ -277,10 +317,11 @@ class _EditableNoteNameState extends ConsumerState<_EditableNoteName> {
           if (folderPath.isNotEmpty)
             Text(
               folderPath,
-              style: TextStyle(
-                fontFamily: 'FiraCode',
-                fontSize: 11,
-                color: SpaceNotesTheme.text.withValues(alpha: 0.5),
+              style: const TextStyle(
+                fontFamily: SpaceNotesTheme.fontMono,
+                fontSize: 10,
+                color: SpaceNotesTheme.dim,
+                letterSpacing: 0.3,
               ),
               overflow: TextOverflow.ellipsis,
             ),
@@ -297,20 +338,22 @@ class _EditableNoteNameState extends ConsumerState<_EditableNoteName> {
           Text(
             widget.currentName,
             style: const TextStyle(
-              fontFamily: 'FiraCode',
+              fontFamily: SpaceNotesTheme.fontSans,
               fontSize: 16,
-              color: SpaceNotesTheme.text,
+              color: SpaceNotesTheme.fg,
               fontWeight: FontWeight.w500,
+              letterSpacing: -0.2,
             ),
             overflow: TextOverflow.ellipsis,
           ),
           if (folderPath.isNotEmpty)
             Text(
               folderPath,
-              style: TextStyle(
-                fontFamily: 'FiraCode',
-                fontSize: 11,
-                color: SpaceNotesTheme.text.withValues(alpha: 0.5),
+              style: const TextStyle(
+                fontFamily: SpaceNotesTheme.fontMono,
+                fontSize: 10,
+                color: SpaceNotesTheme.dim,
+                letterSpacing: 0.3,
               ),
               overflow: TextOverflow.ellipsis,
             ),
@@ -430,11 +473,14 @@ class _EditableFolderNameState extends ConsumerState<_EditableFolderName> {
             controller: _controller,
             focusNode: _focusNode,
             style: const TextStyle(
-              fontFamily: 'FiraCode',
+              fontFamily: SpaceNotesTheme.fontSans,
               fontSize: 16,
-              color: SpaceNotesTheme.text,
+              color: SpaceNotesTheme.fg,
               fontWeight: FontWeight.w500,
+              letterSpacing: -0.2,
             ),
+            cursorColor: SpaceNotesTheme.accent,
+            cursorWidth: 1.5,
             decoration: const InputDecoration(
               border: InputBorder.none,
               enabledBorder: InputBorder.none,
@@ -447,10 +493,11 @@ class _EditableFolderNameState extends ConsumerState<_EditableFolderName> {
           if (parentPath.isNotEmpty)
             Text(
               parentPath,
-              style: TextStyle(
-                fontFamily: 'FiraCode',
-                fontSize: 11,
-                color: SpaceNotesTheme.text.withValues(alpha: 0.5),
+              style: const TextStyle(
+                fontFamily: SpaceNotesTheme.fontMono,
+                fontSize: 10,
+                color: SpaceNotesTheme.dim,
+                letterSpacing: 0.3,
               ),
               overflow: TextOverflow.ellipsis,
             ),
@@ -467,20 +514,22 @@ class _EditableFolderNameState extends ConsumerState<_EditableFolderName> {
           Text(
             widget.currentName,
             style: const TextStyle(
-              fontFamily: 'FiraCode',
+              fontFamily: SpaceNotesTheme.fontSans,
               fontSize: 16,
-              color: SpaceNotesTheme.text,
+              color: SpaceNotesTheme.fg,
               fontWeight: FontWeight.w500,
+              letterSpacing: -0.2,
             ),
             overflow: TextOverflow.ellipsis,
           ),
           if (parentPath.isNotEmpty)
             Text(
               parentPath,
-              style: TextStyle(
-                fontFamily: 'FiraCode',
-                fontSize: 11,
-                color: SpaceNotesTheme.text.withValues(alpha: 0.5),
+              style: const TextStyle(
+                fontFamily: SpaceNotesTheme.fontMono,
+                fontSize: 10,
+                color: SpaceNotesTheme.dim,
+                letterSpacing: 0.3,
               ),
               overflow: TextOverflow.ellipsis,
             ),

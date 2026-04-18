@@ -77,10 +77,10 @@ packages:
     dependency: transitive
     description:
       name: brotli
-      sha256: ffd057351913e05384a6807e63330888e0e2a752fa262d72f294c0d866ece9ec
+      sha256: "7f891558ed779aab2bed874f0a36b8123f9ff3f19cf6efbee89e18ed294945ae"
       url: "https://pub.dev"
     source: hosted
-    version: "0.5.0"
+    version: "0.6.0"
   build:
     dependency: transitive
     description:
@@ -1309,10 +1309,11 @@ packages:
   spacetimedb_sdk:
     dependency: "direct main"
     description:
-      path: "../../Dart/spacetimedb_dart_sdk"
-      relative: true
-    source: path
-    version: "1.1.0"
+      name: spacetimedb_sdk
+      sha256: "5a0cd232caf12d5e61d2dd8d3f0ab6bcd3a0c89dbb9b3fb63484bcb59e8436b2"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.1.1"
   sprintf:
     dependency: transitive
     description:

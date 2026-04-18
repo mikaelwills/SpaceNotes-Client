@@ -1,7 +1,7 @@
-import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image/image.dart' as image_lib;
@@ -11,7 +11,7 @@ import '../providers/notes_providers.dart';
 import '../providers/chat_providers.dart';
 import '../dialogs/notes_list_dialogs.dart';
 import '../screens/home_screen.dart';
-import 'notes_search_bar.dart';
+import 'primitives/primitives.dart';
 
 Future<Uint8List> _readFileBytes(String path) async {
   return File(path).readAsBytes();
@@ -26,205 +26,183 @@ class MobileBottomInputBar extends ConsumerStatefulWidget {
 }
 
 class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
-  final TextEditingController _searchController = TextEditingController();
+  final TextEditingController _textController = TextEditingController();
+  final FocusNode _focusNode = FocusNode();
   final ImagePicker _imagePicker = ImagePicker();
-  bool _isSearchFocused = false;
-  String? _pendingImageBase64;
+  bool _hasText = false;
+  bool _isFocused = false;
+  Uint8List? _pendingImageBytes;
+
+  @override
+  void initState() {
+    super.initState();
+    _textController.addListener(_onTextChanged);
+    _focusNode.addListener(_onFocusChanged);
+  }
 
   @override
   void dispose() {
-    _searchController.dispose();
+    _textController.removeListener(_onTextChanged);
+    _focusNode.removeListener(_onFocusChanged);
+    _textController.dispose();
+    _focusNode.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final viewType = _getCurrentViewType();
-    final isChat =
-        viewType == HomeViewType.chat || viewType == HomeViewType.sessionChat;
 
-    final searchQuery = ref.watch(folderSearchQueryProvider);
-    if (!isChat && searchQuery.isEmpty && _searchController.text.isNotEmpty) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _searchController.clear();
-      });
-    }
-    final folderPath = ref.watch(currentFolderPathProvider);
-    final notePath = ref.watch(currentNotePathProvider);
-
-    return Stack(
-      children: [
-        _buildGradientBackground(),
-        _buildInputRow(
-          viewType: viewType,
-          isChat: isChat,
-          folderPath: folderPath,
-          notePath: notePath,
-        ),
-      ],
-    );
-  }
-
-  Widget _buildGradientBackground() {
-    return Positioned.fill(
-      child: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Colors.transparent,
-              SpaceNotesTheme.background,
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildInputRow({
-    required HomeViewType viewType,
-    required bool isChat,
-    required String folderPath,
-    required String? notePath,
-  }) {
     if (viewType == HomeViewType.note || viewType == HomeViewType.sessions) {
       return const SizedBox.shrink();
     }
-
     final location = GoRouterState.of(context).uri.toString();
     if (location == '/settings') {
       return const SizedBox.shrink();
     }
 
+    final isChat =
+        viewType == HomeViewType.chat || viewType == HomeViewType.sessionChat;
     final isSessionChat = viewType == HomeViewType.sessionChat;
 
-    return Container(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          if (isSessionChat) ...[
-            _buildRoundedButton(
-              onPressed: () => context.pop(),
-              tooltip: 'Back',
-              icon: Icons.arrow_back,
+    final searchQuery = ref.watch(folderSearchQueryProvider);
+    if (!isChat && searchQuery.isEmpty && _textController.text.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _textController.clear();
+      });
+    }
+
+    final folderPath = ref.watch(currentFolderPathProvider);
+
+    return Stack(
+      children: [
+        _buildFadeOverlay(),
+        SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(14, 8, 14, 12),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                if (isSessionChat) ...[
+                  _DockTile(
+                    icon: Icons.arrow_back,
+                    onTap: () => context.pop(),
+                    semanticLabel: 'back',
+                  ),
+                  const SizedBox(width: 8),
+                ],
+                Expanded(child: _buildField(isChat)),
+                const SizedBox(width: 8),
+                ..._buildTrailing(isChat, folderPath),
+              ],
             ),
-            const SizedBox(width: 8),
-          ],
-          _buildSearchBar(isChat || isSessionChat),
-          const SizedBox(width: 8),
-          _buildRightButtons(isChat || isSessionChat, folderPath),
-        ],
-      ),
+          ),
+        ),
+      ],
     );
   }
 
-  Widget _buildSearchBar(bool isChat) {
-    final targetSession = ref.watch(targetSessionProvider);
-
-    String hintText;
-    if (!isChat) {
-      hintText = 'Search notes...';
-    } else if (_getCurrentSessionId() != null) {
-      hintText = '${_getCurrentSessionId()}...';
-    } else {
-      hintText = '$targetSession...';
-    }
-
-    return Expanded(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            decoration: BoxDecoration(
-              color: SpaceNotesTheme.inputSurface,
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: NotesSearchBar(
-              controller: _searchController,
-              height: 48,
-              hintText: hintText,
-              onChanged: isChat ? (_) {} : _onSearchChanged,
-              onFocusChanged: (focused) {
-                setState(() => _isSearchFocused = focused);
-              },
-              onSubmitted: _onSendToAi,
-              showImagePicker: isChat,
-              onImagePickerTap: _onPickImage,
-              hasImageAttached: _pendingImageBase64 != null,
-              onClearImage: () {
-                setState(() {
-                  _pendingImageBase64 = null;
-                });
-              },
+  Widget _buildFadeOverlay() {
+    return const Positioned.fill(
+      child: IgnorePointer(
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              stops: [0.0, 0.35, 1.0],
+              colors: [
+                Color(0x000D0D0F),
+                Color(0xCC0D0D0F),
+                Color(0xFF0D0D0F),
+              ],
             ),
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildRightButtons(bool isChat, String folderPath) {
-    if (isChat) {
-      return _buildRoundedButton(
-        onPressed: _onSendToAi,
-        tooltip: 'Send to AI',
-        icon: Icons.arrow_upward,
-      );
-    } else if (_isSearchFocused || _searchController.text.isNotEmpty) {
-      return _buildRoundedButton(
-        onPressed: _onSendToAi,
-        tooltip: 'Send to AI',
-        icon: Icons.arrow_upward,
-      );
-    } else {
-      return Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _buildRoundedButton(
-            onPressed: () => NotesListDialogs.showCreateFolderDialog(
-              context,
-              ref,
-              currentPath: folderPath,
-            ),
-            tooltip: 'Create new folder',
-            icon: Icons.create_new_folder_outlined,
-          ),
-          const SizedBox(width: 8),
-          _buildRoundedButton(
-            onPressed: () => _createQuickNote(folderPath),
-            tooltip: 'Create new note',
-            icon: Icons.add,
-          ),
-        ],
-      );
-    }
-  }
-
-  Widget _buildRoundedButton({
-    required VoidCallback onPressed,
-    required String tooltip,
-    required IconData icon,
-  }) {
-    return Container(
-      width: 48,
-      height: 48,
-      decoration: BoxDecoration(
-        color: SpaceNotesTheme.inputSurface,
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: IconButton(
-        onPressed: onPressed,
-        tooltip: tooltip,
-        icon: Icon(
-          icon,
-          size: 24,
-          color: SpaceNotesTheme.primary,
         ),
       ),
     );
+  }
+
+  Widget _buildField(bool isChat) {
+    final hint = _computeHint(isChat);
+    final hasImage = _pendingImageBytes != null;
+
+    return SnField(
+      controller: _textController,
+      focusNode: _focusNode,
+      hint: hint,
+      onChanged: isChat ? (_) {} : _onSearchChanged,
+      onSubmitted: (_) => _onSend(),
+      maxLines: 6,
+      minLines: 1,
+      expands: false,
+      trailing: hasImage
+          ? GestureDetector(
+              onTap: () {
+                HapticFeedback.lightImpact();
+                setState(() => _pendingImageBytes = null);
+              },
+              behavior: HitTestBehavior.opaque,
+              child: const Icon(
+                Icons.image,
+                size: 16,
+                color: SpaceNotesTheme.accent,
+              ),
+            )
+          : null,
+    );
+  }
+
+  String _computeHint(bool isChat) {
+    if (!isChat) return 'search notes…';
+    final sid = _getCurrentSessionId();
+    if (sid != null) return sid;
+    return ref.read(targetSessionProvider);
+  }
+
+  List<Widget> _buildTrailing(bool isChat, String folderPath) {
+    if (isChat) {
+      return [
+        _DockTile(
+          icon: Icons.image_outlined,
+          onTap: _onPickImage,
+          semanticLabel: 'attach image',
+        ),
+        const SizedBox(width: 8),
+        _DockTile(
+          icon: Icons.arrow_upward,
+          onTap: _onSend,
+          semanticLabel: 'send',
+        ),
+      ];
+    }
+    if (_isFocused || _hasText) {
+      return [
+        _DockTile(
+          icon: Icons.arrow_upward,
+          onTap: _onSend,
+          semanticLabel: 'send to AI',
+        ),
+      ];
+    }
+    return [
+      _DockTile(
+        icon: Icons.create_new_folder_outlined,
+        onTap: () => NotesListDialogs.showCreateFolderDialog(
+          context,
+          ref,
+          currentPath: folderPath,
+        ),
+        semanticLabel: 'new folder',
+      ),
+      const SizedBox(width: 8),
+      _DockTile(
+        icon: Icons.note_add_outlined,
+        onTap: () => _createQuickNote(folderPath),
+        semanticLabel: 'new note',
+      ),
+    ];
   }
 
   HomeViewType _getCurrentViewType() {
@@ -247,32 +225,38 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
     ref.read(folderSearchQueryProvider.notifier).state = query;
   }
 
-  void _onSendToAi() {
-    final message = _searchController.text.trim();
-    if (message.isEmpty && _pendingImageBase64 == null) return;
+  void _onSend() {
+    final message = _textController.text.trim();
+    final image = _pendingImageBytes;
+    if (message.isEmpty && image == null) return;
 
     FocusManager.instance.primaryFocus?.unfocus();
 
     final sessionId = _getCurrentSessionId();
     if (sessionId != null) {
-      sendChatMessage(ref, sessionId: sessionId, text: message);
-      _searchController.clear();
-      setState(() {
-        _pendingImageBase64 = null;
-      });
+      if (image != null) {
+        sendChatImage(ref,
+            sessionId: sessionId, caption: message, pngBytes: image);
+      } else {
+        sendChatMessage(ref, sessionId: sessionId, text: message);
+      }
+      _textController.clear();
+      setState(() => _pendingImageBytes = null);
       return;
     }
 
     final targetSession = ref.read(targetSessionProvider);
-    final text = message.isEmpty ? 'What is in this image?' : message;
-    sendChatMessage(ref, sessionId: targetSession, text: text);
+    if (image != null) {
+      sendChatImage(ref,
+          sessionId: targetSession, caption: message, pngBytes: image);
+    } else {
+      sendChatMessage(ref, sessionId: targetSession, text: message);
+    }
     context.go('/notes/chat');
 
-    _searchController.clear();
+    _textController.clear();
     ref.read(folderSearchQueryProvider.notifier).state = '';
-    setState(() {
-      _pendingImageBase64 = null;
-    });
+    setState(() => _pendingImageBytes = null);
   }
 
   Future<void> _onPickImage() async {
@@ -280,66 +264,103 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
       final image = await _imagePicker.pickImage(source: ImageSource.gallery);
       if (image == null) return;
 
-      var bytes = await compute(_readFileBytes, image.path);
-
-      if (bytes.length > 4 * 1024 * 1024) {
-        bytes = await compute(_compressImage, bytes);
+      final raw = await compute(_readFileBytes, image.path);
+      final png = await compute(_resizeToPng, raw);
+      if (png == null) {
+        debugPrint('[MobileBottomInputBar] Image decode failed');
+        return;
+      }
+      if (png.length > 2 * 1024 * 1024) {
+        debugPrint(
+            '[MobileBottomInputBar] Image exceeds 2MB post-compress: ${png.length}');
+        return;
       }
 
-      setState(() {
-        _pendingImageBase64 = base64Encode(bytes);
-      });
+      setState(() => _pendingImageBytes = png);
     } catch (e) {
       debugPrint('[MobileBottomInputBar] Error picking image: $e');
     }
   }
 
-  static Uint8List _compressImage(Uint8List bytes) {
+  static Uint8List? _resizeToPng(Uint8List bytes) {
     final img = image_lib.decodeImage(bytes);
-    if (img == null) return bytes;
+    if (img == null) return null;
 
     var resized = img;
-    if (img.width > 2048 || img.height > 2048) {
+    if (img.width > 1024 || img.height > 1024) {
       resized = image_lib.copyResize(img,
-          width: img.width > img.height ? 2048 : -1,
-          height: img.height >= img.width ? 2048 : -1);
+          width: img.width >= img.height ? 1024 : -1,
+          height: img.height > img.width ? 1024 : -1);
     }
 
-    for (final quality in [90, 80, 70, 60]) {
-      final jpeg =
-          Uint8List.fromList(image_lib.encodeJpg(resized, quality: quality));
-      if (jpeg.length <= 4 * 1024 * 1024) return jpeg;
-    }
-
-    return Uint8List.fromList(image_lib.encodeJpg(resized, quality: 50));
+    return Uint8List.fromList(image_lib.encodePng(resized));
   }
 
   Future<void> _createQuickNote(String folderPath) async {
-    debugPrint(
-        '[MobileBottomInputBar] _createQuickNote called, folderPath: "$folderPath"');
     final now = DateTime.now();
     final timestamp =
         '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}-${now.hour.toString().padLeft(2, '0')}-${now.minute.toString().padLeft(2, '0')}-${now.second.toString().padLeft(2, '0')}';
-
     final basePath = folderPath.isEmpty ? 'All Notes' : folderPath;
     final notePath = '$basePath/Untitled-$timestamp.md';
-    debugPrint('[MobileBottomInputBar] Creating note at path: "$notePath"');
-
     final repo = ref.read(notesRepositoryProvider);
     try {
-      debugPrint('[MobileBottomInputBar] Calling repo.createNote...');
       final noteId = await repo.createNote(notePath, '');
-      debugPrint('[MobileBottomInputBar] repo.createNote returned: $noteId');
       if (noteId != null && mounted) {
-        debugPrint('[MobileBottomInputBar] Navigating to /notes/note/$noteId');
         context.go('/notes/note/$noteId');
-      } else {
-        debugPrint(
-            '[MobileBottomInputBar] noteId is null or widget not mounted');
       }
-    } catch (e, stack) {
+    } catch (e) {
       debugPrint('[MobileBottomInputBar] Error creating note: $e');
-      debugPrint('[MobileBottomInputBar] Stack trace: $stack');
     }
+  }
+
+  void _onTextChanged() {
+    final hasText = _textController.text.isNotEmpty;
+    if (hasText != _hasText) {
+      setState(() => _hasText = hasText);
+    }
+  }
+
+  void _onFocusChanged() {
+    setState(() => _isFocused = _focusNode.hasFocus);
+  }
+}
+
+class _DockTile extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onTap;
+  final String semanticLabel;
+
+  const _DockTile({
+    required this.icon,
+    required this.onTap,
+    required this.semanticLabel,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      label: semanticLabel,
+      button: true,
+      child: GestureDetector(
+        onTap: () {
+          HapticFeedback.selectionClick();
+          onTap();
+        },
+        behavior: HitTestBehavior.opaque,
+        child: Container(
+          width: 44,
+          height: 44,
+          decoration: BoxDecoration(
+            color: SpaceNotesTheme.bgAlt,
+            border: Border.all(
+              color: SpaceNotesTheme.hairlineStrong,
+              width: 1,
+            ),
+            borderRadius: BorderRadius.circular(SpaceNotesTheme.radiusDock),
+          ),
+          child: Icon(icon, size: 16, color: SpaceNotesTheme.accent),
+        ),
+      ),
+    );
   }
 }

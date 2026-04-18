@@ -4,9 +4,10 @@ import 'package:go_router/go_router.dart';
 
 import '../../providers/notes_providers.dart';
 import '../../theme/spacenotes_theme.dart';
-import '../connection_indicator.dart';
+import '../note_chat_panel.dart';
 import '../sync_state_indicator.dart';
 import 'desktop_note_view.dart';
+import 'desktop_sessions_layout.dart';
 import 'note_tabs.dart';
 import 'sidebar.dart';
 
@@ -35,11 +36,25 @@ class _DesktopShellState extends ConsumerState<DesktopShell> {
 
   @override
   Widget build(BuildContext context) {
+    final location = GoRouterState.of(context).uri.toString();
+    if (location.startsWith('/notes/sessions')) {
+      String? activeSessionId;
+      if (location.startsWith('/notes/sessions/')) {
+        final encoded = location.substring('/notes/sessions/'.length);
+        activeSessionId = Uri.decodeComponent(encoded);
+      }
+      return Scaffold(
+        backgroundColor: SpaceNotesTheme.bg,
+        // ignore: prefer_const_constructors
+        body: DesktopSessionsLayout(activeSessionId: activeSessionId),
+      );
+    }
+
     final isCollapsed = ref.watch(sidebarCollapsedProvider);
     final sidebarWidth = ref.watch(sidebarWidthProvider);
 
     return Scaffold(
-      backgroundColor: SpaceNotesTheme.background,
+      backgroundColor: SpaceNotesTheme.bg,
       body: Row(
         children: [
           AnimatedContainer(
@@ -73,8 +88,8 @@ class _DesktopShellState extends ConsumerState<DesktopShell> {
               child: Container(
                 width: _dividerWidth,
                 color: _isResizing
-                    ? SpaceNotesTheme.primary
-                    : SpaceNotesTheme.surface,
+                    ? SpaceNotesTheme.accent
+                    : SpaceNotesTheme.hairline,
               ),
             ),
           ),
@@ -87,37 +102,47 @@ class _DesktopShellState extends ConsumerState<DesktopShell> {
   }
 }
 
-class _DesktopContentArea extends StatelessWidget {
+class _DesktopContentArea extends ConsumerWidget {
   final Widget child;
 
   const _DesktopContentArea({required this.child});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final location = GoRouterState.of(context).uri.toString();
     final isChat = location.startsWith('/notes/chat');
     final isSettings = location.startsWith('/settings');
     final isConnect = location.startsWith('/connect');
     final isSessions = location.startsWith('/notes/sessions');
+    final isNotesView = !isChat && !isSettings && !isConnect && !isSessions;
 
-    return Column(
+    if (!isNotesView) {
+      return Column(
+        children: [
+          const _DesktopTopBar(showTabs: false),
+          Expanded(child: child),
+        ],
+      );
+    }
+
+    final openNoteId = ref.watch(currentNotePathProvider);
+
+    return Row(
       children: [
-        _DesktopTopBar(
-            showTabs: !isChat && !isSettings && !isConnect && !isSessions),
         Expanded(
-          child:
-              _buildContent(context, isChat, isSettings, isConnect, isSessions),
+          child: Column(
+            children: [
+              const _DesktopTopBar(showTabs: true),
+              const Expanded(child: DesktopNoteView()),
+            ],
+          ),
+        ),
+        NoteChatPanel(
+          notePath: openNoteId ?? '',
+          isDesktop: true,
         ),
       ],
     );
-  }
-
-  Widget _buildContent(BuildContext context, bool isChat, bool isSettings,
-      bool isConnect, bool isSessions) {
-    if (isChat || isSettings || isConnect || isSessions) {
-      return child;
-    }
-    return const DesktopNoteView();
   }
 }
 
@@ -131,77 +156,81 @@ class _DesktopTopBar extends ConsumerWidget {
       final noteId = location.substring('/notes/note/'.length);
       final note = ref.watch(noteByIdProvider(noteId));
       if (note != null) {
-        return '/${note.path}';
+        return note.path;
       }
-      return '/';
+      return '';
     }
     if (location.startsWith('/notes/folder/')) {
       final encodedPath = location.substring('/notes/folder/'.length);
       final decodedPath = Uri.decodeComponent(encodedPath);
-      return '/$decodedPath';
+      return decodedPath;
     }
     if (location == '/notes' || location == '/notes/') {
-      return '/';
+      return 'all notes';
     }
     if (location == '/notes/chat') {
-      return '/Chat';
+      return 'chat';
     }
-    return 'SpaceNotes';
-  }
-
-  bool _shouldShowBackButton(String location) {
-    return location == '/notes/chat' ||
-        location == '/settings' ||
-        location.startsWith('/notes/sessions');
+    if (location.startsWith('/notes/sessions')) {
+      return 'sessions';
+    }
+    if (location == '/settings') {
+      return 'settings';
+    }
+    return '';
   }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final location = GoRouterState.of(context).uri.toString();
     final breadcrumb = _getBreadcrumb(location, ref);
-    final showBack = _shouldShowBackButton(location);
 
     return Container(
       height: 40,
       decoration: const BoxDecoration(
-        color: SpaceNotesTheme.surface,
+        color: SpaceNotesTheme.bg,
         border: Border(
-          bottom: BorderSide(color: SpaceNotesTheme.inputSurface, width: 1),
+          bottom: BorderSide(color: SpaceNotesTheme.hairline, width: 1),
         ),
       ),
       child: Row(
         children: [
-          if (showBack)
-            IconButton(
-              icon: const Icon(Icons.arrow_back, size: 18),
-              color: SpaceNotesTheme.textSecondary,
-              onPressed: () => context.go('/notes'),
-              tooltip: 'Back to notes',
-            )
-          else if (showTabs)
+          if (showTabs)
             const Expanded(child: NoteTabs())
-          else
-            const SizedBox(width: 16),
-          if (!showTabs)
+          else ...[
+            const SizedBox(width: 20),
             Expanded(
-              child: Text(
-                breadcrumb,
-                style: SpaceNotesTextStyles.terminal.copyWith(
-                  color: SpaceNotesTheme.textSecondary,
-                  fontSize: 12,
-                ),
-                overflow: TextOverflow.ellipsis,
+              child: Row(
+                children: [
+                  const Text(
+                    '◆',
+                    style: TextStyle(
+                      color: SpaceNotesTheme.accent,
+                      fontSize: 10,
+                      fontFamily: SpaceNotesTheme.fontMono,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Flexible(
+                    child: Text(
+                      breadcrumb,
+                      style: const TextStyle(
+                        fontFamily: SpaceNotesTheme.fontMono,
+                        fontSize: 11,
+                        color: SpaceNotesTheme.muted,
+                        letterSpacing: 0.3,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
               ),
             ),
-          const SyncStateIndicator(),
-          const SizedBox(width: 8),
-          IconButton(
-            icon: const Icon(Icons.settings_outlined, size: 18),
-            color: SpaceNotesTheme.textSecondary,
-            onPressed: () => context.go('/settings'),
-            tooltip: 'Settings',
+          ],
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 14),
+            child: SyncStateIndicator(),
           ),
-          const ConnectionIndicator(),
         ],
       ),
     );

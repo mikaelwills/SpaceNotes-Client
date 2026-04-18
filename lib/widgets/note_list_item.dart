@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../theme/spacenotes_theme.dart';
 import '../generated/note.dart';
+import 'swipe_action.dart';
 
 class _LeftOnlyHorizontalDragGestureRecognizer
     extends HorizontalDragGestureRecognizer {
@@ -21,6 +22,7 @@ class _LeftOnlyHorizontalDragGestureRecognizer
 
 class NoteListItem extends StatefulWidget {
   final Note note;
+  final int? index;
   final VoidCallback onTap;
   final VoidCallback? onLongPress;
   final VoidCallback? onDelete;
@@ -31,6 +33,7 @@ class NoteListItem extends StatefulWidget {
     super.key,
     required this.note,
     required this.onTap,
+    this.index,
     this.onLongPress,
     this.onDelete,
     this.onMove,
@@ -48,8 +51,8 @@ class _NoteListItemState extends State<NoteListItem>
   late AnimationController _animationController;
   late Animation<double> _animation;
 
-  static const double _actionButtonWidth = 60;
-  static const double _maxSwipe = 120;
+  static const double _actionButtonWidth = 88;
+  static const double _maxSwipe = 176;
 
   @override
   void initState() {
@@ -72,7 +75,7 @@ class _NoteListItemState extends State<NoteListItem>
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 8),
+      margin: EdgeInsets.zero,
       child: Stack(
         children: [
           Positioned.fill(
@@ -80,38 +83,26 @@ class _NoteListItemState extends State<NoteListItem>
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
                 if (widget.onMove != null)
-                  GestureDetector(
+                  SwipeAction(
+                    icon: Icons.drive_file_move_outline,
+                    label: 'move',
+                    color: SpaceNotesTheme.accent,
+                    width: _actionButtonWidth,
                     onTap: () {
                       _animateToOffset(0);
                       widget.onMove!();
                     },
-                    child: Container(
-                      width: _actionButtonWidth,
-                      color: SpaceNotesTheme.primary,
-                      alignment: Alignment.center,
-                      child: const Icon(
-                        Icons.drive_file_move_outline,
-                        color: SpaceNotesTheme.background,
-                        size: 20,
-                      ),
-                    ),
                   ),
                 if (widget.onDelete != null)
-                  GestureDetector(
+                  SwipeAction(
+                    icon: Icons.delete_outline,
+                    label: 'delete',
+                    color: SpaceNotesTheme.offline,
+                    width: _actionButtonWidth,
                     onTap: () {
                       _animateToOffset(0);
                       widget.onDelete!();
                     },
-                    child: Container(
-                      width: _actionButtonWidth,
-                      color: SpaceNotesTheme.error,
-                      alignment: Alignment.center,
-                      child: const Icon(
-                        Icons.delete_outline,
-                        color: SpaceNotesTheme.background,
-                        size: 20,
-                      ),
-                    ),
                   ),
               ],
             ),
@@ -159,41 +150,99 @@ class _NoteListItemState extends State<NoteListItem>
                   child: InkWell(
                     onTap: _handleTap,
                     onLongPress: _handleLongPress,
-                    splashColor: SpaceNotesTheme.primary.withValues(alpha: 0.1),
+                    splashColor: SpaceNotesTheme.accent.withValues(alpha: 0.1),
                     highlightColor:
-                        SpaceNotesTheme.primary.withValues(alpha: 0.05),
+                        SpaceNotesTheme.accent.withValues(alpha: 0.05),
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 200),
-                      padding: const EdgeInsets.all(16),
+                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
                       decoration: BoxDecoration(
-                        border: Border.all(
-                          color: _borderColor,
-                          width: widget.isSelected ? 2 : 1,
+                        border: Border(
+                          bottom: BorderSide(
+                            color: _borderColor,
+                            width: 1,
+                          ),
                         ),
                       ),
                       child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Icon(
-                            Icons.description_outlined,
-                            color: widget.isSelected
-                                ? SpaceNotesTheme.primary
-                                : SpaceNotesTheme.textSecondary
-                                    .withValues(alpha: 0.7),
-                            size: 16,
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              widget.note.name,
-                              style: TextStyle(
-                                fontFamily: 'FiraCode',
-                                fontSize: 14,
-                                color: widget.isSelected
-                                    ? SpaceNotesTheme.primary
-                                    : SpaceNotesTheme.text,
-                                fontWeight: FontWeight.w500,
+                          if (widget.index != null) ...[
+                            SizedBox(
+                              width: 28,
+                              child: Padding(
+                                padding: const EdgeInsets.only(top: 2),
+                                child: Text(
+                                  widget.index!.toString().padLeft(3, '0'),
+                                  style: const TextStyle(
+                                    fontFamily: SpaceNotesTheme.fontMono,
+                                    fontSize: 9,
+                                    color: SpaceNotesTheme.dim,
+                                    letterSpacing: 0.6,
+                                  ),
+                                ),
                               ),
-                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                          Padding(
+                            padding: const EdgeInsets.only(top: 2),
+                            child: Icon(
+                              Icons.description_outlined,
+                              color: widget.isSelected
+                                  ? SpaceNotesTheme.accent
+                                  : SpaceNotesTheme.dim,
+                              size: 15,
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  widget.note.name,
+                                  style: TextStyle(
+                                    fontFamily: SpaceNotesTheme.fontSans,
+                                    fontSize: 15,
+                                    color: widget.isSelected
+                                        ? SpaceNotesTheme.accent
+                                        : SpaceNotesTheme.fg,
+                                    fontWeight: FontWeight.w500,
+                                    letterSpacing: -0.2,
+                                    height: 1.2,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                  maxLines: 1,
+                                ),
+                                if (_previewText.isNotEmpty) ...[
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    _previewText,
+                                    style: const TextStyle(
+                                      fontFamily: SpaceNotesTheme.fontSans,
+                                      fontSize: 12,
+                                      color: SpaceNotesTheme.muted,
+                                      height: 1.4,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                    maxLines: 1,
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Padding(
+                            padding: const EdgeInsets.only(top: 2),
+                            child: Text(
+                              _timeAgo,
+                              style: const TextStyle(
+                                fontFamily: SpaceNotesTheme.fontMono,
+                                fontSize: 10,
+                                color: SpaceNotesTheme.dim,
+                                letterSpacing: 0.4,
+                              ),
                             ),
                           ),
                         ],
@@ -235,15 +284,38 @@ class _NoteListItemState extends State<NoteListItem>
   }
 
   Color get _borderColor {
-    if (widget.isSelected) return SpaceNotesTheme.primary;
-    if (_isHovered) return SpaceNotesTheme.textSecondary.withValues(alpha: 0.2);
-    return SpaceNotesTheme.textSecondary.withValues(alpha: 0.1);
+    if (widget.isSelected) return SpaceNotesTheme.accent;
+    if (_isHovered) return SpaceNotesTheme.hairlineStrong;
+    return SpaceNotesTheme.hairline;
   }
 
   Color get _backgroundColor {
-    if (widget.isSelected)
-      return SpaceNotesTheme.primary.withValues(alpha: 0.1);
-    if (_isHovered) return SpaceNotesTheme.surface;
-    return SpaceNotesTheme.surface;
+    if (widget.isSelected) {
+      return SpaceNotesTheme.accent.withValues(alpha: 0.06);
+    }
+    return SpaceNotesTheme.bg;
+  }
+
+  String get _previewText {
+    final raw = widget.note.content.trim();
+    if (raw.isEmpty) return '';
+    final firstLine = raw.split('\n').firstWhere(
+          (l) => l.trim().isNotEmpty,
+          orElse: () => '',
+        );
+    return firstLine.trim();
+  }
+
+  String get _timeAgo {
+    final ms = widget.note.modifiedTime.toInt();
+    if (ms == 0) return '';
+    final dt = DateTime.fromMillisecondsSinceEpoch(ms);
+    final diff = DateTime.now().difference(dt);
+    if (diff.inSeconds < 60) return '${diff.inSeconds}s';
+    if (diff.inMinutes < 60) return '${diff.inMinutes}m';
+    if (diff.inHours < 24) return '${diff.inHours}h';
+    if (diff.inDays < 30) return '${diff.inDays}d';
+    if (diff.inDays < 365) return '${(diff.inDays / 30).floor()}mo';
+    return '${(diff.inDays / 365).floor()}y';
   }
 }

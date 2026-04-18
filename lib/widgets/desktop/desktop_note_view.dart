@@ -13,33 +13,43 @@ class DesktopNoteView extends StatelessWidget {
     return BlocBuilder<DesktopNotesBloc, DesktopNotesState>(
       builder: (context, state) {
         if (!state.hasOpenNotes || state.activeNoteId == null) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.description_outlined,
-                  size: 64,
-                  color: SpaceNotesTheme.textSecondary.withValues(alpha: 0.3),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'Select a note from the sidebar',
-                  style: SpaceNotesTextStyles.terminal.copyWith(
-                    color: SpaceNotesTheme.textSecondary,
-                    fontSize: 14,
-                  ),
-                ),
-              ],
-            ),
-          );
+          return const _EmptyState();
         }
-
         return NoteScreen(
           key: ValueKey(state.activeNoteId),
           noteId: state.activeNoteId!,
         );
       },
+    );
+  }
+}
+
+class _EmptyState extends StatelessWidget {
+  const _EmptyState();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.description_outlined,
+            size: 48,
+            color: SpaceNotesTheme.dim,
+          ),
+          SizedBox(height: 20),
+          Text(
+            'select a note from the sidebar',
+            style: TextStyle(
+              fontFamily: SpaceNotesTheme.fontMono,
+              fontSize: 12,
+              color: SpaceNotesTheme.muted,
+              letterSpacing: 1.2,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

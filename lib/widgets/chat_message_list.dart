@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import '../theme/spacenotes_theme.dart';
 import 'keyboard_dismiss_on_scroll.dart';
 
-class ChatMessageList extends StatefulWidget {
-  final List<Widget> items;
+class ChatMessageList<T> extends StatefulWidget {
+  final List<T> items;
+  final Widget Function(BuildContext, T) itemBuilder;
+  final Key Function(T)? keyBuilder;
   final EdgeInsets padding;
   final String emptyText;
   final bool showScrollToBottom;
@@ -13,7 +15,9 @@ class ChatMessageList extends StatefulWidget {
   const ChatMessageList({
     super.key,
     required this.items,
-    this.padding = const EdgeInsets.fromLTRB(4, 8, 4, 120),
+    required this.itemBuilder,
+    this.keyBuilder,
+    this.padding = const EdgeInsets.fromLTRB(4, 8, 4, 140),
     this.emptyText = 'No messages yet',
     this.showScrollToBottom = true,
     this.maxWidth = 800,
@@ -21,30 +25,17 @@ class ChatMessageList extends StatefulWidget {
   });
 
   @override
-  State<ChatMessageList> createState() => ChatMessageListState();
+  State<ChatMessageList<T>> createState() => ChatMessageListState<T>();
 }
 
-class ChatMessageListState extends State<ChatMessageList> {
+class ChatMessageListState<T> extends State<ChatMessageList<T>> {
   ScrollController? _ownScrollController;
   bool _showScrollButton = false;
   bool _autoScrollEnabled = true;
-  int _previousItemCount = 0;
 
   @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _syncScrollButtonVisibility();
-    });
-  }
-
-  @override
-  void didUpdateWidget(ChatMessageList oldWidget) {
+  void didUpdateWidget(ChatMessageList<T> oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.items.length > _previousItemCount && _autoScrollEnabled) {
-      scrollToBottom();
-    }
-    _previousItemCount = widget.items.length;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _syncScrollButtonVisibility();
     });
@@ -76,8 +67,7 @@ class ChatMessageListState extends State<ChatMessageList> {
           child: NotificationListener<ScrollNotification>(
             onNotification: (notification) {
               if (notification is ScrollUpdateNotification) {
-                final isNearBottom = _scrollController.position.pixels >=
-                    _scrollController.position.maxScrollExtent - 100;
+                final isNearBottom = _scrollController.position.pixels < 100;
                 if (_showScrollButton == isNearBottom) {
                   setState(() => _showScrollButton = !isNearBottom);
                 }
@@ -95,11 +85,20 @@ class ChatMessageListState extends State<ChatMessageList> {
                       .copyWith(scrollbars: false),
                   child: ListView.builder(
                     controller: _scrollController,
+                    reverse: true,
                     keyboardDismissBehavior:
                         ScrollViewKeyboardDismissBehavior.onDrag,
                     padding: widget.padding,
                     itemCount: widget.items.length,
-                    itemBuilder: (context, index) => widget.items[index],
+                    itemBuilder: (context, index) {
+                      final item =
+                          widget.items[widget.items.length - 1 - index];
+                      final child = widget.itemBuilder(context, item);
+                      final k = widget.keyBuilder?.call(item);
+                      return k == null
+                          ? child
+                          : KeyedSubtree(key: k, child: child);
+                    },
                   ),
                 ),
               ),
@@ -114,33 +113,28 @@ class ChatMessageListState extends State<ChatMessageList> {
 
   Widget _buildScrollToBottomButton() {
     return Positioned(
-      bottom: 76,
-      left: 0,
-      right: 0,
-      child: Center(
-        child: ConstrainedBox(
-          constraints: BoxConstraints(maxWidth: widget.maxWidth),
-          child: Align(
-            alignment: Alignment.centerRight,
-            child: Padding(
-              padding: const EdgeInsets.only(right: 16),
-              child: Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: SpaceNotesTheme.inputSurface,
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: IconButton(
-                  onPressed: forceScrollToBottom,
-                  tooltip: 'Scroll to bottom',
-                  icon: const Icon(
-                    Icons.arrow_downward,
-                    size: 24,
-                    color: SpaceNotesTheme.primary,
-                  ),
-                ),
+      bottom: 100,
+      right: 16,
+      child: GestureDetector(
+        onTap: forceScrollToBottom,
+        behavior: HitTestBehavior.opaque,
+        child: Tooltip(
+          message: 'scroll to bottom',
+          child: Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: SpaceNotesTheme.bgAlt,
+              border: Border.all(
+                color: SpaceNotesTheme.hairlineStrong,
+                width: 1,
               ),
+              borderRadius: BorderRadius.circular(SpaceNotesTheme.radiusDock),
+            ),
+            child: const Icon(
+              Icons.arrow_downward,
+              size: 16,
+              color: SpaceNotesTheme.accent,
             ),
           ),
         ),
@@ -156,7 +150,7 @@ class ChatMessageListState extends State<ChatMessageList> {
     if (!_scrollController.hasClients) return;
     final pos = _scrollController.position;
     if (!pos.hasContentDimensions) return;
-    final isNearBottom = pos.pixels >= pos.maxScrollExtent - 100;
+    final isNearBottom = pos.pixels < 100;
     if (_showScrollButton == isNearBottom) {
       setState(() => _showScrollButton = !isNearBottom);
     }
@@ -166,7 +160,7 @@ class ChatMessageListState extends State<ChatMessageList> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
         _scrollController.animateTo(
-          _scrollController.position.maxScrollExtent,
+          0,
           duration: const Duration(milliseconds: 200),
           curve: Curves.easeOut,
         );

@@ -6,6 +6,7 @@ import '../theme/spacenotes_theme.dart';
 import '../blocs/config/config_cubit.dart';
 import '../blocs/config/config_state.dart';
 import '../providers/notes_providers.dart';
+import '../widgets/primitives/primitives.dart';
 
 class ConnectScreen extends ConsumerStatefulWidget {
   const ConnectScreen({super.key});
@@ -16,117 +17,142 @@ class ConnectScreen extends ConsumerStatefulWidget {
 
 class _ConnectScreenState extends ConsumerState<ConnectScreen> {
   final TextEditingController _ipController = TextEditingController();
+  final FocusNode _focusNode = FocusNode();
   bool _isConnecting = false;
   String? _errorMessage;
 
   @override
   void dispose() {
     _ipController.dispose();
+    _focusNode.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Text(
-              'Connect to SpaceNotes',
-              style: TextStyle(
-                color: SpaceNotesTheme.text,
-                fontSize: 24,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 32),
-            Container(
-              constraints: const BoxConstraints(maxWidth: 350),
-              height: 44,
-              decoration: BoxDecoration(
-                color: SpaceNotesTheme.inputSurface,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: TextField(
-                controller: _ipController,
-                style: SpaceNotesTextStyles.terminal.copyWith(fontSize: 14),
-                decoration: InputDecoration(
-                  hintText: 'Server IP Address',
-                  hintStyle: SpaceNotesTextStyles.terminal.copyWith(
+    return Scaffold(
+      backgroundColor: SpaceNotesTheme.bg,
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 420),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const SnMicroLabel('mcp · connect'),
+                const SizedBox(height: 14),
+                RichText(
+                  text: const TextSpan(
+                    style: TextStyle(
+                      fontFamily: SpaceNotesTheme.fontSans,
+                      fontSize: 32,
+                      fontWeight: FontWeight.w500,
+                      color: SpaceNotesTheme.fg,
+                      letterSpacing: -0.8,
+                      height: 1.0,
+                    ),
+                    children: [
+                      TextSpan(text: 'Connect'),
+                      TextSpan(
+                        text: '.',
+                        style: TextStyle(color: SpaceNotesTheme.accent),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 10),
+                const Text(
+                  'Enter the server IP running SpaceNotes.',
+                  style: TextStyle(
+                    fontFamily: SpaceNotesTheme.fontSans,
                     fontSize: 14,
-                    color: SpaceNotesTheme.textSecondary,
-                  ),
-                  border: InputBorder.none,
-                  contentPadding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                ),
-                onSubmitted: (_) => _connect(),
-              ),
-            ),
-            const SizedBox(height: 24),
-            if (_errorMessage != null) ...[
-              Container(
-                constraints: const BoxConstraints(maxWidth: 300),
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: SpaceNotesTheme.error.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                    color: SpaceNotesTheme.error.withValues(alpha: 0.3),
+                    color: SpaceNotesTheme.muted,
+                    height: 1.55,
                   ),
                 ),
-                child: Text(
-                  _errorMessage!,
-                  style: const TextStyle(
-                    color: SpaceNotesTheme.error,
-                    fontSize: 12,
-                  ),
-                  textAlign: TextAlign.center,
+                const SizedBox(height: 28),
+                SnField(
+                  controller: _ipController,
+                  focusNode: _focusNode,
+                  hint: 'ip address',
+                  onSubmitted: (_) => _connect(),
                 ),
-              ),
-              const SizedBox(height: 16),
-            ],
-            Container(
-              constraints: const BoxConstraints(maxWidth: 350),
-              width: double.infinity,
-              height: 48,
-              child: ElevatedButton(
-                onPressed: _isConnecting ? null : _connect,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: SpaceNotesTheme.surface,
-                  foregroundColor: SpaceNotesTheme.primary,
-                  disabledBackgroundColor:
-                      SpaceNotesTheme.surface.withValues(alpha: 0.5),
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    side: BorderSide(
-                      color: SpaceNotesTheme.primary.withValues(alpha: 0.3),
+                if (_errorMessage != null) ...[
+                  const SizedBox(height: 14),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 10),
+                    decoration: BoxDecoration(
+                      border: Border.all(
+                        color: SpaceNotesTheme.offline.withValues(alpha: 0.4),
+                        width: 1,
+                      ),
+                    ),
+                    child: Text(
+                      _errorMessage!,
+                      style: const TextStyle(
+                        fontFamily: SpaceNotesTheme.fontMono,
+                        fontSize: 11,
+                        color: SpaceNotesTheme.offline,
+                        letterSpacing: 0.3,
+                        height: 1.4,
+                      ),
                     ),
                   ),
-                ),
-                child: _isConnecting
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            SpaceNotesTheme.background,
+                ],
+                const SizedBox(height: 18),
+                _isConnecting
+                    ? _spinnerTile()
+                    : GestureDetector(
+                        onTap: _connect,
+                        behavior: HitTestBehavior.opaque,
+                        child: Container(
+                          height: 44,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            border: Border.all(
+                              color: SpaceNotesTheme.hairlineStrong,
+                              width: 1,
+                            ),
+                            borderRadius:
+                                BorderRadius.circular(SpaceNotesTheme.radiusXs),
+                          ),
+                          child: const Text(
+                            'CONNECT',
+                            style: TextStyle(
+                              fontFamily: SpaceNotesTheme.fontMono,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: 1,
+                              color: SpaceNotesTheme.fg,
+                            ),
                           ),
                         ),
-                      )
-                    : const Text(
-                        'Connect',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w600,
-                        ),
                       ),
-              ),
+              ],
             ),
-          ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _spinnerTile() {
+    return Container(
+      height: 44,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        border: Border.all(color: SpaceNotesTheme.hairlineStrong, width: 1),
+        borderRadius: BorderRadius.circular(SpaceNotesTheme.radiusXs),
+      ),
+      child: const SizedBox(
+        width: 14,
+        height: 14,
+        child: CircularProgressIndicator(
+          strokeWidth: 1.5,
+          valueColor: AlwaysStoppedAnimation<Color>(SpaceNotesTheme.accent),
         ),
       ),
     );
@@ -137,7 +163,7 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
 
     if (ip.isEmpty) {
       setState(() {
-        _errorMessage = 'Server address is required';
+        _errorMessage = 'server address is required';
       });
       return;
     }
@@ -161,14 +187,14 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
         context.go('/notes');
       } else {
         setState(() {
-          _errorMessage = 'Failed to connect to server';
+          _errorMessage = 'failed to connect to server';
           _isConnecting = false;
         });
       }
     } catch (e) {
       if (mounted) {
         setState(() {
-          _errorMessage = 'Connection failed: $e';
+          _errorMessage = 'connection failed: $e';
           _isConnecting = false;
         });
       }

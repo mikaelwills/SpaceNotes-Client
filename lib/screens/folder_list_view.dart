@@ -60,43 +60,17 @@ class _FolderListViewState extends ConsumerState<FolderListView> {
     }
 
     final totalItems = folders.length + notes.length;
-    final isRootLevel = widget.folderPath.isEmpty;
-    final headerOffset = isRootLevel ? 1 : 0;
 
     return KeyboardDismissOnScroll(
       child: ListView.builder(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
-        itemCount: totalItems + headerOffset,
+        padding: const EdgeInsets.fromLTRB(0, 0, 0, 120),
+        itemCount: totalItems,
         itemBuilder: (context, index) {
-          if (isRootLevel && index == 0) {
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.chevron_left,
-                    size: 16,
-                    color: SpaceNotesTheme.textSecondary.withValues(alpha: 0.7),
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    'Recent',
-                    style: TextStyle(
-                      fontFamily: 'FiraCode',
-                      fontSize: 12,
-                      color:
-                          SpaceNotesTheme.textSecondary.withValues(alpha: 0.7),
-                    ),
-                  ),
-                ],
-              ),
-            );
-          }
-          final itemIndex = index - headerOffset;
-          if (itemIndex < folders.length) {
-            return _buildFolderItem(folders[itemIndex]);
+          if (index < folders.length) {
+            return _buildFolderItem(folders[index]);
           } else {
-            return _buildNoteItem(notes[itemIndex - folders.length]);
+            final noteIndex = index - folders.length;
+            return _buildNoteItem(notes[noteIndex], noteIndex + 1);
           }
         },
       ),
@@ -111,21 +85,38 @@ class _FolderListViewState extends ConsumerState<FolderListView> {
           const Icon(
             Icons.note_outlined,
             size: 48,
-            color: SpaceNotesTheme.textSecondary,
+            color: SpaceNotesTheme.dim,
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 20),
           const Text(
-            'No notes found',
+            'no notes found',
             style: TextStyle(
-              fontFamily: 'FiraCode',
-              fontSize: 14,
-              color: SpaceNotesTheme.textSecondary,
+              fontFamily: SpaceNotesTheme.fontMono,
+              fontSize: 12,
+              color: SpaceNotesTheme.muted,
+              letterSpacing: 1.5,
             ),
           ),
           const SizedBox(height: 16),
-          ElevatedButton(
+          TextButton(
             onPressed: _createQuickNote,
-            child: const Text('Create first note'),
+            style: TextButton.styleFrom(
+              foregroundColor: SpaceNotesTheme.accent,
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(SpaceNotesTheme.radiusXs),
+                side: const BorderSide(color: SpaceNotesTheme.hairlineStrong),
+              ),
+            ),
+            child: const Text(
+              'CREATE FIRST NOTE',
+              style: TextStyle(
+                fontFamily: SpaceNotesTheme.fontMono,
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 1,
+              ),
+            ),
           ),
         ],
       ),
@@ -140,15 +131,16 @@ class _FolderListViewState extends ConsumerState<FolderListView> {
           const Icon(
             Icons.search_off_outlined,
             size: 48,
-            color: SpaceNotesTheme.textSecondary,
+            color: SpaceNotesTheme.dim,
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 20),
           Text(
-            'No results for "$query"',
+            'no results for "$query"',
             style: const TextStyle(
-              fontFamily: 'FiraCode',
-              fontSize: 14,
-              color: SpaceNotesTheme.textSecondary,
+              fontFamily: SpaceNotesTheme.fontMono,
+              fontSize: 12,
+              color: SpaceNotesTheme.muted,
+              letterSpacing: 0.5,
             ),
           ),
         ],
@@ -174,10 +166,11 @@ class _FolderListViewState extends ConsumerState<FolderListView> {
     );
   }
 
-  Widget _buildNoteItem(Note note) {
+  Widget _buildNoteItem(Note note, int index) {
     return NoteListItem(
       key: ValueKey(note.id),
       note: note,
+      index: index,
       onTap: () {
         FocusManager.instance.primaryFocus?.unfocus();
         ref.read(folderSearchQueryProvider.notifier).state = '';

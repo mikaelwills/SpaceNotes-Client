@@ -7,7 +7,6 @@ import '../generated/note.dart';
 import '../providers/notes_providers.dart';
 import '../widgets/quill_note_editor.dart';
 import '../widgets/note_bottom_bar.dart';
-import '../widgets/note_chat_panel.dart';
 import '../widgets/adaptive/platform_utils.dart';
 import '../services/debug_logger.dart';
 import '../widgets/keyboard_dismiss_on_scroll.dart';
@@ -94,36 +93,22 @@ class _NoteScreenState extends ConsumerState<NoteScreen> {
   }
 
   Widget _buildDesktopLayout(Note? note) {
-    return Row(
+    return Stack(
       children: [
-        Expanded(
-          child: Stack(
-            children: [
-              Padding(
-                padding: const EdgeInsets.only(bottom: 80),
-                child: _buildEditor(note),
-              ),
-              Positioned(
-                left: 0,
-                right: 0,
-                bottom: 0,
-                child: NoteBottomBar(
-                  notePath: _currentPath,
-                  quillKey: _quillKey,
-                  onChatTap: () => setState(() {
-                    _isChatOpen = !_isChatOpen;
-                  }),
-                ),
-              ),
-            ],
+        Padding(
+          padding: const EdgeInsets.only(bottom: 80),
+          child: _buildEditor(note),
+        ),
+        Positioned(
+          left: 0,
+          right: 0,
+          bottom: 0,
+          child: NoteBottomBar(
+            notePath: _currentPath,
+            quillKey: _quillKey,
+            onChatTap: () {},
           ),
         ),
-        if (_isChatOpen)
-          NoteChatPanel(
-            notePath: _currentPath,
-            onClose: () => setState(() => _isChatOpen = false),
-            isDesktop: true,
-          ),
       ],
     );
   }

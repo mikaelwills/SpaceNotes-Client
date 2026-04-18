@@ -36,10 +36,12 @@ class ChatView extends ConsumerWidget {
           children: [
             if (showConnectionStatus) const ConnectionStatusRow(),
             Expanded(
-              child: ChatMessageList(
-                items: items.map(_itemToWidget).toList(),
+              child: ChatMessageList<ChatItem>(
+                items: items,
+                itemBuilder: chatItemToWidget,
+                keyBuilder: chatItemKey,
                 padding:
-                    messagePadding ?? const EdgeInsets.fromLTRB(4, 8, 4, 120),
+                    messagePadding ?? const EdgeInsets.fromLTRB(4, 8, 4, 80),
                 emptyText: 'Ask me anything...',
                 scrollController: scrollController,
               ),
@@ -62,13 +64,5 @@ class ChatView extends ConsumerWidget {
           ),
       ],
     );
-  }
-
-  Widget _itemToWidget(ChatItem item) {
-    return switch (item) {
-      ChatMessageItem(:final message) => TerminalMessage(message: message),
-      ChatToolItem(:final event) => ToolEventRow(event: event),
-      ChatPermissionItem(:final request) => PermissionRow(request: request),
-    };
   }
 }

@@ -9,7 +9,7 @@ import '../dialogs/notes_list_dialogs.dart';
 import 'keyboard_dismiss_on_scroll.dart';
 
 class RecentNotesGrid extends ConsumerWidget {
-  static const double maxCardHeight = 100.0;
+  static const double maxCardHeight = 140.0;
 
   const RecentNotesGrid({super.key});
 
@@ -29,26 +29,27 @@ class RecentNotesGrid extends ConsumerWidget {
         children: [
           Icon(
             Icons.note_outlined,
-            size: 64,
-            color: SpaceNotesTheme.textSecondary,
+            size: 48,
+            color: SpaceNotesTheme.dim,
           ),
-          SizedBox(height: 24),
+          SizedBox(height: 20),
           Text(
-            'No recent notes',
+            'no recent notes',
             style: TextStyle(
-              fontFamily: 'FiraCode',
-              fontSize: 18,
-              color: SpaceNotesTheme.text,
-              fontWeight: FontWeight.bold,
+              fontFamily: SpaceNotesTheme.fontMono,
+              fontSize: 12,
+              color: SpaceNotesTheme.muted,
+              letterSpacing: 1.5,
             ),
           ),
-          SizedBox(height: 8),
+          SizedBox(height: 6),
           Text(
-            'Swipe right to browse folders',
+            'swipe right to browse folders',
             style: TextStyle(
-              fontFamily: 'FiraCode',
-              fontSize: 14,
-              color: SpaceNotesTheme.textSecondary,
+              fontFamily: SpaceNotesTheme.fontMono,
+              fontSize: 10,
+              color: SpaceNotesTheme.dim,
+              letterSpacing: 1.2,
             ),
           ),
         ],
@@ -62,32 +63,7 @@ class RecentNotesGrid extends ConsumerWidget {
       child: CustomScrollView(
         slivers: [
           SliverPadding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-            sliver: SliverToBoxAdapter(
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  Text(
-                    'Folders',
-                    style: TextStyle(
-                      fontFamily: 'FiraCode',
-                      fontSize: 12,
-                      color:
-                          SpaceNotesTheme.textSecondary.withValues(alpha: 0.7),
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                  Icon(
-                    Icons.chevron_right,
-                    size: 16,
-                    color: SpaceNotesTheme.textSecondary.withValues(alpha: 0.7),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          SliverPadding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 120),
+            padding: const EdgeInsets.fromLTRB(12, 14, 12, 120),
             sliver: SliverToBoxAdapter(
               child: _buildStaggeredGrid(context, ref, notes),
             ),
@@ -99,20 +75,21 @@ class RecentNotesGrid extends ConsumerWidget {
 
   Widget _buildStaggeredGrid(
       BuildContext context, WidgetRef ref, List<Note> notes) {
-    final leftColumn = <Note>[];
-    final rightColumn = <Note>[];
+    final leftColumn = <_IndexedNote>[];
+    final rightColumn = <_IndexedNote>[];
 
     for (int i = 0; i < notes.length; i++) {
+      final indexed = _IndexedNote(note: notes[i], index: i + 1);
       if (i % 2 == 0) {
-        leftColumn.add(notes[i]);
+        leftColumn.add(indexed);
       } else {
-        rightColumn.add(notes[i]);
+        rightColumn.add(indexed);
       }
     }
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        const columnGap = 8.0;
+        const columnGap = 10.0;
         final columnWidth = (constraints.maxWidth - columnGap) / 2;
 
         return Row(
@@ -122,7 +99,8 @@ class RecentNotesGrid extends ConsumerWidget {
               width: columnWidth,
               child: Column(
                 children: leftColumn
-                    .map((note) => _buildRecentNoteCard(context, ref, note))
+                    .map((n) =>
+                        _buildRecentNoteCard(context, ref, n.note, n.index))
                     .toList(),
               ),
             ),
@@ -131,7 +109,8 @@ class RecentNotesGrid extends ConsumerWidget {
               width: columnWidth,
               child: Column(
                 children: rightColumn
-                    .map((note) => _buildRecentNoteCard(context, ref, note))
+                    .map((n) =>
+                        _buildRecentNoteCard(context, ref, n.note, n.index))
                     .toList(),
               ),
             ),
@@ -141,57 +120,78 @@ class RecentNotesGrid extends ConsumerWidget {
     );
   }
 
-  Widget _buildRecentNoteCard(BuildContext context, WidgetRef ref, Note note) {
+  Widget _buildRecentNoteCard(
+      BuildContext context, WidgetRef ref, Note note, int index) {
+    final preview = note.content.trim();
+    final hasPreview = preview.isNotEmpty;
+
     return GestureDetector(
-      onTap: () {
-        context.go('/notes/note/${note.id}');
-      },
+      onTap: () => context.go('/notes/note/${note.id}'),
       onLongPress: () {
         HapticFeedback.mediumImpact();
         NotesListDialogs.showNoteContextMenu(context, ref, note);
       },
       child: Container(
         width: double.infinity,
-        margin: const EdgeInsets.only(bottom: 8),
-        padding: const EdgeInsets.all(12),
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.fromLTRB(13, 12, 13, 14),
         constraints: const BoxConstraints(maxHeight: maxCardHeight),
         decoration: BoxDecoration(
-          color: SpaceNotesTheme.surface,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-              color: SpaceNotesTheme.textSecondary.withValues(alpha: 0.1)),
+          color: SpaceNotesTheme.card,
+          border: Border.all(color: SpaceNotesTheme.hairline, width: 1),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
+              index.toString().padLeft(3, '0'),
+              style: const TextStyle(
+                fontFamily: SpaceNotesTheme.fontMono,
+                fontSize: 9,
+                color: SpaceNotesTheme.dim,
+                letterSpacing: 0.6,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
               note.name,
               style: const TextStyle(
-                fontFamily: 'FiraCode',
-                fontSize: 14,
-                color: SpaceNotesTheme.text,
-                fontWeight: FontWeight.bold,
+                fontFamily: SpaceNotesTheme.fontSans,
+                fontSize: 15,
+                color: SpaceNotesTheme.fg,
+                fontWeight: FontWeight.w500,
+                letterSpacing: -0.2,
+                height: 1.2,
               ),
-              maxLines: 1,
+              maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
-            const SizedBox(height: 4),
-            Flexible(
-              child: Text(
-                note.content,
-                style: const TextStyle(
-                  fontFamily: 'FiraCode',
-                  fontSize: 12,
-                  color: SpaceNotesTheme.textSecondary,
-                  height: 1.4,
+            if (hasPreview) ...[
+              const SizedBox(height: 6),
+              Flexible(
+                child: Text(
+                  preview,
+                  style: const TextStyle(
+                    fontFamily: SpaceNotesTheme.fontSans,
+                    fontSize: 12,
+                    color: SpaceNotesTheme.muted,
+                    height: 1.5,
+                  ),
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
                 ),
-                overflow: TextOverflow.clip,
               ),
-            ),
+            ],
           ],
         ),
       ),
     );
   }
+}
+
+class _IndexedNote {
+  final Note note;
+  final int index;
+  _IndexedNote({required this.note, required this.index});
 }
