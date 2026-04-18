@@ -6,14 +6,14 @@ import 'note_chat_input.dart';
 
 class NoteChatPanel extends StatelessWidget {
   final String notePath;
-  final VoidCallback onClose;
+  final VoidCallback? onClose;
   final bool isDesktop;
 
   const NoteChatPanel({
     super.key,
     required this.notePath,
-    required this.onClose,
     required this.isDesktop,
+    this.onClose,
   });
 
   @override
@@ -28,7 +28,10 @@ class NoteChatPanel extends StatelessWidget {
       ),
       child: Column(
         children: [
-          const ConnectionStatusRow(),
+          SizedBox(
+            height: isDesktop ? 40 : null,
+            child: const ConnectionStatusRow(),
+          ),
           Expanded(
             child: ChatView(
               showConnectionStatus: false,

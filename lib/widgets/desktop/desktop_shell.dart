@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../providers/notes_providers.dart';
 import '../../theme/spacenotes_theme.dart';
+import '../note_chat_panel.dart';
 import '../sync_state_indicator.dart';
 import 'desktop_note_view.dart';
 import 'note_tabs.dart';
@@ -86,37 +87,47 @@ class _DesktopShellState extends ConsumerState<DesktopShell> {
   }
 }
 
-class _DesktopContentArea extends StatelessWidget {
+class _DesktopContentArea extends ConsumerWidget {
   final Widget child;
 
   const _DesktopContentArea({required this.child});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final location = GoRouterState.of(context).uri.toString();
     final isChat = location.startsWith('/notes/chat');
     final isSettings = location.startsWith('/settings');
     final isConnect = location.startsWith('/connect');
     final isSessions = location.startsWith('/notes/sessions');
+    final isNotesView = !isChat && !isSettings && !isConnect && !isSessions;
 
-    return Column(
+    if (!isNotesView) {
+      return Column(
+        children: [
+          const _DesktopTopBar(showTabs: false),
+          Expanded(child: child),
+        ],
+      );
+    }
+
+    final openNoteId = ref.watch(currentNotePathProvider);
+
+    return Row(
       children: [
-        _DesktopTopBar(
-            showTabs: !isChat && !isSettings && !isConnect && !isSessions),
         Expanded(
-          child:
-              _buildContent(context, isChat, isSettings, isConnect, isSessions),
+          child: Column(
+            children: [
+              const _DesktopTopBar(showTabs: true),
+              const Expanded(child: DesktopNoteView()),
+            ],
+          ),
+        ),
+        NoteChatPanel(
+          notePath: openNoteId ?? '',
+          isDesktop: true,
         ),
       ],
     );
-  }
-
-  Widget _buildContent(BuildContext context, bool isChat, bool isSettings,
-      bool isConnect, bool isSessions) {
-    if (isChat || isSettings || isConnect || isSessions) {
-      return child;
-    }
-    return const DesktopNoteView();
   }
 }
 

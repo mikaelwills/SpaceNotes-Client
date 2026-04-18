@@ -28,78 +28,37 @@ class _DesktopChatInputState extends ConsumerState<DesktopChatInput> {
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        _buildFadeOverlay(),
-        Padding(
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 800),
+        child: SnChatDock(
+          controller: _controller,
+          focusNode: _focusNode,
+          hint: 'ask ai…',
+          onSend: _onSend,
+          maxLines: 8,
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 800),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Expanded(
-                    child: SnField(
-                      controller: _controller,
-                      focusNode: _focusNode,
-                      hint: 'ask ai…',
-                      onSubmitted: (_) => _onSend(),
-                      maxLines: 8,
-                      minLines: 1,
-                      trailing: _pendingImageBase64 != null
-                          ? GestureDetector(
-                              onTap: () {
-                                HapticFeedback.lightImpact();
-                                setState(() => _pendingImageBase64 = null);
-                              },
-                              behavior: HitTestBehavior.opaque,
-                              child: const Icon(
-                                Icons.image,
-                                size: 16,
-                                color: SpaceNotesTheme.accent,
-                              ),
-                            )
-                          : null,
-                    ),
+          fieldTrailing: _pendingImageBase64 != null
+              ? GestureDetector(
+                  onTap: () {
+                    HapticFeedback.lightImpact();
+                    setState(() => _pendingImageBase64 = null);
+                  },
+                  behavior: HitTestBehavior.opaque,
+                  child: const Icon(
+                    Icons.image,
+                    size: 16,
+                    color: SpaceNotesTheme.accent,
                   ),
-                  const SizedBox(width: 10),
-                  _DockTile(
-                    icon: Icons.image_outlined,
-                    onTap: _onPickImage,
-                    semanticLabel: 'attach image',
-                  ),
-                  const SizedBox(width: 8),
-                  _DockTile(
-                    icon: Icons.arrow_upward,
-                    onTap: _onSend,
-                    semanticLabel: 'send',
-                  ),
-                ],
-              ),
+                )
+              : null,
+          trailing: [
+            SnDockTile(
+              icon: Icons.image_outlined,
+              onTap: _onPickImage,
+              semanticLabel: 'attach image',
             ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildFadeOverlay() {
-    return const Positioned.fill(
-      child: IgnorePointer(
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              stops: [0.0, 0.35, 1.0],
-              colors: [
-                Color(0x000D0D0F),
-                Color(0xCC0D0D0F),
-                Color(0xFF0D0D0F),
-              ],
-            ),
-          ),
+          ],
         ),
       ),
     );
@@ -130,45 +89,5 @@ class _DesktopChatInputState extends ConsumerState<DesktopChatInput> {
       debugPrint('[DesktopChatInput] Error picking image: $e');
       debugPrint('[DesktopChatInput] Stack: $stack');
     }
-  }
-}
-
-class _DockTile extends StatelessWidget {
-  final IconData icon;
-  final VoidCallback onTap;
-  final String semanticLabel;
-
-  const _DockTile({
-    required this.icon,
-    required this.onTap,
-    required this.semanticLabel,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Semantics(
-      label: semanticLabel,
-      button: true,
-      child: GestureDetector(
-        onTap: () {
-          HapticFeedback.selectionClick();
-          onTap();
-        },
-        behavior: HitTestBehavior.opaque,
-        child: Container(
-          width: 44,
-          height: 44,
-          decoration: BoxDecoration(
-            color: SpaceNotesTheme.bgAlt,
-            border: Border.all(
-              color: SpaceNotesTheme.hairlineStrong,
-              width: 1,
-            ),
-            borderRadius: BorderRadius.circular(SpaceNotesTheme.radiusDock),
-          ),
-          child: Icon(icon, size: 16, color: SpaceNotesTheme.accent),
-        ),
-      ),
-    );
   }
 }
