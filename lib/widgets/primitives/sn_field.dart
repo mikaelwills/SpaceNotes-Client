@@ -131,6 +131,9 @@ class SnField extends StatelessWidget {
         fontSize: 14,
         color: SpaceNotesTheme.fg,
         height: vCenter ? 1.0 : 1.4,
+        leadingDistribution: vCenter
+            ? TextLeadingDistribution.even
+            : TextLeadingDistribution.proportional,
       ),
       textAlignVertical:
           vCenter ? TextAlignVertical.center : TextAlignVertical.top,
@@ -146,6 +149,7 @@ class SnField extends StatelessWidget {
           color: SpaceNotesTheme.dim,
           letterSpacing: 0.3,
           height: vCenter ? 1.0 : null,
+          leadingDistribution: vCenter ? TextLeadingDistribution.even : null,
         ),
         border: InputBorder.none,
         enabledBorder: InputBorder.none,
