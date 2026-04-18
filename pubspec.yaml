@@ -119,6 +119,12 @@ flutter:
   # https://flutter.dev/to/asset-from-package
 
   fonts:
+    - family: Geist
+      fonts:
+        - asset: assets/fonts/Geist-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/Geist-Medium.ttf
+          weight: 500
     - family: Inter
       fonts:
         - asset: assets/fonts/Inter-Regular.ttf

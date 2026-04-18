@@ -40,7 +40,7 @@ class SpaceNotesTheme {
   static const double radiusSm = 4;
   static const double radiusDock = 6;
 
-  static const String fontSans = 'Inter';
+  static const String fontSans = 'Geist';
   static const String fontMono = 'JetBrainsMono';
 
   static ThemeData get themeData {
