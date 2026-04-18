@@ -206,19 +206,58 @@ class _SidebarSearchState extends ConsumerState<_SidebarSearch> {
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
-      child: SnField(
-        controller: _controller,
-        focusNode: _focusNode,
-        hint: 'search…',
-        onChanged: _onSearchChanged,
-        height: 36,
-        leading: Icon(
-          Icons.search,
-          size: 14,
-          color: hasQuery ? SpaceNotesTheme.accent : SpaceNotesTheme.muted,
+      child: Container(
+        height: 40,
+        decoration: BoxDecoration(
+          color: SpaceNotesTheme.bgAlt,
+          border: Border.all(color: SpaceNotesTheme.hairlineStrong, width: 1),
+          borderRadius: BorderRadius.circular(SpaceNotesTheme.radiusDock),
         ),
-        trailing: hasQuery
-            ? GestureDetector(
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.search,
+              size: 14,
+              color: hasQuery ? SpaceNotesTheme.accent : SpaceNotesTheme.muted,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: TextField(
+                controller: _controller,
+                focusNode: _focusNode,
+                onChanged: _onSearchChanged,
+                style: const TextStyle(
+                  fontFamily: SpaceNotesTheme.fontSans,
+                  fontSize: 13,
+                  color: SpaceNotesTheme.fg,
+                  height: 1.2,
+                ),
+                textAlignVertical: TextAlignVertical.center,
+                cursorColor: SpaceNotesTheme.accent,
+                cursorWidth: 1.5,
+                cursorHeight: 14,
+                decoration: const InputDecoration(
+                  isCollapsed: true,
+                  contentPadding: EdgeInsets.zero,
+                  hintText: 'search…',
+                  hintStyle: TextStyle(
+                    fontFamily: SpaceNotesTheme.fontMono,
+                    fontSize: 12,
+                    color: SpaceNotesTheme.dim,
+                    letterSpacing: 0.3,
+                  ),
+                  border: InputBorder.none,
+                  enabledBorder: InputBorder.none,
+                  focusedBorder: InputBorder.none,
+                  filled: false,
+                ),
+              ),
+            ),
+            if (hasQuery) ...[
+              const SizedBox(width: 8),
+              GestureDetector(
                 onTap: _clearSearch,
                 behavior: HitTestBehavior.opaque,
                 child: const Icon(
@@ -226,8 +265,10 @@ class _SidebarSearchState extends ConsumerState<_SidebarSearch> {
                   size: 14,
                   color: SpaceNotesTheme.muted,
                 ),
-              )
-            : null,
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }
