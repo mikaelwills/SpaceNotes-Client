@@ -72,7 +72,7 @@ class _NoteListItemState extends State<NoteListItem>
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 8),
+      margin: EdgeInsets.zero,
       child: Stack(
         children: [
           Positioned.fill(
@@ -87,11 +87,11 @@ class _NoteListItemState extends State<NoteListItem>
                     },
                     child: Container(
                       width: _actionButtonWidth,
-                      color: SpaceNotesTheme.primary,
+                      color: SpaceNotesTheme.accent,
                       alignment: Alignment.center,
                       child: const Icon(
                         Icons.drive_file_move_outline,
-                        color: SpaceNotesTheme.background,
+                        color: SpaceNotesTheme.bg,
                         size: 20,
                       ),
                     ),
@@ -104,11 +104,11 @@ class _NoteListItemState extends State<NoteListItem>
                     },
                     child: Container(
                       width: _actionButtonWidth,
-                      color: SpaceNotesTheme.error,
+                      color: SpaceNotesTheme.offline,
                       alignment: Alignment.center,
                       child: const Icon(
                         Icons.delete_outline,
-                        color: SpaceNotesTheme.background,
+                        color: SpaceNotesTheme.bg,
                         size: 20,
                       ),
                     ),
@@ -159,16 +159,18 @@ class _NoteListItemState extends State<NoteListItem>
                   child: InkWell(
                     onTap: _handleTap,
                     onLongPress: _handleLongPress,
-                    splashColor: SpaceNotesTheme.primary.withValues(alpha: 0.1),
+                    splashColor: SpaceNotesTheme.accent.withValues(alpha: 0.1),
                     highlightColor:
-                        SpaceNotesTheme.primary.withValues(alpha: 0.05),
+                        SpaceNotesTheme.accent.withValues(alpha: 0.05),
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 200),
-                      padding: const EdgeInsets.all(16),
+                      padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
                       decoration: BoxDecoration(
-                        border: Border.all(
-                          color: _borderColor,
-                          width: widget.isSelected ? 2 : 1,
+                        border: Border(
+                          bottom: BorderSide(
+                            color: _borderColor,
+                            width: 1,
+                          ),
                         ),
                       ),
                       child: Row(
@@ -176,22 +178,22 @@ class _NoteListItemState extends State<NoteListItem>
                           Icon(
                             Icons.description_outlined,
                             color: widget.isSelected
-                                ? SpaceNotesTheme.primary
-                                : SpaceNotesTheme.textSecondary
-                                    .withValues(alpha: 0.7),
-                            size: 16,
+                                ? SpaceNotesTheme.accent
+                                : SpaceNotesTheme.dim,
+                            size: 15,
                           ),
-                          const SizedBox(width: 8),
+                          const SizedBox(width: 10),
                           Expanded(
                             child: Text(
                               widget.note.name,
                               style: TextStyle(
-                                fontFamily: 'FiraCode',
-                                fontSize: 14,
+                                fontFamily: SpaceNotesTheme.fontSans,
+                                fontSize: 15,
                                 color: widget.isSelected
-                                    ? SpaceNotesTheme.primary
-                                    : SpaceNotesTheme.text,
+                                    ? SpaceNotesTheme.accent
+                                    : SpaceNotesTheme.fg,
                                 fontWeight: FontWeight.w500,
+                                letterSpacing: -0.2,
                               ),
                               overflow: TextOverflow.ellipsis,
                             ),
@@ -235,15 +237,15 @@ class _NoteListItemState extends State<NoteListItem>
   }
 
   Color get _borderColor {
-    if (widget.isSelected) return SpaceNotesTheme.primary;
-    if (_isHovered) return SpaceNotesTheme.textSecondary.withValues(alpha: 0.2);
-    return SpaceNotesTheme.textSecondary.withValues(alpha: 0.1);
+    if (widget.isSelected) return SpaceNotesTheme.accent;
+    if (_isHovered) return SpaceNotesTheme.hairlineStrong;
+    return SpaceNotesTheme.hairline;
   }
 
   Color get _backgroundColor {
-    if (widget.isSelected)
-      return SpaceNotesTheme.primary.withValues(alpha: 0.1);
-    if (_isHovered) return SpaceNotesTheme.surface;
-    return SpaceNotesTheme.surface;
+    if (widget.isSelected) {
+      return SpaceNotesTheme.accent.withValues(alpha: 0.06);
+    }
+    return SpaceNotesTheme.bg;
   }
 }

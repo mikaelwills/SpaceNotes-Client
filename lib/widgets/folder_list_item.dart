@@ -71,7 +71,7 @@ class _FolderListItemState extends State<FolderListItem>
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 8),
+      margin: EdgeInsets.zero,
       child: Stack(
         children: [
           Positioned.fill(
@@ -86,11 +86,11 @@ class _FolderListItemState extends State<FolderListItem>
                     },
                     child: Container(
                       width: _actionButtonWidth,
-                      color: SpaceNotesTheme.primary,
+                      color: SpaceNotesTheme.accent,
                       alignment: Alignment.center,
                       child: const Icon(
                         Icons.drive_file_move_outline,
-                        color: SpaceNotesTheme.background,
+                        color: SpaceNotesTheme.bg,
                         size: 20,
                       ),
                     ),
@@ -103,11 +103,11 @@ class _FolderListItemState extends State<FolderListItem>
                     },
                     child: Container(
                       width: _actionButtonWidth,
-                      color: SpaceNotesTheme.error,
+                      color: SpaceNotesTheme.offline,
                       alignment: Alignment.center,
                       child: const Icon(
                         Icons.delete_outline,
-                        color: SpaceNotesTheme.background,
+                        color: SpaceNotesTheme.bg,
                         size: 20,
                       ),
                     ),
@@ -152,24 +152,25 @@ class _FolderListItemState extends State<FolderListItem>
               },
               child: Material(
                 color: widget.isSelected
-                    ? SpaceNotesTheme.primary.withValues(alpha: 0.1)
-                    : SpaceNotesTheme.surface,
+                    ? SpaceNotesTheme.accent.withValues(alpha: 0.06)
+                    : SpaceNotesTheme.bg,
                 child: InkWell(
                   onTap: _handleTap,
                   onLongPress: _handleLongPress,
-                  splashColor: SpaceNotesTheme.primary.withValues(alpha: 0.1),
+                  splashColor: SpaceNotesTheme.accent.withValues(alpha: 0.1),
                   highlightColor:
-                      SpaceNotesTheme.primary.withValues(alpha: 0.05),
+                      SpaceNotesTheme.accent.withValues(alpha: 0.05),
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 200),
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
                     decoration: BoxDecoration(
-                      border: Border.all(
-                        color: widget.isSelected
-                            ? SpaceNotesTheme.primary
-                            : SpaceNotesTheme.textSecondary
-                                .withValues(alpha: 0.1),
-                        width: widget.isSelected ? 2 : 1,
+                      border: Border(
+                        bottom: BorderSide(
+                          color: widget.isSelected
+                              ? SpaceNotesTheme.accent
+                              : SpaceNotesTheme.hairline,
+                          width: 1,
+                        ),
                       ),
                     ),
                     child: Row(
@@ -177,23 +178,24 @@ class _FolderListItemState extends State<FolderListItem>
                         Icon(
                           Icons.folder_outlined,
                           color: widget.isSelected
-                              ? SpaceNotesTheme.primary
-                              : SpaceNotesTheme.primary.withValues(alpha: 0.7),
-                          size: 16,
+                              ? SpaceNotesTheme.accent
+                              : SpaceNotesTheme.accent.withValues(alpha: 0.75),
+                          size: 15,
                         ),
-                        const SizedBox(width: 8),
+                        const SizedBox(width: 10),
                         Expanded(
                           child: Text(
                             widget.folder.name.contains('/')
                                 ? widget.folder.name.split('/').last
                                 : widget.folder.name,
                             style: TextStyle(
-                              fontFamily: 'FiraCode',
-                              fontSize: 14,
+                              fontFamily: SpaceNotesTheme.fontSans,
+                              fontSize: 15,
                               color: widget.isSelected
-                                  ? SpaceNotesTheme.primary
-                                  : SpaceNotesTheme.text,
+                                  ? SpaceNotesTheme.accent
+                                  : SpaceNotesTheme.fg,
                               fontWeight: FontWeight.w500,
+                              letterSpacing: -0.2,
                             ),
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -201,9 +203,9 @@ class _FolderListItemState extends State<FolderListItem>
                         Icon(
                           Icons.chevron_right,
                           color: widget.isSelected
-                              ? SpaceNotesTheme.primary
-                              : SpaceNotesTheme.textSecondary,
-                          size: 20,
+                              ? SpaceNotesTheme.accent
+                              : SpaceNotesTheme.dim,
+                          size: 16,
                         ),
                       ],
                     ),
