@@ -122,46 +122,30 @@ final chatTimelineBySessionProvider =
   return List<ChatItem>.unmodifiable(bucket.items);
 });
 
-/// Per-session bucket holding the merged sorted timeline. Rows arrive in
-/// STDB commit order, which is effectively timestamp-ascending — a short
-/// reverse-linear insertion from the tail is almost always O(1).
+/// Per-session bucket holding the merged sorted timeline. Reconciled from the
+/// full `rows` snapshot of each source table — no incremental insert/update
+/// delta handling. Correctness over cleverness: `onInsert`/`onUpdate` streams
+/// can silently misclassify server echoes as updates when a row is already in
+/// cache from offline hydration or SubscribeApplied, leaving the UI empty.
 class _SessionBucket extends ChangeNotifier {
-  final List<ChatItem> items = [];
+  List<ChatItem> items = const [];
 
-  void add(ChatItem item) {
-    var i = items.length;
-    while (i > 0 && items[i - 1].timestamp.compareTo(item.timestamp) > 0) {
-      i--;
-    }
-    items.insert(i, item);
-    notifyListeners();
-  }
-
-  void replace(String id, ChatItem next) {
-    final idx = items.indexWhere((e) => e.id == id);
-    if (idx == -1) {
-      add(next);
-      return;
-    }
-    items[idx] = next;
-    notifyListeners();
-  }
-
-  void removeById(String id) {
-    final idx = items.indexWhere((e) => e.id == id);
-    if (idx == -1) return;
-    items.removeAt(idx);
+  void setItems(List<ChatItem> next) {
+    items = next;
     notifyListeners();
   }
 }
 
-/// Maintains per-session timelines incrementally from SDK events. Listens to
-/// message/tool_event/permission_request insert/update/delete streams once;
-/// routes each row to its session bucket. Buckets are created lazily.
+/// Maintains per-session timelines from the source-of-truth `rows`
+/// ValueListenables. On every change it re-buckets each row by sessionId and
+/// publishes sorted timelines. Zero reliance on insert/update/delete stream
+/// classification.
 class _ChatIndex {
   final SpacetimeDbClient client;
   final Map<String, _SessionBucket> _buckets = {};
-  final List<StreamSubscription<dynamic>> _subs = [];
+  late final VoidCallback _messageListener;
+  late final VoidCallback _toolListener;
+  late final VoidCallback _permListener;
 
   _ChatIndex(this.client) {
     debugLogger.chat(
@@ -170,77 +154,57 @@ class _ChatIndex {
           'tools=${client.toolEvent.rows.value.length} '
           'perms=${client.permissionRequest.rows.value.length}',
     );
-    _hydrate();
-    _wireListeners();
+    _rebuild();
+    _messageListener = _rebuild;
+    _toolListener = _rebuild;
+    _permListener = _rebuild;
+    client.message.rows.addListener(_messageListener);
+    client.toolEvent.rows.addListener(_toolListener);
+    client.permissionRequest.rows.addListener(_permListener);
   }
 
   _SessionBucket bucketFor(String sessionId) =>
       _buckets.putIfAbsent(sessionId, _SessionBucket.new);
 
-  void _hydrate() {
+  void _rebuild() {
+    final perSession = <String, List<ChatItem>>{};
+
     for (final m in client.message.rows.value) {
-      bucketFor(m.sessionId).add(ChatMessageItem(m));
+      (perSession[m.sessionId] ??= []).add(ChatMessageItem(m));
     }
     for (final t in client.toolEvent.rows.value) {
-      bucketFor(t.sessionId).add(ChatToolItem(t));
+      (perSession[t.sessionId] ??= []).add(ChatToolItem(t));
     }
     for (final p in client.permissionRequest.rows.value) {
       if (p.status == 'pending') {
-        bucketFor(p.sessionId).add(ChatPermissionItem(p));
+        (perSession[p.sessionId] ??= []).add(ChatPermissionItem(p));
       }
     }
-  }
 
-  void _wireListeners() {
-    _subs.add(client.message.onInsert.listen((e) {
-      debugLogger.chat(
-        'msg.onInsert',
-        'id=${e.row.id} session=${e.row.sessionId} role=${e.row.role}',
-      );
-      bucketFor(e.row.sessionId).add(ChatMessageItem(e.row));
-    }));
-    _subs.add(client.message.onUpdate.listen((e) {
-      final bucket = bucketFor(e.newRow.sessionId);
-      bucket.replace('msg:${e.newRow.id}', ChatMessageItem(e.newRow));
-    }));
-    _subs.add(client.message.onDelete.listen((e) {
-      bucketFor(e.row.sessionId).removeById('msg:${e.row.id}');
-    }));
+    debugLogger.chat(
+      'ChatIndex rebuild',
+      'msgs=${client.message.rows.value.length} '
+          'tools=${client.toolEvent.rows.value.length} '
+          'sessions=${perSession.length}',
+    );
 
-    _subs.add(client.toolEvent.onInsert.listen((e) {
-      bucketFor(e.row.sessionId).add(ChatToolItem(e.row));
-    }));
-    _subs.add(client.toolEvent.onUpdate.listen((e) {
-      final bucket = bucketFor(e.newRow.sessionId);
-      bucket.replace('tool:${e.newRow.id}', ChatToolItem(e.newRow));
-    }));
-    _subs.add(client.toolEvent.onDelete.listen((e) {
-      bucketFor(e.row.sessionId).removeById('tool:${e.row.id}');
-    }));
+    for (final entry in perSession.entries) {
+      entry.value.sort((a, b) => a.timestamp.compareTo(b.timestamp));
+      bucketFor(entry.key).setItems(entry.value);
+    }
 
-    _subs.add(client.permissionRequest.onInsert.listen((e) {
-      if (e.row.status != 'pending') return;
-      bucketFor(e.row.sessionId).add(ChatPermissionItem(e.row));
-    }));
-    _subs.add(client.permissionRequest.onUpdate.listen((e) {
-      final id = 'perm:${e.newRow.id}';
-      final bucket = bucketFor(e.newRow.sessionId);
-      if (e.newRow.status != 'pending') {
-        bucket.removeById(id);
-      } else {
-        bucket.replace(id, ChatPermissionItem(e.newRow));
+    for (final sessionId in _buckets.keys) {
+      if (!perSession.containsKey(sessionId) &&
+          _buckets[sessionId]!.items.isNotEmpty) {
+        _buckets[sessionId]!.setItems(const []);
       }
-    }));
-    _subs.add(client.permissionRequest.onDelete.listen((e) {
-      bucketFor(e.row.sessionId).removeById('perm:${e.row.id}');
-    }));
+    }
   }
 
   void dispose() {
-    for (final s in _subs) {
-      s.cancel();
-    }
-    _subs.clear();
+    client.message.rows.removeListener(_messageListener);
+    client.toolEvent.rows.removeListener(_toolListener);
+    client.permissionRequest.rows.removeListener(_permListener);
     for (final b in _buckets.values) {
       b.dispose();
     }
