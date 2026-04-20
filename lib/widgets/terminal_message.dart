@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../generated/message.dart';
 import '../generated/permission_request.dart';
@@ -37,120 +36,114 @@ class TerminalMessage extends StatelessWidget {
   }
 
   Widget _buildUserMessage(BuildContext context) {
-    return GestureDetector(
-      onLongPress: () => _copy(context, message.text),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(32, 14, 16, 14),
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final maxTextWidth = (constraints.maxWidth - 14) * 0.82;
-            return Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Flexible(
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(maxWidth: maxTextWidth),
-                    child: Container(
-                      padding: const EdgeInsets.only(right: 12),
-                      decoration: const BoxDecoration(
-                        border: Border(
-                          right: BorderSide(
-                            color: SpaceNotesTheme.accent,
-                            width: 2,
-                          ),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(32, 14, 16, 14),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final maxTextWidth = (constraints.maxWidth - 14) * 0.82;
+          return Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Flexible(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(maxWidth: maxTextWidth),
+                  child: Container(
+                    padding: const EdgeInsets.only(right: 12),
+                    decoration: const BoxDecoration(
+                      border: Border(
+                        right: BorderSide(
+                          color: SpaceNotesTheme.accent,
+                          width: 2,
                         ),
                       ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            _time,
-                            style: const TextStyle(
-                              fontFamily: SpaceNotesTheme.fontMono,
-                              fontSize: 10,
-                              color: SpaceNotesTheme.dim,
-                              letterSpacing: 0.5,
-                            ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          _time,
+                          style: const TextStyle(
+                            fontFamily: SpaceNotesTheme.fontMono,
+                            fontSize: 10,
+                            color: SpaceNotesTheme.dim,
+                            letterSpacing: 0.5,
                           ),
-                          const SizedBox(height: 4),
-                          Text(
-                            message.text,
-                            textAlign: TextAlign.right,
-                            style: const TextStyle(
-                              fontFamily: SpaceNotesTheme.fontSans,
-                              fontSize: 15,
-                              color: SpaceNotesTheme.fg,
-                              height: 1.55,
-                            ),
+                        ),
+                        const SizedBox(height: 4),
+                        SelectableText(
+                          message.text,
+                          textAlign: TextAlign.right,
+                          style: const TextStyle(
+                            fontFamily: SpaceNotesTheme.fontSans,
+                            fontSize: 15,
+                            color: SpaceNotesTheme.fg,
+                            height: 1.55,
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
-              ],
-            );
-          },
-        ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
 
   Widget _buildAssistantMessage(BuildContext context) {
-    return GestureDetector(
-      onLongPress: () => _copy(context, message.text),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 14, 32, 14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                const Text(
-                  '—',
-                  style: TextStyle(
-                    fontFamily: SpaceNotesTheme.fontMono,
-                    fontSize: 10,
-                    color: SpaceNotesTheme.dim,
-                  ),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 14, 32, 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Text(
+                '—',
+                style: TextStyle(
+                  fontFamily: SpaceNotesTheme.fontMono,
+                  fontSize: 10,
+                  color: SpaceNotesTheme.dim,
                 ),
-                const SizedBox(width: 8),
-                Text(
-                  message.source.toUpperCase(),
-                  style: TextStyle(
-                    fontFamily: SpaceNotesTheme.fontMono,
-                    fontSize: 10,
-                    color: _sourceColor,
-                    letterSpacing: 1.5,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Text(
-                  _time,
-                  style: const TextStyle(
-                    fontFamily: SpaceNotesTheme.fontMono,
-                    fontSize: 10,
-                    color: SpaceNotesTheme.dim,
-                    letterSpacing: 0.5,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(
-              message.text,
-              style: const TextStyle(
-                fontFamily: SpaceNotesTheme.fontSans,
-                fontSize: 15,
-                color: SpaceNotesTheme.fg,
-                height: 1.55,
               ),
+              const SizedBox(width: 8),
+              Text(
+                message.source.toUpperCase(),
+                style: TextStyle(
+                  fontFamily: SpaceNotesTheme.fontMono,
+                  fontSize: 10,
+                  color: _sourceColor,
+                  letterSpacing: 1.5,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                _time,
+                style: const TextStyle(
+                  fontFamily: SpaceNotesTheme.fontMono,
+                  fontSize: 10,
+                  color: SpaceNotesTheme.dim,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          SelectableText(
+            message.text,
+            style: const TextStyle(
+              fontFamily: SpaceNotesTheme.fontSans,
+              fontSize: 15,
+              color: SpaceNotesTheme.fg,
+              height: 1.55,
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -170,12 +163,6 @@ class TerminalMessage extends StatelessWidget {
       default:
         return SpaceNotesTheme.muted;
     }
-  }
-
-  void _copy(BuildContext context, String text) {
-    if (text.isEmpty) return;
-    Clipboard.setData(ClipboardData(text: text));
-    HapticFeedback.mediumImpact();
   }
 }
 
