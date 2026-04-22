@@ -1,11 +1,13 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../generated/message.dart';
 import '../generated/permission_request.dart';
 import '../generated/tool_event.dart';
 import '../providers/chat_providers.dart';
 import '../theme/spacenotes_theme.dart';
+import 'markdown_styles.dart';
 import 'primitives/primitives.dart';
 
 Widget chatItemToWidget(BuildContext context, ChatItem item) {
@@ -134,13 +136,15 @@ class TerminalMessage extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 8),
-          SelectableText(
-            message.text,
-            style: const TextStyle(
-              fontFamily: SpaceNotesTheme.fontSans,
-              fontSize: 15,
-              color: SpaceNotesTheme.fg,
-              height: 1.55,
+          SelectionArea(
+            child: MarkdownBody(
+              data: message.text,
+              selectable: false,
+              fitContent: false,
+              shrinkWrap: true,
+              styleSheet: SpaceMarkdownStyles.chatAssistant(context),
+              builders: {'table': TableAsBulletsBuilder()},
+              softLineBreak: true,
             ),
           ),
         ],
