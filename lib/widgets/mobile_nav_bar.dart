@@ -117,13 +117,13 @@ class MobileNavBar extends ConsumerWidget {
     ('/notes', Icons.notes_outlined),
     ('/notes/chat', Icons.chat_bubble_outline),
     ('/notes/sessions', Icons.terminal_outlined),
-    ('/notes/users', Icons.people_outline),
+    // ('/notes/users', Icons.people_outline),
   ];
 
   String _currentScreen(String location) {
     if (location.startsWith('/notes/chat')) return '/notes/chat';
     if (location == '/notes/sessions') return '/notes/sessions';
-    if (location == '/notes/users') return '/notes/users';
+    // if (location == '/notes/users') return '/notes/users';
     return '/notes';
   }
 
