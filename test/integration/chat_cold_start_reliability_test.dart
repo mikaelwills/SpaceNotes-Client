@@ -70,6 +70,16 @@ void main() {
         authStorage: InMemoryTokenStore(),
       );
 
+      addTearDown(() async {
+        try {
+          final client = repoB.clientNotifier.value;
+          if (client != null) {
+            await client.reducers.endSession(sessionId: sessionId);
+          }
+        } catch (_) {}
+        repoB.dispose();
+      });
+
       await tester.runAsync(() async {
         await repoB.connectAndGetInitialData();
         // Wait for initial subscription to apply and hydrate the message cache.
@@ -162,10 +172,6 @@ void main() {
             'timeline should grow by newSendCount after sends; only grew from '
             '${timelineUpdates.first} to ${finalTimeline.length}',
       );
-
-      await tester.runAsync(() async {
-        repoB.dispose();
-      });
     });
   });
 }

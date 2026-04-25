@@ -267,6 +267,7 @@ class SpacetimeDbNotesRepository {
 
     final connectionStateSub =
         _client!.connection.onStateChanged.listen((state) {
+      debugLogger.connection('state -> ${state.displayName}');
       if (state is stdb.AuthError) {
         debugLogger.warning('AUTH',
             'Auth error detected - auto-clearing token and reconnecting');
@@ -742,16 +743,55 @@ class SpacetimeDbNotesRepository {
 
   /// Try to reconnect if currently disconnected or in slow reconnect backoff
   Future<void> tryReconnect() async {
-    if (_client == null) return;
+    debugLogger.connection('tryReconnect() called');
+    if (_client == null) {
+      debugLogger.connection('tryReconnect: _client is null, returning');
+      return;
+    }
 
     final state = _client!.connection.state;
-    if (state.isConnected || state.isConnecting) {
+    debugLogger.connection('tryReconnect: state=${state.displayName}');
+
+    if (state.isConnecting) {
+      debugLogger.connection('tryReconnect: already connecting, returning');
       return;
+    }
+
+    if (state.isConnected) {
+      // State says connected but iOS/Android may have silently killed the
+      // socket's read-half while backgrounded. Force a round-trip probe;
+      // if the server doesn't answer within the timeout, fall through to
+      // reconnect.
+      debugLogger.connection('tryReconnect: running checkHealth (timeout=2s)');
+      bool healthy;
+      try {
+        healthy = await _client!.subscriptions
+            .checkHealth(timeout: const Duration(seconds: 2));
+      } catch (e, st) {
+        debugLogger.error(
+          'CONN',
+          'tryReconnect: checkHealth threw',
+          '$e\n$st',
+        );
+        healthy = false;
+      }
+      debugLogger.connection('tryReconnect: checkHealth=$healthy');
+      if (healthy) {
+        debugLogger.connection('checkHealth ok, skipping reconnect');
+        return;
+      }
+      debugLogger.warning(
+        'CONN',
+        'checkHealth failed, connection is silently dead - reconnecting',
+      );
     }
 
     debugLogger.connection('Attempting to reconnect...');
     try {
       await _client!.connection.reconnect();
+      debugLogger.connection(
+        'tryReconnect: reconnect() completed, state=${_client!.connection.state.displayName}',
+      );
     } on SpacetimeDbAuthException {
       debugLogger.warning(
           'AUTH', 'Auth expired during reconnect, clearing token');
@@ -764,11 +804,20 @@ class SpacetimeDbNotesRepository {
       Future.delayed(const Duration(seconds: 2), () {
         if (_client != null) {
           final retryState = _client!.connection.state;
+          debugLogger.connection(
+            'tryReconnect retry: state=${retryState.displayName}, canRetry=${retryState.canRetry}',
+          );
           if (retryState.canRetry) {
             tryReconnect();
           }
         }
       });
+    } catch (e, st) {
+      debugLogger.error(
+        'CONN',
+        'tryReconnect: reconnect() threw unexpected exception',
+        '$e\n$st',
+      );
     }
   }
 

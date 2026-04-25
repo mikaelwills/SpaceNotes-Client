@@ -24,7 +24,7 @@ Future<void> enterEditMode(WidgetTester tester) async {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  const testHost = '100.84.184.121:3003';
+  const testHost = '100.84.184.121:5050';
   const testDatabase = 'spacenotes';
   const uuid = Uuid();
 

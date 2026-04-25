@@ -248,10 +248,26 @@ Future<void> sendChatMessage(
       source: 'flutter',
     );
     debugLogger.chat('sendChatMessage ok', 'id=$id');
+    _probeEcho(client, id, 'msg');
   } catch (e, st) {
     debugLogger.chatError('sendChatMessage threw', 'id=$id err=$e\n$st');
     rethrow;
   }
+}
+
+void _probeEcho(SpacetimeDbClient client, String id, String kind) {
+  Future.delayed(const Duration(seconds: 2), () {
+    final found = client.message.rows.value.any((m) => m.id == id);
+    if (found) {
+      debugLogger.chat('echo ok', 'kind=$kind id=$id');
+    } else {
+      debugLogger.chatError(
+        'echo MISSING after 2s',
+        'kind=$kind id=$id — server reducer succeeded but no server broadcast arrived; '
+            'socket may be silently dead (iOS backgrounded read-half)',
+      );
+    }
+  });
 }
 
 Future<void> sendChatImage(
@@ -278,6 +294,7 @@ Future<void> sendChatImage(
       bytes: pngBytes,
     );
     debugLogger.chat('sendChatImage ok', 'id=$id');
+    _probeEcho(client, id, 'img');
   } catch (e, st) {
     debugLogger.chatError('sendChatImage threw', 'id=$id err=$e\n$st');
     rethrow;
