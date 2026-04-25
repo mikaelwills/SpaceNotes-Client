@@ -12,8 +12,9 @@ See the main repo for full documentation, setup instructions, and the Docker sta
 ![Desktop AI Chat](assets/screenshots/desktop-chat.png)
 
 <p align="center">
-  <img src="assets/screenshots/mobile-notes.png" width="45%" alt="Mobile Notes View" />
-  <img src="assets/screenshots/mobile-chat.png" width="45%" alt="Mobile AI Chat" />
+  <img src="assets/screenshots/mobile-notes.png" width="30%" alt="Mobile Notes View" />
+  <img src="assets/screenshots/mobile-chat.png" width="30%" alt="Mobile AI Chat" />
+  <img src="assets/screenshots/mobile-sessions.png" width="30%" alt="Mobile MCP Sessions" />
 </p>
 
 ## Building
