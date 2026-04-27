@@ -430,6 +430,37 @@ class PrependToNoteArgsDecoder implements ReducerArgDecoder<PrependToNoteArgs> {
   }
 }
 
+class PushContextUsageArgs {
+  PushContextUsageArgs({
+    required this.sessionId,
+    required this.used,
+    required this.window,
+  });
+
+  final String sessionId;
+
+  final Int64 used;
+
+  final Int64 window;
+}
+
+class PushContextUsageArgsDecoder
+    implements ReducerArgDecoder<PushContextUsageArgs> {
+  const PushContextUsageArgsDecoder();
+
+  @override
+  PushContextUsageArgs decode(BsatnDecoder decoder) {
+    final sessionId = decoder.readString();
+    final used = decoder.readU64();
+    final window = decoder.readU64();
+    return PushContextUsageArgs(
+      sessionId: sessionId,
+      used: used,
+      window: window,
+    );
+  }
+}
+
 class PushImageArgs {
   PushImageArgs({
     required this.id,
@@ -1008,6 +1039,8 @@ const moveNoteDef =
     ReducerDef<MoveNoteArgs>('move_note', MoveNoteArgsDecoder());
 const prependToNoteDef = ReducerDef<PrependToNoteArgs>(
     'prepend_to_note', PrependToNoteArgsDecoder());
+const pushContextUsageDef = ReducerDef<PushContextUsageArgs>(
+    'push_context_usage', PushContextUsageArgsDecoder());
 const pushImageDef =
     ReducerDef<PushImageArgs>('push_image', PushImageArgsDecoder());
 const pushMessageDef =

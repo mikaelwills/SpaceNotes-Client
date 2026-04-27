@@ -374,6 +374,29 @@ class Reducers {
         optimisticChanges: optimisticChanges, dropIfOffline: dropIfOffline);
   }
 
+  /// Calls the `push_context_usage` reducer.
+  ///
+  /// Returns a [TransactionResult] on success. Throws
+  /// [SpacetimeDbReducerException] if the reducer returns `Failed` or
+  /// `InternalError`. The returned status is one of `Committed`,
+  /// `Pending` (queued to offline storage), or `Dropped` (skipped via
+  /// `dropIfOffline: true` while offline).
+  Future<TransactionResult> pushContextUsage({
+    required String sessionId,
+    required Int64 used,
+    required Int64 window,
+    List<OptimisticChange>? optimisticChanges,
+    bool dropIfOffline = false,
+  }) async {
+    final encoder = BsatnEncoder();
+    encoder.writeString(sessionId);
+    encoder.writeU64(used);
+    encoder.writeU64(window);
+    return await _reducerCaller.call(
+        pushContextUsageDef.name, encoder.toBytes(),
+        optimisticChanges: optimisticChanges, dropIfOffline: dropIfOffline);
+  }
+
   /// Calls the `push_image` reducer.
   ///
   /// Returns a [TransactionResult] on success. Throws
@@ -987,6 +1010,19 @@ class Reducers {
       final args = event.reducerArgs;
       if (args is! PrependToNoteArgs) return;
       callback(ctx, args.path, args.content);
+    });
+  }
+
+  StreamSubscription<void> onPushContextUsage(
+      void Function(
+              EventContext ctx, String sessionId, Int64 used, Int64 window)
+          callback) {
+    return _reducerEmitter.on(pushContextUsageDef).listen((EventContext ctx) {
+      final event = ctx.event;
+      if (event is! ReducerEvent) return;
+      final args = event.reducerArgs;
+      if (args is! PushContextUsageArgs) return;
+      callback(ctx, args.sessionId, args.used, args.window);
     });
   }
 

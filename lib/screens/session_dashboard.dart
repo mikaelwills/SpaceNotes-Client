@@ -506,11 +506,37 @@ class _NameBlock extends StatelessWidget {
             _MetaPair(label: 'reg', value: _timeAgo(session.createdAt)),
             const SizedBox(width: 14),
             _MetaPair(label: 'seen', value: _timeAgo(session.lastSeen)),
+            if (session.contextWindow.toInt() > 0) ...[
+              const SizedBox(width: 14),
+              _MetaPair(
+                label: 'ctx',
+                value: _formatContextUsage(
+                  session.contextUsed.toInt(),
+                  session.contextWindow.toInt(),
+                ),
+              ),
+            ],
           ],
         ),
       ],
     );
   }
+}
+
+String _formatContextUsage(int used, int window) {
+  return '${_fmtTokens(used)}/${_fmtTokens(window)}';
+}
+
+String _fmtTokens(int n) {
+  if (n >= 1000000) {
+    final m = n / 1000000;
+    return '${m.toStringAsFixed(m >= 10 ? 0 : 1)}m';
+  }
+  if (n >= 1000) {
+    final k = n / 1000;
+    return '${k.toStringAsFixed(k >= 100 ? 0 : 1)}k';
+  }
+  return '$n';
 }
 
 class _MetaPair extends StatelessWidget {
