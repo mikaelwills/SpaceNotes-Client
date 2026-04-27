@@ -1,12 +1,16 @@
 import 'package:fixnum/fixnum.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../generated/session.dart';
 import '../providers/chat_providers.dart';
 import '../providers/connection_providers.dart';
+import '../providers/notes_providers.dart';
 import '../theme/spacenotes_theme.dart';
 import '../widgets/primitives/primitives.dart';
+import '../widgets/swipe_action.dart';
 
 class SessionDashboard extends ConsumerWidget {
   const SessionDashboard({super.key});
@@ -19,7 +23,11 @@ class SessionDashboard extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _Header(count: sessions.length),
+        _Header(
+          count: sessions.length,
+          onClearAll:
+              sessions.isEmpty ? null : () => _confirmClearAll(context, ref),
+        ),
         const _ColumnHeader(),
         Expanded(
           child: sessions.isEmpty
@@ -33,6 +41,7 @@ class SessionDashboard extends ConsumerWidget {
                     final baseCount =
                         sessions.where((s) => _baseName(s.id) == base).length;
                     return _SessionRow(
+                      key: ValueKey(session.id),
                       index: index + 1,
                       session: session,
                       showHost: baseCount > 1,
@@ -44,11 +53,62 @@ class SessionDashboard extends ConsumerWidget {
       ],
     );
   }
+
+  Future<void> _confirmClearAll(BuildContext context, WidgetRef ref) async {
+    HapticFeedback.heavyImpact();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: SpaceNotesTheme.bgAlt,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.zero,
+          side: BorderSide(color: SpaceNotesTheme.hairline),
+        ),
+        title: const Text(
+          'Clear all sessions?',
+          style: TextStyle(
+            fontFamily: SpaceNotesTheme.fontSans,
+            fontSize: 16,
+            color: SpaceNotesTheme.fg,
+          ),
+        ),
+        content: const Text(
+          'Wipes every session, all chat history, all tool events. Live sessions will reregister automatically. This cannot be undone.',
+          style: TextStyle(
+            fontFamily: SpaceNotesTheme.fontSans,
+            fontSize: 13,
+            color: SpaceNotesTheme.muted,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(color: SpaceNotesTheme.muted),
+            ),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text(
+              'Clear all',
+              style: TextStyle(color: SpaceNotesTheme.offline),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    final client = ref.read(spacetimeClientProvider);
+    if (client == null) return;
+    await client.reducers.clearAllSessions();
+  }
 }
 
 class _Header extends StatelessWidget {
   final int count;
-  const _Header({required this.count});
+  final VoidCallback? onClearAll;
+  const _Header({required this.count, this.onClearAll});
 
   @override
   Widget build(BuildContext context) {
@@ -65,6 +125,21 @@ class _Header extends StatelessWidget {
             fontSize: 10,
             letterSpacing: 0.5,
           ),
+          if (onClearAll != null) ...[
+            const SizedBox(width: 10),
+            InkWell(
+              onTap: onClearAll,
+              borderRadius: BorderRadius.circular(2),
+              child: const Padding(
+                padding: EdgeInsets.all(4),
+                child: Icon(
+                  Icons.close,
+                  size: 14,
+                  color: SpaceNotesTheme.muted,
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -144,74 +219,197 @@ class _Footer extends StatelessWidget {
   }
 }
 
-class _SessionRow extends ConsumerWidget {
+class _SessionRow extends ConsumerStatefulWidget {
   final int index;
   final Session session;
   final bool showHost;
 
   const _SessionRow({
+    super.key,
     required this.index,
     required this.session,
     required this.showHost,
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final activity = ref.watch(sessionActivityProvider(session.id));
+  ConsumerState<_SessionRow> createState() => _SessionRowState();
+}
+
+class _SessionRowState extends ConsumerState<_SessionRow>
+    with SingleTickerProviderStateMixin {
+  double _swipeOffset = 0;
+  late AnimationController _animationController;
+  late Animation<double> _animation;
+
+  static const double _actionButtonWidth = 60;
+  static const double _maxSwipe = 60;
+
+  @override
+  void initState() {
+    super.initState();
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 200),
+    );
+    _animation = Tween<double>(begin: 0, end: 0).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final activity = ref.watch(sessionActivityProvider(widget.session.id));
     final targetSession = ref.watch(targetSessionProvider);
     final state = _resolveState(activity?.state);
-    final isActive = session.id == targetSession;
+    final isActive = widget.session.id == targetSession;
 
-    return Material(
-      color: isActive
-          ? SpaceNotesTheme.accent.withValues(alpha: 0.03)
-          : Colors.transparent,
-      child: InkWell(
-        onTap: () =>
-            context.push('/notes/sessions/${Uri.encodeComponent(session.id)}'),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-          decoration: const BoxDecoration(
-            border: Border(
-              bottom: BorderSide(color: SpaceNotesTheme.hairline, width: 1),
+    final showAction = _swipeOffset < 0 || _animationController.isAnimating;
+    final rowBg = isActive
+        ? Color.alphaBlend(
+            SpaceNotesTheme.accent.withValues(alpha: 0.06),
+            SpaceNotesTheme.bg,
+          )
+        : SpaceNotesTheme.bg;
+    return Stack(
+      children: [
+        if (showAction)
+          Positioned.fill(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                SwipeAction(
+                  icon: Icons.delete_outline,
+                  label: 'delete',
+                  color: SpaceNotesTheme.offline,
+                  width: _actionButtonWidth,
+                  onTap: () {
+                    _animateToOffset(0);
+                    _deleteSession();
+                  },
+                ),
+              ],
             ),
           ),
-          child: Stack(
-            children: [
-              if (isActive)
-                const Positioned(
-                  left: -20,
-                  top: -16,
-                  bottom: -16,
-                  child: _LeftRule(),
-                ),
-              Row(
-                children: [
-                  SizedBox(
-                    width: 28,
-                    child: SnUiText(
-                      index.toString().padLeft(2, '0'),
-                      color: SpaceNotesTheme.dim,
-                      fontSize: 10,
-                      letterSpacing: 0.5,
+        AnimatedBuilder(
+          animation: _animationController,
+          builder: (context, child) {
+            final offset = _animationController.isAnimating
+                ? _animation.value
+                : _swipeOffset;
+            return Transform.translate(
+              offset: Offset(offset, 0),
+              child: child,
+            );
+          },
+          child: RawGestureDetector(
+            gestures: {
+              _LeftOnlyHorizontalDragGestureRecognizer:
+                  GestureRecognizerFactoryWithHandlers<
+                      _LeftOnlyHorizontalDragGestureRecognizer>(
+                () => _LeftOnlyHorizontalDragGestureRecognizer(),
+                (_LeftOnlyHorizontalDragGestureRecognizer instance) {
+                  instance
+                    ..onUpdate = (details) {
+                      setState(() {
+                        _swipeOffset = (_swipeOffset + details.delta.dx)
+                            .clamp(-_maxSwipe, 0);
+                      });
+                    }
+                    ..onEnd = (details) {
+                      if (_swipeOffset < -_maxSwipe / 2) {
+                        _animateToOffset(-_maxSwipe);
+                      } else {
+                        _animateToOffset(0);
+                      }
+                    };
+                },
+              ),
+            },
+            child: Material(
+              color: rowBg,
+              child: InkWell(
+                onTap: _handleTap,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 20, vertical: 16),
+                  decoration: const BoxDecoration(
+                    border: Border(
+                      bottom:
+                          BorderSide(color: SpaceNotesTheme.hairline, width: 1),
                     ),
                   ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                      child: _NameBlock(
-                    session: session,
-                    showHost: showHost,
-                    state: state,
-                  )),
-                  const SizedBox(width: 12),
-                  _StateTail(state: state),
-                ],
+                  child: Stack(
+                    children: [
+                      if (isActive)
+                        const Positioned(
+                          left: -20,
+                          top: -16,
+                          bottom: -16,
+                          child: _LeftRule(),
+                        ),
+                      Row(
+                        children: [
+                          SizedBox(
+                            width: 28,
+                            child: SnUiText(
+                              widget.index.toString().padLeft(2, '0'),
+                              color: SpaceNotesTheme.dim,
+                              fontSize: 10,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                              child: _NameBlock(
+                            session: widget.session,
+                            showHost: widget.showHost,
+                            state: state,
+                          )),
+                          const SizedBox(width: 12),
+                          _StateTail(state: state),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
               ),
-            ],
+            ),
           ),
         ),
-      ),
+      ],
     );
+  }
+
+  void _handleTap() {
+    if (_swipeOffset != 0) {
+      _animateToOffset(0);
+      return;
+    }
+    HapticFeedback.selectionClick();
+    context.push(
+        '/notes/sessions/${Uri.encodeComponent(widget.session.id)}');
+  }
+
+  void _animateToOffset(double target) {
+    _animation = Tween<double>(begin: _swipeOffset, end: target).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeOut),
+    );
+    _animationController.forward(from: 0).then((_) {
+      setState(() => _swipeOffset = target);
+    });
+  }
+
+  Future<void> _deleteSession() async {
+    HapticFeedback.mediumImpact();
+    final client = ref.read(spacetimeClientProvider);
+    if (client == null) return;
+    await client.reducers.deleteSession(sessionId: widget.session.id);
   }
 
   _SessionState _resolveState(String? raw) {
@@ -223,6 +421,21 @@ class _SessionRow extends ConsumerWidget {
       default:
         return _SessionState.idle;
     }
+  }
+}
+
+class _LeftOnlyHorizontalDragGestureRecognizer
+    extends HorizontalDragGestureRecognizer {
+  @override
+  bool isFlingGesture(VelocityEstimate estimate, PointerDeviceKind kind) {
+    final minVelocity = minFlingVelocity ?? kMinFlingVelocity;
+    return estimate.pixelsPerSecond.dx.abs() > minVelocity;
+  }
+
+  @override
+  bool hasSufficientGlobalDistanceToAccept(
+      PointerDeviceKind pointerDeviceKind, double? deviceTouchSlop) {
+    return globalDistanceMoved < -kTouchSlop;
   }
 }
 

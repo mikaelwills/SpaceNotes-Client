@@ -68,6 +68,23 @@ class Reducers {
         optimisticChanges: optimisticChanges, dropIfOffline: dropIfOffline);
   }
 
+  /// Calls the `clear_all_sessions` reducer.
+  ///
+  /// Returns a [TransactionResult] on success. Throws
+  /// [SpacetimeDbReducerException] if the reducer returns `Failed` or
+  /// `InternalError`. The returned status is one of `Committed`,
+  /// `Pending` (queued to offline storage), or `Dropped` (skipped via
+  /// `dropIfOffline: true` while offline).
+  Future<TransactionResult> clearAllSessions({
+    List<OptimisticChange>? optimisticChanges,
+    bool dropIfOffline = false,
+  }) async {
+    final encoder = BsatnEncoder();
+    return await _reducerCaller.call(
+        clearAllSessionsDef.name, encoder.toBytes(),
+        optimisticChanges: optimisticChanges, dropIfOffline: dropIfOffline);
+  }
+
   /// Calls the `create_folder` reducer.
   ///
   /// Returns a [TransactionResult] on success. Throws
@@ -159,6 +176,24 @@ class Reducers {
     final encoder = BsatnEncoder();
     encoder.writeString(id);
     return await _reducerCaller.call(deleteNoteDef.name, encoder.toBytes(),
+        optimisticChanges: optimisticChanges, dropIfOffline: dropIfOffline);
+  }
+
+  /// Calls the `delete_session` reducer.
+  ///
+  /// Returns a [TransactionResult] on success. Throws
+  /// [SpacetimeDbReducerException] if the reducer returns `Failed` or
+  /// `InternalError`. The returned status is one of `Committed`,
+  /// `Pending` (queued to offline storage), or `Dropped` (skipped via
+  /// `dropIfOffline: true` while offline).
+  Future<TransactionResult> deleteSession({
+    required String sessionId,
+    List<OptimisticChange>? optimisticChanges,
+    bool dropIfOffline = false,
+  }) async {
+    final encoder = BsatnEncoder();
+    encoder.writeString(sessionId);
+    return await _reducerCaller.call(deleteSessionDef.name, encoder.toBytes(),
         optimisticChanges: optimisticChanges, dropIfOffline: dropIfOffline);
   }
 
@@ -762,6 +797,17 @@ class Reducers {
     });
   }
 
+  StreamSubscription<void> onClearAllSessions(
+      void Function(EventContext ctx) callback) {
+    return _reducerEmitter.on(clearAllSessionsDef).listen((EventContext ctx) {
+      final event = ctx.event;
+      if (event is! ReducerEvent) return;
+      final args = event.reducerArgs;
+      if (args is! ClearAllSessionsArgs) return;
+      callback(ctx);
+    });
+  }
+
   StreamSubscription<void> onCreateFolder(
       void Function(EventContext ctx, String path, String name, int depth)
           callback) {
@@ -827,6 +873,17 @@ class Reducers {
       final args = event.reducerArgs;
       if (args is! DeleteNoteArgs) return;
       callback(ctx, args.id);
+    });
+  }
+
+  StreamSubscription<void> onDeleteSession(
+      void Function(EventContext ctx, String sessionId) callback) {
+    return _reducerEmitter.on(deleteSessionDef).listen((EventContext ctx) {
+      final event = ctx.event;
+      if (event is! ReducerEvent) return;
+      final args = event.reducerArgs;
+      if (args is! DeleteSessionArgs) return;
+      callback(ctx, args.sessionId);
     });
   }
 
