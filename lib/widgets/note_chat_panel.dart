@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../theme/spacenotes_theme.dart';
 import '../screens/chat_view.dart';
 import 'connection_status_row.dart';
-import 'desktop/desktop_chat_input.dart';
+import 'note_chat_input.dart';
 
 class NoteChatPanel extends StatelessWidget {
   final String notePath;
@@ -32,12 +32,12 @@ class NoteChatPanel extends StatelessWidget {
             height: isDesktop ? 40 : null,
             child: const ConnectionStatusRow(),
           ),
-          const Expanded(
+          Expanded(
             child: ChatView(
               showConnectionStatus: false,
               showInput: false,
-              customInput: DesktopChatInput(),
-              messagePadding: EdgeInsets.fromLTRB(16, 16, 16, 80),
+              customInput: NoteChatInput(notePath: notePath),
+              messagePadding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
             ),
           ),
         ],

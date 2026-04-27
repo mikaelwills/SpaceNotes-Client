@@ -14,6 +14,7 @@ class ConnectionStatusRow extends ConsumerWidget {
     final String resolvedSession =
         sessionId ?? ref.watch(targetSessionProvider);
     final activity = ref.watch(sessionActivityProvider(resolvedSession));
+    final session = ref.watch(sessionByIdProvider(resolvedSession));
 
     final state = activity?.state ?? 'idle';
     final isActive = state == 'thinking' || state == 'tool_use';
@@ -23,6 +24,12 @@ class ConnectionStatusRow extends ConsumerWidget {
       _ => 'idle',
     };
     final accent = isActive ? SpaceNotesTheme.accent2 : SpaceNotesTheme.dim;
+
+    final ctxWindow = session?.contextWindow.toInt() ?? 0;
+    final ctxUsed = session?.contextUsed.toInt() ?? 0;
+    final ctxLabel = ctxWindow > 0
+        ? '${_fmtTokens(ctxUsed)}/${_fmtTokens(ctxWindow)}'
+        : null;
 
     return SnStatusLine(
       leading: Row(
@@ -46,6 +53,16 @@ class ConnectionStatusRow extends ConsumerWidget {
               overflow: TextOverflow.ellipsis,
             ),
           ),
+          if (ctxLabel != null) ...[
+            const SizedBox(width: 8),
+            SnUiText(
+              '· $ctxLabel',
+              color: SpaceNotesTheme.dim,
+              fontSize: 10,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
         ],
       ),
       trailing: Row(
@@ -63,6 +80,18 @@ class ConnectionStatusRow extends ConsumerWidget {
       ),
     );
   }
+}
+
+String _fmtTokens(int n) {
+  if (n >= 1000000) {
+    final m = n / 1000000;
+    return '${m.toStringAsFixed(m >= 10 ? 0 : 1)}m';
+  }
+  if (n >= 1000) {
+    final k = n / 1000;
+    return '${k.toStringAsFixed(k >= 100 ? 0 : 1)}k';
+  }
+  return '$n';
 }
 
 class _StateDot extends StatefulWidget {

@@ -18,7 +18,7 @@ class Reducers {
   ///
   /// Returns a [TransactionResult] on success. Throws
   /// [SpacetimeDbReducerException] if the reducer returns `Failed` or
-  /// `OutOfEnergy`. The returned status is one of `Committed`,
+  /// `InternalError`. The returned status is one of `Committed`,
   /// `Pending` (queued to offline storage), or `Dropped` (skipped via
   /// `dropIfOffline: true` while offline).
   Future<TransactionResult> acceptCall({
@@ -36,7 +36,7 @@ class Reducers {
   ///
   /// Returns a [TransactionResult] on success. Throws
   /// [SpacetimeDbReducerException] if the reducer returns `Failed` or
-  /// `OutOfEnergy`. The returned status is one of `Committed`,
+  /// `InternalError`. The returned status is one of `Committed`,
   /// `Pending` (queued to offline storage), or `Dropped` (skipped via
   /// `dropIfOffline: true` while offline).
   Future<TransactionResult> appendToNote({
@@ -56,7 +56,7 @@ class Reducers {
   ///
   /// Returns a [TransactionResult] on success. Throws
   /// [SpacetimeDbReducerException] if the reducer returns `Failed` or
-  /// `OutOfEnergy`. The returned status is one of `Committed`,
+  /// `InternalError`. The returned status is one of `Committed`,
   /// `Pending` (queued to offline storage), or `Dropped` (skipped via
   /// `dropIfOffline: true` while offline).
   Future<TransactionResult> clearAll({
@@ -68,11 +68,28 @@ class Reducers {
         optimisticChanges: optimisticChanges, dropIfOffline: dropIfOffline);
   }
 
+  /// Calls the `clear_all_sessions` reducer.
+  ///
+  /// Returns a [TransactionResult] on success. Throws
+  /// [SpacetimeDbReducerException] if the reducer returns `Failed` or
+  /// `InternalError`. The returned status is one of `Committed`,
+  /// `Pending` (queued to offline storage), or `Dropped` (skipped via
+  /// `dropIfOffline: true` while offline).
+  Future<TransactionResult> clearAllSessions({
+    List<OptimisticChange>? optimisticChanges,
+    bool dropIfOffline = false,
+  }) async {
+    final encoder = BsatnEncoder();
+    return await _reducerCaller.call(
+        clearAllSessionsDef.name, encoder.toBytes(),
+        optimisticChanges: optimisticChanges, dropIfOffline: dropIfOffline);
+  }
+
   /// Calls the `create_folder` reducer.
   ///
   /// Returns a [TransactionResult] on success. Throws
   /// [SpacetimeDbReducerException] if the reducer returns `Failed` or
-  /// `OutOfEnergy`. The returned status is one of `Committed`,
+  /// `InternalError`. The returned status is one of `Committed`,
   /// `Pending` (queued to offline storage), or `Dropped` (skipped via
   /// `dropIfOffline: true` while offline).
   Future<TransactionResult> createFolder({
@@ -94,7 +111,7 @@ class Reducers {
   ///
   /// Returns a [TransactionResult] on success. Throws
   /// [SpacetimeDbReducerException] if the reducer returns `Failed` or
-  /// `OutOfEnergy`. The returned status is one of `Committed`,
+  /// `InternalError`. The returned status is one of `Committed`,
   /// `Pending` (queued to offline storage), or `Dropped` (skipped via
   /// `dropIfOffline: true` while offline).
   Future<TransactionResult> createNote({
@@ -130,7 +147,7 @@ class Reducers {
   ///
   /// Returns a [TransactionResult] on success. Throws
   /// [SpacetimeDbReducerException] if the reducer returns `Failed` or
-  /// `OutOfEnergy`. The returned status is one of `Committed`,
+  /// `InternalError`. The returned status is one of `Committed`,
   /// `Pending` (queued to offline storage), or `Dropped` (skipped via
   /// `dropIfOffline: true` while offline).
   Future<TransactionResult> deleteFolder({
@@ -148,7 +165,7 @@ class Reducers {
   ///
   /// Returns a [TransactionResult] on success. Throws
   /// [SpacetimeDbReducerException] if the reducer returns `Failed` or
-  /// `OutOfEnergy`. The returned status is one of `Committed`,
+  /// `InternalError`. The returned status is one of `Committed`,
   /// `Pending` (queued to offline storage), or `Dropped` (skipped via
   /// `dropIfOffline: true` while offline).
   Future<TransactionResult> deleteNote({
@@ -162,11 +179,29 @@ class Reducers {
         optimisticChanges: optimisticChanges, dropIfOffline: dropIfOffline);
   }
 
+  /// Calls the `delete_session` reducer.
+  ///
+  /// Returns a [TransactionResult] on success. Throws
+  /// [SpacetimeDbReducerException] if the reducer returns `Failed` or
+  /// `InternalError`. The returned status is one of `Committed`,
+  /// `Pending` (queued to offline storage), or `Dropped` (skipped via
+  /// `dropIfOffline: true` while offline).
+  Future<TransactionResult> deleteSession({
+    required String sessionId,
+    List<OptimisticChange>? optimisticChanges,
+    bool dropIfOffline = false,
+  }) async {
+    final encoder = BsatnEncoder();
+    encoder.writeString(sessionId);
+    return await _reducerCaller.call(deleteSessionDef.name, encoder.toBytes(),
+        optimisticChanges: optimisticChanges, dropIfOffline: dropIfOffline);
+  }
+
   /// Calls the `edit_message` reducer.
   ///
   /// Returns a [TransactionResult] on success. Throws
   /// [SpacetimeDbReducerException] if the reducer returns `Failed` or
-  /// `OutOfEnergy`. The returned status is one of `Committed`,
+  /// `InternalError`. The returned status is one of `Committed`,
   /// `Pending` (queued to offline storage), or `Dropped` (skipped via
   /// `dropIfOffline: true` while offline).
   Future<TransactionResult> editMessage({
@@ -186,7 +221,7 @@ class Reducers {
   ///
   /// Returns a [TransactionResult] on success. Throws
   /// [SpacetimeDbReducerException] if the reducer returns `Failed` or
-  /// `OutOfEnergy`. The returned status is one of `Committed`,
+  /// `InternalError`. The returned status is one of `Committed`,
   /// `Pending` (queued to offline storage), or `Dropped` (skipped via
   /// `dropIfOffline: true` while offline).
   Future<TransactionResult> endCall({
@@ -204,7 +239,7 @@ class Reducers {
   ///
   /// Returns a [TransactionResult] on success. Throws
   /// [SpacetimeDbReducerException] if the reducer returns `Failed` or
-  /// `OutOfEnergy`. The returned status is one of `Committed`,
+  /// `InternalError`. The returned status is one of `Committed`,
   /// `Pending` (queued to offline storage), or `Dropped` (skipped via
   /// `dropIfOffline: true` while offline).
   Future<TransactionResult> endSession({
@@ -222,7 +257,7 @@ class Reducers {
   ///
   /// Returns a [TransactionResult] on success. Throws
   /// [SpacetimeDbReducerException] if the reducer returns `Failed` or
-  /// `OutOfEnergy`. The returned status is one of `Committed`,
+  /// `InternalError`. The returned status is one of `Committed`,
   /// `Pending` (queued to offline storage), or `Dropped` (skipped via
   /// `dropIfOffline: true` while offline).
   Future<TransactionResult> findReplaceInNote({
@@ -247,7 +282,7 @@ class Reducers {
   ///
   /// Returns a [TransactionResult] on success. Throws
   /// [SpacetimeDbReducerException] if the reducer returns `Failed` or
-  /// `OutOfEnergy`. The returned status is one of `Committed`,
+  /// `InternalError`. The returned status is one of `Committed`,
   /// `Pending` (queued to offline storage), or `Dropped` (skipped via
   /// `dropIfOffline: true` while offline).
   Future<TransactionResult> getRecentNotes({
@@ -265,7 +300,7 @@ class Reducers {
   ///
   /// Returns a [TransactionResult] on success. Throws
   /// [SpacetimeDbReducerException] if the reducer returns `Failed` or
-  /// `OutOfEnergy`. The returned status is one of `Committed`,
+  /// `InternalError`. The returned status is one of `Committed`,
   /// `Pending` (queued to offline storage), or `Dropped` (skipped via
   /// `dropIfOffline: true` while offline).
   Future<TransactionResult> heartbeat({
@@ -283,7 +318,7 @@ class Reducers {
   ///
   /// Returns a [TransactionResult] on success. Throws
   /// [SpacetimeDbReducerException] if the reducer returns `Failed` or
-  /// `OutOfEnergy`. The returned status is one of `Committed`,
+  /// `InternalError`. The returned status is one of `Committed`,
   /// `Pending` (queued to offline storage), or `Dropped` (skipped via
   /// `dropIfOffline: true` while offline).
   Future<TransactionResult> moveFolder({
@@ -303,7 +338,7 @@ class Reducers {
   ///
   /// Returns a [TransactionResult] on success. Throws
   /// [SpacetimeDbReducerException] if the reducer returns `Failed` or
-  /// `OutOfEnergy`. The returned status is one of `Committed`,
+  /// `InternalError`. The returned status is one of `Committed`,
   /// `Pending` (queued to offline storage), or `Dropped` (skipped via
   /// `dropIfOffline: true` while offline).
   Future<TransactionResult> moveNote({
@@ -323,7 +358,7 @@ class Reducers {
   ///
   /// Returns a [TransactionResult] on success. Throws
   /// [SpacetimeDbReducerException] if the reducer returns `Failed` or
-  /// `OutOfEnergy`. The returned status is one of `Committed`,
+  /// `InternalError`. The returned status is one of `Committed`,
   /// `Pending` (queued to offline storage), or `Dropped` (skipped via
   /// `dropIfOffline: true` while offline).
   Future<TransactionResult> prependToNote({
@@ -339,11 +374,34 @@ class Reducers {
         optimisticChanges: optimisticChanges, dropIfOffline: dropIfOffline);
   }
 
+  /// Calls the `push_context_usage` reducer.
+  ///
+  /// Returns a [TransactionResult] on success. Throws
+  /// [SpacetimeDbReducerException] if the reducer returns `Failed` or
+  /// `InternalError`. The returned status is one of `Committed`,
+  /// `Pending` (queued to offline storage), or `Dropped` (skipped via
+  /// `dropIfOffline: true` while offline).
+  Future<TransactionResult> pushContextUsage({
+    required String sessionId,
+    required Int64 used,
+    required Int64 window,
+    List<OptimisticChange>? optimisticChanges,
+    bool dropIfOffline = false,
+  }) async {
+    final encoder = BsatnEncoder();
+    encoder.writeString(sessionId);
+    encoder.writeU64(used);
+    encoder.writeU64(window);
+    return await _reducerCaller.call(
+        pushContextUsageDef.name, encoder.toBytes(),
+        optimisticChanges: optimisticChanges, dropIfOffline: dropIfOffline);
+  }
+
   /// Calls the `push_image` reducer.
   ///
   /// Returns a [TransactionResult] on success. Throws
   /// [SpacetimeDbReducerException] if the reducer returns `Failed` or
-  /// `OutOfEnergy`. The returned status is one of `Committed`,
+  /// `InternalError`. The returned status is one of `Committed`,
   /// `Pending` (queued to offline storage), or `Dropped` (skipped via
   /// `dropIfOffline: true` while offline).
   Future<TransactionResult> pushImage({
@@ -367,7 +425,7 @@ class Reducers {
   ///
   /// Returns a [TransactionResult] on success. Throws
   /// [SpacetimeDbReducerException] if the reducer returns `Failed` or
-  /// `OutOfEnergy`. The returned status is one of `Committed`,
+  /// `InternalError`. The returned status is one of `Committed`,
   /// `Pending` (queued to offline storage), or `Dropped` (skipped via
   /// `dropIfOffline: true` while offline).
   Future<TransactionResult> pushMessage({
@@ -393,7 +451,7 @@ class Reducers {
   ///
   /// Returns a [TransactionResult] on success. Throws
   /// [SpacetimeDbReducerException] if the reducer returns `Failed` or
-  /// `OutOfEnergy`. The returned status is one of `Committed`,
+  /// `InternalError`. The returned status is one of `Committed`,
   /// `Pending` (queued to offline storage), or `Dropped` (skipped via
   /// `dropIfOffline: true` while offline).
   Future<TransactionResult> pushStatus({
@@ -413,7 +471,7 @@ class Reducers {
   ///
   /// Returns a [TransactionResult] on success. Throws
   /// [SpacetimeDbReducerException] if the reducer returns `Failed` or
-  /// `OutOfEnergy`. The returned status is one of `Committed`,
+  /// `InternalError`. The returned status is one of `Committed`,
   /// `Pending` (queued to offline storage), or `Dropped` (skipped via
   /// `dropIfOffline: true` while offline).
   Future<TransactionResult> pushToolEvent({
@@ -437,7 +495,7 @@ class Reducers {
   ///
   /// Returns a [TransactionResult] on success. Throws
   /// [SpacetimeDbReducerException] if the reducer returns `Failed` or
-  /// `OutOfEnergy`. The returned status is one of `Committed`,
+  /// `InternalError`. The returned status is one of `Committed`,
   /// `Pending` (queued to offline storage), or `Dropped` (skipped via
   /// `dropIfOffline: true` while offline).
   Future<TransactionResult> registerSession({
@@ -461,7 +519,7 @@ class Reducers {
   ///
   /// Returns a [TransactionResult] on success. Throws
   /// [SpacetimeDbReducerException] if the reducer returns `Failed` or
-  /// `OutOfEnergy`. The returned status is one of `Committed`,
+  /// `InternalError`. The returned status is one of `Committed`,
   /// `Pending` (queued to offline storage), or `Dropped` (skipped via
   /// `dropIfOffline: true` while offline).
   Future<TransactionResult> renameNote({
@@ -481,7 +539,7 @@ class Reducers {
   ///
   /// Returns a [TransactionResult] on success. Throws
   /// [SpacetimeDbReducerException] if the reducer returns `Failed` or
-  /// `OutOfEnergy`. The returned status is one of `Committed`,
+  /// `InternalError`. The returned status is one of `Committed`,
   /// `Pending` (queued to offline storage), or `Dropped` (skipped via
   /// `dropIfOffline: true` while offline).
   Future<TransactionResult> requestCall({
@@ -499,7 +557,7 @@ class Reducers {
   ///
   /// Returns a [TransactionResult] on success. Throws
   /// [SpacetimeDbReducerException] if the reducer returns `Failed` or
-  /// `OutOfEnergy`. The returned status is one of `Committed`,
+  /// `InternalError`. The returned status is one of `Committed`,
   /// `Pending` (queued to offline storage), or `Dropped` (skipped via
   /// `dropIfOffline: true` while offline).
   Future<TransactionResult> requestPermission({
@@ -524,7 +582,7 @@ class Reducers {
   ///
   /// Returns a [TransactionResult] on success. Throws
   /// [SpacetimeDbReducerException] if the reducer returns `Failed` or
-  /// `OutOfEnergy`. The returned status is one of `Committed`,
+  /// `InternalError`. The returned status is one of `Committed`,
   /// `Pending` (queued to offline storage), or `Dropped` (skipped via
   /// `dropIfOffline: true` while offline).
   Future<TransactionResult> resolvePermission({
@@ -545,7 +603,7 @@ class Reducers {
   ///
   /// Returns a [TransactionResult] on success. Throws
   /// [SpacetimeDbReducerException] if the reducer returns `Failed` or
-  /// `OutOfEnergy`. The returned status is one of `Committed`,
+  /// `InternalError`. The returned status is one of `Committed`,
   /// `Pending` (queued to offline storage), or `Dropped` (skipped via
   /// `dropIfOffline: true` while offline).
   Future<TransactionResult> sendAudioFrame({
@@ -567,7 +625,7 @@ class Reducers {
   ///
   /// Returns a [TransactionResult] on success. Throws
   /// [SpacetimeDbReducerException] if the reducer returns `Failed` or
-  /// `OutOfEnergy`. The returned status is one of `Committed`,
+  /// `InternalError`. The returned status is one of `Committed`,
   /// `Pending` (queued to offline storage), or `Dropped` (skipped via
   /// `dropIfOffline: true` while offline).
   Future<TransactionResult> sendVideoFrame({
@@ -593,7 +651,7 @@ class Reducers {
   ///
   /// Returns a [TransactionResult] on success. Throws
   /// [SpacetimeDbReducerException] if the reducer returns `Failed` or
-  /// `OutOfEnergy`. The returned status is one of `Committed`,
+  /// `InternalError`. The returned status is one of `Committed`,
   /// `Pending` (queued to offline storage), or `Dropped` (skipped via
   /// `dropIfOffline: true` while offline).
   Future<TransactionResult> setDisplayName({
@@ -611,7 +669,7 @@ class Reducers {
   ///
   /// Returns a [TransactionResult] on success. Throws
   /// [SpacetimeDbReducerException] if the reducer returns `Failed` or
-  /// `OutOfEnergy`. The returned status is one of `Committed`,
+  /// `InternalError`. The returned status is one of `Committed`,
   /// `Pending` (queued to offline storage), or `Dropped` (skipped via
   /// `dropIfOffline: true` while offline).
   Future<TransactionResult> sweepOldMessages({
@@ -628,7 +686,7 @@ class Reducers {
   ///
   /// Returns a [TransactionResult] on success. Throws
   /// [SpacetimeDbReducerException] if the reducer returns `Failed` or
-  /// `OutOfEnergy`. The returned status is one of `Committed`,
+  /// `InternalError`. The returned status is one of `Committed`,
   /// `Pending` (queued to offline storage), or `Dropped` (skipped via
   /// `dropIfOffline: true` while offline).
   Future<TransactionResult> updateNoteContent({
@@ -655,7 +713,7 @@ class Reducers {
   ///
   /// Returns a [TransactionResult] on success. Throws
   /// [SpacetimeDbReducerException] if the reducer returns `Failed` or
-  /// `OutOfEnergy`. The returned status is one of `Committed`,
+  /// `InternalError`. The returned status is one of `Committed`,
   /// `Pending` (queued to offline storage), or `Dropped` (skipped via
   /// `dropIfOffline: true` while offline).
   Future<TransactionResult> updateNotePath({
@@ -675,7 +733,7 @@ class Reducers {
   ///
   /// Returns a [TransactionResult] on success. Throws
   /// [SpacetimeDbReducerException] if the reducer returns `Failed` or
-  /// `OutOfEnergy`. The returned status is one of `Committed`,
+  /// `InternalError`. The returned status is one of `Committed`,
   /// `Pending` (queued to offline storage), or `Dropped` (skipped via
   /// `dropIfOffline: true` while offline).
   Future<TransactionResult> upsertFolder({
@@ -697,7 +755,7 @@ class Reducers {
   ///
   /// Returns a [TransactionResult] on success. Throws
   /// [SpacetimeDbReducerException] if the reducer returns `Failed` or
-  /// `OutOfEnergy`. The returned status is one of `Committed`,
+  /// `InternalError`. The returned status is one of `Committed`,
   /// `Pending` (queued to offline storage), or `Dropped` (skipped via
   /// `dropIfOffline: true` while offline).
   Future<TransactionResult> upsertNote({
@@ -758,6 +816,17 @@ class Reducers {
       if (event is! ReducerEvent) return;
       final args = event.reducerArgs;
       if (args is! ClearAllArgs) return;
+      callback(ctx);
+    });
+  }
+
+  StreamSubscription<void> onClearAllSessions(
+      void Function(EventContext ctx) callback) {
+    return _reducerEmitter.on(clearAllSessionsDef).listen((EventContext ctx) {
+      final event = ctx.event;
+      if (event is! ReducerEvent) return;
+      final args = event.reducerArgs;
+      if (args is! ClearAllSessionsArgs) return;
       callback(ctx);
     });
   }
@@ -827,6 +896,17 @@ class Reducers {
       final args = event.reducerArgs;
       if (args is! DeleteNoteArgs) return;
       callback(ctx, args.id);
+    });
+  }
+
+  StreamSubscription<void> onDeleteSession(
+      void Function(EventContext ctx, String sessionId) callback) {
+    return _reducerEmitter.on(deleteSessionDef).listen((EventContext ctx) {
+      final event = ctx.event;
+      if (event is! ReducerEvent) return;
+      final args = event.reducerArgs;
+      if (args is! DeleteSessionArgs) return;
+      callback(ctx, args.sessionId);
     });
   }
 
@@ -930,6 +1010,19 @@ class Reducers {
       final args = event.reducerArgs;
       if (args is! PrependToNoteArgs) return;
       callback(ctx, args.path, args.content);
+    });
+  }
+
+  StreamSubscription<void> onPushContextUsage(
+      void Function(
+              EventContext ctx, String sessionId, Int64 used, Int64 window)
+          callback) {
+    return _reducerEmitter.on(pushContextUsageDef).listen((EventContext ctx) {
+      final event = ctx.event;
+      if (event is! ReducerEvent) return;
+      final args = event.reducerArgs;
+      if (args is! PushContextUsageArgs) return;
+      callback(ctx, args.sessionId, args.used, args.window);
     });
   }
 

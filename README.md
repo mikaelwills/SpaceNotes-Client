@@ -1,19 +1,18 @@
 # SpaceNotes Client
 
-Flutter client for [SpaceNotes](https://github.com/mikaelwills/spacenotes) - an open-source self-hosted notes solution.
+Flutter client for [SpaceNotes](https://github.com/mikaelwills/spacenotes) — a self-hosted notes system with real-time sync and a built-in bridge to Claude Code agents.
 
-**An open-source attempt at the ideal notes solution.**
+This is just the client app — iOS, Android, macOS, Windows, Linux, and web. It subscribes to your SpaceNotes server's SpacetimeDB and renders notes plus a live dashboard of any Claude Code sessions running through SpaceChannel.
 
-This project explores what note-taking could look like if you had full control: your own server, plain markdown files, real-time sync across all devices, and AI that can actually help you organize your thoughts. No vendor lock-in, no subscription fees, no compromises on privacy.
-
-See the main repo for full documentation, setup instructions, and the Docker stack.
+For the server, sync daemon, MCP, Docker stack, architecture, and setup, see the **[main SpaceNotes repo](https://github.com/mikaelwills/spacenotes)**.
 
 ![Desktop Notes View](assets/screenshots/desktop-notes.png)
 ![Desktop AI Chat](assets/screenshots/desktop-chat.png)
 
 <p align="center">
-  <img src="assets/screenshots/mobile-notes.png" width="45%" alt="Mobile Notes View" />
-  <img src="assets/screenshots/mobile-chat.png" width="45%" alt="Mobile AI Chat" />
+  <img src="assets/screenshots/mobile-notes.png" width="30%" alt="Mobile Notes View" />
+  <img src="assets/screenshots/mobile-chat.png" width="30%" alt="Mobile AI Chat" />
+  <img src="assets/screenshots/mobile-sessions.png" width="30%" alt="Mobile MCP Sessions" />
 </p>
 
 ## Building
@@ -25,4 +24,4 @@ flutter run
 
 ## License
 
-GPL-3.0 - See the main SpaceNotes repository for full license details.
+GPL-3.0 — See the [main SpaceNotes repository](https://github.com/mikaelwills/spacenotes) for full license details.

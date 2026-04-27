@@ -4,8 +4,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image/image.dart' as image_lib;
 import 'package:image_picker/image_picker.dart';
-import '../../theme/spacenotes_theme.dart';
 import '../../providers/chat_providers.dart';
+import '../../services/debug_logger.dart';
+import '../../services/paste_image_listener.dart';
 import '../primitives/primitives.dart';
 
 class DesktopChatInput extends ConsumerStatefulWidget {
@@ -20,10 +21,18 @@ class DesktopChatInput extends ConsumerStatefulWidget {
 class _DesktopChatInputState extends ConsumerState<DesktopChatInput> {
   final TextEditingController _controller = TextEditingController();
   final FocusNode _focusNode = FocusNode();
+  final PasteImageListener _pasteListener = createPasteImageListener();
   Uint8List? _pendingImageBytes;
 
   @override
+  void initState() {
+    super.initState();
+    _pasteListener.register(_onPastedImageBytes);
+  }
+
+  @override
   void dispose() {
+    _pasteListener.unregister();
     _controller.dispose();
     _focusNode.dispose();
     super.dispose();
@@ -41,30 +50,39 @@ class _DesktopChatInputState extends ConsumerState<DesktopChatInput> {
           onSend: _onSend,
           maxLines: 8,
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-          fieldTrailing: _pendingImageBytes != null
-              ? GestureDetector(
-                  onTap: () {
-                    HapticFeedback.lightImpact();
-                    setState(() => _pendingImageBytes = null);
-                  },
-                  behavior: HitTestBehavior.opaque,
-                  child: const Icon(
-                    Icons.image,
-                    size: 16,
-                    color: SpaceNotesTheme.accent,
-                  ),
-                )
-              : null,
           trailing: [
             SnDockTile(
-              icon: Icons.image_outlined,
-              onTap: _onPickImage,
-              semanticLabel: 'attach image',
+              icon: _pendingImageBytes != null
+                  ? Icons.image
+                  : Icons.image_outlined,
+              onTap: _pendingImageBytes != null
+                  ? () {
+                      HapticFeedback.lightImpact();
+                      setState(() => _pendingImageBytes = null);
+                    }
+                  : _onPickImage,
+              semanticLabel: _pendingImageBytes != null
+                  ? 'clear attached image'
+                  : 'attach image',
             ),
           ],
         ),
       ),
     );
+  }
+
+  Future<void> _onPastedImageBytes(Uint8List raw) async {
+    final png = await compute(_resizeToPng, raw);
+    if (png == null) {
+      debugLogger.error('PASTE', 'decode failed');
+      return;
+    }
+    if (png.length > 2 * 1024 * 1024) {
+      debugLogger.warning('PASTE', 'exceeds 2MB post-compress: ${png.length}');
+      return;
+    }
+    if (!mounted) return;
+    setState(() => _pendingImageBytes = png);
   }
 
   void _onSend() {
@@ -91,19 +109,18 @@ class _DesktopChatInputState extends ConsumerState<DesktopChatInput> {
       final raw = await image.readAsBytes();
       final png = await compute(_resizeToPng, raw);
       if (png == null) {
-        debugPrint('[DesktopChatInput] Image decode failed');
+        debugLogger.error('PICKER', 'decode failed');
         return;
       }
       if (png.length > 2 * 1024 * 1024) {
-        debugPrint(
-            '[DesktopChatInput] Image exceeds 2MB post-compress: ${png.length}');
+        debugLogger.warning(
+            'PICKER', 'exceeds 2MB post-compress: ${png.length}');
         return;
       }
 
       setState(() => _pendingImageBytes = png);
     } catch (e, stack) {
-      debugPrint('[DesktopChatInput] Error picking image: $e');
-      debugPrint('[DesktopChatInput] Stack: $stack');
+      debugLogger.error('PICKER', 'pick failed: $e', stack.toString());
     }
   }
 }

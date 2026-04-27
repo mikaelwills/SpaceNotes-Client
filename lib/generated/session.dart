@@ -10,6 +10,8 @@ class Session {
     required this.clientId,
     required this.createdAt,
     required this.lastSeen,
+    required this.contextUsed,
+    required this.contextWindow,
   });
 
   factory Session.fromJson(Map<String, dynamic> json) {
@@ -20,6 +22,8 @@ class Session {
       clientId: json['clientId'] ?? '',
       createdAt: Int64(json['createdAt'] ?? 0),
       lastSeen: Int64(json['lastSeen'] ?? 0),
+      contextUsed: Int64(json['contextUsed'] ?? 0),
+      contextWindow: Int64(json['contextWindow'] ?? 0),
     );
   }
 
@@ -35,6 +39,10 @@ class Session {
 
   final Int64 lastSeen;
 
+  final Int64 contextUsed;
+
+  final Int64 contextWindow;
+
   void encodeBsatn(BsatnEncoder encoder) {
     encoder.writeString(id);
     encoder.writeString(baseName);
@@ -42,6 +50,8 @@ class Session {
     encoder.writeString(clientId);
     encoder.writeI64(createdAt);
     encoder.writeI64(lastSeen);
+    encoder.writeU64(contextUsed);
+    encoder.writeU64(contextWindow);
   }
 
   static Session decodeBsatn(BsatnDecoder decoder) {
@@ -52,6 +62,8 @@ class Session {
       clientId: decoder.readString(),
       createdAt: decoder.readI64(),
       lastSeen: decoder.readI64(),
+      contextUsed: decoder.readU64(),
+      contextWindow: decoder.readU64(),
     );
   }
 
@@ -63,6 +75,8 @@ class Session {
       'clientId': clientId,
       'createdAt': createdAt.toInt(),
       'lastSeen': lastSeen.toInt(),
+      'contextUsed': contextUsed.toInt(),
+      'contextWindow': contextWindow.toInt(),
     };
   }
 
@@ -75,17 +89,20 @@ class Session {
             host == other.host &&
             clientId == other.clientId &&
             createdAt == other.createdAt &&
-            lastSeen == other.lastSeen;
+            lastSeen == other.lastSeen &&
+            contextUsed == other.contextUsed &&
+            contextWindow == other.contextWindow;
   }
 
   @override
   int get hashCode {
-    return Object.hash(id, baseName, host, clientId, createdAt, lastSeen);
+    return Object.hash(id, baseName, host, clientId, createdAt, lastSeen,
+        contextUsed, contextWindow);
   }
 
   @override
   String toString() {
-    return 'Session(id: $id, baseName: $baseName, host: $host, clientId: $clientId, createdAt: $createdAt, lastSeen: $lastSeen)';
+    return 'Session(id: $id, baseName: $baseName, host: $host, clientId: $clientId, createdAt: $createdAt, lastSeen: $lastSeen, contextUsed: $contextUsed, contextWindow: $contextWindow)';
   }
 
   Session copyWith({
@@ -95,6 +112,8 @@ class Session {
     String? clientId,
     Int64? createdAt,
     Int64? lastSeen,
+    Int64? contextUsed,
+    Int64? contextWindow,
   }) {
     return Session(
       id: id ?? this.id,
@@ -103,6 +122,8 @@ class Session {
       clientId: clientId ?? this.clientId,
       createdAt: createdAt ?? this.createdAt,
       lastSeen: lastSeen ?? this.lastSeen,
+      contextUsed: contextUsed ?? this.contextUsed,
+      contextWindow: contextWindow ?? this.contextWindow,
     );
   }
 }

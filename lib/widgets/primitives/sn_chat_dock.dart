@@ -64,15 +64,27 @@ class SnChatDock extends StatelessWidget {
             children: [
               for (final w in leading) ...[w, const SizedBox(width: 8)],
               Expanded(
-                child: SnField(
-                  controller: controller,
-                  focusNode: focusNode,
-                  hint: hint,
-                  onChanged: onChanged,
-                  onSubmitted: (_) => onSend(),
-                  maxLines: maxLines,
-                  minLines: minLines,
-                  trailing: fieldTrailing,
+                child: Focus(
+                  onKeyEvent: (_, event) {
+                    if (event is! KeyDownEvent) return KeyEventResult.ignored;
+                    if (event.logicalKey != LogicalKeyboardKey.enter) {
+                      return KeyEventResult.ignored;
+                    }
+                    final shift = HardwareKeyboard.instance.isShiftPressed;
+                    if (shift) return KeyEventResult.ignored;
+                    onSend();
+                    return KeyEventResult.handled;
+                  },
+                  child: SnField(
+                    controller: controller,
+                    focusNode: focusNode,
+                    hint: hint,
+                    onChanged: onChanged,
+                    onSubmitted: (_) => onSend(),
+                    maxLines: maxLines,
+                    minLines: minLines,
+                    trailing: fieldTrailing,
+                  ),
                 ),
               ),
               for (final w in trailing) ...[const SizedBox(width: 8), w],

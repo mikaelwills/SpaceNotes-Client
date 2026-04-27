@@ -58,6 +58,20 @@ class ClearAllArgsDecoder implements ReducerArgDecoder<ClearAllArgs> {
   }
 }
 
+class ClearAllSessionsArgs {
+  ClearAllSessionsArgs();
+}
+
+class ClearAllSessionsArgsDecoder
+    implements ReducerArgDecoder<ClearAllSessionsArgs> {
+  const ClearAllSessionsArgsDecoder();
+
+  @override
+  ClearAllSessionsArgs decode(BsatnDecoder decoder) {
+    return ClearAllSessionsArgs();
+  }
+}
+
 class CreateFolderArgs {
   CreateFolderArgs({
     required this.path,
@@ -185,6 +199,24 @@ class DeleteNoteArgsDecoder implements ReducerArgDecoder<DeleteNoteArgs> {
     final id = decoder.readString();
     return DeleteNoteArgs(
       id: id,
+    );
+  }
+}
+
+class DeleteSessionArgs {
+  DeleteSessionArgs({required this.sessionId});
+
+  final String sessionId;
+}
+
+class DeleteSessionArgsDecoder implements ReducerArgDecoder<DeleteSessionArgs> {
+  const DeleteSessionArgsDecoder();
+
+  @override
+  DeleteSessionArgs decode(BsatnDecoder decoder) {
+    final sessionId = decoder.readString();
+    return DeleteSessionArgs(
+      sessionId: sessionId,
     );
   }
 }
@@ -394,6 +426,37 @@ class PrependToNoteArgsDecoder implements ReducerArgDecoder<PrependToNoteArgs> {
     return PrependToNoteArgs(
       path: path,
       content: content,
+    );
+  }
+}
+
+class PushContextUsageArgs {
+  PushContextUsageArgs({
+    required this.sessionId,
+    required this.used,
+    required this.window,
+  });
+
+  final String sessionId;
+
+  final Int64 used;
+
+  final Int64 window;
+}
+
+class PushContextUsageArgsDecoder
+    implements ReducerArgDecoder<PushContextUsageArgs> {
+  const PushContextUsageArgsDecoder();
+
+  @override
+  PushContextUsageArgs decode(BsatnDecoder decoder) {
+    final sessionId = decoder.readString();
+    final used = decoder.readU64();
+    final window = decoder.readU64();
+    return PushContextUsageArgs(
+      sessionId: sessionId,
+      used: used,
+      window: window,
     );
   }
 }
@@ -947,6 +1010,8 @@ const appendToNoteDef =
     ReducerDef<AppendToNoteArgs>('append_to_note', AppendToNoteArgsDecoder());
 const clearAllDef =
     ReducerDef<ClearAllArgs>('clear_all', ClearAllArgsDecoder());
+const clearAllSessionsDef = ReducerDef<ClearAllSessionsArgs>(
+    'clear_all_sessions', ClearAllSessionsArgsDecoder());
 const createFolderDef =
     ReducerDef<CreateFolderArgs>('create_folder', CreateFolderArgsDecoder());
 const createNoteDef =
@@ -955,6 +1020,8 @@ const deleteFolderDef =
     ReducerDef<DeleteFolderArgs>('delete_folder', DeleteFolderArgsDecoder());
 const deleteNoteDef =
     ReducerDef<DeleteNoteArgs>('delete_note', DeleteNoteArgsDecoder());
+const deleteSessionDef =
+    ReducerDef<DeleteSessionArgs>('delete_session', DeleteSessionArgsDecoder());
 const editMessageDef =
     ReducerDef<EditMessageArgs>('edit_message', EditMessageArgsDecoder());
 const endCallDef = ReducerDef<EndCallArgs>('end_call', EndCallArgsDecoder());
@@ -972,6 +1039,8 @@ const moveNoteDef =
     ReducerDef<MoveNoteArgs>('move_note', MoveNoteArgsDecoder());
 const prependToNoteDef = ReducerDef<PrependToNoteArgs>(
     'prepend_to_note', PrependToNoteArgsDecoder());
+const pushContextUsageDef = ReducerDef<PushContextUsageArgs>(
+    'push_context_usage', PushContextUsageArgsDecoder());
 const pushImageDef =
     ReducerDef<PushImageArgs>('push_image', PushImageArgsDecoder());
 const pushMessageDef =
