@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../services/genui_note_parser.dart';
 import '../../services/json_pointer.dart';
 import '../../theme/spacenotes_theme.dart';
+import '../adaptive/platform_utils.dart';
 import '../primitives/primitives.dart';
 import '../quill_note_editor.dart';
 import 'action_widgets.dart';
@@ -67,6 +68,9 @@ class _GenuiSurfaceState extends State<GenuiSurface> {
   @override
   Widget build(BuildContext context) {
     final children = _renderRootChildren();
+    final isDesktop = PlatformUtils.isDesktopLayout(context);
+    final sidePad = isDesktop ? 32.0 : 16.0;
+    final topPad = isDesktop ? 32.0 : 16.0;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.only(bottom: 80),
@@ -75,7 +79,7 @@ class _GenuiSurfaceState extends State<GenuiSurface> {
         children: [
           if (children.isNotEmpty)
             Padding(
-              padding: const EdgeInsets.fromLTRB(32, 32, 32, 0),
+              padding: EdgeInsets.fromLTRB(sidePad, topPad, sidePad, 0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -453,25 +457,47 @@ class _GenuiSurfaceState extends State<GenuiSurface> {
       }
     }
 
-    final inner = column
-        ? Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              for (final c in children) ...[
-                c,
-                const SizedBox(height: 8),
+    Widget inner;
+    if (column) {
+      inner = Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          for (final c in children) ...[
+            c,
+            const SizedBox(height: 8),
+          ],
+        ],
+      );
+    } else {
+      const stackBelow = 480.0;
+      const perItemMin = 180.0;
+      inner = LayoutBuilder(
+        builder: (context, constraints) {
+          final shouldStack = constraints.maxWidth < stackBelow ||
+              constraints.maxWidth < perItemMin * children.length;
+          if (shouldStack) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                for (final c in children) ...[
+                  c,
+                  const SizedBox(height: 12),
+                ],
               ],
-            ],
-          )
-        : Row(
+            );
+          }
+          return Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              for (final c in children) ...[
-                Flexible(child: c),
-                const SizedBox(width: 8),
+              for (var i = 0; i < children.length; i++) ...[
+                Expanded(child: children[i]),
+                if (i != children.length - 1) const SizedBox(width: 12),
               ],
             ],
           );
+        },
+      );
+    }
 
     if (padding) {
       return DashSurface(

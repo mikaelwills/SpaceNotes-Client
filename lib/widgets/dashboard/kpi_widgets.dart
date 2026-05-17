@@ -30,12 +30,15 @@ class DashKpiCard extends StatelessWidget {
         children: [
           SnMicroLabel(label),
           const SizedBox(height: 10),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.baseline,
-            textBaseline: TextBaseline.alphabetic,
-            children: [
-              Flexible(
-                child: Text(
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.baseline,
+              textBaseline: TextBaseline.alphabetic,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
                   value,
                   style: const TextStyle(
                     fontFamily: SpaceNotesTheme.fontSans,
@@ -45,26 +48,28 @@ class DashKpiCard extends StatelessWidget {
                     letterSpacing: -0.6,
                     height: 1.05,
                   ),
-                  overflow: TextOverflow.ellipsis,
                 ),
-              ),
-              if (unit != null) ...[
-                const SizedBox(width: 4),
-                Text(
-                  unit!,
-                  style: const TextStyle(
-                    fontFamily: SpaceNotesTheme.fontMono,
-                    fontSize: 11,
-                    color: SpaceNotesTheme.dim,
-                    letterSpacing: 0.3,
+                if (unit != null) ...[
+                  const SizedBox(width: 4),
+                  Text(
+                    unit!,
+                    style: const TextStyle(
+                      fontFamily: SpaceNotesTheme.fontMono,
+                      fontSize: 11,
+                      color: SpaceNotesTheme.dim,
+                      letterSpacing: 0.3,
+                    ),
                   ),
-                ),
+                ],
               ],
-            ],
+            ),
           ),
           if (delta != null) ...[
             const SizedBox(height: 8),
-            _TrendChip(text: delta!, trend: trend ?? DashTrend.flat),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: _TrendChip(text: delta!, trend: trend ?? DashTrend.flat),
+            ),
           ],
         ],
       ),

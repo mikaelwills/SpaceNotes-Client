@@ -42,6 +42,16 @@
     document.addEventListener('contextmenu', function(e) {
       e.preventDefault();
     });
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then(function(rs) {
+        rs.forEach(function(r) { r.unregister(); });
+      });
+      if (window.caches) {
+        caches.keys().then(function(ks) {
+          ks.forEach(function(k) { caches.delete(k); });
+        });
+      }
+    }
   </script>
   <script src="webcodecs_helper.js"></script>
   <script src="flutter_bootstrap.js" async></script>

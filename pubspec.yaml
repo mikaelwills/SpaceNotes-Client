@@ -57,7 +57,6 @@ dependencies:
 
   # Notes feature dependencies
   dio: ^5.4.0 # Enhanced HTTP client for Obsidian REST API
-  flutter_secure_storage: ^9.0.0 # Secure storage for API keys
   rxdart: ^0.28.0 # Reactive extensions for Dart (debouncing)
 
   # SpacetimeDB feature dependencies
