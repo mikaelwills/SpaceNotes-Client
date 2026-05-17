@@ -25,6 +25,8 @@ class QuillNoteEditor extends StatefulWidget {
   final ValueChanged<String> onContentChanged;
   final FocusNode? focusNode;
   final bool showToolbar;
+  final EdgeInsets padding;
+  final bool scrollable;
 
   const QuillNoteEditor({
     super.key,
@@ -32,6 +34,8 @@ class QuillNoteEditor extends StatefulWidget {
     required this.onContentChanged,
     this.focusNode,
     this.showToolbar = true,
+    this.padding = const EdgeInsets.all(16),
+    this.scrollable = true,
   });
 
   @override
@@ -144,14 +148,14 @@ class QuillNoteEditorState extends State<QuillNoteEditor> {
             height: 1.6,
           ),
           cursorColor: SpaceNotesTheme.primary,
-          decoration: const InputDecoration(
-            contentPadding: EdgeInsets.all(16),
+          decoration: InputDecoration(
+            contentPadding: widget.padding,
             border: InputBorder.none,
             enabledBorder: InputBorder.none,
             focusedBorder: InputBorder.none,
             filled: false,
             hintText: 'Raw markdown...',
-            hintStyle: TextStyle(
+            hintStyle: const TextStyle(
               fontFamily: 'FiraCode',
               fontSize: 14,
               color: SpaceNotesTheme.textSecondary,
@@ -173,7 +177,8 @@ class QuillNoteEditorState extends State<QuillNoteEditor> {
         focusNode: _focusNode,
         config: QuillEditorConfig(
           contextMenuBuilder: SpaceNotesContextMenu.buildForQuill,
-          padding: const EdgeInsets.all(16),
+          padding: widget.padding,
+          scrollable: widget.scrollable,
           placeholder: 'Start writing...',
           embedBuilders: [
             _DividerEmbedBuilder(),

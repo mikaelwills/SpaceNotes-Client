@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import '../../services/genui_note_parser.dart';
+import '../../services/json_pointer.dart';
 import '../../theme/spacenotes_theme.dart';
 import '../primitives/primitives.dart';
+import '../quill_note_editor.dart';
 import 'action_widgets.dart';
 import 'chart_widgets.dart';
 import 'input_widgets.dart';
@@ -17,6 +19,12 @@ import 'status_widgets.dart';
 /// markdown in memory; mutations from interactive widgets route back through
 /// the callback as a freshly-serialized body. Persistence/debounce belongs
 /// to the parent (NoteScreen).
+///
+/// Supports both schema shapes:
+///   * Flat A2UI-style (components keyed by `id`, `rootId` entry point,
+///     `{"path": "/..."}` JSON Pointer bindings)
+///   * Legacy nested (components with inline children, `valueBinding: "key"`
+///     bindings against `data` map)
 class GenuiSurface extends StatefulWidget {
   final String body;
   final ValueChanged<String> onBodyChanged;
@@ -34,6 +42,7 @@ class GenuiSurface extends StatefulWidget {
 class _GenuiSurfaceState extends State<GenuiSurface> {
   late Map<String, dynamic> _schema;
   late String _markdown;
+  final GlobalKey<QuillNoteEditorState> _markdownEditorKey = GlobalKey();
 
   @override
   void initState() {
@@ -50,48 +59,115 @@ class _GenuiSurfaceState extends State<GenuiSurface> {
       );
       if (reSerialized != widget.body) {
         _ingest(widget.body);
+        _markdownEditorKey.currentState?.updateContent(_markdown);
       }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final components = _schema['components'];
-    final componentList = components is List ? components : const [];
+    final children = _renderRootChildren();
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(24, 24, 24, 48),
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 1100),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            for (final c in componentList) ...[
-              _renderComponent(c),
-              const SizedBox(height: 12),
-            ],
-            if (_markdown.isNotEmpty) ...[
-              const SizedBox(height: 16),
-              const SnHairline(),
-              const SizedBox(height: 16),
-              Text(
-                _markdown,
-                style: const TextStyle(
-                  fontFamily: SpaceNotesTheme.fontSans,
-                  fontSize: 14,
-                  color: SpaceNotesTheme.fg,
-                  height: 1.55,
-                ),
+      padding: const EdgeInsets.only(bottom: 80),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (children.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(32, 32, 32, 0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  for (final child in children) ...[
+                    child,
+                    const SizedBox(height: 24),
+                  ],
+                  const SizedBox(height: 12),
+                  const SnHairline(),
+                ],
               ),
-            ],
-          ],
-        ),
+            ),
+          QuillNoteEditor(
+            key: _markdownEditorKey,
+            initialContent: _markdown,
+            showToolbar: false,
+            scrollable: false,
+            onContentChanged: _onMarkdownChanged,
+          ),
+        ],
       ),
     );
   }
 
-  Widget _renderComponent(Object? raw) {
-    if (raw is! Map) return _unknown('not a component object');
+  List<Widget> _renderRootChildren() {
+    final components = _schema['components'];
+    if (components is! List) return const [];
+
+    if (GenuiNoteParser.isFlat(_schema)) {
+      final rootId = _schema['rootId'];
+      Map<String, dynamic>? root;
+      if (rootId is String) {
+        root = _findById(components, rootId);
+      } else {
+        final first = components.isNotEmpty ? components.first : null;
+        if (first is Map) {
+          root = Map<String, dynamic>.from(first);
+        }
+      }
+      if (root == null) return const [];
+      final childIds = root['children'];
+      if (childIds is! List) {
+        return [_renderById(_idOf(root))];
+      }
+      return [
+        for (final id in childIds)
+          if (id is String) _renderById(id),
+      ];
+    }
+
+    final out = <Widget>[];
+    for (var i = 0; i < components.length; i++) {
+      final c = components[i];
+      if (c is Map) out.add(_renderLegacy(c, legacyIndex: i));
+    }
+    return out;
+  }
+
+  Map<String, dynamic>? _findById(List components, String id) {
+    for (final c in components) {
+      if (c is Map && c['id'] == id) {
+        return Map<String, dynamic>.from(c);
+      }
+    }
+    return null;
+  }
+
+  String _idOf(Map component) {
+    final id = component['id'];
+    return id is String ? id : '';
+  }
+
+  Widget _renderById(String id) {
+    final components = _schema['components'];
+    if (components is! List) return _unknown('no components list');
+    final found = _findById(components, id);
+    if (found == null) return _unknown('component id "$id" not found');
+    return _renderComponent(found, id: id, isFlat: true);
+  }
+
+  Widget _renderLegacy(Map raw, {required int legacyIndex}) {
+    return _renderComponent(raw, legacyIndex: legacyIndex, isFlat: false);
+  }
+
+  /// Single component renderer. In flat mode children are ID strings;
+  /// in legacy mode children are inline objects.
+  Widget _renderComponent(
+    Map raw, {
+    String? id,
+    int? legacyIndex,
+    required bool isFlat,
+  }) {
     final typeRaw = raw['component'];
     if (typeRaw is! String) return _unknown('missing "component" key');
     final type = typeRaw;
@@ -116,6 +192,22 @@ class _GenuiSurfaceState extends State<GenuiSurface> {
       return v is num ? v.toDouble() : null;
     }
 
+    /// Read a field that may be a literal or a binding `{"path": "/..."}`.
+    /// In legacy mode the field is always a literal.
+    String boundString(String k, [String fallback = '']) {
+      final v = raw[k];
+      if (v is String) return v;
+      if (isFlat && v is Map) {
+        final path = v['path'];
+        if (path is String) {
+          final resolved = JsonPointer.read(_schema['data'], path);
+          if (resolved is String) return resolved;
+          if (resolved != null) return resolved.toString();
+        }
+      }
+      return fallback;
+    }
+
     DashTrend trendOf(String? t) => switch (t) {
           'up' => DashTrend.up,
           'down' => DashTrend.down,
@@ -130,43 +222,34 @@ class _GenuiSurfaceState extends State<GenuiSurface> {
         };
 
     switch (type) {
-      // Inputs
       case 'TextField':
-        final key = str('valueBinding');
-        if (key.isEmpty) return _unknown('TextField missing valueBinding');
-        final readValue = GenuiNoteParser.readData(_schema, key);
-        final current = readValue is String ? readValue : '';
-        return DashTextField(
-          label: str('label', key),
-          value: current,
-          hint: strOrNull('hint'),
-          multiline: flag('multiline', true),
-          onChanged: (v) => _onDataChange(key, v),
-        );
+        return _renderTextField(raw, isFlat: isFlat);
 
-      // KPI / Metric
       case 'KpiCard':
         return DashKpiCard(
-          label: str('label'),
-          value: str('value'),
+          label: boundString('label'),
+          value: boundString('value'),
           delta: strOrNull('delta'),
           trend: trendOf(strOrNull('trend')),
           unit: strOrNull('unit'),
         );
       case 'StatBlock':
-        return DashStatBlock(label: str('label'), value: str('value'));
+        return DashStatBlock(
+          label: boundString('label'),
+          value: boundString('value'),
+        );
       case 'MetricRow':
         return DashMetricRow(
-          label: str('label'),
-          value: str('value'),
+          label: boundString('label'),
+          value: boundString('value'),
           delta: strOrNull('delta'),
           trend: trendOf(strOrNull('trend')),
+          last: flag('last'),
         );
 
-      // Charts
       case 'ProgressBar':
         return DashProgressBar(
-          label: str('label'),
+          label: boundString('label'),
           value: numOrNull('value') ?? 0,
           trailing: strOrNull('trailing'),
         );
@@ -189,11 +272,37 @@ class _GenuiSurfaceState extends State<GenuiSurface> {
               }).toList()
             : const <({String label, double value})>[];
         return DashBarChart(data: data);
+      case 'LineChart':
+        final seriesRaw = raw['series'];
+        final seriesList = seriesRaw is List
+            ? seriesRaw.whereType<Map>().map((m) {
+                final label = m['label'];
+                final dataRaw = m['data'];
+                final points = dataRaw is List
+                    ? dataRaw.whereType<Map>().map((p) {
+                        final x = p['x'];
+                        final y = p['y'];
+                        return (
+                          x: x is String ? x : '',
+                          y: y is num ? y.toDouble() : 0.0,
+                        );
+                      }).toList()
+                    : const <({String x, double y})>[];
+                return DashLineSeries(
+                  label: label is String ? label : '',
+                  data: points,
+                );
+              }).toList()
+            : const <DashLineSeries>[];
+        final stride = numOrNull('xLabelStride')?.toInt() ?? 1;
+        return DashLineChart(
+          series: seriesList,
+          xLabelStride: stride < 1 ? 1 : stride,
+        );
 
-      // Lists
       case 'ListItem':
         return DashListItem(
-          title: str('title'),
+          title: boundString('title'),
           subtitle: strOrNull('subtitle'),
           trailing: strOrNull('trailing'),
         );
@@ -220,7 +329,7 @@ class _GenuiSurfaceState extends State<GenuiSurface> {
           );
         }
         return DashPropertyCard(
-          title: str('title'),
+          title: boundString('title'),
           subtitle: strOrNull('subtitle'),
           body: strOrNull('body'),
           status: status,
@@ -229,56 +338,158 @@ class _GenuiSurfaceState extends State<GenuiSurface> {
       case 'TimelineEntry':
         return DashTimelineEntry(
           timestamp: str('timestamp'),
-          text: str('text'),
+          text: boundString('text'),
           last: flag('last'),
         );
       case 'CountdownItem':
         return DashCountdownItem(
-          title: str('title'),
+          title: boundString('title'),
           due: str('due'),
           relative: str('relative'),
         );
 
-      // Status
       case 'StatusBadge':
         return DashStatusBadge(
-            label: str('label'), tone: toneOf(strOrNull('tone')));
+          label: boundString('label'),
+          tone: toneOf(strOrNull('tone')),
+        );
       case 'TagChip':
-        return DashTagChip(label: str('label'));
+        return DashTagChip(label: boundString('label'));
 
-      // Actions
       case 'ActionButton':
-        return DashActionButton(label: str('label'), onPressed: () {});
+        return DashActionButton(
+          label: boundString('label'),
+          onPressed: () {},
+        );
       case 'LinkRow':
         return DashLinkRow(
-            label: str('label'), trailing: strOrNull('trailing'));
+          label: boundString('label'),
+          trailing: strOrNull('trailing'),
+        );
 
-      // Layout
       case 'Markdown':
-        return DashMarkdown(text: str('text'));
+        return DashMarkdown(
+          text: str('text'),
+          onChanged: _markdownEditor(id: id, legacyIndex: legacyIndex),
+        );
       case 'SectionHeader':
         return DashSectionHeader(
-            title: str('title'), subtitle: strOrNull('subtitle'));
-      case 'Surface':
-        final childrenRaw = raw['children'];
-        final children =
-            childrenRaw is List ? childrenRaw : const <Object?>[];
-        return DashSurface(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              for (final ch in children) ...[
-                _renderComponent(ch),
-                const SizedBox(height: 8),
-              ],
-            ],
-          ),
+          title: boundString('title'),
+          subtitle: strOrNull('subtitle'),
         );
+      case 'Surface':
+      case 'Column':
+        return _renderContainer(raw,
+            isFlat: isFlat, padding: type == 'Surface', column: true);
+      case 'Row':
+        return _renderContainer(raw,
+            isFlat: isFlat, padding: false, column: false);
 
       default:
         return _unknown('unknown component "$type"');
     }
+  }
+
+  Widget _renderTextField(Map raw, {required bool isFlat}) {
+    final label = raw['label'];
+    final hint = raw['hint'];
+
+    if (isFlat) {
+      final valueField = raw['value'];
+      String? path;
+      String current = '';
+
+      if (valueField is Map) {
+        final p = valueField['path'];
+        if (p is String) {
+          path = p;
+          final resolved = JsonPointer.read(_schema['data'], p);
+          if (resolved is String) current = resolved;
+        }
+      } else if (valueField is String) {
+        current = valueField;
+      }
+
+      return DashTextField(
+        label: label is String ? label : (path ?? ''),
+        value: current,
+        hint: hint is String ? hint : null,
+        multiline: _flagOf(raw['multiline'], fallback: true),
+        onChanged: path == null ? (_) {} : (v) => _onPathWrite(path!, v),
+      );
+    }
+
+    final key = raw['valueBinding'];
+    if (key is! String || key.isEmpty) {
+      return _unknown('TextField missing valueBinding');
+    }
+    final readValue = GenuiNoteParser.readData(_schema, key);
+    final current = readValue is String ? readValue : '';
+    return DashTextField(
+      label: label is String ? label : key,
+      value: current,
+      hint: hint is String ? hint : null,
+      multiline: _flagOf(raw['multiline'], fallback: true),
+      onChanged: (v) => _onDataChange(key, v),
+    );
+  }
+
+  Widget _renderContainer(
+    Map raw, {
+    required bool isFlat,
+    required bool padding,
+    required bool column,
+  }) {
+    final childrenRaw = raw['children'];
+    final children = <Widget>[];
+
+    if (childrenRaw is List) {
+      for (final ch in childrenRaw) {
+        if (isFlat && ch is String) {
+          children.add(_renderById(ch));
+        } else if (!isFlat && ch is Map) {
+          children.add(_renderComponent(ch, isFlat: false));
+        }
+      }
+    }
+
+    final inner = column
+        ? Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              for (final c in children) ...[
+                c,
+                const SizedBox(height: 8),
+              ],
+            ],
+          )
+        : Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              for (final c in children) ...[
+                Flexible(child: c),
+                const SizedBox(width: 8),
+              ],
+            ],
+          );
+
+    if (padding) {
+      return DashSurface(
+        padding: const EdgeInsets.all(16),
+        child: inner,
+      );
+    }
+    return inner;
+  }
+
+  ValueChanged<String>? _markdownEditor({String? id, int? legacyIndex}) {
+    if (id != null) {
+      return (v) => _onFlatComponentFieldChange(id, 'text', v);
+    }
+    if (legacyIndex != null) {
+      return (v) => _onLegacyComponentFieldChange(legacyIndex, 'text', v);
+    }
+    return null;
   }
 
   Widget _unknown(String reason) {
@@ -317,8 +528,65 @@ class _GenuiSurfaceState extends State<GenuiSurface> {
     setState(() {
       _schema = GenuiNoteParser.writeData(_schema, key, value);
     });
+    _pushBody();
+  }
+
+  void _onPathWrite(String path, dynamic value) {
+    setState(() {
+      final currentData = _schema['data'];
+      final newData = JsonPointer.write(
+        currentData is Map<String, dynamic> ? currentData : <String, dynamic>{},
+        path,
+        value,
+      );
+      _schema = {..._schema, 'data': newData};
+    });
+    _pushBody();
+  }
+
+  void _onMarkdownChanged(String markdown) {
+    _markdown = markdown;
+    _pushBody();
+  }
+
+  void _onLegacyComponentFieldChange(int index, String field, dynamic value) {
+    final components = _schema['components'];
+    if (components is! List) return;
+    if (index < 0 || index >= components.length) return;
+    final component = components[index];
+    if (component is! Map) return;
+    final updated = Map<String, dynamic>.from(component);
+    updated[field] = value;
+    final newComponents = List<dynamic>.from(components);
+    newComponents[index] = updated;
+    _schema = {..._schema, 'components': newComponents};
+    _pushBody();
+  }
+
+  void _onFlatComponentFieldChange(String id, String field, dynamic value) {
+    final components = _schema['components'];
+    if (components is! List) return;
+    final newComponents = <dynamic>[];
+    for (final c in components) {
+      if (c is Map && c['id'] == id) {
+        final updated = Map<String, dynamic>.from(c);
+        updated[field] = value;
+        newComponents.add(updated);
+      } else {
+        newComponents.add(c);
+      }
+    }
+    _schema = {..._schema, 'components': newComponents};
+    _pushBody();
+  }
+
+  void _pushBody() {
     widget.onBodyChanged(GenuiNoteParser.serialize(
       GenuiNote(schema: _schema, markdown: _markdown),
     ));
+  }
+
+  bool _flagOf(dynamic v, {required bool fallback}) {
+    return v is bool ? v : fallback;
   }
 }

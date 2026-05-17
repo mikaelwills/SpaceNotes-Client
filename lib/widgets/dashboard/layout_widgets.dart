@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import '../../theme/spacenotes_theme.dart';
 import '../markdown_styles.dart';
+import '../quill_note_editor.dart';
 
 class DashSectionHeader extends StatelessWidget {
   final String title;
@@ -97,18 +98,28 @@ class DashWidgetGrid extends StatelessWidget {
 
 class DashMarkdown extends StatelessWidget {
   final String text;
+  final ValueChanged<String>? onChanged;
 
-  const DashMarkdown({super.key, required this.text});
+  const DashMarkdown({super.key, required this.text, this.onChanged});
 
   @override
   Widget build(BuildContext context) {
-    return MarkdownBody(
-      data: text,
-      selectable: false,
-      fitContent: false,
-      shrinkWrap: true,
-      styleSheet: SpaceMarkdownStyles.chatAssistant(context),
-      softLineBreak: true,
+    if (onChanged == null) {
+      return MarkdownBody(
+        data: text,
+        selectable: false,
+        fitContent: false,
+        shrinkWrap: true,
+        styleSheet: SpaceMarkdownStyles.chatAssistant(context),
+        softLineBreak: true,
+      );
+    }
+    return QuillNoteEditor(
+      initialContent: text,
+      showToolbar: false,
+      padding: EdgeInsets.zero,
+      scrollable: false,
+      onContentChanged: onChanged!,
     );
   }
 }

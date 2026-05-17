@@ -19,18 +19,36 @@ class GenuiNote {
 /// Note body layout (when `genui: true` in frontmatter):
 ///
 ///     ```genui
-///     {"components":[...],"data":{...}}
+///     {"catalogId":"spacenotes/v0","components":[...],"data":{...}}
 ///     ```
 ///
 ///     (optional markdown body below)
 ///
-/// The genui fenced block must appear before the markdown body.
+/// Schema shapes supported:
+///
+/// 1. **Flat A2UI-style** — components is an array of objects with `id`, each
+///    referenced by ID in `children` arrays. A `rootId` field (or the first
+///    component if omitted) is the entry point. Bindings use JSON Pointer
+///    objects: `{"path": "/foo"}`.
+///
+/// 2. **Legacy nested** — components is an array of objects with nested
+///    `children` arrays (objects, not IDs). Bindings use `valueBinding: "foo"`
+///    string keys against the `data` map.
+///
+/// Detection: a component with both `id` and no nested-object children, OR a
+/// schema with `rootId`, is treated as flat. Otherwise legacy. New notes
+/// should be flat; existing legacy notes keep rendering.
+///
+/// `catalogId` is optional. Default: `spacenotes/v0` (our domain widgets).
+///
 /// Canonical serialization is pretty-printed JSON with 2-space indent.
 class GenuiNoteParser {
   static final RegExp _genuiBlock =
       RegExp(r'^```genui\r?\n([\s\S]*?)\r?\n```\r?\n?', multiLine: false);
 
   static const JsonEncoder _encoder = JsonEncoder.withIndent('  ');
+
+  static const String defaultCatalogId = 'spacenotes/v0';
 
   /// Parse a note body into its genui schema + markdown body.
   /// Returns null if no genui block is found at the start.
@@ -73,7 +91,23 @@ class GenuiNoteParser {
     return buffer.toString();
   }
 
+  static String catalogIdOf(Map<String, dynamic> schema) {
+    final v = schema['catalogId'];
+    return v is String && v.isNotEmpty ? v : defaultCatalogId;
+  }
+
+  /// Returns true if the schema is in flat (A2UI-style) form.
+  static bool isFlat(Map<String, dynamic> schema) {
+    if (schema['rootId'] is String) return true;
+    final components = schema['components'];
+    if (components is! List || components.isEmpty) return false;
+    final first = components.first;
+    if (first is! Map) return false;
+    return first['id'] is String;
+  }
+
   /// Read or initialize a data value at the given binding key.
+  /// Legacy: key is a flat data-map key.
   static dynamic readData(Map<String, dynamic> schema, String key) {
     final data = schema['data'];
     if (data is Map<String, dynamic>) return data[key];
@@ -82,6 +116,7 @@ class GenuiNoteParser {
 
   /// Write a data value at the given binding key, creating the data map
   /// if needed. Returns a NEW schema map (immutable update).
+  /// Legacy: key is a flat data-map key.
   static Map<String, dynamic> writeData(
       Map<String, dynamic> schema, String key, dynamic value) {
     final newSchema = Map<String, dynamic>.from(schema);

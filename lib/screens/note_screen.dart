@@ -97,10 +97,7 @@ class _NoteScreenState extends ConsumerState<NoteScreen> {
   Widget _buildDesktopLayout(Note? note) {
     return Stack(
       children: [
-        Padding(
-          padding: const EdgeInsets.only(bottom: 80),
-          child: _buildEditor(note),
-        ),
+        _buildEditor(note),
         Positioned(
           left: 0,
           right: 0,
@@ -223,6 +220,7 @@ class _NoteScreenState extends ConsumerState<NoteScreen> {
         key: _quillKey,
         initialContent: content,
         showToolbar: PlatformUtils.isDesktopLayout(context),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
         onContentChanged: (markdown) {
           _currentContent = markdown;
           _debounceTimer?.cancel();

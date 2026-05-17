@@ -8,6 +8,7 @@ import '../providers/connection_providers.dart';
 import '../providers/chat_providers.dart';
 import '../dialogs/notes_list_dialogs.dart';
 import '../generated/note.dart';
+import 'desktop/desktop_shell.dart';
 import 'quill_note_editor.dart';
 import 'adaptive/platform_utils.dart';
 import 'primitives/primitives.dart';
@@ -51,6 +52,9 @@ class _NoteBottomBarState extends ConsumerState<NoteBottomBar> {
   }
 
   Widget _buildDesktopBar(bool isChatConnected) {
+    final sidebarCollapsed = ref.watch(sidebarCollapsedProvider);
+    final chatCollapsed = ref.watch(chatPanelCollapsedProvider);
+    final isFocusMode = sidebarCollapsed && chatCollapsed;
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
       decoration: const BoxDecoration(
@@ -69,6 +73,19 @@ class _NoteBottomBarState extends ConsumerState<NoteBottomBar> {
               icon: Icons.undo,
               onTap: () => widget.quillKey?.currentState?.undo(),
               semanticLabel: 'undo',
+              size: 36,
+            ),
+            const SizedBox(width: 8),
+            _buildTile(
+              icon: isFocusMode
+                  ? Icons.fullscreen_exit
+                  : Icons.fullscreen,
+              onTap: () {
+                final next = !isFocusMode;
+                ref.read(sidebarCollapsedProvider.notifier).state = next;
+                ref.read(chatPanelCollapsedProvider.notifier).state = next;
+              },
+              semanticLabel: isFocusMode ? 'exit focus mode' : 'focus mode',
               size: 36,
             ),
           ],

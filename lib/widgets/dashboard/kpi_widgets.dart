@@ -108,6 +108,7 @@ class DashMetricRow extends StatelessWidget {
   final String value;
   final String? delta;
   final DashTrend? trend;
+  final bool last;
 
   const DashMetricRow({
     super.key,
@@ -115,15 +116,19 @@ class DashMetricRow extends StatelessWidget {
     required this.value,
     this.delta,
     this.trend,
+    this.last = false,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         border: Border(
-          bottom: BorderSide(color: SpaceNotesTheme.hairline, width: 1),
+          bottom: BorderSide(
+            color: last ? Colors.transparent : SpaceNotesTheme.hairline,
+            width: 1,
+          ),
         ),
       ),
       child: Row(

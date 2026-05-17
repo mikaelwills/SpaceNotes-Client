@@ -13,6 +13,7 @@ import 'sidebar.dart';
 
 final sidebarCollapsedProvider = StateProvider<bool>((ref) => false);
 final sidebarWidthProvider = StateProvider<double>((ref) => 450.0);
+final chatPanelCollapsedProvider = StateProvider<bool>((ref) => false);
 
 class DesktopShell extends ConsumerStatefulWidget {
   final Widget child;
@@ -127,6 +128,7 @@ class _DesktopContentArea extends ConsumerWidget {
     }
 
     final openNoteId = ref.watch(currentNotePathProvider);
+    final chatPanelCollapsed = ref.watch(chatPanelCollapsedProvider);
 
     return Row(
       children: [
@@ -138,10 +140,11 @@ class _DesktopContentArea extends ConsumerWidget {
             ],
           ),
         ),
-        NoteChatPanel(
-          notePath: openNoteId ?? '',
-          isDesktop: true,
-        ),
+        if (!chatPanelCollapsed)
+          NoteChatPanel(
+            notePath: openNoteId ?? '',
+            isDesktop: true,
+          ),
       ],
     );
   }
