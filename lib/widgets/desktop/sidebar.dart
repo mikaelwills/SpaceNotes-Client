@@ -888,63 +888,6 @@ class _NoteTreeItem extends ConsumerWidget {
     this.isMatch = false,
   });
 
-  void _handleNoteAction(
-      BuildContext context, WidgetRef ref, Note note, String action) async {
-    final repo = ref.read(notesRepositoryProvider);
-    switch (action) {
-      case 'rename':
-        final nameWithoutExt = note.name.endsWith('.md')
-            ? note.name.substring(0, note.name.length - 3)
-            : note.name;
-        final controller = TextEditingController(text: nameWithoutExt);
-        final result = await showDialog<String>(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            title: const Text('Rename Note'),
-            content: TextField(
-              controller: controller,
-              autofocus: true,
-              style: SpaceNotesTextStyles.terminal,
-              decoration: const InputDecoration(
-                hintText: 'Note name',
-              ),
-              onSubmitted: (value) => Navigator.of(ctx).pop(value),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(ctx).pop(),
-                child: Text('Cancel',
-                    style: SpaceNotesTextStyles.terminal
-                        .copyWith(color: SpaceNotesTheme.textSecondary)),
-              ),
-              TextButton(
-                onPressed: () => Navigator.of(ctx).pop(controller.text),
-                child: Text('Rename',
-                    style: SpaceNotesTextStyles.terminal
-                        .copyWith(color: SpaceNotesTheme.primary)),
-              ),
-            ],
-          ),
-        );
-        if (result != null &&
-            result.isNotEmpty &&
-            result != nameWithoutExt &&
-            context.mounted) {
-          final newName = result.endsWith('.md') ? result : '$result.md';
-          final folderPath = note.path.contains('/')
-              ? note.path.substring(0, note.path.lastIndexOf('/'))
-              : '';
-          final newPath = folderPath.isEmpty ? newName : '$folderPath/$newName';
-          await repo.moveNote(note.path, newPath);
-        }
-        break;
-      case 'delete':
-        context.read<DesktopNotesBloc>().add(CloseNote(note.id));
-        repo.deleteNote(note.id);
-        break;
-    }
-  }
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final displayName = note.name.endsWith('.md')
@@ -1031,6 +974,63 @@ class _NoteTreeItem extends ConsumerWidget {
         _handleNoteAction(context, ref, note, action);
       },
     );
+  }
+
+  void _handleNoteAction(
+      BuildContext context, WidgetRef ref, Note note, String action) async {
+    final repo = ref.read(notesRepositoryProvider);
+    switch (action) {
+      case 'rename':
+        final nameWithoutExt = note.name.endsWith('.md')
+            ? note.name.substring(0, note.name.length - 3)
+            : note.name;
+        final controller = TextEditingController(text: nameWithoutExt);
+        final result = await showDialog<String>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text('Rename Note'),
+            content: TextField(
+              controller: controller,
+              autofocus: true,
+              style: SpaceNotesTextStyles.terminal,
+              decoration: const InputDecoration(
+                hintText: 'Note name',
+              ),
+              onSubmitted: (value) => Navigator.of(ctx).pop(value),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(),
+                child: Text('Cancel',
+                    style: SpaceNotesTextStyles.terminal
+                        .copyWith(color: SpaceNotesTheme.textSecondary)),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(controller.text),
+                child: Text('Rename',
+                    style: SpaceNotesTextStyles.terminal
+                        .copyWith(color: SpaceNotesTheme.primary)),
+              ),
+            ],
+          ),
+        );
+        if (result != null &&
+            result.isNotEmpty &&
+            result != nameWithoutExt &&
+            context.mounted) {
+          final newName = result.endsWith('.md') ? result : '$result.md';
+          final folderPath = note.path.contains('/')
+              ? note.path.substring(0, note.path.lastIndexOf('/'))
+              : '';
+          final newPath = folderPath.isEmpty ? newName : '$folderPath/$newName';
+          await repo.moveNote(note.path, newPath);
+        }
+        break;
+      case 'delete':
+        context.read<DesktopNotesBloc>().add(CloseNote(note.id));
+        repo.deleteNote(note.id);
+        break;
+    }
   }
 }
 
@@ -1363,6 +1363,68 @@ class _CollapsedIconButtonState extends State<_CollapsedIconButton> {
 class _SidebarFooter extends ConsumerWidget {
   const _SidebarFooter();
 
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final location = GoRouterState.of(context).uri.toString();
+    final onChat = location.startsWith('/notes/chat');
+    final onSessions = location.startsWith('/notes/sessions');
+    final onSettings = location == '/settings';
+    final onNotes = !onChat && !onSessions && !onSettings;
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(10, 4, 10, 10),
+      child: Row(
+        children: [
+          SnIconButton(
+            icon: const Icon(Icons.note_add_outlined),
+            onPressed: () => _createNote(context, ref),
+            tooltip: 'new note',
+          ),
+          const SizedBox(width: 4),
+          SnIconButton(
+            icon: const Icon(Icons.create_new_folder_outlined),
+            onPressed: () => _createFolder(context, ref),
+            tooltip: 'new folder',
+          ),
+          const SizedBox(width: 14),
+          Container(
+            width: 1,
+            height: 16,
+            color: SpaceNotesTheme.hairlineStrong,
+          ),
+          const SizedBox(width: 14),
+          SnIconButton(
+            icon: const Icon(Icons.notes_outlined),
+            onPressed: onNotes ? null : () => context.go('/notes'),
+            active: onNotes,
+            tooltip: 'notes',
+          ),
+          const SizedBox(width: 4),
+          SnIconButton(
+            icon: const Icon(Icons.chat_bubble_outline),
+            onPressed: onChat ? null : () => context.go('/notes/chat'),
+            active: onChat,
+            tooltip: 'chat',
+          ),
+          const SizedBox(width: 4),
+          SnIconButton(
+            icon: const Icon(Icons.terminal_outlined),
+            onPressed: onSessions ? null : () => context.go('/notes/sessions'),
+            active: onSessions,
+            tooltip: 'sessions',
+          ),
+          const Spacer(),
+          SnIconButton(
+            icon: const Icon(Icons.settings_outlined),
+            onPressed: onSettings ? null : () => context.go('/settings'),
+            active: onSettings,
+            tooltip: 'settings',
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _createNote(BuildContext context, WidgetRef ref) async {
     final repo = ref.read(notesRepositoryProvider);
     final now = DateTime.now();
@@ -1434,67 +1496,5 @@ class _SidebarFooter extends ConsumerWidget {
         await repo.createFolder(result);
       }
     }
-  }
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final location = GoRouterState.of(context).uri.toString();
-    final onChat = location.startsWith('/notes/chat');
-    final onSessions = location.startsWith('/notes/sessions');
-    final onSettings = location == '/settings';
-    final onNotes = !onChat && !onSessions && !onSettings;
-
-    return Container(
-      padding: const EdgeInsets.fromLTRB(10, 4, 10, 10),
-      child: Row(
-        children: [
-          SnIconButton(
-            icon: const Icon(Icons.note_add_outlined),
-            onPressed: () => _createNote(context, ref),
-            tooltip: 'new note',
-          ),
-          const SizedBox(width: 4),
-          SnIconButton(
-            icon: const Icon(Icons.create_new_folder_outlined),
-            onPressed: () => _createFolder(context, ref),
-            tooltip: 'new folder',
-          ),
-          const SizedBox(width: 14),
-          Container(
-            width: 1,
-            height: 16,
-            color: SpaceNotesTheme.hairlineStrong,
-          ),
-          const SizedBox(width: 14),
-          SnIconButton(
-            icon: const Icon(Icons.notes_outlined),
-            onPressed: onNotes ? null : () => context.go('/notes'),
-            active: onNotes,
-            tooltip: 'notes',
-          ),
-          const SizedBox(width: 4),
-          SnIconButton(
-            icon: const Icon(Icons.chat_bubble_outline),
-            onPressed: onChat ? null : () => context.go('/notes/chat'),
-            active: onChat,
-            tooltip: 'chat',
-          ),
-          const SizedBox(width: 4),
-          SnIconButton(
-            icon: const Icon(Icons.terminal_outlined),
-            onPressed: onSessions ? null : () => context.go('/notes/sessions'),
-            active: onSessions,
-            tooltip: 'sessions',
-          ),
-          const Spacer(),
-          SnIconButton(
-            icon: const Icon(Icons.settings_outlined),
-            onPressed: onSettings ? null : () => context.go('/settings'),
-            active: onSettings,
-            tooltip: 'settings',
-          ),
-        ],
-      ),
-    );
   }
 }

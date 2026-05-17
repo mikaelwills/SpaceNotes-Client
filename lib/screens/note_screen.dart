@@ -5,6 +5,8 @@ import 'package:spacetimedb_sdk/spacetimedb_sdk.dart';
 import '../generated/client.dart';
 import '../generated/note.dart';
 import '../providers/notes_providers.dart';
+import '../services/genui_note_parser.dart';
+import '../widgets/dashboard/genui_surface.dart';
 import '../widgets/quill_note_editor.dart';
 import '../widgets/note_bottom_bar.dart';
 import '../widgets/adaptive/platform_utils.dart';
@@ -200,6 +202,20 @@ class _NoteScreenState extends ConsumerState<NoteScreen> {
     if (_currentContent.isEmpty && note != null) {
       _currentContent = note.content;
       _lastSavedContent = note.content;
+    }
+
+    if (GenuiNoteParser.parse(content) != null) {
+      return GenuiSurface(
+        body: content,
+        onBodyChanged: (newBody) {
+          _currentContent = newBody;
+          _debounceTimer?.cancel();
+          _debounceTimer = Timer(const Duration(seconds: 1), () {
+            debugLogger.debug('NOTE', 'Debounce fired (genui): $_noteName');
+            _saveContent();
+          });
+        },
+      );
     }
 
     return KeyboardDismissOnScroll(

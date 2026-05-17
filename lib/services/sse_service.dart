@@ -26,6 +26,32 @@ class SSEService {
     return _eventController!.stream;
   }
 
+  bool get isConnected => _isConnected;
+
+  bool get isActive => _eventController != null && !_eventController!.isClosed;
+
+  void restartConnection() {
+    debugLogger.sse('Restart: Cleaning up old connection');
+    _reconnectTimer?.cancel();
+    _subscription?.cancel();
+
+    if (_eventController != null && !_eventController!.isClosed) {
+      _eventController!.close();
+    }
+
+    _isConnected = false;
+    _reconnectAttempts = 0;
+    _eventController = null;
+    debugLogger.sse('Restart: Ready for new connection');
+  }
+
+  void dispose() {
+    _reconnectTimer?.cancel();
+    _subscription?.cancel();
+    _eventController?.close();
+    _isConnected = false;
+  }
+
   void _connectToSSE() {
     _reconnectAttempts++;
     final sseUrl = '${_configCubit.baseUrl}${ConfigCubit.sseEndpoint}';
@@ -98,25 +124,6 @@ class SSEService {
         _connectToSSE();
       }
     });
-  }
-
-  bool get isConnected => _isConnected;
-
-  bool get isActive => _eventController != null && !_eventController!.isClosed;
-
-  void restartConnection() {
-    debugLogger.sse('Restart: Cleaning up old connection');
-    _reconnectTimer?.cancel();
-    _subscription?.cancel();
-
-    if (_eventController != null && !_eventController!.isClosed) {
-      _eventController!.close();
-    }
-
-    _isConnected = false;
-    _reconnectAttempts = 0;
-    _eventController = null;
-    debugLogger.sse('Restart: Ready for new connection');
   }
 
   // Fast path for text streaming - optimized for message.part.updated events
@@ -194,12 +201,5 @@ class SSEService {
     } catch (e) {
       return null;
     }
-  }
-
-  void dispose() {
-    _reconnectTimer?.cancel();
-    _subscription?.cancel();
-    _eventController?.close();
-    _isConnected = false;
   }
 }

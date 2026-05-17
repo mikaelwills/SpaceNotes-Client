@@ -114,7 +114,8 @@ class _DesktopContentArea extends ConsumerWidget {
     final isSettings = location.startsWith('/settings');
     final isConnect = location.startsWith('/connect');
     final isSessions = location.startsWith('/notes/sessions');
-    final isNotesView = !isChat && !isSettings && !isConnect && !isSessions;
+    final isNotesView =
+        !isChat && !isSettings && !isConnect && !isSessions;
 
     if (!isNotesView) {
       return Column(
@@ -129,11 +130,11 @@ class _DesktopContentArea extends ConsumerWidget {
 
     return Row(
       children: [
-        Expanded(
+        const Expanded(
           child: Column(
             children: [
-              const _DesktopTopBar(showTabs: true),
-              const Expanded(child: DesktopNoteView()),
+              _DesktopTopBar(showTabs: true),
+              Expanded(child: DesktopNoteView()),
             ],
           ),
         ),
@@ -150,35 +151,6 @@ class _DesktopTopBar extends ConsumerWidget {
   final bool showTabs;
 
   const _DesktopTopBar({this.showTabs = false});
-
-  String _getBreadcrumb(String location, WidgetRef ref) {
-    if (location.startsWith('/notes/note/')) {
-      final noteId = location.substring('/notes/note/'.length);
-      final note = ref.watch(noteByIdProvider(noteId));
-      if (note != null) {
-        return note.path;
-      }
-      return '';
-    }
-    if (location.startsWith('/notes/folder/')) {
-      final encodedPath = location.substring('/notes/folder/'.length);
-      final decodedPath = Uri.decodeComponent(encodedPath);
-      return decodedPath;
-    }
-    if (location == '/notes' || location == '/notes/') {
-      return 'all notes';
-    }
-    if (location == '/notes/chat') {
-      return 'chat';
-    }
-    if (location.startsWith('/notes/sessions')) {
-      return 'sessions';
-    }
-    if (location == '/settings') {
-      return 'settings';
-    }
-    return '';
-  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -234,5 +206,34 @@ class _DesktopTopBar extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  String _getBreadcrumb(String location, WidgetRef ref) {
+    if (location.startsWith('/notes/note/')) {
+      final noteId = location.substring('/notes/note/'.length);
+      final note = ref.watch(noteByIdProvider(noteId));
+      if (note != null) {
+        return note.path;
+      }
+      return '';
+    }
+    if (location.startsWith('/notes/folder/')) {
+      final encodedPath = location.substring('/notes/folder/'.length);
+      final decodedPath = Uri.decodeComponent(encodedPath);
+      return decodedPath;
+    }
+    if (location == '/notes' || location == '/notes/') {
+      return 'all notes';
+    }
+    if (location == '/notes/chat') {
+      return 'chat';
+    }
+    if (location.startsWith('/notes/sessions')) {
+      return 'sessions';
+    }
+    if (location == '/settings') {
+      return 'settings';
+    }
+    return '';
   }
 }

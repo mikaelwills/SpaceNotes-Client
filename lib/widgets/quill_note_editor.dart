@@ -87,15 +87,47 @@ class QuillNoteEditorState extends State<QuillNoteEditor> {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        if (widget.showToolbar) _buildCollapsibleToolbar(),
+        if (widget.showToolbar) buildCollapsibleToolbar(),
         Expanded(
-          child: _isRawMode ? _buildRawEditor() : _buildQuillEditor(),
+          child: _isRawMode ? buildRawEditor() : buildQuillEditor(),
         ),
       ],
     );
   }
 
-  Widget _buildRawEditor() {
+  void updateContent(String markdown) {
+    if (_isUpdatingFromParent) return;
+    _isUpdatingFromParent = true;
+    try {
+      _applyExternalMarkdown(markdown);
+    } catch (e) {
+      debugLogger.error('EDITOR', 'Error updating content: $e');
+    } finally {
+      _isUpdatingFromParent = false;
+    }
+  }
+
+  String getMarkdown() {
+    try {
+      return _deltaToMd.convert(_controller.document.toDelta());
+    } catch (e) {
+      debugLogger.error('EDITOR', 'Error getting markdown: $e');
+      return '';
+    }
+  }
+
+  void undo() {
+    _controller.undo();
+  }
+
+  void redo() {
+    _controller.redo();
+  }
+
+  bool get canUndo => _controller.hasUndo;
+  bool get canRedo => _controller.hasRedo;
+
+  Widget buildRawEditor() {
     return ScrollConfiguration(
       behavior: ScrollConfiguration.of(context).copyWith(scrollbars: false),
       child: SingleChildScrollView(
@@ -133,7 +165,7 @@ class QuillNoteEditorState extends State<QuillNoteEditor> {
     );
   }
 
-  Widget _buildQuillEditor() {
+  Widget buildQuillEditor() {
     return ScrollConfiguration(
       behavior: ScrollConfiguration.of(context).copyWith(scrollbars: false),
       child: QuillEditor.basic(
@@ -275,7 +307,7 @@ class QuillNoteEditorState extends State<QuillNoteEditor> {
     );
   }
 
-  Widget _buildCollapsibleToolbar() {
+  Widget buildCollapsibleToolbar() {
     return SizedBox(
       height: 44,
       child: Row(
@@ -373,18 +405,6 @@ class QuillNoteEditorState extends State<QuillNoteEditor> {
     );
   }
 
-  void updateContent(String markdown) {
-    if (_isUpdatingFromParent) return;
-    _isUpdatingFromParent = true;
-    try {
-      _applyExternalMarkdown(markdown);
-    } catch (e) {
-      debugLogger.error('EDITOR', 'Error updating content: $e');
-    } finally {
-      _isUpdatingFromParent = false;
-    }
-  }
-
   void _applyExternalMarkdown(String markdown) {
     final hadFocus = _focusNode.hasFocus;
     final previousSelection = _controller.selection;
@@ -401,26 +421,6 @@ class QuillNoteEditorState extends State<QuillNoteEditor> {
       _controller.updateSelection(previousSelection, ChangeSource.local);
     } catch (_) {}
   }
-
-  String getMarkdown() {
-    try {
-      return _deltaToMd.convert(_controller.document.toDelta());
-    } catch (e) {
-      debugLogger.error('EDITOR', 'Error getting markdown: $e');
-      return '';
-    }
-  }
-
-  void undo() {
-    _controller.undo();
-  }
-
-  void redo() {
-    _controller.redo();
-  }
-
-  bool get canUndo => _controller.hasUndo;
-  bool get canRedo => _controller.hasRedo;
 
   void _attachDocumentListener() {
     _documentChangesSubscription?.cancel();

@@ -31,7 +31,6 @@ class ChatMessageList<T> extends StatefulWidget {
 class ChatMessageListState<T> extends State<ChatMessageList<T>> {
   ScrollController? _ownScrollController;
   bool _showScrollButton = false;
-  bool _autoScrollEnabled = true;
 
   @override
   void didUpdateWidget(ChatMessageList<T> oldWidget) {
@@ -71,9 +70,6 @@ class ChatMessageListState<T> extends State<ChatMessageList<T>> {
                 if (_showScrollButton == isNearBottom) {
                   setState(() => _showScrollButton = !isNearBottom);
                 }
-                if (notification.dragDetails != null) {
-                  _autoScrollEnabled = isNearBottom;
-                }
               }
               return false;
             },
@@ -106,54 +102,37 @@ class ChatMessageListState<T> extends State<ChatMessageList<T>> {
           ),
         ),
         if (widget.showScrollToBottom && _showScrollButton)
-          _buildScrollToBottomButton(),
-      ],
-    );
-  }
-
-  Widget _buildScrollToBottomButton() {
-    return Positioned(
-      bottom: 100,
-      right: 16,
-      child: GestureDetector(
-        onTap: forceScrollToBottom,
-        behavior: HitTestBehavior.opaque,
-        child: Tooltip(
-          message: 'scroll to bottom',
-          child: Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: SpaceNotesTheme.bgAlt,
-              border: Border.all(
-                color: SpaceNotesTheme.hairlineStrong,
-                width: 1,
+          Positioned(
+            bottom: 100,
+            right: 16,
+            child: GestureDetector(
+              onTap: forceScrollToBottom,
+              behavior: HitTestBehavior.opaque,
+              child: Tooltip(
+                message: 'scroll to bottom',
+                child: Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: SpaceNotesTheme.bgAlt,
+                    border: Border.all(
+                      color: SpaceNotesTheme.hairlineStrong,
+                      width: 1,
+                    ),
+                    borderRadius:
+                        BorderRadius.circular(SpaceNotesTheme.radiusDock),
+                  ),
+                  child: const Icon(
+                    Icons.arrow_downward,
+                    size: 16,
+                    color: SpaceNotesTheme.accent,
+                  ),
+                ),
               ),
-              borderRadius: BorderRadius.circular(SpaceNotesTheme.radiusDock),
-            ),
-            child: const Icon(
-              Icons.arrow_downward,
-              size: 16,
-              color: SpaceNotesTheme.accent,
             ),
           ),
-        ),
-      ),
+      ],
     );
-  }
-
-  ScrollController get _scrollController =>
-      widget.scrollController ?? (_ownScrollController ??= ScrollController());
-
-  void _syncScrollButtonVisibility() {
-    if (!mounted) return;
-    if (!_scrollController.hasClients) return;
-    final pos = _scrollController.position;
-    if (!pos.hasContentDimensions) return;
-    final isNearBottom = pos.pixels < 100;
-    if (_showScrollButton == isNearBottom) {
-      setState(() => _showScrollButton = !isNearBottom);
-    }
   }
 
   void scrollToBottom() {
@@ -169,7 +148,20 @@ class ChatMessageListState<T> extends State<ChatMessageList<T>> {
   }
 
   void forceScrollToBottom() {
-    _autoScrollEnabled = true;
     scrollToBottom();
+  }
+
+  ScrollController get _scrollController =>
+      widget.scrollController ?? (_ownScrollController ??= ScrollController());
+
+  void _syncScrollButtonVisibility() {
+    if (!mounted) return;
+    if (!_scrollController.hasClients) return;
+    final pos = _scrollController.position;
+    if (!pos.hasContentDimensions) return;
+    final isNearBottom = pos.pixels < 100;
+    if (_showScrollButton == isNearBottom) {
+      setState(() => _showScrollButton = !isNearBottom);
+    }
   }
 }

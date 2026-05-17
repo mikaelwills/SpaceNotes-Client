@@ -11,6 +11,7 @@ import '../../providers/notes_providers.dart';
 import '../../screens/session_chat.dart';
 import '../../theme/spacenotes_theme.dart';
 import '../primitives/primitives.dart';
+import '../sessions/session_row_content.dart';
 
 class DesktopSessionsLayout extends ConsumerWidget {
   final String? activeSessionId;
@@ -37,7 +38,7 @@ class DesktopSessionsLayout extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _Header(isConnected: isConnected),
-                _ColumnHeader(),
+                const _ColumnHeader(),
                 Expanded(
                   child: sessions.isEmpty
                       ? const _EmptyList()
@@ -173,8 +174,8 @@ class _Footer extends StatelessWidget {
             tooltip: 'chat',
           ),
           const SizedBox(width: 4),
-          SnIconButton(
-            icon: const Icon(Icons.terminal_outlined),
+          const SnIconButton(
+            icon: Icon(Icons.terminal_outlined),
             onPressed: null,
             active: true,
             tooltip: 'sessions',
@@ -285,9 +286,7 @@ class _SessionRow extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final activity = ref.watch(sessionActivityProvider(session.id));
-    final state = _resolveState(activity?.state);
-    final base = _baseName(session.id);
-    final host = _hostPart(session.id);
+    final state = resolveSessionState(activity?.state);
 
     return Material(
       color: isActive
@@ -296,194 +295,14 @@ class _SessionRow extends ConsumerWidget {
       child: InkWell(
         onTap: () =>
             context.go('/notes/sessions/${Uri.encodeComponent(session.id)}'),
-        child: Stack(
-          children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-              decoration: const BoxDecoration(
-                border: Border(
-                  bottom: BorderSide(color: SpaceNotesTheme.hairline, width: 1),
-                ),
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  SizedBox(
-                    width: 24,
-                    child: SnUiText(
-                      index.toString().padLeft(2, '0'),
-                      color: SpaceNotesTheme.dim,
-                      fontSize: 10,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Row(
-                          children: [
-                            _StateDot(state: state),
-                            const SizedBox(width: 8),
-                            Flexible(
-                              child: Text(
-                                base,
-                                style: const TextStyle(
-                                  fontFamily: SpaceNotesTheme.fontMono,
-                                  fontSize: 13,
-                                  color: SpaceNotesTheme.fg,
-                                  letterSpacing: 0.3,
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ],
-                        ),
-                        if (host.isNotEmpty) ...[
-                          const SizedBox(height: 4),
-                          Padding(
-                            padding: const EdgeInsets.only(left: 14),
-                            child: Text(
-                              host,
-                              style: const TextStyle(
-                                fontFamily: SpaceNotesTheme.fontMono,
-                                fontSize: 10,
-                                color: SpaceNotesTheme.dim,
-                                letterSpacing: 0.3,
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  SnUiText(
-                    _stateLabel(state),
-                    color: _stateColor(state),
-                    fontSize: 9,
-                    letterSpacing: 1,
-                  ),
-                ],
-              ),
-            ),
-            if (isActive)
-              const Positioned(
-                left: 0,
-                top: 0,
-                bottom: 0,
-                child: SizedBox(
-                  width: 2,
-                  child: ColoredBox(color: SpaceNotesTheme.accent),
-                ),
-              ),
-          ],
+        child: SessionRowContent(
+          index: index,
+          session: session,
+          state: state,
+          showHost: true,
+          isActive: isActive,
         ),
       ),
-    );
-  }
-}
-
-enum _SessionState { idle, thinking, running }
-
-_SessionState _resolveState(String? raw) {
-  switch (raw) {
-    case 'thinking':
-      return _SessionState.thinking;
-    case 'tool_use':
-      return _SessionState.running;
-    default:
-      return _SessionState.idle;
-  }
-}
-
-Color _stateColor(_SessionState state) => switch (state) {
-      _SessionState.idle => SpaceNotesTheme.dim,
-      _SessionState.thinking => SpaceNotesTheme.accent2,
-      _SessionState.running => SpaceNotesTheme.accent,
-    };
-
-String _stateLabel(_SessionState state) => switch (state) {
-      _SessionState.idle => 'IDLE',
-      _SessionState.thinking => 'THINKING',
-      _SessionState.running => 'TOOL · RUN',
-    };
-
-String _baseName(String sessionKey) {
-  final idx = sessionKey.indexOf('@');
-  return idx < 0 ? sessionKey : sessionKey.substring(0, idx);
-}
-
-String _hostPart(String sessionKey) {
-  final idx = sessionKey.indexOf('@');
-  return idx < 0 ? '' : sessionKey.substring(idx + 1);
-}
-
-class _StateDot extends StatefulWidget {
-  final _SessionState state;
-  const _StateDot({required this.state});
-
-  @override
-  State<_StateDot> createState() => _StateDotState();
-}
-
-class _StateDotState extends State<_StateDot>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1400),
-    );
-    if (widget.state != _SessionState.idle) {
-      _controller.repeat(reverse: true);
-    }
-  }
-
-  @override
-  void didUpdateWidget(covariant _StateDot oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.state != _SessionState.idle && !_controller.isAnimating) {
-      _controller.repeat(reverse: true);
-    } else if (widget.state == _SessionState.idle && _controller.isAnimating) {
-      _controller.stop();
-      _controller.value = 0;
-    }
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final color = _stateColor(widget.state);
-    return AnimatedBuilder(
-      animation: _controller,
-      builder: (_, __) {
-        final opacity = widget.state == _SessionState.idle
-            ? 1.0
-            : 0.35 + (1.0 - 0.35) * _controller.value;
-        return Opacity(
-          opacity: opacity,
-          child: Container(
-            width: 6,
-            height: 6,
-            decoration: BoxDecoration(
-              color: color,
-              shape: BoxShape.circle,
-            ),
-          ),
-        );
-      },
     );
   }
 }

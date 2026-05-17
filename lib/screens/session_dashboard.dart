@@ -1,4 +1,3 @@
-import 'package:fixnum/fixnum.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -10,6 +9,7 @@ import '../providers/connection_providers.dart';
 import '../providers/notes_providers.dart';
 import '../theme/spacenotes_theme.dart';
 import '../widgets/primitives/primitives.dart';
+import '../widgets/sessions/session_row_content.dart';
 import '../widgets/swipe_action.dart';
 
 class SessionDashboard extends ConsumerWidget {
@@ -37,9 +37,9 @@ class SessionDashboard extends ConsumerWidget {
                   itemCount: sessions.length,
                   itemBuilder: (context, index) {
                     final session = sessions[index];
-                    final base = _baseName(session.id);
+                    final base = sessionBaseName(session.id);
                     final baseCount =
-                        sessions.where((s) => _baseName(s.id) == base).length;
+                        sessions.where((s) => sessionBaseName(s.id) == base).length;
                     return _SessionRow(
                       key: ValueKey(session.id),
                       index: index + 1,
@@ -266,7 +266,7 @@ class _SessionRowState extends ConsumerState<_SessionRow>
   Widget build(BuildContext context) {
     final activity = ref.watch(sessionActivityProvider(widget.session.id));
     final targetSession = ref.watch(targetSessionProvider);
-    final state = _resolveState(activity?.state);
+    final state = resolveSessionState(activity?.state);
     final isActive = widget.session.id == targetSession;
 
     final showAction = _swipeOffset < 0 || _animationController.isAnimating;
@@ -335,48 +335,12 @@ class _SessionRowState extends ConsumerState<_SessionRow>
               color: rowBg,
               child: InkWell(
                 onTap: _handleTap,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 20, vertical: 16),
-                  decoration: const BoxDecoration(
-                    border: Border(
-                      bottom:
-                          BorderSide(color: SpaceNotesTheme.hairline, width: 1),
-                    ),
-                  ),
-                  child: Stack(
-                    children: [
-                      if (isActive)
-                        const Positioned(
-                          left: -20,
-                          top: -16,
-                          bottom: -16,
-                          child: _LeftRule(),
-                        ),
-                      Row(
-                        children: [
-                          SizedBox(
-                            width: 28,
-                            child: SnUiText(
-                              widget.index.toString().padLeft(2, '0'),
-                              color: SpaceNotesTheme.dim,
-                              fontSize: 10,
-                              letterSpacing: 0.5,
-                            ),
-                          ),
-                          const SizedBox(width: 14),
-                          Expanded(
-                              child: _NameBlock(
-                            session: widget.session,
-                            showHost: widget.showHost,
-                            state: state,
-                          )),
-                          const SizedBox(width: 12),
-                          _StateTail(state: state),
-                        ],
-                      ),
-                    ],
-                  ),
+                child: SessionRowContent(
+                  index: widget.index,
+                  session: widget.session,
+                  state: state,
+                  showHost: widget.showHost,
+                  isActive: isActive,
                 ),
               ),
             ),
@@ -412,16 +376,6 @@ class _SessionRowState extends ConsumerState<_SessionRow>
     await client.reducers.deleteSession(sessionId: widget.session.id);
   }
 
-  _SessionState _resolveState(String? raw) {
-    switch (raw) {
-      case 'thinking':
-        return _SessionState.thinking;
-      case 'tool_use':
-        return _SessionState.running;
-      default:
-        return _SessionState.idle;
-    }
-  }
 }
 
 class _LeftOnlyHorizontalDragGestureRecognizer
@@ -437,272 +391,4 @@ class _LeftOnlyHorizontalDragGestureRecognizer
       PointerDeviceKind pointerDeviceKind, double? deviceTouchSlop) {
     return globalDistanceMoved < -kTouchSlop;
   }
-}
-
-class _LeftRule extends StatelessWidget {
-  const _LeftRule();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(width: 2, color: SpaceNotesTheme.accent);
-  }
-}
-
-class _NameBlock extends StatelessWidget {
-  final Session session;
-  final bool showHost;
-  final _SessionState state;
-
-  const _NameBlock({
-    required this.session,
-    required this.showHost,
-    required this.state,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final base = _baseName(session.id);
-    final host = _hostPart(session.id);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            _StateDot(state: state),
-            const SizedBox(width: 8),
-            Flexible(
-              child: Text(
-                base,
-                style: const TextStyle(
-                  fontFamily: SpaceNotesTheme.fontMono,
-                  fontSize: 14,
-                  color: SpaceNotesTheme.fg,
-                  letterSpacing: 0.3,
-                ),
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            if (showHost && host.isNotEmpty) ...[
-              const SizedBox(width: 6),
-              Flexible(
-                child: Text(
-                  host,
-                  style: const TextStyle(
-                    fontFamily: SpaceNotesTheme.fontMono,
-                    fontSize: 10,
-                    color: SpaceNotesTheme.dim,
-                    letterSpacing: 0.3,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ],
-          ],
-        ),
-        const SizedBox(height: 6),
-        Row(
-          children: [
-            _MetaPair(label: 'reg', value: _timeAgo(session.createdAt)),
-            const SizedBox(width: 14),
-            _MetaPair(label: 'seen', value: _timeAgo(session.lastSeen)),
-            if (session.contextWindow.toInt() > 0) ...[
-              const SizedBox(width: 14),
-              _MetaPair(
-                label: 'ctx',
-                value: _formatContextUsage(
-                  session.contextUsed.toInt(),
-                  session.contextWindow.toInt(),
-                ),
-              ),
-            ],
-          ],
-        ),
-      ],
-    );
-  }
-}
-
-String _formatContextUsage(int used, int window) {
-  return '${_fmtTokens(used)}/${_fmtTokens(window)}';
-}
-
-String _fmtTokens(int n) {
-  if (n >= 1000000) {
-    final m = n / 1000000;
-    return '${m.toStringAsFixed(m >= 10 ? 0 : 1)}m';
-  }
-  if (n >= 1000) {
-    final k = n / 1000;
-    return '${k.toStringAsFixed(k >= 100 ? 0 : 1)}k';
-  }
-  return '$n';
-}
-
-class _MetaPair extends StatelessWidget {
-  final String label;
-  final String value;
-
-  const _MetaPair({required this.label, required this.value});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          label.toUpperCase(),
-          style: const TextStyle(
-            fontFamily: SpaceNotesTheme.fontMono,
-            fontSize: 10,
-            color: SpaceNotesTheme.dim,
-            letterSpacing: 0.4,
-          ),
-        ),
-        const SizedBox(width: 5),
-        Text(
-          value,
-          style: const TextStyle(
-            fontFamily: SpaceNotesTheme.fontMono,
-            fontSize: 10,
-            color: SpaceNotesTheme.muted,
-            letterSpacing: 0.4,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _StateDot extends StatefulWidget {
-  final _SessionState state;
-  const _StateDot({required this.state});
-
-  @override
-  State<_StateDot> createState() => _StateDotState();
-}
-
-class _StateDotState extends State<_StateDot>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1400),
-    );
-    if (widget.state != _SessionState.idle) {
-      _controller.repeat(reverse: true);
-    }
-  }
-
-  @override
-  void didUpdateWidget(covariant _StateDot oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.state != _SessionState.idle && !_controller.isAnimating) {
-      _controller.repeat(reverse: true);
-    } else if (widget.state == _SessionState.idle && _controller.isAnimating) {
-      _controller.stop();
-      _controller.value = 0;
-    }
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final color = _stateColor(widget.state);
-    return AnimatedBuilder(
-      animation: _controller,
-      builder: (_, __) {
-        final opacity = widget.state == _SessionState.idle
-            ? 1.0
-            : 0.35 + (1.0 - 0.35) * _controller.value;
-        return Opacity(
-          opacity: opacity,
-          child: Container(
-            width: 6,
-            height: 6,
-            decoration: BoxDecoration(
-              color: color,
-              borderRadius: BorderRadius.circular(3),
-            ),
-          ),
-        );
-      },
-    );
-  }
-}
-
-class _StateTail extends StatelessWidget {
-  final _SessionState state;
-  const _StateTail({required this.state});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.end,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          _stateLabel(state),
-          style: TextStyle(
-            fontFamily: SpaceNotesTheme.fontMono,
-            fontSize: 10,
-            color: _stateColor(state),
-            letterSpacing: 1,
-          ),
-        ),
-        const SizedBox(height: 4),
-        const Text(
-          '›',
-          style: TextStyle(
-            fontFamily: SpaceNotesTheme.fontMono,
-            fontSize: 12,
-            color: SpaceNotesTheme.dim,
-            height: 1,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-enum _SessionState { idle, thinking, running }
-
-Color _stateColor(_SessionState state) => switch (state) {
-      _SessionState.idle => SpaceNotesTheme.dim,
-      _SessionState.thinking => SpaceNotesTheme.accent2,
-      _SessionState.running => SpaceNotesTheme.accent,
-    };
-
-String _stateLabel(_SessionState state) => switch (state) {
-      _SessionState.idle => 'IDLE',
-      _SessionState.thinking => 'THINKING',
-      _SessionState.running => 'TOOL · RUN',
-    };
-
-String _baseName(String sessionKey) {
-  final idx = sessionKey.indexOf('@');
-  return idx < 0 ? sessionKey : sessionKey.substring(0, idx);
-}
-
-String _hostPart(String sessionKey) {
-  final idx = sessionKey.indexOf('@');
-  return idx < 0 ? '' : sessionKey.substring(idx + 1);
-}
-
-String _timeAgo(Int64 ts) {
-  final dt = timestampToDateTime(ts);
-  final diff = DateTime.now().difference(dt);
-  if (diff.inSeconds < 60) return '${diff.inSeconds}s';
-  if (diff.inMinutes < 60) return '${diff.inMinutes}m';
-  if (diff.inHours < 24) return '${diff.inHours}h';
-  return '${diff.inDays}d';
 }

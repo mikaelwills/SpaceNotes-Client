@@ -13,12 +13,6 @@ class PlatformLogStorage {
 
   static const int _maxChars = 5000;
 
-  String _formatTimestamp(DateTime dt) {
-    return '${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')}_'
-        '${dt.hour.toString().padLeft(2, '0')}-${dt.minute.toString().padLeft(2, '0')}-${dt.second.toString().padLeft(2, '0')}-'
-        '${dt.millisecond.toString().padLeft(3, '0')}';
-  }
-
   Future<void> initialize() async {
     final appDir = await getApplicationDocumentsDirectory();
     _logDir = Directory('${appDir.path}/logs');
@@ -44,28 +38,6 @@ class PlatformLogStorage {
     _sink?.writeln(line);
     _charCount += line.length + 1;
     _rotateIfNeeded();
-  }
-
-  void _rotateIfNeeded() {
-    if (_charCount >= _maxChars && !_isRotating && _logDir != null) {
-      _isRotating = true;
-
-      final oldSink = _sink;
-
-      _currentTimestamp = _formatTimestamp(DateTime.now());
-      _currentLogFile = File('${_logDir!.path}/debug_$_currentTimestamp.log');
-      _sink = _currentLogFile!.openWrite(mode: FileMode.append);
-      final header =
-          '=== SESSION (continued): ${DateTime.now().toIso8601String()} ===\n';
-      _sink!.writeln(header);
-      _charCount = header.length;
-
-      unawaited(Future(() async {
-        await oldSink?.flush();
-        await oldSink?.close();
-        _isRotating = false;
-      }));
-    }
   }
 
   Future<void> flush() async {
@@ -151,6 +123,34 @@ class PlatformLogStorage {
   }
 
   bool get isAvailable => true;
+
+  String _formatTimestamp(DateTime dt) {
+    return '${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')}_'
+        '${dt.hour.toString().padLeft(2, '0')}-${dt.minute.toString().padLeft(2, '0')}-${dt.second.toString().padLeft(2, '0')}-'
+        '${dt.millisecond.toString().padLeft(3, '0')}';
+  }
+
+  void _rotateIfNeeded() {
+    if (_charCount >= _maxChars && !_isRotating && _logDir != null) {
+      _isRotating = true;
+
+      final oldSink = _sink;
+
+      _currentTimestamp = _formatTimestamp(DateTime.now());
+      _currentLogFile = File('${_logDir!.path}/debug_$_currentTimestamp.log');
+      _sink = _currentLogFile!.openWrite(mode: FileMode.append);
+      final header =
+          '=== SESSION (continued): ${DateTime.now().toIso8601String()} ===\n';
+      _sink!.writeln(header);
+      _charCount = header.length;
+
+      unawaited(Future(() async {
+        await oldSink?.flush();
+        await oldSink?.close();
+        _isRotating = false;
+      }));
+    }
+  }
 }
 
 class LogFileData {

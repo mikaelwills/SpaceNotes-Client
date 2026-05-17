@@ -42,21 +42,6 @@ class SpaceNotesContextMenu extends StatelessWidget {
     );
   }
 
-  static String _labelFor(ContextMenuButtonType type) {
-    switch (type) {
-      case ContextMenuButtonType.cut:
-        return 'Cut';
-      case ContextMenuButtonType.copy:
-        return 'Copy';
-      case ContextMenuButtonType.paste:
-        return 'Paste';
-      case ContextMenuButtonType.selectAll:
-        return 'Select All';
-      default:
-        return '';
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final filtered = buttonItems
@@ -118,5 +103,20 @@ class SpaceNotesContextMenu extends StatelessWidget {
               ))
           .toList(),
     );
+  }
+
+  static String _labelFor(ContextMenuButtonType type) {
+    switch (type) {
+      case ContextMenuButtonType.cut:
+        return 'Cut';
+      case ContextMenuButtonType.copy:
+        return 'Copy';
+      case ContextMenuButtonType.paste:
+        return 'Paste';
+      case ContextMenuButtonType.selectAll:
+        return 'Select All';
+      default:
+        return '';
+    }
   }
 }

@@ -22,14 +22,6 @@ class MobileVideoCaptureService implements VideoCaptureService {
   @override
   bool get isCapturing => _isCapturing;
 
-  ResolutionPreset _resolutionForSize(int width, int height) {
-    final pixels = width * height;
-    if (pixels >= 1920 * 1080) return ResolutionPreset.max;
-    if (pixels >= 1280 * 720) return ResolutionPreset.high;
-    if (pixels >= 640 * 480) return ResolutionPreset.medium;
-    return ResolutionPreset.low;
-  }
-
   @override
   Future<void> start(
       {int fps = 10,
@@ -68,6 +60,29 @@ class MobileVideoCaptureService implements VideoCaptureService {
 
     await _camera!.startImageStream(_onFrame);
     debugLogger.info('CAPTURE', 'Started mobile capture at ${fps}fps');
+  }
+
+  @override
+  void stop() {
+    _isCapturing = false;
+    _camera?.stopImageStream();
+    debugLogger.info('CAPTURE', 'Stopped mobile capture');
+  }
+
+  @override
+  Future<void> dispose() async {
+    stop();
+    await _camera?.dispose();
+    _camera = null;
+    await _frameController.close();
+  }
+
+  ResolutionPreset _resolutionForSize(int width, int height) {
+    final pixels = width * height;
+    if (pixels >= 1920 * 1080) return ResolutionPreset.max;
+    if (pixels >= 1280 * 720) return ResolutionPreset.high;
+    if (pixels >= 640 * 480) return ResolutionPreset.medium;
+    return ResolutionPreset.low;
   }
 
   void _onFrame(CameraImage frame) {
@@ -162,20 +177,5 @@ class MobileVideoCaptureService implements VideoCaptureService {
     }
 
     return image;
-  }
-
-  @override
-  void stop() {
-    _isCapturing = false;
-    _camera?.stopImageStream();
-    debugLogger.info('CAPTURE', 'Stopped mobile capture');
-  }
-
-  @override
-  Future<void> dispose() async {
-    stop();
-    await _camera?.dispose();
-    _camera = null;
-    await _frameController.close();
   }
 }

@@ -1,3 +1,6 @@
+// ignore_for_file: implementation_imports
+// SdkLogger is not publicly exported from spacetimedb_sdk; reaching into
+// src/ is intentional to wire the SDK's log stream into debugLogger.
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';

@@ -108,14 +108,6 @@ class PerformanceTracker {
     );
   }
 
-  // Stop frequency tracking
-  static void _stopTracking() {
-    _frequencyTimer?.cancel();
-    _frequencyTimer = null;
-    _updateCount = 0;
-    _idleCount = 0;
-  }
-
   // Clear all performance data
   static void reset() {
     _timestamps.clear();
@@ -134,6 +126,14 @@ class PerformanceTracker {
     _updateCount = 0;
     _idleCount = 0;
     reset();
+  }
+
+  // Stop frequency tracking
+  static void _stopTracking() {
+    _frequencyTimer?.cancel();
+    _frequencyTimer = null;
+    _updateCount = 0;
+    _idleCount = 0;
   }
 }
 

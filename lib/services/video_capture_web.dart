@@ -44,6 +44,33 @@ class WebVideoCaptureService implements VideoCaptureService {
     }
   }
 
+  @override
+  void stop() {
+    _isCapturing = false;
+
+    if (_codecMode == 'h264') {
+      _jsStopEncoder();
+    } else {
+      _captureTimer?.cancel();
+      _captureTimer = null;
+
+      final stream = _video?.srcObject;
+      if (stream != null) {
+        final ms = stream as web.MediaStream;
+        final tracks = ms.getTracks().toDart;
+        for (final track in tracks) {
+          track.stop();
+        }
+      }
+    }
+  }
+
+  @override
+  Future<void> dispose() async {
+    stop();
+    await _frameController.close();
+  }
+
   void _startH264(int width, int height, int fps) {
     final onFrame = ((JSUint8Array jsData, bool isKeyframe, int size) {
       if (!_isCapturing) return;
@@ -109,33 +136,6 @@ class WebVideoCaptureService implements VideoCaptureService {
 
     _frameController
         .add(CapturedFrame(data: bytes, codec: 0, isKeyframe: true));
-  }
-
-  @override
-  void stop() {
-    _isCapturing = false;
-
-    if (_codecMode == 'h264') {
-      _jsStopEncoder();
-    } else {
-      _captureTimer?.cancel();
-      _captureTimer = null;
-
-      final stream = _video?.srcObject;
-      if (stream != null) {
-        final ms = stream as web.MediaStream;
-        final tracks = ms.getTracks().toDart;
-        for (final track in tracks) {
-          track.stop();
-        }
-      }
-    }
-  }
-
-  @override
-  Future<void> dispose() async {
-    stop();
-    await _frameController.close();
   }
 }
 

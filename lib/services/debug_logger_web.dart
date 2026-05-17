@@ -11,12 +11,6 @@ class PlatformLogStorage {
 
   static const int _maxChars = 5000;
 
-  String _formatTimestamp(DateTime dt) {
-    return '${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')}_'
-        '${dt.hour.toString().padLeft(2, '0')}-${dt.minute.toString().padLeft(2, '0')}-${dt.second.toString().padLeft(2, '0')}-'
-        '${dt.millisecond.toString().padLeft(3, '0')}';
-  }
-
   Future<void> initialize() async {
     await startNewLogFile();
   }
@@ -38,22 +32,6 @@ class PlatformLogStorage {
     _currentSession?.lines.add(line);
     _charCount += line.length + 1;
     _rotateIfNeeded();
-  }
-
-  void _rotateIfNeeded() {
-    if (_charCount >= _maxChars && _currentSession != null) {
-      final timestamp = _formatTimestamp(DateTime.now());
-      final header =
-          '=== SESSION (continued): ${DateTime.now().toIso8601String()} ===\n';
-
-      _currentSession = _LogSession(timestamp: timestamp, lines: [header]);
-      _sessions.add(_currentSession!);
-      _charCount = header.length;
-
-      if (_sessions.length > 10) {
-        _sessions.removeAt(0);
-      }
-    }
   }
 
   Future<void> flush() async {}
@@ -103,6 +81,28 @@ class PlatformLogStorage {
   }
 
   bool get isAvailable => true;
+
+  String _formatTimestamp(DateTime dt) {
+    return '${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')}_'
+        '${dt.hour.toString().padLeft(2, '0')}-${dt.minute.toString().padLeft(2, '0')}-${dt.second.toString().padLeft(2, '0')}-'
+        '${dt.millisecond.toString().padLeft(3, '0')}';
+  }
+
+  void _rotateIfNeeded() {
+    if (_charCount >= _maxChars && _currentSession != null) {
+      final timestamp = _formatTimestamp(DateTime.now());
+      final header =
+          '=== SESSION (continued): ${DateTime.now().toIso8601String()} ===\n';
+
+      _currentSession = _LogSession(timestamp: timestamp, lines: [header]);
+      _sessions.add(_currentSession!);
+      _charCount = header.length;
+
+      if (_sessions.length > 10) {
+        _sessions.removeAt(0);
+      }
+    }
+  }
 }
 
 class _LogSession {

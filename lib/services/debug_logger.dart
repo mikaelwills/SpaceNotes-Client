@@ -19,23 +19,6 @@ class DebugLogger {
     await _initFuture;
   }
 
-  Future<void> _init() async {
-    try {
-      _storage = platform.createPlatformStorage();
-      await _storage!.initialize();
-    } catch (e) {
-      debugPrint('Failed to initialize debug logger: $e');
-    }
-  }
-
-  String _time() {
-    final now = DateTime.now();
-    return '${now.hour.toString().padLeft(2, '0')}:'
-        '${now.minute.toString().padLeft(2, '0')}:'
-        '${now.second.toString().padLeft(2, '0')}.'
-        '${now.millisecond.toString().padLeft(3, '0')}';
-  }
-
   void log(String level, String category, String msg, [String? details]) {
     final line = details != null
         ? '${_time()} [$level][$category] $msg | $details'
@@ -89,6 +72,23 @@ class DebugLogger {
   }
 
   bool get isAvailable => _storage?.isAvailable ?? false;
+
+  Future<void> _init() async {
+    try {
+      _storage = platform.createPlatformStorage();
+      await _storage!.initialize();
+    } catch (e) {
+      debugPrint('Failed to initialize debug logger: $e');
+    }
+  }
+
+  String _time() {
+    final now = DateTime.now();
+    return '${now.hour.toString().padLeft(2, '0')}:'
+        '${now.minute.toString().padLeft(2, '0')}:'
+        '${now.second.toString().padLeft(2, '0')}.'
+        '${now.millisecond.toString().padLeft(3, '0')}';
+  }
 }
 
 final debugLogger = DebugLogger();

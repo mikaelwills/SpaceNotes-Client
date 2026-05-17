@@ -7,25 +7,6 @@ import '../blocs/config/config_cubit.dart';
 class WebConfigService {
   static Map<String, dynamic>? _cachedConfig;
 
-  static Future<Map<String, dynamic>?> _fetchConfig() async {
-    if (_cachedConfig != null) return _cachedConfig;
-
-    try {
-      final response = await http.get(Uri.parse('/config.json')).timeout(
-            const Duration(seconds: 2),
-          );
-      if (response.statusCode == 200) {
-        final decoded = jsonDecode(response.body);
-        if (decoded is! Map<String, dynamic>) return null;
-        _cachedConfig = decoded;
-        return _cachedConfig;
-      }
-    } catch (e) {
-      print('Could not fetch config.json: $e');
-    }
-    return null;
-  }
-
   static Future<void> tryAutoConfigureFromServer(
       SpacetimeDbNotesRepository repo) async {
     try {
@@ -59,5 +40,24 @@ class WebConfigService {
     } catch (e) {
       print('Could not auto-configure server: $e');
     }
+  }
+
+  static Future<Map<String, dynamic>?> _fetchConfig() async {
+    if (_cachedConfig != null) return _cachedConfig;
+
+    try {
+      final response = await http.get(Uri.parse('/config.json')).timeout(
+            const Duration(seconds: 2),
+          );
+      if (response.statusCode == 200) {
+        final decoded = jsonDecode(response.body);
+        if (decoded is! Map<String, dynamic>) return null;
+        _cachedConfig = decoded;
+        return _cachedConfig;
+      }
+    } catch (e) {
+      print('Could not fetch config.json: $e');
+    }
+    return null;
   }
 }

@@ -97,24 +97,6 @@ class ApiNote extends Equatable {
     );
   }
 
-  static String _extractNoteName(String path) {
-    final name = path.split('/').last;
-    return name.replaceAll('.md', '');
-  }
-
-  static String _extractFolderPath(String path) {
-    final parts = path.split('/');
-    if (parts.length <= 1) return '';
-    return '${parts.sublist(0, parts.length - 1).join('/')}/';
-  }
-
-  static int _calculateDepth(String path) {
-    final folderPath = _extractFolderPath(path);
-    if (folderPath.isEmpty) return 0;
-    final cleanPath = folderPath.substring(0, folderPath.length - 1);
-    return cleanPath.split('/').length;
-  }
-
   Map<String, dynamic> toJson() {
     return {
       'path': path,
@@ -166,6 +148,24 @@ class ApiNote extends Equatable {
       createdTime: createdTime ?? this.createdTime,
       modifiedTime: modifiedTime ?? this.modifiedTime,
     );
+  }
+
+  static String _extractNoteName(String path) {
+    final name = path.split('/').last;
+    return name.replaceAll('.md', '');
+  }
+
+  static String _extractFolderPath(String path) {
+    final parts = path.split('/');
+    if (parts.length <= 1) return '';
+    return '${parts.sublist(0, parts.length - 1).join('/')}/';
+  }
+
+  static int _calculateDepth(String path) {
+    final folderPath = _extractFolderPath(path);
+    if (folderPath.isEmpty) return 0;
+    final cleanPath = folderPath.substring(0, folderPath.length - 1);
+    return cleanPath.split('/').length;
   }
 }
 

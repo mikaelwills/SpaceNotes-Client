@@ -38,6 +38,10 @@ class SpacetimeDbNotesRepository {
   OfflineStorage? _offlineStorage;
   SpacetimeDbClient? _client;
   Future<void>? _connectingFuture;
+  bool _retryScheduled = false;
+  int _retryAttempt = 0;
+  bool _nonTableListenersRegistered = false;
+  bool _generalNotesFolderEnsured = false;
 
   final ValueNotifier<SpacetimeDbClient?> clientNotifier =
       ValueNotifier<SpacetimeDbClient?>(null);
@@ -46,6 +50,27 @@ class SpacetimeDbNotesRepository {
       BehaviorSubject<SyncState>.seeded(const SyncState());
 
   final List<StreamSubscription> _subscriptions = [];
+
+  static const _initialSubscriptions = [
+    'SELECT * FROM note',
+    'SELECT * FROM folder',
+    'SELECT * FROM call_session',
+    'SELECT * FROM connected_user',
+    'SELECT * FROM video_frame',
+    'SELECT * FROM audio_frame',
+    'SELECT * FROM session',
+    'SELECT * FROM session_activity',
+    'SELECT * FROM message',
+    'SELECT * FROM tool_event',
+    'SELECT * FROM permission_request',
+  ];
+
+  static const _connectionConfig = ConnectionConfig(
+    pingInterval: Duration(seconds: 15),
+    pongTimeout: Duration(seconds: 10),
+    autoReconnect: true,
+    connectTimeout: Duration(seconds: 15),
+  );
 
   SpacetimeDbNotesRepository({
     String? host,
@@ -68,222 +93,6 @@ class SpacetimeDbNotesRepository {
         await prefs.remove('spacenotes_host');
       }
     }
-  }
-
-  Future<void> _ensureConnected() async {
-    if (_client != null) {
-      final state = _client!.connection.state;
-      debugLogger.connection(
-          '_ensureConnected: client exists, state=${state.displayName}');
-
-      if (state.isConnected) {
-        return;
-      }
-
-      if (state.isConnecting) {
-        debugLogger.connection(
-            'In progress (${state.displayName}), client available for offline ops');
-        return;
-      }
-
-      if (state is stdb.AuthError) {
-        debugLogger.warning(
-            'CONN', 'Auth error - will clear token on reconnect');
-        resetConnection();
-      }
-
-      if (state is stdb.Disconnected) {
-        if (_client!.hasOfflineStorage) {
-          debugLogger.connection('Offline mode: using existing client');
-          return;
-        }
-        debugLogger.warning(
-            'CONN', 'DEGRADED CONNECTION: ${state.displayName}');
-        resetConnection();
-      }
-    }
-
-    if (_connectingFuture != null) {
-      await _connectingFuture;
-      return;
-    }
-
-    final configured = await isConfigured();
-
-    if (!configured) {
-      return;
-    }
-
-    _connectingFuture = _connect();
-    try {
-      await _connectingFuture;
-    } finally {
-      _connectingFuture = null;
-    }
-  }
-
-  Future<OfflineStorage?> _createOfflineStorage() async {
-    if (kIsWeb) {
-      debugLogger.info(
-          'STORAGE', 'Web platform - using InMemoryOfflineStorage');
-      return InMemoryOfflineStorage();
-    }
-
-    try {
-      final appDir = await getApplicationSupportDirectory();
-      final storagePath = '${appDir.path}/spacenotes_offline';
-      debugLogger.info(
-          'STORAGE', 'Native platform - using JsonFileStorage', storagePath);
-      final storage = JsonFileStorage(basePath: storagePath);
-      await storage.initialize();
-      return storage;
-    } catch (e) {
-      debugLogger.error(
-          'STORAGE', 'Failed to create offline storage', e.toString());
-      return null;
-    }
-  }
-
-  static const _initialSubscriptions = [
-    'SELECT * FROM note',
-    'SELECT * FROM folder',
-    'SELECT * FROM call_session',
-    'SELECT * FROM connected_user',
-    'SELECT * FROM video_frame',
-    'SELECT * FROM audio_frame',
-    'SELECT * FROM session',
-    'SELECT * FROM session_activity',
-    'SELECT * FROM message',
-    'SELECT * FROM tool_event',
-    'SELECT * FROM permission_request',
-  ];
-
-  static const _connectionConfig = ConnectionConfig(
-    pingInterval: Duration(seconds: 4),
-    pongTimeout: Duration(seconds: 5),
-    autoReconnect: true,
-    connectTimeout: Duration(seconds: 5),
-  );
-
-  Future<SpacetimeDbClient> _createAndConnectClient(
-    stdb.AuthTokenStore storage,
-  ) async {
-    final client = await SpacetimeDbClient.create(
-      host: _host!,
-      database: _database!,
-      authStorage: storage,
-      offlineStorage: _offlineStorage,
-      ssl: false,
-      config: _connectionConfig,
-    );
-
-    _client = client;
-    clientNotifier.value = client;
-
-    await client.connect(
-      initialSubscriptions: _initialSubscriptions,
-      subscriptionTimeout: const Duration(seconds: 10),
-    );
-
-    return client;
-  }
-
-  Future<void> _connect() async {
-    try {
-      debugLogger.connection(
-          'Connecting to SpacetimeDB', 'host=$_host, db=$_database');
-
-      final storage = _authStorage ?? SharedPreferencesTokenStore();
-
-      _offlineStorage ??= await _createOfflineStorage();
-
-      const maxRetries = 3;
-      const retryDelay = Duration(seconds: 2);
-
-      for (var attempt = 1; attempt <= maxRetries; attempt++) {
-        try {
-          await _createAndConnectClient(storage);
-          break;
-        } on SpacetimeDbAuthException {
-          debugLogger.warning(
-              'AUTH', 'Auth failure (401) - clearing token and retrying');
-          await storage.clearToken();
-          await _createAndConnectClient(storage);
-          debugLogger.connection('Reconnected with fresh anonymous identity');
-          break;
-        } catch (e) {
-          if (attempt < maxRetries) {
-            debugLogger.warning('CONN',
-                'Attempt $attempt failed: $e, retrying in ${retryDelay.inSeconds}s');
-            await Future.delayed(retryDelay);
-          } else {
-            rethrow;
-          }
-        }
-      }
-
-      final isConnected = _client!.connection.state.isConnected;
-      if (isConnected) {
-        debugLogger.connection('Successfully connected to SpacetimeDB');
-      } else {
-        debugLogger
-            .connection('Operating in offline mode (cached data available)');
-      }
-
-      _registerNonTableListeners();
-
-      if (isConnected) {
-        await ensureGeneralNotesFolder();
-      }
-    } on SpacetimeDbException catch (e) {
-      debugLogger.error(
-          'CONN', 'Error connecting to SpacetimeDB', e.toString());
-      rethrow;
-    }
-  }
-
-  bool _nonTableListenersRegistered = false;
-
-  /// Listeners that are not watchable via the per-table ValueNotifier API.
-  /// Table row/event watching happens directly in providers via `client.note.rows`
-  /// and `client.note.lastBatch`.
-  void _registerNonTableListeners() {
-    if (_client == null) return;
-    if (_nonTableListenersRegistered) return;
-    _nonTableListenersRegistered = true;
-
-    if (_client!.hasOfflineStorage) {
-      final syncStateSub = _client!.onSyncStateChanged.listen((state) {
-        debugLogger.debug(
-          'SYNC_SDK',
-          'SDK sync state changed: isSyncing=${state.isSyncing}, pending=${state.pendingCount}, hasError=${state.hasError}',
-        );
-        _syncStateSubject.add(state);
-      });
-      _subscriptions.add(syncStateSub);
-      final initialState = _client!.syncState;
-      _syncStateSubject.add(initialState);
-    }
-
-    final connectionStateSub =
-        _client!.connection.onStateChanged.listen((state) {
-      debugLogger.connection('state -> ${state.displayName}');
-      if (state is stdb.AuthError) {
-        debugLogger.warning('AUTH',
-            'Auth error detected - auto-clearing token and reconnecting');
-        _handleAuthError();
-      }
-    });
-    _subscriptions.add(connectionStateSub);
-
-    debugLogger.sync('Non-table listeners registered');
-  }
-
-  Future<void> _handleAuthError() async {
-    final storage = _authStorage ?? SharedPreferencesTokenStore();
-    await storage.clearToken();
-    resetConnection();
-    await connectAndGetInitialData();
   }
 
   /// Watch sync state for offline mutation status
@@ -541,8 +350,6 @@ class SpacetimeDbNotesRepository {
     }
   }
 
-  bool _generalNotesFolderEnsured = false;
-
   Future<void> ensureGeneralNotesFolder() async {
     if (_generalNotesFolderEnsured) return;
 
@@ -757,6 +564,11 @@ class SpacetimeDbNotesRepository {
       return;
     }
 
+    if (_retryScheduled) {
+      debugLogger.connection('tryReconnect: retry already scheduled, returning');
+      return;
+    }
+
     if (state.isConnected) {
       // State says connected but iOS/Android may have silently killed the
       // socket's read-half while backgrounded. Force a round-trip probe;
@@ -778,6 +590,7 @@ class SpacetimeDbNotesRepository {
       debugLogger.connection('tryReconnect: checkHealth=$healthy');
       if (healthy) {
         debugLogger.connection('checkHealth ok, skipping reconnect');
+        _retryAttempt = 0;
         return;
       }
       debugLogger.warning(
@@ -792,6 +605,7 @@ class SpacetimeDbNotesRepository {
       debugLogger.connection(
         'tryReconnect: reconnect() completed, state=${_client!.connection.state.displayName}',
       );
+      _retryAttempt = 0;
     } on SpacetimeDbAuthException {
       debugLogger.warning(
           'AUTH', 'Auth expired during reconnect, clearing token');
@@ -799,25 +613,16 @@ class SpacetimeDbNotesRepository {
       await storage.clearToken();
       await _client!.connection.reconnect();
       debugLogger.connection('Reconnected with fresh identity');
+      _retryAttempt = 0;
     } on SpacetimeDbException catch (e) {
-      debugLogger.warning('CONN', 'Reconnection failed: $e, retrying in 2s');
-      Future.delayed(const Duration(seconds: 2), () {
-        if (_client != null) {
-          final retryState = _client!.connection.state;
-          debugLogger.connection(
-            'tryReconnect retry: state=${retryState.displayName}, canRetry=${retryState.canRetry}',
-          );
-          if (retryState.canRetry) {
-            tryReconnect();
-          }
-        }
-      });
+      _scheduleRetry(e.toString());
     } catch (e, st) {
       debugLogger.error(
         'CONN',
         'tryReconnect: reconnect() threw unexpected exception',
         '$e\n$st',
       );
+      _scheduleRetry(e.toString());
     }
   }
 
@@ -876,5 +681,223 @@ class SpacetimeDbNotesRepository {
     _syncStateSubject.close();
     await _offlineStorage?.dispose();
     _offlineStorage = null;
+  }
+
+  Future<void> _ensureConnected() async {
+    if (_client != null) {
+      final state = _client!.connection.state;
+      debugLogger.connection(
+          '_ensureConnected: client exists, state=${state.displayName}');
+
+      if (state.isConnected) {
+        return;
+      }
+
+      if (state.isConnecting) {
+        debugLogger.connection(
+            'In progress (${state.displayName}), client available for offline ops');
+        return;
+      }
+
+      if (state is stdb.AuthError) {
+        debugLogger.warning(
+            'CONN', 'Auth error - will clear token on reconnect');
+        resetConnection();
+      }
+
+      if (state is stdb.Disconnected) {
+        if (_client!.hasOfflineStorage) {
+          debugLogger.connection('Offline mode: using existing client');
+          return;
+        }
+        debugLogger.warning(
+            'CONN', 'DEGRADED CONNECTION: ${state.displayName}');
+        resetConnection();
+      }
+    }
+
+    if (_connectingFuture != null) {
+      await _connectingFuture;
+      return;
+    }
+
+    final configured = await isConfigured();
+
+    if (!configured) {
+      return;
+    }
+
+    _connectingFuture = _connect();
+    try {
+      await _connectingFuture;
+    } finally {
+      _connectingFuture = null;
+    }
+  }
+
+  Future<OfflineStorage?> _createOfflineStorage() async {
+    if (kIsWeb) {
+      debugLogger.info(
+          'STORAGE', 'Web platform - using InMemoryOfflineStorage');
+      return InMemoryOfflineStorage();
+    }
+
+    try {
+      final appDir = await getApplicationSupportDirectory();
+      final storagePath = '${appDir.path}/spacenotes_offline';
+      debugLogger.info(
+          'STORAGE', 'Native platform - using JsonFileStorage', storagePath);
+      final storage = JsonFileStorage(basePath: storagePath);
+      await storage.initialize();
+      return storage;
+    } catch (e) {
+      debugLogger.error(
+          'STORAGE', 'Failed to create offline storage', e.toString());
+      return null;
+    }
+  }
+
+  Future<SpacetimeDbClient> _createAndConnectClient(
+    stdb.AuthTokenStore storage,
+  ) async {
+    final client = await SpacetimeDbClient.create(
+      host: _host!,
+      database: _database!,
+      authStorage: storage,
+      offlineStorage: _offlineStorage,
+      ssl: false,
+      config: _connectionConfig,
+    );
+
+    _client = client;
+    clientNotifier.value = client;
+
+    await client.connect(
+      initialSubscriptions: _initialSubscriptions,
+      subscriptionTimeout: const Duration(seconds: 10),
+    );
+
+    return client;
+  }
+
+  Future<void> _connect() async {
+    try {
+      debugLogger.connection(
+          'Connecting to SpacetimeDB', 'host=$_host, db=$_database');
+
+      final storage = _authStorage ?? SharedPreferencesTokenStore();
+
+      _offlineStorage ??= await _createOfflineStorage();
+
+      const maxRetries = 3;
+      const retryDelay = Duration(seconds: 2);
+
+      for (var attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+          await _createAndConnectClient(storage);
+          break;
+        } on SpacetimeDbAuthException {
+          debugLogger.warning(
+              'AUTH', 'Auth failure (401) - clearing token and retrying');
+          await storage.clearToken();
+          await _createAndConnectClient(storage);
+          debugLogger.connection('Reconnected with fresh anonymous identity');
+          break;
+        } catch (e) {
+          if (attempt < maxRetries) {
+            debugLogger.warning('CONN',
+                'Attempt $attempt failed: $e, retrying in ${retryDelay.inSeconds}s');
+            await Future.delayed(retryDelay);
+          } else {
+            rethrow;
+          }
+        }
+      }
+
+      final isConnected = _client!.connection.state.isConnected;
+      if (isConnected) {
+        debugLogger.connection('Successfully connected to SpacetimeDB');
+      } else {
+        debugLogger
+            .connection('Operating in offline mode (cached data available)');
+      }
+
+      _registerNonTableListeners();
+
+      if (isConnected) {
+        await ensureGeneralNotesFolder();
+      }
+    } on SpacetimeDbException catch (e) {
+      debugLogger.error(
+          'CONN', 'Error connecting to SpacetimeDB', e.toString());
+      rethrow;
+    }
+  }
+
+  /// Listeners that are not watchable via the per-table ValueNotifier API.
+  /// Table row/event watching happens directly in providers via `client.note.rows`
+  /// and `client.note.lastBatch`.
+  void _registerNonTableListeners() {
+    if (_client == null) return;
+    if (_nonTableListenersRegistered) return;
+    _nonTableListenersRegistered = true;
+
+    if (_client!.hasOfflineStorage) {
+      final syncStateSub = _client!.onSyncStateChanged.listen((state) {
+        debugLogger.debug(
+          'SYNC_SDK',
+          'SDK sync state changed: isSyncing=${state.isSyncing}, pending=${state.pendingCount}, hasError=${state.hasError}',
+        );
+        _syncStateSubject.add(state);
+      });
+      _subscriptions.add(syncStateSub);
+      final initialState = _client!.syncState;
+      _syncStateSubject.add(initialState);
+    }
+
+    final connectionStateSub =
+        _client!.connection.onStateChanged.listen((state) {
+      debugLogger.connection('state -> ${state.displayName}');
+      if (state is stdb.AuthError) {
+        debugLogger.warning('AUTH',
+            'Auth error detected - auto-clearing token and reconnecting');
+        _handleAuthError();
+      }
+    });
+    _subscriptions.add(connectionStateSub);
+
+    debugLogger.sync('Non-table listeners registered');
+  }
+
+  Future<void> _handleAuthError() async {
+    final storage = _authStorage ?? SharedPreferencesTokenStore();
+    await storage.clearToken();
+    resetConnection();
+    await connectAndGetInitialData();
+  }
+
+  /// Schedule the next reconnect attempt with capped exponential backoff.
+  /// Sequence: 2s, 4s, 8s, 15s, 30s, 60s, 60s, ...
+  void _scheduleRetry(String reason) {
+    if (_retryScheduled) return;
+    const ladder = [2, 4, 8, 15, 30, 60];
+    final delaySeconds = ladder[_retryAttempt.clamp(0, ladder.length - 1)];
+    _retryAttempt += 1;
+    _retryScheduled = true;
+    debugLogger.warning(
+      'CONN',
+      'Reconnection failed: $reason, retrying in ${delaySeconds}s (attempt $_retryAttempt)',
+    );
+    Future.delayed(Duration(seconds: delaySeconds), () {
+      _retryScheduled = false;
+      if (_client == null) return;
+      final retryState = _client!.connection.state;
+      debugLogger.connection(
+        'tryReconnect retry: state=${retryState.displayName}, canRetry=${retryState.canRetry}',
+      );
+      if (retryState.canRetry) {
+        tryReconnect();
+      }
+    });
   }
 }

@@ -166,6 +166,16 @@ class _ChatIndex {
   _SessionBucket bucketFor(String sessionId) =>
       _buckets.putIfAbsent(sessionId, _SessionBucket.new);
 
+  void dispose() {
+    client.message.rows.removeListener(_messageListener);
+    client.toolEvent.rows.removeListener(_toolListener);
+    client.permissionRequest.rows.removeListener(_permListener);
+    for (final b in _buckets.values) {
+      b.dispose();
+    }
+    _buckets.clear();
+  }
+
   void _rebuild() {
     final perSession = <String, List<ChatItem>>{};
 
@@ -199,16 +209,6 @@ class _ChatIndex {
         _buckets[sessionId]!.setItems(const []);
       }
     }
-  }
-
-  void dispose() {
-    client.message.rows.removeListener(_messageListener);
-    client.toolEvent.rows.removeListener(_toolListener);
-    client.permissionRequest.rows.removeListener(_permListener);
-    for (final b in _buckets.values) {
-      b.dispose();
-    }
-    _buckets.clear();
   }
 }
 
