@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'package:http/http.dart' as http;
+import 'package:http/browser_client.dart';
 import 'package:web/web.dart' as web;
 import '../repositories/spacetimedb_notes_repository.dart';
 import '../blocs/config/config_cubit.dart';
@@ -45,8 +45,9 @@ class WebConfigService {
   static Future<Map<String, dynamic>?> _fetchConfig() async {
     if (_cachedConfig != null) return _cachedConfig;
 
+    final client = BrowserClient();
     try {
-      final response = await http.get(Uri.parse('/config.json')).timeout(
+      final response = await client.get(Uri.parse('/config.json')).timeout(
             const Duration(seconds: 2),
           );
       if (response.statusCode == 200) {
@@ -57,6 +58,8 @@ class WebConfigService {
       }
     } catch (e) {
       print('Could not fetch config.json: $e');
+    } finally {
+      client.close();
     }
     return null;
   }

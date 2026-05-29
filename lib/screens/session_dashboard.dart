@@ -37,14 +37,11 @@ class SessionDashboard extends ConsumerWidget {
                   itemCount: sessions.length,
                   itemBuilder: (context, index) {
                     final session = sessions[index];
-                    final base = sessionBaseName(session.id);
-                    final baseCount =
-                        sessions.where((s) => sessionBaseName(s.id) == base).length;
                     return _SessionRow(
                       key: ValueKey(session.id),
                       index: index + 1,
                       session: session,
-                      showHost: baseCount > 1,
+                      showHost: true,
                     );
                   },
                 ),
