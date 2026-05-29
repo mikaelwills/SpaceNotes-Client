@@ -578,6 +578,34 @@ class Reducers {
         optimisticChanges: optimisticChanges, dropIfOffline: dropIfOffline);
   }
 
+  /// Calls the `request_question` reducer.
+  ///
+  /// Returns a [TransactionResult] on success. Throws
+  /// [SpacetimeDbReducerException] if the reducer returns `Failed` or
+  /// `InternalError`. The returned status is one of `Committed`,
+  /// `Pending` (queued to offline storage), or `Dropped` (skipped via
+  /// `dropIfOffline: true` while offline).
+  Future<TransactionResult> requestQuestion({
+    required String id,
+    required String sessionId,
+    required String question,
+    required String header,
+    required String options,
+    required bool multiSelect,
+    List<OptimisticChange>? optimisticChanges,
+    bool dropIfOffline = false,
+  }) async {
+    final encoder = BsatnEncoder();
+    encoder.writeString(id);
+    encoder.writeString(sessionId);
+    encoder.writeString(question);
+    encoder.writeString(header);
+    encoder.writeString(options);
+    encoder.writeBool(multiSelect);
+    return await _reducerCaller.call(requestQuestionDef.name, encoder.toBytes(),
+        optimisticChanges: optimisticChanges, dropIfOffline: dropIfOffline);
+  }
+
   /// Calls the `resolve_permission` reducer.
   ///
   /// Returns a [TransactionResult] on success. Throws
@@ -596,6 +624,27 @@ class Reducers {
     encoder.writeString(status);
     return await _reducerCaller.call(
         resolvePermissionDef.name, encoder.toBytes(),
+        optimisticChanges: optimisticChanges, dropIfOffline: dropIfOffline);
+  }
+
+  /// Calls the `respond_to_question` reducer.
+  ///
+  /// Returns a [TransactionResult] on success. Throws
+  /// [SpacetimeDbReducerException] if the reducer returns `Failed` or
+  /// `InternalError`. The returned status is one of `Committed`,
+  /// `Pending` (queued to offline storage), or `Dropped` (skipped via
+  /// `dropIfOffline: true` while offline).
+  Future<TransactionResult> respondToQuestion({
+    required String id,
+    required String response,
+    List<OptimisticChange>? optimisticChanges,
+    bool dropIfOffline = false,
+  }) async {
+    final encoder = BsatnEncoder();
+    encoder.writeString(id);
+    encoder.writeString(response);
+    return await _reducerCaller.call(
+        respondToQuestionDef.name, encoder.toBytes(),
         optimisticChanges: optimisticChanges, dropIfOffline: dropIfOffline);
   }
 
@@ -1125,6 +1174,20 @@ class Reducers {
     });
   }
 
+  StreamSubscription<void> onRequestQuestion(
+      void Function(EventContext ctx, String id, String sessionId,
+              String question, String header, String options, bool multiSelect)
+          callback) {
+    return _reducerEmitter.on(requestQuestionDef).listen((EventContext ctx) {
+      final event = ctx.event;
+      if (event is! ReducerEvent) return;
+      final args = event.reducerArgs;
+      if (args is! RequestQuestionArgs) return;
+      callback(ctx, args.id, args.sessionId, args.question, args.header,
+          args.options, args.multiSelect);
+    });
+  }
+
   StreamSubscription<void> onResolvePermission(
       void Function(EventContext ctx, String id, String status) callback) {
     return _reducerEmitter.on(resolvePermissionDef).listen((EventContext ctx) {
@@ -1133,6 +1196,17 @@ class Reducers {
       final args = event.reducerArgs;
       if (args is! ResolvePermissionArgs) return;
       callback(ctx, args.id, args.status);
+    });
+  }
+
+  StreamSubscription<void> onRespondToQuestion(
+      void Function(EventContext ctx, String id, String response) callback) {
+    return _reducerEmitter.on(respondToQuestionDef).listen((EventContext ctx) {
+      final event = ctx.event;
+      if (event is! ReducerEvent) return;
+      final args = event.reducerArgs;
+      if (args is! RespondToQuestionArgs) return;
+      callback(ctx, args.id, args.response);
     });
   }
 

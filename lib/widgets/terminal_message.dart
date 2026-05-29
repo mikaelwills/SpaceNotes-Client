@@ -4,6 +4,7 @@ import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../generated/message.dart';
 import '../generated/permission_request.dart';
+import '../generated/question_request.dart';
 import '../generated/tool_event.dart';
 import '../providers/chat_providers.dart';
 import '../theme/spacenotes_theme.dart';
@@ -15,6 +16,7 @@ Widget chatItemToWidget(BuildContext context, ChatItem item) {
     ChatMessageItem(:final message) => TerminalMessage(message: message),
     ChatToolItem(:final event) => ToolEventRow(event: event),
     ChatPermissionItem(:final request) => PermissionRow(request: request),
+    ChatQuestionItem(:final request) => QuestionRow(request: request),
   };
 }
 
@@ -23,6 +25,7 @@ Key chatItemKey(ChatItem item) {
     ChatMessageItem(:final message) => ValueKey('msg:${message.id}'),
     ChatToolItem(:final event) => ValueKey('tool:${event.id}'),
     ChatPermissionItem(:final request) => ValueKey('perm:${request.id}'),
+    ChatQuestionItem(:final request) => ValueKey('question:${request.id}'),
   };
 }
 
@@ -316,6 +319,144 @@ class PermissionRow extends ConsumerWidget {
                   ),
                 ),
               ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class QuestionRow extends ConsumerStatefulWidget {
+  final QuestionRequest request;
+
+  const QuestionRow({super.key, required this.request});
+
+  @override
+  ConsumerState<QuestionRow> createState() => _QuestionRowState();
+}
+
+class _QuestionRowState extends ConsumerState<QuestionRow> {
+  final Set<String> _selected = {};
+
+  List<String> get _options {
+    try {
+      final decoded = jsonDecode(widget.request.options);
+      if (decoded is List) {
+        return decoded.whereType<String>().toList();
+      }
+    } catch (_) {}
+    return const [];
+  }
+
+  void _submit(List<String> labels) {
+    if (labels.isEmpty) return;
+    respondToQuestion(ref, requestId: widget.request.id, labels: labels);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final multi = widget.request.multiSelect;
+    final header = widget.request.header;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 10, 32, 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Text(
+                'QUESTION',
+                style: TextStyle(
+                  fontFamily: SpaceNotesTheme.fontMono,
+                  fontSize: 10,
+                  color: SpaceNotesTheme.dim,
+                  letterSpacing: 1.5,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              if (header.isNotEmpty) ...[
+                const SizedBox(width: 10),
+                Text(
+                  header,
+                  style: const TextStyle(
+                    fontFamily: SpaceNotesTheme.fontMono,
+                    fontSize: 11,
+                    color: SpaceNotesTheme.fg,
+                    letterSpacing: 0.3,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            widget.request.question,
+            style: const TextStyle(
+              fontFamily: SpaceNotesTheme.fontSans,
+              fontSize: 14,
+              color: SpaceNotesTheme.fg,
+              height: 1.5,
+            ),
+          ),
+          const SizedBox(height: 10),
+          for (final label in _options) _option(label, multi),
+          if (multi) ...[
+            const SizedBox(height: 10),
+            SnButton(
+              label: 'submit',
+              accent: SpaceNotesTheme.accent,
+              variant: SnButtonVariant.outline,
+              onPressed: () => _submit(_selected.toList()),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _option(String label, bool multi) {
+    final checked = _selected.contains(label);
+    return InkWell(
+      onTap: () {
+        if (multi) {
+          setState(() {
+            if (checked) {
+              _selected.remove(label);
+            } else {
+              _selected.add(label);
+            }
+          });
+        } else {
+          _submit([label]);
+        }
+      },
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 7),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              multi ? (checked ? '[x] ' : '[ ] ') : '› ',
+              style: TextStyle(
+                fontFamily: SpaceNotesTheme.fontMono,
+                fontSize: 14,
+                color: checked ? SpaceNotesTheme.accent : SpaceNotesTheme.dim,
+                height: 1.45,
+              ),
+            ),
+            Expanded(
+              child: Text(
+                label,
+                style: const TextStyle(
+                  fontFamily: SpaceNotesTheme.fontSans,
+                  fontSize: 14,
+                  color: SpaceNotesTheme.fg,
+                  height: 1.45,
+                ),
+              ),
             ),
           ],
         ),

@@ -711,6 +711,52 @@ class RequestPermissionArgsDecoder
   }
 }
 
+class RequestQuestionArgs {
+  RequestQuestionArgs({
+    required this.id,
+    required this.sessionId,
+    required this.question,
+    required this.header,
+    required this.options,
+    required this.multiSelect,
+  });
+
+  final String id;
+
+  final String sessionId;
+
+  final String question;
+
+  final String header;
+
+  final String options;
+
+  final bool multiSelect;
+}
+
+class RequestQuestionArgsDecoder
+    implements ReducerArgDecoder<RequestQuestionArgs> {
+  const RequestQuestionArgsDecoder();
+
+  @override
+  RequestQuestionArgs decode(BsatnDecoder decoder) {
+    final id = decoder.readString();
+    final sessionId = decoder.readString();
+    final question = decoder.readString();
+    final header = decoder.readString();
+    final options = decoder.readString();
+    final multiSelect = decoder.readBool();
+    return RequestQuestionArgs(
+      id: id,
+      sessionId: sessionId,
+      question: question,
+      header: header,
+      options: options,
+      multiSelect: multiSelect,
+    );
+  }
+}
+
 class ResolvePermissionArgs {
   ResolvePermissionArgs({
     required this.id,
@@ -733,6 +779,32 @@ class ResolvePermissionArgsDecoder
     return ResolvePermissionArgs(
       id: id,
       status: status,
+    );
+  }
+}
+
+class RespondToQuestionArgs {
+  RespondToQuestionArgs({
+    required this.id,
+    required this.response,
+  });
+
+  final String id;
+
+  final String response;
+}
+
+class RespondToQuestionArgsDecoder
+    implements ReducerArgDecoder<RespondToQuestionArgs> {
+  const RespondToQuestionArgsDecoder();
+
+  @override
+  RespondToQuestionArgs decode(BsatnDecoder decoder) {
+    final id = decoder.readString();
+    final response = decoder.readString();
+    return RespondToQuestionArgs(
+      id: id,
+      response: response,
     );
   }
 }
@@ -1057,8 +1129,12 @@ const requestCallDef =
     ReducerDef<RequestCallArgs>('request_call', RequestCallArgsDecoder());
 const requestPermissionDef = ReducerDef<RequestPermissionArgs>(
     'request_permission', RequestPermissionArgsDecoder());
+const requestQuestionDef = ReducerDef<RequestQuestionArgs>(
+    'request_question', RequestQuestionArgsDecoder());
 const resolvePermissionDef = ReducerDef<ResolvePermissionArgs>(
     'resolve_permission', ResolvePermissionArgsDecoder());
+const respondToQuestionDef = ReducerDef<RespondToQuestionArgs>(
+    'respond_to_question', RespondToQuestionArgsDecoder());
 const sendAudioFrameDef = ReducerDef<SendAudioFrameArgs>(
     'send_audio_frame', SendAudioFrameArgsDecoder());
 const sendVideoFrameDef = ReducerDef<SendVideoFrameArgs>(

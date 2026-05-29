@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:fixnum/fixnum.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -6,6 +7,7 @@ import 'package:spacetimedb_sdk/spacetimedb_sdk.dart';
 import '../generated/client.dart';
 import '../generated/message.dart';
 import '../generated/permission_request.dart';
+import '../generated/question_request.dart';
 import '../generated/session.dart';
 import '../generated/session_activity.dart';
 import '../generated/tool_event.dart';
@@ -44,6 +46,15 @@ class ChatPermissionItem extends ChatItem {
   String get id => 'perm:${request.id}';
 }
 
+class ChatQuestionItem extends ChatItem {
+  final QuestionRequest request;
+  ChatQuestionItem(this.request);
+  @override
+  Int64 get timestamp => request.createdAt;
+  @override
+  String get id => 'question:${request.id}';
+}
+
 const String defaultTargetSession = 'note-assistant';
 
 final sessionsProvider = Provider<List<Session>>((ref) {
@@ -74,6 +85,13 @@ final permissionByIdProvider =
   final client = ref.watch(spacetimeClientProvider);
   if (client == null) return null;
   return watchListenable(ref, client.permissionRequest.rowNotifier(id));
+});
+
+final questionByIdProvider =
+    Provider.family<QuestionRequest?, String>((ref, id) {
+  final client = ref.watch(spacetimeClientProvider);
+  if (client == null) return null;
+  return watchListenable(ref, client.questionRequest.rowNotifier(id));
 });
 
 /// Manual override. Null = auto-pick from sessions list.
@@ -146,6 +164,7 @@ class _ChatIndex {
   late final VoidCallback _messageListener;
   late final VoidCallback _toolListener;
   late final VoidCallback _permListener;
+  late final VoidCallback _questionListener;
 
   _ChatIndex(this.client) {
     debugLogger.chat(
@@ -158,9 +177,11 @@ class _ChatIndex {
     _messageListener = _rebuild;
     _toolListener = _rebuild;
     _permListener = _rebuild;
+    _questionListener = _rebuild;
     client.message.rows.addListener(_messageListener);
     client.toolEvent.rows.addListener(_toolListener);
     client.permissionRequest.rows.addListener(_permListener);
+    client.questionRequest.rows.addListener(_questionListener);
   }
 
   _SessionBucket bucketFor(String sessionId) =>
@@ -170,6 +191,7 @@ class _ChatIndex {
     client.message.rows.removeListener(_messageListener);
     client.toolEvent.rows.removeListener(_toolListener);
     client.permissionRequest.rows.removeListener(_permListener);
+    client.questionRequest.rows.removeListener(_questionListener);
     for (final b in _buckets.values) {
       b.dispose();
     }
@@ -188,6 +210,11 @@ class _ChatIndex {
     for (final p in client.permissionRequest.rows.value) {
       if (p.status == 'pending') {
         (perSession[p.sessionId] ??= []).add(ChatPermissionItem(p));
+      }
+    }
+    for (final q in client.questionRequest.rows.value) {
+      if (q.status == 'pending') {
+        (perSession[q.sessionId] ??= []).add(ChatQuestionItem(q));
       }
     }
 
@@ -311,5 +338,21 @@ Future<void> respondToPermission(
   await client.reducers.resolvePermission(
     id: requestId,
     status: allow ? 'allow' : 'deny',
+  );
+}
+
+/// Answers an AskUserQuestion. [labels] holds the selected option label(s) —
+/// one for single-select, one or more for multi-select. Encoded as JSON so the
+/// space-channel bridge can inject it back into the session.
+Future<void> respondToQuestion(
+  WidgetRef ref, {
+  required String requestId,
+  required List<String> labels,
+}) async {
+  final client = ref.read(spacetimeClientProvider);
+  if (client == null) return;
+  await client.reducers.respondToQuestion(
+    id: requestId,
+    response: jsonEncode(labels),
   );
 }
