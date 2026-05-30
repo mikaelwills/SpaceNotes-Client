@@ -63,6 +63,7 @@ class SpacetimeDbNotesRepository {
     'SELECT * FROM message',
     'SELECT * FROM tool_event',
     'SELECT * FROM permission_request',
+    'SELECT * FROM question_request',
   ];
 
   static const _connectionConfig = ConnectionConfig(
