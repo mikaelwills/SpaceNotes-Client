@@ -55,7 +55,14 @@ class ChatQuestionItem extends ChatItem {
   String get id => 'question:${request.id}';
 }
 
-const String defaultTargetSession = 'note-assistant';
+const String defaultTargetSession = 'workflow-agent';
+
+const List<String> hostPriority = ['robert', 'M1MAX', 'Mikaels-Work'];
+
+int _hostRank(String host) {
+  final i = hostPriority.indexOf(host);
+  return i == -1 ? hostPriority.length : i;
+}
 
 final sessionsProvider = Provider<List<Session>>((ref) {
   final client = ref.watch(spacetimeClientProvider);
@@ -97,16 +104,17 @@ final questionByIdProvider =
 /// Manual override. Null = auto-pick from sessions list.
 final targetSessionOverrideProvider = StateProvider<String?>((ref) => null);
 
-/// Session id used by the main chat. Auto-picks the first session whose
-/// baseName matches [defaultTargetSession]; falls back to the bare default.
+/// Session id used by the main chat. Picks the [defaultTargetSession] instance
+/// on the highest-priority host (see [hostPriority]); falls back to the bare
+/// default. Never falls through to an unrelated session.
 final targetSessionProvider = Provider<String>((ref) {
   final override = ref.watch(targetSessionOverrideProvider);
   if (override != null) return override;
   final sessions = ref.watch(sessionsProvider);
-  for (final s in sessions) {
-    if (s.baseName == defaultTargetSession) return s.id;
-  }
-  if (sessions.isNotEmpty) return sessions.first.id;
+  final candidates =
+      sessions.where((s) => s.baseName == defaultTargetSession).toList()
+        ..sort((a, b) => _hostRank(a.host).compareTo(_hostRank(b.host)));
+  if (candidates.isNotEmpty) return candidates.first.id;
   return defaultTargetSession;
 });
 

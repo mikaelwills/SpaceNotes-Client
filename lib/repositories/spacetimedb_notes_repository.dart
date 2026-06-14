@@ -107,6 +107,13 @@ class SpacetimeDbNotesRepository {
   /// Check if offline storage is enabled
   bool get hasOfflineStorage => _client?.hasOfflineStorage ?? false;
 
+  /// Dismiss the retained sync failures shown in the UI. Clears the
+  /// `failedCount` / `recentFailures` carried on [SyncState] without
+  /// touching the pending queue.
+  void clearSyncErrors() {
+    _client?.clearSyncErrors();
+  }
+
   Future<bool> isConfigured() async {
     final configured = _host != null && _host!.isNotEmpty;
     debugLogger.debug('REPO', 'isConfigured() = $configured');

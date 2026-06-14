@@ -41,7 +41,7 @@ class _NoteChatInputState extends ConsumerState<NoteChatInput> {
   }
 
   String get _hint {
-    if (widget.notePath.isEmpty) return 'ask note-assistant…';
+    if (widget.notePath.isEmpty) return 'ask workflow-agent…';
     final name = widget.notePath.split('/').last.replaceAll('.md', '');
     final trimmed = name.length > 24 ? '${name.substring(0, 24)}…' : name;
     return 'ask about $trimmed…';
