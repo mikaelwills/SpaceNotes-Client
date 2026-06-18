@@ -198,7 +198,6 @@ class _PulsingHealthBarState extends ConsumerState<_PulsingHealthBar>
 
   void _forceReconnect() async {
     final repo = ref.read(notesRepositoryProvider);
-    repo.resetConnection();
-    await repo.connectAndGetInitialData();
+    await repo.tryReconnect();
   }
 }

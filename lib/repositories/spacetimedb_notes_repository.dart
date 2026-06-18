@@ -40,6 +40,7 @@ class SpacetimeDbNotesRepository {
   Future<void>? _connectingFuture;
   bool _retryScheduled = false;
   int _retryAttempt = 0;
+  int _authErrorAttempts = 0;
   bool _nonTableListenersRegistered = false;
   bool _generalNotesFolderEnsured = false;
 
@@ -619,9 +620,15 @@ class SpacetimeDbNotesRepository {
           'AUTH', 'Auth expired during reconnect, clearing token');
       final storage = _authStorage ?? SharedPreferencesTokenStore();
       await storage.clearToken();
-      await _client!.connection.reconnect();
-      debugLogger.connection('Reconnected with fresh identity');
-      _retryAttempt = 0;
+      try {
+        await _client!.connection.reconnect();
+        debugLogger.connection('Reconnected with fresh identity');
+        _retryAttempt = 0;
+      } catch (_) {
+        debugLogger.warning('AUTH',
+            'In-place auth recovery failed - full rebuild for fresh identity');
+        await _handleAuthError();
+      }
     } on SpacetimeDbException catch (e) {
       _scheduleRetry(e.toString());
     } catch (e, st) {
@@ -709,18 +716,22 @@ class SpacetimeDbNotesRepository {
 
       if (state is stdb.AuthError) {
         debugLogger.warning(
-            'CONN', 'Auth error - will clear token on reconnect');
-        resetConnection();
+            'CONN', 'Auth error - reconnecting in place');
+        await tryReconnect();
+        return;
       }
 
       if (state is stdb.Disconnected) {
+        debugLogger.connection(
+            '_ensureConnected Disconnected: hasOfflineStorage=${_client!.hasOfflineStorage}');
         if (_client!.hasOfflineStorage) {
           debugLogger.connection('Offline mode: using existing client');
           return;
         }
         debugLogger.warning(
-            'CONN', 'DEGRADED CONNECTION: ${state.displayName}');
-        resetConnection();
+            'CONN', 'DEGRADED CONNECTION: ${state.displayName} - reconnecting in place');
+        await tryReconnect();
+        return;
       }
     }
 
@@ -866,15 +877,38 @@ class SpacetimeDbNotesRepository {
     final connectionStateSub =
         _client!.connection.onStateChanged.listen((state) {
       debugLogger.connection('state -> ${state.displayName}');
+      if (state is stdb.Connected) {
+        _authErrorAttempts = 0;
+        return;
+      }
       if (state is stdb.AuthError) {
-        debugLogger.warning('AUTH',
-            'Auth error detected - auto-clearing token and reconnecting');
-        _handleAuthError();
+        _handleAuthErrorGated();
+        return;
+      }
+      if (state is stdb.FatalError) {
+        debugLogger.warning('CONN',
+            'Fatal error - re-arming repo retry to recover when server returns');
+        _scheduleRetry('fatal error - re-arming');
       }
     });
     _subscriptions.add(connectionStateSub);
 
     debugLogger.sync('Non-table listeners registered');
+  }
+
+  Future<void> _handleAuthErrorGated() async {
+    _authErrorAttempts++;
+    if (_authErrorAttempts >= 2) {
+      debugLogger.warning('AUTH',
+          'AuthError persisted ($_authErrorAttempts) - full rebuild with fresh identity');
+      await _handleAuthError();
+      return;
+    }
+    debugLogger.warning('AUTH',
+        'AuthError ($_authErrorAttempts) - reconnecting in place before rebuild');
+    try {
+      await tryReconnect();
+    } catch (_) {}
   }
 
   Future<void> _handleAuthError() async {
