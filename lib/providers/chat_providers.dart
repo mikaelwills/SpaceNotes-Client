@@ -290,33 +290,24 @@ class ChatSendEntry {
       ChatSendEntry(status: status ?? this.status, message: message);
 }
 
-/// Tracks the delivery state of messages this client sent, keyed by the minted
-/// message id. Survives the SDK's optimistic rollback: on failure the SDK
-/// deletes the row from `client.message.rows`, so a failed bubble can only be
-/// rendered from the [Message] retained here.
 class ChatSendStatusNotifier extends StateNotifier<Map<String, ChatSendEntry>> {
-  final SpacetimeDbClient? client;
   StreamSubscription<MutationSyncResult>? _resultSub;
-  VoidCallback? _rowsListener;
 
-  ChatSendStatusNotifier(this.client) : super(const {}) {
-    final c = client;
-    if (c == null) return;
-    _resultSub = c.onMutationSyncResult.listen(_onResult);
-    _rowsListener = _reconcileSent;
-    c.message.rows.addListener(_rowsListener!);
-  }
+  ChatSendStatusNotifier() : super(const {});
 
   @override
   void dispose() {
     _resultSub?.cancel();
-    final listener = _rowsListener;
-    final c = client;
-    if (listener != null && c != null) c.message.rows.removeListener(listener);
     super.dispose();
   }
 
+  void attachClient(SpacetimeDbClient? client) {
+    _resultSub?.cancel();
+    _resultSub = client?.onMutationSyncResult.listen(_onResult);
+  }
+
   void markPending(Message message) {
+    debugLogger.chat('sendStatus pending', 'id=${message.id}');
     state = {
       ...state,
       message.id: ChatSendEntry(
@@ -328,12 +319,15 @@ class ChatSendStatusNotifier extends StateNotifier<Map<String, ChatSendEntry>> {
 
   void clear(String id) {
     if (!state.containsKey(id)) return;
+    debugLogger.chat('sendStatus clear', 'id=$id');
     final next = Map<String, ChatSendEntry>.from(state)..remove(id);
     state = next;
   }
 
   void _onResult(MutationSyncResult result) {
     if (result.reducerName != pushMessageDef.name) return;
+    debugLogger.chat('sendStatus result',
+        'success=${result.success} reqId=${result.requestId}');
     if (result.success) {
       _reconcileSent();
       return;
@@ -349,20 +343,18 @@ class ChatSendStatusNotifier extends StateNotifier<Map<String, ChatSendEntry>> {
       final existing = next[id];
       final message = existing?.message ?? Message.fromJson(row!);
       next[id] = ChatSendEntry(status: ChatSendStatus.failed, message: message);
+      debugLogger.chatError('sendStatus failed', 'id=$id err=${result.error}');
       changed = true;
     }
     if (changed) state = next;
   }
 
   void _reconcileSent() {
-    final c = client;
-    if (c == null) return;
-    final ids = c.message.rows.value.map((m) => m.id).toSet();
     Map<String, ChatSendEntry>? next;
     for (final entry in state.entries) {
-      if (entry.value.status == ChatSendStatus.pending &&
-          ids.contains(entry.key)) {
+      if (entry.value.status == ChatSendStatus.pending) {
         next ??= Map<String, ChatSendEntry>.from(state);
+        debugLogger.chat('sendStatus sent', 'id=${entry.key}');
         next[entry.key] = entry.value.copyWith(status: ChatSendStatus.sent);
       }
     }
@@ -373,8 +365,13 @@ class ChatSendStatusNotifier extends StateNotifier<Map<String, ChatSendEntry>> {
 final chatSendStatusProvider =
     StateNotifierProvider<ChatSendStatusNotifier, Map<String, ChatSendEntry>>(
         (ref) {
-  final client = ref.watch(spacetimeClientProvider);
-  return ChatSendStatusNotifier(client);
+  final notifier = ChatSendStatusNotifier();
+  notifier.attachClient(ref.read(spacetimeClientProvider));
+  ref.listen<SpacetimeDbClient?>(spacetimeClientProvider, (prev, next) {
+    debugLogger.chat('chatSendStatus', 'client changed -> reattach result sub');
+    notifier.attachClient(next);
+  });
+  return notifier;
 });
 
 int _localSendSeq = 0;
