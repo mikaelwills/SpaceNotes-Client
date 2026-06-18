@@ -87,6 +87,7 @@ class TerminalMessage extends StatelessWidget {
                             height: 1.55,
                           ),
                         ),
+                        _SendStatusTick(message: message),
                       ],
                     ),
                   ),
@@ -170,6 +171,74 @@ class TerminalMessage extends StatelessWidget {
       default:
         return SpaceNotesTheme.muted;
     }
+  }
+}
+
+class _SendStatusTick extends ConsumerWidget {
+  final Message message;
+
+  const _SendStatusTick({required this.message});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final status = ref.watch(
+      chatSendStatusProvider.select((m) => m[message.id]?.status),
+    );
+    if (status == null) return const SizedBox.shrink();
+
+    final (icon, color, tappable) = switch (status) {
+      ChatSendStatus.pending => (
+          Icons.schedule,
+          SpaceNotesTheme.dim,
+          false,
+        ),
+      ChatSendStatus.sent => (
+          Icons.check,
+          SpaceNotesTheme.dim,
+          false,
+        ),
+      ChatSendStatus.failed => (
+          Icons.error_outline,
+          SpaceNotesTheme.error,
+          true,
+        ),
+    };
+
+    final tick = Padding(
+      padding: const EdgeInsets.only(top: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.end,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: color),
+          if (status == ChatSendStatus.failed) ...[
+            const SizedBox(width: 5),
+            const Text(
+              'failed · tap to retry',
+              style: TextStyle(
+                fontFamily: SpaceNotesTheme.fontMono,
+                fontSize: 10,
+                color: SpaceNotesTheme.error,
+                letterSpacing: 0.5,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+
+    if (!tappable) return tick;
+    return InkWell(
+      onTap: () {
+        ref.read(chatSendStatusProvider.notifier).clear(message.id);
+        sendChatMessage(
+          ref,
+          sessionId: message.sessionId,
+          text: message.text,
+        );
+      },
+      child: tick,
+    );
   }
 }
 
