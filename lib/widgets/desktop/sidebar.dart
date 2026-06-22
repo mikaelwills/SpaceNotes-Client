@@ -664,36 +664,59 @@ class _FolderTreeItemState extends ConsumerState<_FolderTreeItem> {
       },
       onAddNote: () =>
           _handleFolderAction(context, ref, widget.folder, 'new_note'),
-      contextMenuItems: [
+      contextMenuItems: const [
         PopupMenuItem(
           value: 'new_note',
-          height: 36,
-          padding: const EdgeInsets.symmetric(horizontal: 12),
+          height: 44,
+          padding: EdgeInsets.symmetric(horizontal: 18),
           child: Text('New Note',
-              style: SpaceNotesTextStyles.terminal.copyWith(fontSize: 13)),
+              style: TextStyle(
+                fontFamily: SpaceNotesTheme.fontSans,
+                fontSize: 13,
+                fontWeight: FontWeight.w400,
+                letterSpacing: -0.1,
+                color: SpaceNotesTheme.fg,
+              )),
         ),
         PopupMenuItem(
           value: 'new_folder',
-          height: 36,
-          padding: const EdgeInsets.symmetric(horizontal: 12),
+          height: 44,
+          padding: EdgeInsets.symmetric(horizontal: 18),
           child: Text('New Folder',
-              style: SpaceNotesTextStyles.terminal.copyWith(fontSize: 13)),
+              style: TextStyle(
+                fontFamily: SpaceNotesTheme.fontSans,
+                fontSize: 13,
+                fontWeight: FontWeight.w400,
+                letterSpacing: -0.1,
+                color: SpaceNotesTheme.fg,
+              )),
         ),
-        const PopupMenuDivider(height: 1),
+        PopupMenuDivider(height: 1),
         PopupMenuItem(
           value: 'rename',
-          height: 36,
-          padding: const EdgeInsets.symmetric(horizontal: 12),
+          height: 44,
+          padding: EdgeInsets.symmetric(horizontal: 18),
           child: Text('Rename',
-              style: SpaceNotesTextStyles.terminal.copyWith(fontSize: 13)),
+              style: TextStyle(
+                fontFamily: SpaceNotesTheme.fontSans,
+                fontSize: 13,
+                fontWeight: FontWeight.w400,
+                letterSpacing: -0.1,
+                color: SpaceNotesTheme.fg,
+              )),
         ),
         PopupMenuItem(
           value: 'delete',
-          height: 36,
-          padding: const EdgeInsets.symmetric(horizontal: 12),
+          height: 44,
+          padding: EdgeInsets.symmetric(horizontal: 18),
           child: Text('Delete',
-              style: SpaceNotesTextStyles.terminal
-                  .copyWith(fontSize: 13, color: SpaceNotesTheme.error)),
+              style: TextStyle(
+                fontFamily: SpaceNotesTheme.fontSans,
+                fontSize: 13,
+                fontWeight: FontWeight.w400,
+                letterSpacing: -0.1,
+                color: SpaceNotesTheme.error,
+              )),
         ),
       ],
       onContextMenuSelected: (action) {
@@ -955,21 +978,32 @@ class _NoteTreeItem extends ConsumerWidget {
         _openNoteInDesktop(context, note.id);
       },
       onDelete: () => _handleNoteAction(context, ref, note, 'delete'),
-      contextMenuItems: [
+      contextMenuItems: const [
         PopupMenuItem(
           value: 'rename',
-          height: 36,
-          padding: const EdgeInsets.symmetric(horizontal: 12),
+          height: 44,
+          padding: EdgeInsets.symmetric(horizontal: 18),
           child: Text('Rename',
-              style: SpaceNotesTextStyles.terminal.copyWith(fontSize: 13)),
+              style: TextStyle(
+                fontFamily: SpaceNotesTheme.fontSans,
+                fontSize: 13,
+                fontWeight: FontWeight.w400,
+                letterSpacing: -0.1,
+                color: SpaceNotesTheme.fg,
+              )),
         ),
         PopupMenuItem(
           value: 'delete',
-          height: 36,
-          padding: const EdgeInsets.symmetric(horizontal: 12),
+          height: 44,
+          padding: EdgeInsets.symmetric(horizontal: 18),
           child: Text('Delete',
-              style: SpaceNotesTextStyles.terminal
-                  .copyWith(fontSize: 13, color: SpaceNotesTheme.error)),
+              style: TextStyle(
+                fontFamily: SpaceNotesTheme.fontSans,
+                fontSize: 13,
+                fontWeight: FontWeight.w400,
+                letterSpacing: -0.1,
+                color: SpaceNotesTheme.error,
+              )),
         ),
       ],
       onContextMenuSelected: (action) {
@@ -989,29 +1023,23 @@ class _NoteTreeItem extends ConsumerWidget {
         final controller = TextEditingController(text: nameWithoutExt);
         final result = await showDialog<String>(
           context: context,
-          builder: (ctx) => AlertDialog(
-            title: const Text('Rename Note'),
-            content: TextField(
+          builder: (ctx) => SnDialog(
+            title: 'Rename Note',
+            content: SnDialogField(
               controller: controller,
-              autofocus: true,
-              style: SpaceNotesTextStyles.terminal,
-              decoration: const InputDecoration(
-                hintText: 'Note name',
-              ),
               onSubmitted: (value) => Navigator.of(ctx).pop(value),
             ),
             actions: [
-              TextButton(
+              SnDialogAction(
+                label: 'Cancel',
+                variant: SnButtonVariant.outline,
                 onPressed: () => Navigator.of(ctx).pop(),
-                child: Text('Cancel',
-                    style: SpaceNotesTextStyles.terminal
-                        .copyWith(color: SpaceNotesTheme.textSecondary)),
               ),
-              TextButton(
+              SnDialogAction(
+                label: 'Rename',
+                variant: SnButtonVariant.ghost,
+                accent: SpaceNotesTheme.accent,
                 onPressed: () => Navigator.of(ctx).pop(controller.text),
-                child: Text('Rename',
-                    style: SpaceNotesTextStyles.terminal
-                        .copyWith(color: SpaceNotesTheme.primary)),
               ),
             ],
           ),
@@ -1224,7 +1252,7 @@ class _TreeItemRowState extends State<_TreeItemRow> {
       items: widget.contextMenuItems!,
       color: SpaceNotesTheme.card,
       elevation: 0,
-      menuPadding: EdgeInsets.zero,
+      menuPadding: const EdgeInsets.symmetric(vertical: 6),
       shape: const RoundedRectangleBorder(
         borderRadius:
             BorderRadius.all(Radius.circular(SpaceNotesTheme.radiusXs)),

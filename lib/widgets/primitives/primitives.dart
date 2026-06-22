@@ -3,6 +3,7 @@ library primitives;
 export 'sn_button.dart';
 export 'sn_card.dart';
 export 'sn_chat_dock.dart';
+export 'sn_dialog.dart';
 export 'sn_divider.dart';
 export 'sn_field.dart';
 export 'sn_micro_label.dart';
