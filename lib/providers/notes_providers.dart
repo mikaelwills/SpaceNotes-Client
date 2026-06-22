@@ -88,7 +88,8 @@ final filteredNotesProvider = Provider.autoDispose<List<Note>>((ref) {
   final queryLower = searchQuery.toLowerCase();
   return notes.where((note) {
     return note.name.toLowerCase().contains(queryLower) ||
-        note.path.toLowerCase().contains(queryLower);
+        note.path.toLowerCase().contains(queryLower) ||
+        note.content.toLowerCase().contains(queryLower);
   }).toList();
 });
 
@@ -150,7 +151,8 @@ final dynamicFolderContentsProvider = Provider.family
 
   final filteredNotes = allNotes.where((note) {
     return note.name.toLowerCase().contains(queryLower) ||
-        note.path.toLowerCase().contains(queryLower);
+        note.path.toLowerCase().contains(queryLower) ||
+        note.content.toLowerCase().contains(queryLower);
   }).toList();
 
   return (folders: filteredFolders, notes: filteredNotes);

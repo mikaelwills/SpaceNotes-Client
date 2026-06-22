@@ -309,7 +309,9 @@ class _FolderTreeState extends ConsumerState<_FolderTree> {
 
     if (isSearching) {
       for (final note in notes) {
-        if (note.name.toLowerCase().contains(searchQuery)) {
+        if (note.name.toLowerCase().contains(searchQuery) ||
+            note.path.toLowerCase().contains(searchQuery) ||
+            note.content.toLowerCase().contains(searchQuery)) {
           matchingNotePaths.add(note.path);
           String parentPath = note.folderPath;
           while (parentPath.isNotEmpty) {
