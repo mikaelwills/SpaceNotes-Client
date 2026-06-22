@@ -57,7 +57,7 @@ class SnField extends StatelessWidget {
             ),
             const SizedBox(width: 10),
           ],
-          Expanded(child: _buildTextField(vCenter: true)),
+          Expanded(child: Center(child: _buildTextField(vCenter: true))),
           if (trailing != null) ...[
             const SizedBox(width: 8),
             IconTheme(
@@ -125,7 +125,7 @@ class SnField extends StatelessWidget {
         fontFamily: SpaceNotesTheme.fontSans,
         fontSize: 15,
         color: SpaceNotesTheme.fg,
-        height: 1.4,
+        height: 1.0,
       ),
       textAlignVertical:
           vCenter ? TextAlignVertical.center : TextAlignVertical.top,
@@ -141,7 +141,7 @@ class SnField extends StatelessWidget {
           fontSize: 13,
           color: SpaceNotesTheme.dim,
           letterSpacing: 0.3,
-          height: 1.4,
+          height: 1.0,
           overflow: TextOverflow.ellipsis,
         ),
         border: InputBorder.none,

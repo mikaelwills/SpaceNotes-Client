@@ -3,7 +3,8 @@ import 'package:flutter/services.dart';
 import '../../theme/spacenotes_theme.dart';
 import 'sn_field.dart';
 
-/// Shared chat-input dock: a transparent gradient overlay + SnField + tiles.
+/// Shared chat-input dock: a transparent gradient overlay + a single
+/// borderless surface holding the field and flush, hairline-separated tiles.
 /// Used by the mobile global bar, the desktop chat rail, and the note-chat
 /// panel. Caller owns the controller/focus and passes callbacks + optional
 /// leading/trailing tiles.
@@ -13,6 +14,7 @@ class SnChatDock extends StatelessWidget {
   final String hint;
   final ValueChanged<String>? onChanged;
   final VoidCallback onSend;
+  final bool showSend;
   final Widget? fieldTrailing;
   final List<Widget> leading;
   final List<Widget> trailing;
@@ -27,6 +29,7 @@ class SnChatDock extends StatelessWidget {
     required this.onSend,
     this.focusNode,
     this.onChanged,
+    this.showSend = true,
     this.fieldTrailing,
     this.leading = const [],
     this.trailing = const [],
@@ -59,46 +62,59 @@ class SnChatDock extends StatelessWidget {
         ),
         Padding(
           padding: padding,
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              for (final w in leading) ...[w, const SizedBox(width: 12)],
-              Expanded(
-                child: Focus(
-                  onKeyEvent: (_, event) {
-                    if (event is! KeyDownEvent) return KeyEventResult.ignored;
-                    if (event.logicalKey != LogicalKeyboardKey.enter) {
-                      return KeyEventResult.ignored;
-                    }
-                    final shift = HardwareKeyboard.instance.isShiftPressed;
-                    if (shift) return KeyEventResult.ignored;
-                    onSend();
-                    return KeyEventResult.handled;
-                  },
-                  child: SnField(
-                    controller: controller,
-                    focusNode: focusNode,
-                    hint: hint,
-                    onChanged: onChanged,
-                    onSubmitted: (_) => onSend(),
-                    maxLines: maxLines,
-                    minLines: minLines,
-                    trailing: fieldTrailing,
-                  ),
-                ),
-              ),
-              for (final w in trailing) ...[const SizedBox(width: 12), w],
-              const SizedBox(width: 12),
-              SnDockTile(
-                icon: Icons.arrow_upward,
-                onTap: onSend,
-                semanticLabel: 'send',
-              ),
-            ],
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: SpaceNotesTheme.bgAlt,
+              borderRadius: BorderRadius.circular(SpaceNotesTheme.radiusXs),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: _tiles(),
+            ),
           ),
         ),
       ],
     );
+  }
+
+  List<Widget> _tiles() {
+    return <Widget>[
+      ...leading,
+      Expanded(
+        child: Focus(
+          onKeyEvent: (_, event) {
+            if (event is! KeyDownEvent) return KeyEventResult.ignored;
+            if (event.logicalKey != LogicalKeyboardKey.enter) {
+              return KeyEventResult.ignored;
+            }
+            if (HardwareKeyboard.instance.isShiftPressed) {
+              return KeyEventResult.ignored;
+            }
+            onSend();
+            return KeyEventResult.handled;
+          },
+          child: SnField(
+            controller: controller,
+            focusNode: focusNode,
+            hint: hint,
+            onChanged: onChanged,
+            onSubmitted: (_) => onSend(),
+            maxLines: maxLines,
+            minLines: minLines,
+            trailing: fieldTrailing,
+            background: Colors.transparent,
+            borderColor: Colors.transparent,
+          ),
+        ),
+      ),
+      ...trailing,
+      if (showSend)
+        SnDockTile(
+          icon: Icons.arrow_upward,
+          onTap: onSend,
+          semanticLabel: 'send',
+        ),
+    ];
   }
 }
 
@@ -106,12 +122,14 @@ class SnDockTile extends StatelessWidget {
   final IconData icon;
   final VoidCallback onTap;
   final String semanticLabel;
+  final Color color;
 
   const SnDockTile({
     super.key,
     required this.icon,
     required this.onTap,
     required this.semanticLabel,
+    this.color = SpaceNotesTheme.accent,
   });
 
   @override
@@ -128,15 +146,8 @@ class SnDockTile extends StatelessWidget {
         child: Container(
           width: 52,
           height: 52,
-          decoration: BoxDecoration(
-            color: SpaceNotesTheme.bgAlt,
-            border: Border.all(
-              color: SpaceNotesTheme.hairlineStrong,
-              width: 1,
-            ),
-            borderRadius: BorderRadius.circular(SpaceNotesTheme.radiusDock),
-          ),
-          child: Icon(icon, size: 22, color: SpaceNotesTheme.accent),
+          alignment: Alignment.center,
+          child: Icon(icon, size: 22, color: color),
         ),
       ),
     );

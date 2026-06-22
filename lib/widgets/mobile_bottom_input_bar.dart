@@ -6,7 +6,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image/image.dart' as image_lib;
 import 'package:image_picker/image_picker.dart';
-import '../theme/spacenotes_theme.dart';
 import '../providers/notes_providers.dart';
 import '../providers/chat_providers.dart';
 import '../dialogs/notes_list_dialogs.dart';
@@ -74,83 +73,26 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
 
     final folderPath = ref.watch(currentFolderPathProvider);
 
-    return Stack(
-      children: [
-        _buildFadeOverlay(),
-        SafeArea(
-          top: false,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(14, 8, 14, 12),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                if (isSessionChat) ...[
-                  _DockTile(
-                    icon: Icons.arrow_back,
-                    onTap: () => context.pop(),
-                    semanticLabel: 'back',
-                  ),
-                  const SizedBox(width: 12),
-                ],
-                Expanded(child: _buildField(isChat)),
-                const SizedBox(width: 12),
-                ..._buildTrailing(isChat, folderPath),
-              ],
+    return SafeArea(
+      top: false,
+      child: SnChatDock(
+        controller: _textController,
+        focusNode: _focusNode,
+        hint: _computeHint(isChat),
+        padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+        onChanged: isChat ? null : _onSearchChanged,
+        onSend: _onSend,
+        showSend: isChat || _isFocused || _hasText,
+        leading: [
+          if (isSessionChat)
+            SnDockTile(
+              icon: Icons.arrow_back,
+              onTap: () => context.pop(),
+              semanticLabel: 'back',
             ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildFadeOverlay() {
-    return const Positioned.fill(
-      child: IgnorePointer(
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              stops: [0.0, 0.35, 1.0],
-              colors: [
-                Color(0x000D0D0F),
-                Color(0xCC0D0D0F),
-                Color(0xFF0D0D0F),
-              ],
-            ),
-          ),
-        ),
+        ],
+        trailing: _buildTrailing(isChat, folderPath),
       ),
-    );
-  }
-
-  Widget _buildField(bool isChat) {
-    final hint = _computeHint(isChat);
-    final hasImage = _pendingImageBytes != null;
-
-    return SnField(
-      controller: _textController,
-      focusNode: _focusNode,
-      hint: hint,
-      onChanged: isChat ? (_) {} : _onSearchChanged,
-      onSubmitted: (_) => _onSend(),
-      maxLines: 6,
-      minLines: 1,
-      expands: false,
-      trailing: hasImage
-          ? GestureDetector(
-              onTap: () {
-                HapticFeedback.lightImpact();
-                setState(() => _pendingImageBytes = null);
-              },
-              behavior: HitTestBehavior.opaque,
-              child: const Icon(
-                Icons.image,
-                size: 16,
-                color: SpaceNotesTheme.accent,
-              ),
-            )
-          : null,
     );
   }
 
@@ -163,31 +105,25 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
 
   List<Widget> _buildTrailing(bool isChat, String folderPath) {
     if (isChat) {
+      final hasImage = _pendingImageBytes != null;
       return [
-        _DockTile(
-          icon: Icons.image_outlined,
-          onTap: _onPickImage,
-          semanticLabel: 'attach image',
-        ),
-        const SizedBox(width: 12),
-        _DockTile(
-          icon: Icons.arrow_upward,
-          onTap: _onSend,
-          semanticLabel: 'send',
+        SnDockTile(
+          icon: hasImage ? Icons.image : Icons.image_outlined,
+          onTap: hasImage
+              ? () {
+                  HapticFeedback.lightImpact();
+                  setState(() => _pendingImageBytes = null);
+                }
+              : _onPickImage,
+          semanticLabel: hasImage ? 'remove image' : 'attach image',
         ),
       ];
     }
     if (_isFocused || _hasText) {
-      return [
-        _DockTile(
-          icon: Icons.arrow_upward,
-          onTap: _onSend,
-          semanticLabel: 'send to AI',
-        ),
-      ];
+      return const [];
     }
     return [
-      _DockTile(
+      SnDockTile(
         icon: Icons.create_new_folder_outlined,
         onTap: () => NotesListDialogs.showCreateFolderDialog(
           context,
@@ -196,8 +132,7 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
         ),
         semanticLabel: 'new folder',
       ),
-      const SizedBox(width: 12),
-      _DockTile(
+      SnDockTile(
         icon: Icons.note_add_outlined,
         onTap: () => _createQuickNote(folderPath),
         semanticLabel: 'new note',
@@ -322,45 +257,5 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
 
   void _onFocusChanged() {
     setState(() => _isFocused = _focusNode.hasFocus);
-  }
-}
-
-class _DockTile extends StatelessWidget {
-  final IconData icon;
-  final VoidCallback onTap;
-  final String semanticLabel;
-
-  const _DockTile({
-    required this.icon,
-    required this.onTap,
-    required this.semanticLabel,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Semantics(
-      label: semanticLabel,
-      button: true,
-      child: GestureDetector(
-        onTap: () {
-          HapticFeedback.selectionClick();
-          onTap();
-        },
-        behavior: HitTestBehavior.opaque,
-        child: Container(
-          width: 52,
-          height: 52,
-          decoration: BoxDecoration(
-            color: SpaceNotesTheme.bgAlt,
-            border: Border.all(
-              color: SpaceNotesTheme.hairlineStrong,
-              width: 1,
-            ),
-            borderRadius: BorderRadius.circular(SpaceNotesTheme.radiusDock),
-          ),
-          child: Icon(icon, size: 22, color: SpaceNotesTheme.accent),
-        ),
-      ),
-    );
   }
 }

@@ -207,19 +207,18 @@ class _SidebarSearchState extends ConsumerState<_SidebarSearch> {
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
       child: Container(
-        height: 40,
+        height: 52,
         decoration: BoxDecoration(
           color: SpaceNotesTheme.bgAlt,
-          border: Border.all(color: SpaceNotesTheme.hairlineStrong, width: 1),
-          borderRadius: BorderRadius.circular(SpaceNotesTheme.radiusDock),
+          borderRadius: BorderRadius.circular(SpaceNotesTheme.radiusXs),
         ),
-        padding: const EdgeInsets.symmetric(horizontal: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 14),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Icon(
               Icons.search,
-              size: 14,
+              size: 18,
               color: hasQuery ? SpaceNotesTheme.accent : SpaceNotesTheme.muted,
             ),
             const SizedBox(width: 10),
@@ -231,7 +230,7 @@ class _SidebarSearchState extends ConsumerState<_SidebarSearch> {
                   onChanged: _onSearchChanged,
                   style: const TextStyle(
                     fontFamily: SpaceNotesTheme.fontSans,
-                    fontSize: 13,
+                    fontSize: 15,
                     color: SpaceNotesTheme.fg,
                     height: 1.0,
                   ),
@@ -243,7 +242,7 @@ class _SidebarSearchState extends ConsumerState<_SidebarSearch> {
                     hintText: 'search…',
                     hintStyle: TextStyle(
                       fontFamily: SpaceNotesTheme.fontMono,
-                      fontSize: 12,
+                      fontSize: 13,
                       color: SpaceNotesTheme.dim,
                       letterSpacing: 0.3,
                       height: 1.0,

@@ -90,8 +90,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             _PortChip(label: 'spacenotes', port: ConfigLoaded.spacetimeDbPort),
             SizedBox(width: 10),
             _PortChip(label: 'space', port: ConfigLoaded.spacePort),
-            SizedBox(width: 10),
-            _PortChip(label: 'claude', port: ConfigLoaded.claudeCodePort),
           ],
         ),
         const SizedBox(height: 18),
@@ -112,7 +110,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     label: 'connect',
                     onPressed: _saveServerConfig,
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 18, vertical: 12),
+                        horizontal: 18, vertical: 18),
                   ),
           ],
         ),
@@ -127,8 +125,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   Widget _buildSpinnerTile() {
     return Container(
-      height: 44,
-      width: 44,
+      height: 52,
+      width: 52,
       decoration: BoxDecoration(
         border: Border.all(color: SpaceNotesTheme.hairlineStrong, width: 1),
         borderRadius: BorderRadius.circular(SpaceNotesTheme.radiusXs),
@@ -194,7 +192,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   await debugLogger.exportToFile();
                 },
                 padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 18),
               ),
             ),
             const SizedBox(width: 10),
@@ -203,7 +201,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 label: 'to notes',
                 onPressed: _saveLogsToNotes,
                 padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 18),
               ),
             ),
             const SizedBox(width: 10),
@@ -224,7 +222,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   }
                 },
                 padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 18),
               ),
             ),
           ],
