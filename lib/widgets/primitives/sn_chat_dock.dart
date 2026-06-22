@@ -62,7 +62,7 @@ class SnChatDock extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              for (final w in leading) ...[w, const SizedBox(width: 8)],
+              for (final w in leading) ...[w, const SizedBox(width: 12)],
               Expanded(
                 child: Focus(
                   onKeyEvent: (_, event) {
@@ -87,8 +87,8 @@ class SnChatDock extends StatelessWidget {
                   ),
                 ),
               ),
-              for (final w in trailing) ...[const SizedBox(width: 8), w],
-              const SizedBox(width: 8),
+              for (final w in trailing) ...[const SizedBox(width: 12), w],
+              const SizedBox(width: 12),
               SnDockTile(
                 icon: Icons.arrow_upward,
                 onTap: onSend,
@@ -126,8 +126,8 @@ class SnDockTile extends StatelessWidget {
         },
         behavior: HitTestBehavior.opaque,
         child: Container(
-          width: 44,
-          height: 44,
+          width: 52,
+          height: 52,
           decoration: BoxDecoration(
             color: SpaceNotesTheme.bgAlt,
             border: Border.all(
@@ -136,7 +136,7 @@ class SnDockTile extends StatelessWidget {
             ),
             borderRadius: BorderRadius.circular(SpaceNotesTheme.radiusDock),
           ),
-          child: Icon(icon, size: 16, color: SpaceNotesTheme.accent),
+          child: Icon(icon, size: 22, color: SpaceNotesTheme.accent),
         ),
       ),
     );

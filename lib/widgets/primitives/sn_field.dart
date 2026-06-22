@@ -29,7 +29,7 @@ class SnField extends StatelessWidget {
     this.maxLines = 1,
     this.minLines,
     this.expands = false,
-    this.height = 44,
+    this.height = 52,
     this.radius = SpaceNotesTheme.radiusDock,
     this.background = SpaceNotesTheme.bgAlt,
     this.borderColor = SpaceNotesTheme.hairlineStrong,
@@ -52,7 +52,7 @@ class SnField extends StatelessWidget {
         children: [
           if (leading != null) ...[
             IconTheme(
-              data: const IconThemeData(size: 14, color: SpaceNotesTheme.muted),
+              data: const IconThemeData(size: 18, color: SpaceNotesTheme.muted),
               child: leading!,
             ),
             const SizedBox(width: 10),
@@ -62,7 +62,7 @@ class SnField extends StatelessWidget {
             const SizedBox(width: 8),
             IconTheme(
               data:
-                  const IconThemeData(size: 14, color: SpaceNotesTheme.accent),
+                  const IconThemeData(size: 18, color: SpaceNotesTheme.accent),
               child: trailing!,
             ),
           ],
@@ -77,7 +77,7 @@ class SnField extends StatelessWidget {
     return Container(
       constraints: BoxConstraints(minHeight: height),
       decoration: _decoration(),
-      padding: const EdgeInsets.fromLTRB(13, 12, 13, 10),
+      padding: const EdgeInsets.fromLTRB(13, 15, 13, 15),
       child: Stack(
         children: [
           if (hasLeading)
@@ -86,7 +86,7 @@ class SnField extends StatelessWidget {
               bottom: 0,
               child: IconTheme(
                 data:
-                    const IconThemeData(size: 14, color: SpaceNotesTheme.muted),
+                    const IconThemeData(size: 18, color: SpaceNotesTheme.muted),
                 child: leading!,
               ),
             ),
@@ -103,7 +103,7 @@ class SnField extends StatelessWidget {
               bottom: 0,
               child: IconTheme(
                 data: const IconThemeData(
-                    size: 14, color: SpaceNotesTheme.accent),
+                    size: 18, color: SpaceNotesTheme.accent),
                 child: trailing!,
               ),
             ),
@@ -123,7 +123,7 @@ class SnField extends StatelessWidget {
       expands: expands,
       style: const TextStyle(
         fontFamily: SpaceNotesTheme.fontSans,
-        fontSize: 14,
+        fontSize: 15,
         color: SpaceNotesTheme.fg,
         height: 1.4,
       ),
@@ -133,14 +133,12 @@ class SnField extends StatelessWidget {
       cursorWidth: 1.5,
       decoration: InputDecoration(
         isCollapsed: true,
-        contentPadding: vCenter
-            ? const EdgeInsets.symmetric(vertical: 14)
-            : EdgeInsets.zero,
+        contentPadding: EdgeInsets.zero,
         hintText: hint,
         hintMaxLines: 1,
         hintStyle: const TextStyle(
           fontFamily: SpaceNotesTheme.fontMono,
-          fontSize: 12,
+          fontSize: 13,
           color: SpaceNotesTheme.dim,
           letterSpacing: 0.3,
           height: 1.4,

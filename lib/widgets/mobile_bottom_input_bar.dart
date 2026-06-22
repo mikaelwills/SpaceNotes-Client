@@ -90,10 +90,10 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
                     onTap: () => context.pop(),
                     semanticLabel: 'back',
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 12),
                 ],
                 Expanded(child: _buildField(isChat)),
-                const SizedBox(width: 8),
+                const SizedBox(width: 12),
                 ..._buildTrailing(isChat, folderPath),
               ],
             ),
@@ -169,7 +169,7 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
           onTap: _onPickImage,
           semanticLabel: 'attach image',
         ),
-        const SizedBox(width: 8),
+        const SizedBox(width: 12),
         _DockTile(
           icon: Icons.arrow_upward,
           onTap: _onSend,
@@ -196,7 +196,7 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
         ),
         semanticLabel: 'new folder',
       ),
-      const SizedBox(width: 8),
+      const SizedBox(width: 12),
       _DockTile(
         icon: Icons.note_add_outlined,
         onTap: () => _createQuickNote(folderPath),
@@ -348,8 +348,8 @@ class _DockTile extends StatelessWidget {
         },
         behavior: HitTestBehavior.opaque,
         child: Container(
-          width: 44,
-          height: 44,
+          width: 52,
+          height: 52,
           decoration: BoxDecoration(
             color: SpaceNotesTheme.bgAlt,
             border: Border.all(
@@ -358,7 +358,7 @@ class _DockTile extends StatelessWidget {
             ),
             borderRadius: BorderRadius.circular(SpaceNotesTheme.radiusDock),
           ),
-          child: Icon(icon, size: 16, color: SpaceNotesTheme.accent),
+          child: Icon(icon, size: 22, color: SpaceNotesTheme.accent),
         ),
       ),
     );
