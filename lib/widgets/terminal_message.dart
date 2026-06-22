@@ -165,6 +165,9 @@ class TerminalMessage extends StatelessWidget {
 
   Color get _sourceColor {
     switch (message.source) {
+      case 'error':
+        return SpaceNotesTheme.error;
+      case 'notice':
       case 'mcp':
       case 'hook':
         return SpaceNotesTheme.accent2;
