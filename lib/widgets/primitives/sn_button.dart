@@ -24,6 +24,14 @@ class SnButton extends StatelessWidget {
     final color = accent ?? SpaceNotesTheme.accent;
     final isFilled = variant == SnButtonVariant.filled;
     final isGhost = variant == SnButtonVariant.ghost;
+    final isAccentTinted = variant != SnButtonVariant.filled && accent != null;
+
+    final Color borderColor = isFilled
+        ? color
+        : (isAccentTinted && !isGhost ? color : SpaceNotesTheme.hairlineStrong);
+    final Color textColor = isFilled
+        ? SpaceNotesTheme.bg
+        : (isAccentTinted ? color : SpaceNotesTheme.fg);
 
     return Material(
       color: Colors.transparent,
@@ -36,20 +44,18 @@ class SnButton extends StatelessWidget {
             color: isFilled ? color : Colors.transparent,
             border: isGhost
                 ? null
-                : Border.all(
-                    color: isFilled ? color : SpaceNotesTheme.hairlineStrong,
-                    width: 1,
-                  ),
+                : Border.all(color: borderColor, width: 1),
             borderRadius: BorderRadius.circular(SpaceNotesTheme.radiusXs),
           ),
           child: Text(
             label.toUpperCase(),
+            textAlign: TextAlign.center,
             style: TextStyle(
               fontFamily: SpaceNotesTheme.fontMono,
               fontSize: 11,
               fontWeight: FontWeight.w600,
               letterSpacing: 1,
-              color: isFilled ? SpaceNotesTheme.bg : SpaceNotesTheme.fg,
+              color: textColor,
             ),
           ),
         ),
