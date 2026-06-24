@@ -121,6 +121,7 @@ class SnField extends StatelessWidget {
       behavior: HitTestBehavior.opaque,
       child: Container(
         constraints: BoxConstraints(minHeight: height),
+        alignment: Alignment.center,
         decoration: _decoration(),
         padding: const EdgeInsets.symmetric(horizontal: 13),
         child: Row(
@@ -162,7 +163,6 @@ class SnField extends StatelessWidget {
         fontFamily: SpaceNotesTheme.fontSans,
         fontSize: 15,
         color: SpaceNotesTheme.fg,
-        height: 1.0,
       ),
       textAlignVertical: TextAlignVertical.center,
       cursorColor: SpaceNotesTheme.accent,
@@ -177,7 +177,6 @@ class SnField extends StatelessWidget {
           fontSize: 13,
           color: SpaceNotesTheme.dim,
           letterSpacing: 0.3,
-          height: 1.0,
           overflow: TextOverflow.ellipsis,
         ),
         border: InputBorder.none,
