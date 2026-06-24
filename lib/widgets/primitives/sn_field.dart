@@ -48,7 +48,7 @@ class SnField extends StatelessWidget {
       decoration: _decoration(),
       padding: const EdgeInsets.symmetric(horizontal: 13),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           if (leading != null) ...[
             IconTheme(
@@ -57,7 +57,49 @@ class SnField extends StatelessWidget {
             ),
             const SizedBox(width: 10),
           ],
-          Expanded(child: Center(child: _buildTextField(vCenter: true))),
+          // expands:true fills the full row height → text centers via
+          // textAlignVertical AND the whole box is the tap target.
+          Expanded(
+            child: TextField(
+              controller: controller,
+              focusNode: focusNode,
+              onChanged: onChanged,
+              onSubmitted: onSubmitted,
+              expands: true,
+              maxLines: null,
+              minLines: null,
+              textAlignVertical: TextAlignVertical.center,
+              cursorColor: SpaceNotesTheme.accent,
+              cursorWidth: 1.5,
+              style: const TextStyle(
+                fontFamily: SpaceNotesTheme.fontSans,
+                fontSize: 15,
+                color: SpaceNotesTheme.fg,
+                height: 1.0,
+              ),
+              decoration: InputDecoration(
+                isCollapsed: true,
+                contentPadding: EdgeInsets.zero,
+                hintText: hint,
+                hintMaxLines: 1,
+                hintStyle: const TextStyle(
+                  fontFamily: SpaceNotesTheme.fontMono,
+                  fontSize: 13,
+                  color: SpaceNotesTheme.dim,
+                  letterSpacing: 0.3,
+                  height: 1.0,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
+                disabledBorder: InputBorder.none,
+                errorBorder: InputBorder.none,
+                focusedErrorBorder: InputBorder.none,
+                filled: false,
+              ),
+            ),
+          ),
           if (trailing != null) ...[
             const SizedBox(width: 8),
             IconTheme(
@@ -74,45 +116,40 @@ class SnField extends StatelessWidget {
   Widget _buildAutoGrow() {
     final hasLeading = leading != null;
     final hasTrailing = trailing != null;
-    return Container(
-      constraints: BoxConstraints(minHeight: height),
-      decoration: _decoration(),
-      padding: const EdgeInsets.fromLTRB(13, 15, 13, 15),
-      child: Stack(
-        children: [
-          if (hasLeading)
-            Positioned(
-              left: 0,
-              bottom: 0,
-              child: IconTheme(
+    return GestureDetector(
+      onTap: () => focusNode?.requestFocus(),
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        constraints: BoxConstraints(minHeight: height),
+        decoration: _decoration(),
+        padding: const EdgeInsets.symmetric(horizontal: 13),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            if (hasLeading) ...[
+              IconTheme(
                 data:
                     const IconThemeData(size: 18, color: SpaceNotesTheme.muted),
                 child: leading!,
               ),
-            ),
-          Padding(
-            padding: EdgeInsets.only(
-              left: hasLeading ? 24 : 0,
-              right: hasTrailing ? 28 : 0,
-            ),
-            child: _buildTextField(vCenter: false),
-          ),
-          if (hasTrailing)
-            Positioned(
-              right: 0,
-              bottom: 0,
-              child: IconTheme(
+              const SizedBox(width: 10),
+            ],
+            Expanded(child: _buildTextField()),
+            if (hasTrailing) ...[
+              const SizedBox(width: 8),
+              IconTheme(
                 data: const IconThemeData(
                     size: 18, color: SpaceNotesTheme.accent),
                 child: trailing!,
               ),
-            ),
-        ],
+            ],
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildTextField({required bool vCenter}) {
+  Widget _buildTextField() {
     return TextField(
       controller: controller,
       focusNode: focusNode,
@@ -127,8 +164,7 @@ class SnField extends StatelessWidget {
         color: SpaceNotesTheme.fg,
         height: 1.0,
       ),
-      textAlignVertical:
-          vCenter ? TextAlignVertical.center : TextAlignVertical.top,
+      textAlignVertical: TextAlignVertical.center,
       cursorColor: SpaceNotesTheme.accent,
       cursorWidth: 1.5,
       decoration: InputDecoration(

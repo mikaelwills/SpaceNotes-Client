@@ -65,6 +65,7 @@ class SnChatDock extends StatelessWidget {
           child: DecoratedBox(
             decoration: BoxDecoration(
               color: SpaceNotesTheme.bgAlt,
+              border: Border.all(color: SpaceNotesTheme.hairline, width: 1),
               borderRadius: BorderRadius.circular(SpaceNotesTheme.radiusXs),
             ),
             child: Row(
