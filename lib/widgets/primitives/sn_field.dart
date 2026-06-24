@@ -35,6 +35,10 @@ class SnField extends StatelessWidget {
     this.borderColor = SpaceNotesTheme.hairlineStrong,
   });
 
+  // Vertical breathing room for the autoGrow field; kept constant (not toggled
+  // on wrap) so growing past one line doesn't snap/jump.
+  static const double _autoGrowPadV = 14;
+
   @override
   Widget build(BuildContext context) {
     final autoGrow = expands || maxLines == null || (maxLines ?? 1) > 1;
@@ -169,7 +173,7 @@ class SnField extends StatelessWidget {
       cursorWidth: 1.5,
       decoration: InputDecoration(
         isCollapsed: true,
-        contentPadding: EdgeInsets.zero,
+        contentPadding: const EdgeInsets.symmetric(vertical: _autoGrowPadV),
         hintText: hint,
         hintMaxLines: 1,
         hintStyle: const TextStyle(
