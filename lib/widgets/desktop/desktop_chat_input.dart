@@ -49,7 +49,8 @@ class _DesktopChatInputState extends ConsumerState<DesktopChatInput> {
           hint: 'ask ai…',
           onSend: _onSend,
           maxLines: 8,
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+          showFade: false,
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 26),
           trailing: [
             SnDockTile(
               icon: _pendingImageBytes != null

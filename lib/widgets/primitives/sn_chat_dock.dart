@@ -21,6 +21,7 @@ class SnChatDock extends StatelessWidget {
   final EdgeInsets padding;
   final int maxLines;
   final int minLines;
+  final bool showFade;
 
   const SnChatDock({
     super.key,
@@ -36,30 +37,32 @@ class SnChatDock extends StatelessWidget {
     this.padding = const EdgeInsets.fromLTRB(14, 8, 14, 12),
     this.maxLines = 6,
     this.minLines = 1,
+    this.showFade = true,
   });
 
   @override
   Widget build(BuildContext context) {
     return Stack(
       children: [
-        const Positioned.fill(
-          child: IgnorePointer(
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  stops: [0.0, 0.35, 1.0],
-                  colors: [
-                    Color(0x000D0D0F),
-                    Color(0xCC0D0D0F),
-                    Color(0xFF0D0D0F),
-                  ],
+        if (showFade)
+          const Positioned.fill(
+            child: IgnorePointer(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    stops: [0.0, 0.35, 1.0],
+                    colors: [
+                      Color(0x000D0D0F),
+                      Color(0xCC0D0D0F),
+                      Color(0xFF0D0D0F),
+                    ],
+                  ),
                 ),
               ),
             ),
           ),
-        ),
         Padding(
           padding: padding,
           child: DecoratedBox(
