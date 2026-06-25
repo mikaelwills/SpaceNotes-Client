@@ -1,11 +1,11 @@
 import 'dart:async';
 import 'dart:convert';
-import 'package:fixnum/fixnum.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:spacetimedb_sdk/spacetimedb_sdk.dart';
 import '../generated/client.dart';
 import '../generated/message.dart';
+import '../generated/reducer_args.dart';
 import '../generated/permission_request.dart';
 import '../generated/question_request.dart';
 import '../generated/session.dart';
@@ -72,6 +72,15 @@ final sessionsProvider = Provider<List<Session>>((ref) {
     ..sort(
         (a, b) => a.baseName.toLowerCase().compareTo(b.baseName.toLowerCase()));
   return sorted;
+});
+
+final sessionFilterProvider = StateProvider<String>((ref) => '');
+
+final filteredSessionsProvider = Provider<List<Session>>((ref) {
+  final sessions = ref.watch(sessionsProvider);
+  final query = ref.watch(sessionFilterProvider).trim().toLowerCase();
+  if (query.isEmpty) return sessions;
+  return sessions.where((s) => s.id.toLowerCase().contains(query)).toList();
 });
 
 final sessionByIdProvider = Provider.family<Session?, String>((ref, id) {
@@ -145,7 +154,25 @@ final chatTimelineBySessionProvider =
   void listener() => ref.invalidateSelf();
   bucket.addListener(listener);
   ref.onDispose(() => bucket.removeListener(listener));
-  return List<ChatItem>.unmodifiable(bucket.items);
+
+  final sendStatus = ref.watch(chatSendStatusProvider);
+  final present = {
+    for (final item in bucket.items)
+      if (item is ChatMessageItem) item.message.id,
+  };
+  final orphanedFailures = [
+    for (final entry in sendStatus.values)
+      if (entry.status == ChatSendStatus.failed &&
+          entry.message.sessionId == sessionId &&
+          !present.contains(entry.message.id))
+        ChatMessageItem(entry.message),
+  ];
+  if (orphanedFailures.isEmpty) {
+    return List<ChatItem>.unmodifiable(bucket.items);
+  }
+  final merged = [...bucket.items, ...orphanedFailures]
+    ..sort((a, b) => a.timestamp.compareTo(b.timestamp));
+  return List<ChatItem>.unmodifiable(merged);
 });
 
 /// Per-session bucket holding the merged sorted timeline. Reconciled from the
@@ -251,6 +278,102 @@ DateTime timestampToDateTime(Int64 microsSinceEpoch) {
   return DateTime.fromMicrosecondsSinceEpoch(microsSinceEpoch.toInt());
 }
 
+enum ChatSendStatus { pending, sent, failed }
+
+class ChatSendEntry {
+  final ChatSendStatus status;
+  final Message message;
+
+  const ChatSendEntry({required this.status, required this.message});
+
+  ChatSendEntry copyWith({ChatSendStatus? status}) =>
+      ChatSendEntry(status: status ?? this.status, message: message);
+}
+
+class ChatSendStatusNotifier extends StateNotifier<Map<String, ChatSendEntry>> {
+  StreamSubscription<MutationSyncResult>? _resultSub;
+
+  ChatSendStatusNotifier() : super(const {});
+
+  @override
+  void dispose() {
+    _resultSub?.cancel();
+    super.dispose();
+  }
+
+  void attachClient(SpacetimeDbClient? client) {
+    _resultSub?.cancel();
+    _resultSub = client?.onMutationSyncResult.listen(_onResult);
+  }
+
+  void markPending(Message message) {
+    debugLogger.chat('sendStatus pending', 'id=${message.id}');
+    state = {
+      ...state,
+      message.id: ChatSendEntry(
+        status: ChatSendStatus.pending,
+        message: message,
+      ),
+    };
+  }
+
+  void clear(String id) {
+    if (!state.containsKey(id)) return;
+    debugLogger.chat('sendStatus clear', 'id=$id');
+    final next = Map<String, ChatSendEntry>.from(state)..remove(id);
+    state = next;
+  }
+
+  void _onResult(MutationSyncResult result) {
+    if (result.reducerName != pushMessageDef.name) return;
+    debugLogger.chat('sendStatus result',
+        'success=${result.success} reqId=${result.requestId}');
+    if (result.success) {
+      _reconcileSent();
+      return;
+    }
+    final changes = result.optimisticChanges;
+    if (changes == null) return;
+    final next = Map<String, ChatSendEntry>.from(state);
+    var changed = false;
+    for (final change in changes) {
+      final row = change.newRowJson;
+      final id = row?['id'];
+      if (id is! String) continue;
+      final existing = next[id];
+      final message = existing?.message ?? Message.fromJson(row!);
+      next[id] = ChatSendEntry(status: ChatSendStatus.failed, message: message);
+      debugLogger.chatError('sendStatus failed', 'id=$id err=${result.error}');
+      changed = true;
+    }
+    if (changed) state = next;
+  }
+
+  void _reconcileSent() {
+    Map<String, ChatSendEntry>? next;
+    for (final entry in state.entries) {
+      if (entry.value.status == ChatSendStatus.pending) {
+        next ??= Map<String, ChatSendEntry>.from(state);
+        debugLogger.chat('sendStatus sent', 'id=${entry.key}');
+        next[entry.key] = entry.value.copyWith(status: ChatSendStatus.sent);
+      }
+    }
+    if (next != null) state = next;
+  }
+}
+
+final chatSendStatusProvider =
+    StateNotifierProvider<ChatSendStatusNotifier, Map<String, ChatSendEntry>>(
+        (ref) {
+  final notifier = ChatSendStatusNotifier();
+  notifier.attachClient(ref.read(spacetimeClientProvider));
+  ref.listen<SpacetimeDbClient?>(spacetimeClientProvider, (prev, next) {
+    debugLogger.chat('chatSendStatus', 'client changed -> reattach result sub');
+    notifier.attachClient(next);
+  });
+  return notifier;
+});
+
 int _localSendSeq = 0;
 
 String _mintMessageId() {
@@ -274,6 +397,15 @@ Future<void> sendChatMessage(
     'sendChatMessage',
     'id=$id session=$sessionId textLen=${text.length}',
   );
+  final message = Message(
+    id: id,
+    sessionId: sessionId,
+    role: 'user',
+    text: text,
+    source: 'flutter',
+    createdAt: Int64(DateTime.now().microsecondsSinceEpoch),
+  );
+  ref.read(chatSendStatusProvider.notifier).markPending(message);
   try {
     await client.reducers.pushMessage(
       id: id,
@@ -281,6 +413,7 @@ Future<void> sendChatMessage(
       role: 'user',
       text: text,
       source: 'flutter',
+      optimisticChanges: [OptimisticChange.insertRow(client.message, message)],
     );
     debugLogger.chat('sendChatMessage ok', 'id=$id');
     _probeEcho(client, id, 'msg');
