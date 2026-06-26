@@ -67,14 +67,21 @@ class TerminalMessage extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.end,
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text(
-                          _time,
-                          style: const TextStyle(
-                            fontFamily: SpaceNotesTheme.fontMono,
-                            fontSize: 10,
-                            color: SpaceNotesTheme.dim,
-                            letterSpacing: 0.5,
-                          ),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Text(
+                              _time,
+                              style: const TextStyle(
+                                fontFamily: SpaceNotesTheme.fontMono,
+                                fontSize: 10,
+                                color: SpaceNotesTheme.dim,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                            _SendStatusTick(message: message),
+                          ],
                         ),
                         const SizedBox(height: 4),
                         SelectableText(
@@ -87,7 +94,6 @@ class TerminalMessage extends StatelessWidget {
                             height: 1.55,
                           ),
                         ),
-                        _SendStatusTick(message: message),
                       ],
                     ),
                   ),
@@ -208,7 +214,7 @@ class _SendStatusTick extends ConsumerWidget {
     };
 
     final tick = Padding(
-      padding: const EdgeInsets.only(top: 4),
+      padding: const EdgeInsets.only(left: 6),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.end,
         mainAxisSize: MainAxisSize.min,

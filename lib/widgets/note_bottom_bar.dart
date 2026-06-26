@@ -95,45 +95,46 @@ class _NoteBottomBarState extends ConsumerState<NoteBottomBar> {
   }
 
   Widget _buildMobileBar(bool isChatConnected) {
-    return Container(
-      color: SpaceNotesTheme.bg,
-      child: SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              _buildTile(
-                icon: Icons.more_horiz,
-                onTap: () => _showNoteActions(context),
-                semanticLabel: 'more actions',
-              ),
-              const SizedBox(width: 8),
-              _buildTile(
-                icon: Icons.undo,
-                onTap: () => widget.quillKey?.currentState?.undo(),
-                semanticLabel: 'undo',
-              ),
-              if (isChatConnected) ...[
+    final leading = [
+      SnDockTile(
+        icon: Icons.more_horiz,
+        onTap: () => _showNoteActions(context),
+        semanticLabel: 'more actions',
+      ),
+      SnDockTile(
+        icon: Icons.undo,
+        onTap: () => widget.quillKey?.currentState?.undo(),
+        semanticLabel: 'undo',
+      ),
+    ];
+
+    if (!isChatConnected) {
+      return Container(
+        color: SpaceNotesTheme.bg,
+        child: SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
+            child: Row(
+              children: [
+                leading[0],
                 const SizedBox(width: 8),
-                Expanded(
-                  child: SnField(
-                    controller: _controller,
-                    hint: 'ask about note…',
-                    onSubmitted: (_) => _sendMessage(),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                _buildTile(
-                  icon: Icons.arrow_upward,
-                  onTap: _sendMessage,
-                  semanticLabel: 'send',
-                ),
+                leading[1],
               ],
-            ],
+            ),
           ),
         ),
+      );
+    }
+
+    return SafeArea(
+      top: false,
+      child: SnChatDock(
+        controller: _controller,
+        hint: 'ask about note…',
+        padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
+        onSend: _sendMessage,
+        leading: leading,
       ),
     );
   }
