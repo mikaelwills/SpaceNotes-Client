@@ -10,6 +10,8 @@ class PlatformLogStorage {
   int _charCount = 0;
   String? _currentTimestamp;
   bool _isRotating = false;
+  bool _flushInProgress = false;
+  final List<String> _pendingLines = [];
 
   static const int _maxChars = 5000;
 
@@ -23,37 +25,75 @@ class PlatformLogStorage {
   }
 
   Future<void> startNewLogFile() async {
-    await _sink?.flush();
-    await _sink?.close();
-
-    _currentTimestamp = _formatTimestamp(DateTime.now());
-    _currentLogFile = File('${_logDir!.path}/debug_$_currentTimestamp.log');
-    _sink = _currentLogFile!.openWrite(mode: FileMode.append);
-    final header = '=== SESSION: ${DateTime.now().toIso8601String()} ===\n';
-    _sink!.writeln(header);
-    _charCount = header.length;
+    final oldSink = _sink;
+    _flushInProgress = true;
+    _sink = null;
+    try {
+      await oldSink?.flush();
+      await oldSink?.close();
+    } finally {
+      _currentTimestamp = _formatTimestamp(DateTime.now());
+      _currentLogFile = File('${_logDir!.path}/debug_$_currentTimestamp.log');
+      _sink = _currentLogFile!.openWrite(mode: FileMode.append);
+      final header = '=== SESSION: ${DateTime.now().toIso8601String()} ===\n';
+      _sink!.writeln(header);
+      _charCount = header.length;
+      _flushInProgress = false;
+      _drainPending();
+    }
   }
 
   void writeLine(String line) {
+    if (_flushInProgress) {
+      _pendingLines.add(line);
+      _charCount += line.length + 1;
+      return;
+    }
     _sink?.writeln(line);
     _charCount += line.length + 1;
     _rotateIfNeeded();
   }
 
+  void _drainPending() {
+    if (_pendingLines.isEmpty) return;
+    for (final line in _pendingLines) {
+      _sink?.writeln(line);
+    }
+    _pendingLines.clear();
+    _rotateIfNeeded();
+  }
+
+  Future<void> _guardedFlush() async {
+    if (_sink == null) return;
+    _flushInProgress = true;
+    try {
+      await _sink!.flush();
+    } finally {
+      _flushInProgress = false;
+      _drainPending();
+    }
+  }
+
   Future<void> flush() async {
-    await _sink?.flush();
+    await _guardedFlush();
   }
 
   Future<void> close() async {
-    await _sink?.flush();
-    await _sink?.close();
-    _sink = null;
+    _flushInProgress = true;
+    try {
+      await _sink?.flush();
+      await _sink?.close();
+      _sink = null;
+    } finally {
+      _flushInProgress = false;
+      _pendingLines.clear();
+    }
   }
 
   Future<List<LogFileData>> getLogFiles() async {
     if (_logDir == null) return [];
 
-    await _sink?.flush();
+    await _guardedFlush();
 
     final files = await _logDir!
         .list()
@@ -78,7 +118,7 @@ class PlatformLogStorage {
 
   Future<String?> getCurrentLogContent() async {
     if (_currentLogFile == null) return null;
-    await _sink?.flush();
+    await _guardedFlush();
     if (await _currentLogFile!.exists()) {
       return await _currentLogFile!.readAsString();
     }
@@ -86,9 +126,15 @@ class PlatformLogStorage {
   }
 
   Future<void> clearLogs() async {
-    await _sink?.flush();
-    await _sink?.close();
-    _sink = null;
+    _flushInProgress = true;
+    try {
+      await _sink?.flush();
+      await _sink?.close();
+      _sink = null;
+      _pendingLines.clear();
+    } finally {
+      _flushInProgress = false;
+    }
 
     if (_logDir != null && await _logDir!.exists()) {
       final files = await _logDir!.list().toList();
@@ -107,7 +153,7 @@ class PlatformLogStorage {
   Future<void> exportLogs() async {
     if (_currentLogFile == null) return;
 
-    await _sink?.flush();
+    await _guardedFlush();
 
     final logFiles = await getLogFiles();
     if (logFiles.isEmpty) return;
