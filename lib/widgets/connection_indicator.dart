@@ -27,9 +27,15 @@ class ConnectionIndicator extends ConsumerWidget {
           builder: (context, qualitySnapshot) {
             final quality = qualitySnapshot.data;
 
-            return _PulsingHealthBar(
-              state: state,
-              quality: quality,
+            return ValueListenableBuilder<bool>(
+              valueListenable: client.subscriptions.subscriptionsReady,
+              builder: (context, ready, _) {
+                return _PulsingHealthBar(
+                  state: state,
+                  quality: quality,
+                  subscriptionsReady: ready,
+                );
+              },
             );
           },
         );
@@ -55,11 +61,18 @@ class ConnectionIndicator extends ConsumerWidget {
 class _PulsingHealthBar extends ConsumerStatefulWidget {
   final stdb.ConnectionState state;
   final stdb.ConnectionQuality? quality;
+  final bool subscriptionsReady;
 
   const _PulsingHealthBar({
     required this.state,
     required this.quality,
+    required this.subscriptionsReady,
   });
+
+  /// Full blue only when the socket is connected AND all subscriptions have
+  /// been applied — i.e. the connection is genuinely usable. Socket-open but
+  /// resubscribe-pending reads as still-connecting (amber), not connected.
+  bool get isFullyReady => state.isConnected && subscriptionsReady;
 
   @override
   ConsumerState<_PulsingHealthBar> createState() => _PulsingHealthBarState();
@@ -172,7 +185,10 @@ class _PulsingHealthBarState extends ConsumerState<_PulsingHealthBar>
 
   Color _getStatusColor() {
     return switch (widget.state) {
-      stdb.Connected() => SpaceNotesTheme.success,
+      stdb.Connected() =>
+        widget.subscriptionsReady
+            ? SpaceNotesTheme.success
+            : SpaceNotesTheme.warning,
       stdb.Connecting() || stdb.Reconnecting() => SpaceNotesTheme.warning,
       stdb.AuthError() ||
       stdb.FatalError() ||
@@ -182,6 +198,9 @@ class _PulsingHealthBarState extends ConsumerState<_PulsingHealthBar>
   }
 
   double _getHealthScore() {
+    if (widget.state is stdb.Connected && !widget.subscriptionsReady) {
+      return 0.5;
+    }
     if (widget.quality != null) {
       return widget.quality!.healthScore;
     }

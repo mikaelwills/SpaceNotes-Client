@@ -120,8 +120,19 @@ class Note {
 
   @override
   int get hashCode {
-    return Object.hash(id, path, name, content, folderPath, depth, frontmatter,
-        size, createdTime, modifiedTime, dbUpdatedAt);
+    return Object.hash(
+      id,
+      path,
+      name,
+      content,
+      folderPath,
+      depth,
+      frontmatter,
+      size,
+      createdTime,
+      modifiedTime,
+      dbUpdatedAt,
+    );
   }
 
   @override

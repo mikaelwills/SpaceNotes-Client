@@ -60,7 +60,9 @@ class QuestionRequest {
     encoder.writeBool(multiSelect);
     encoder.writeString(status);
     encoder.writeOption<String>(
-        response, (value) => encoder.writeString(value));
+      response,
+      (value) => encoder.writeString(value),
+    );
     encoder.writeI64(createdAt);
     encoder.writeOption<Int64>(resolvedAt, (value) => encoder.writeI64(value));
   }
@@ -113,8 +115,18 @@ class QuestionRequest {
 
   @override
   int get hashCode {
-    return Object.hash(id, sessionId, question, header, options, multiSelect,
-        status, response, createdAt, resolvedAt);
+    return Object.hash(
+      id,
+      sessionId,
+      question,
+      header,
+      options,
+      multiSelect,
+      status,
+      response,
+      createdAt,
+      resolvedAt,
+    );
   }
 
   @override

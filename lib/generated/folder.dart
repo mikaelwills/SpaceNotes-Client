@@ -3,11 +3,7 @@
 import 'package:spacetimedb_sdk/codegen.dart';
 
 class Folder {
-  Folder({
-    required this.path,
-    required this.name,
-    required this.depth,
-  });
+  Folder({required this.path, required this.name, required this.depth});
 
   factory Folder.fromJson(Map<String, dynamic> json) {
     return Folder(
@@ -38,11 +34,7 @@ class Folder {
   }
 
   Map<String, dynamic> toJson() {
-    return {
-      'path': path,
-      'name': name,
-      'depth': depth,
-    };
+    return {'path': path, 'name': name, 'depth': depth};
   }
 
   @override
@@ -64,11 +56,7 @@ class Folder {
     return 'Folder(path: $path, name: $name, depth: $depth)';
   }
 
-  Folder copyWith({
-    String? path,
-    String? name,
-    int? depth,
-  }) {
+  Folder copyWith({String? path, String? name, int? depth}) {
     return Folder(
       path: path ?? this.path,
       name: name ?? this.name,

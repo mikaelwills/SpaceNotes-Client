@@ -96,8 +96,16 @@ class Session {
 
   @override
   int get hashCode {
-    return Object.hash(id, baseName, host, clientId, createdAt, lastSeen,
-        contextUsed, contextWindow);
+    return Object.hash(
+      id,
+      baseName,
+      host,
+      clientId,
+      createdAt,
+      lastSeen,
+      contextUsed,
+      contextWindow,
+    );
   }
 
   @override

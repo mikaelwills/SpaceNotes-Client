@@ -31,7 +31,9 @@ class SessionActivity {
     encoder.writeString(sessionId);
     encoder.writeString(state);
     encoder.writeOption<String>(
-        lastToolEvent, (value) => encoder.writeString(value));
+      lastToolEvent,
+      (value) => encoder.writeString(value),
+    );
     encoder.writeI64(updatedAt);
   }
 
