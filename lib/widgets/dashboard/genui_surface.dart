@@ -44,11 +44,18 @@ class _GenuiSurfaceState extends State<GenuiSurface> {
   late Map<String, dynamic> _schema;
   late String _markdown;
   final GlobalKey<QuillNoteEditorState> _markdownEditorKey = GlobalKey();
+  final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
     _ingest(widget.body);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
   }
 
   @override
@@ -73,6 +80,7 @@ class _GenuiSurfaceState extends State<GenuiSurface> {
     final topPad = isDesktop ? 32.0 : 16.0;
 
     return SingleChildScrollView(
+      controller: _scrollController,
       padding: const EdgeInsets.only(bottom: 80),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
