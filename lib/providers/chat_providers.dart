@@ -127,6 +127,21 @@ final targetSessionProvider = Provider<String>((ref) {
   return defaultTargetSession;
 });
 
+/// Owns the per-session chat subscription lifecycle. Watching
+/// `sessionSubscriptionProvider(sessionId)` subscribes the four per-session
+/// chat tables (scoped `WHERE session_id = <id>`) on first watch and
+/// unsubscribes when the last watcher disposes. autoDispose ref-counts
+/// watchers, so two widgets on the same session share ONE subscription.
+final sessionSubscriptionProvider =
+    Provider.autoDispose.family<void, String>((ref, sessionId) {
+  final repo = ref.read(notesRepositoryProvider);
+  final pending = repo.subscribeSession(sessionId);
+  ref.onDispose(() async {
+    final qsId = await pending;
+    if (qsId != null) repo.unsubscribeSession(qsId);
+  });
+});
+
 final _chatIndexProvider = Provider<_ChatIndex?>((ref) {
   final client = ref.watch(spacetimeClientProvider);
   if (client == null) {

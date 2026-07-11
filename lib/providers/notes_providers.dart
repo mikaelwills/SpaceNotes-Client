@@ -79,18 +79,47 @@ final currentFolderPathProvider = StateProvider<String>((ref) => '');
 
 final currentNotePathProvider = StateProvider<String?>((ref) => null);
 
+List<String> searchTerms(String query) => query
+    .toLowerCase()
+    .split(RegExp(r'\s+'))
+    .where((term) => term.isNotEmpty)
+    .toList();
+
+bool noteMatchesAllTerms(Note note, List<String> terms) {
+  final name = note.name.toLowerCase();
+  final path = note.path.toLowerCase();
+  final content = note.content.toLowerCase();
+  return terms.every((term) =>
+      name.contains(term) || path.contains(term) || content.contains(term));
+}
+
+List<Note> _rankNotesByNameMatch(List<Note> notes, List<String> terms) {
+  final nameMatches = <Note>[];
+  final otherMatches = <Note>[];
+  for (final note in notes) {
+    final name = note.name.toLowerCase();
+    if (terms.every((term) => name.contains(term))) {
+      nameMatches.add(note);
+    } else {
+      otherMatches.add(note);
+    }
+  }
+  nameMatches.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+  otherMatches.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+  return [...nameMatches, ...otherMatches];
+}
+
 final filteredNotesProvider = Provider.autoDispose<List<Note>>((ref) {
   final notes = ref.watch(notesListProvider);
   final searchQuery = ref.watch(searchQueryProvider);
 
   if (searchQuery.trim().isEmpty) return notes;
 
-  final queryLower = searchQuery.toLowerCase();
-  return notes.where((note) {
-    return note.name.toLowerCase().contains(queryLower) ||
-        note.path.toLowerCase().contains(queryLower) ||
-        note.content.toLowerCase().contains(queryLower);
-  }).toList();
+  final terms = searchTerms(searchQuery);
+  if (terms.isEmpty) return notes;
+  final matches =
+      notes.where((note) => noteMatchesAllTerms(note, terms)).toList();
+  return _rankNotesByNameMatch(matches, terms);
 });
 
 final folderSearchQueryProvider = StateProvider<String>((ref) => '');
@@ -101,9 +130,11 @@ final filteredFoldersProvider = Provider.autoDispose<List<Folder>>((ref) {
 
   if (searchQuery.trim().isEmpty) return folders;
 
-  final queryLower = searchQuery.toLowerCase();
+  final terms = searchTerms(searchQuery);
+  if (terms.isEmpty) return folders;
   return folders.where((folder) {
-    return folder.name.toLowerCase().contains(queryLower);
+    final name = folder.name.toLowerCase();
+    return terms.every((term) => name.contains(term));
   }).toList();
 });
 
@@ -143,19 +174,20 @@ final dynamicFolderContentsProvider = Provider.family
     return (folders: childFolders, notes: childNotes);
   }
 
-  final queryLower = searchQuery.toLowerCase();
+  final terms = searchTerms(searchQuery);
 
   final filteredFolders = allFolders.where((folder) {
-    return folder.name.toLowerCase().contains(queryLower);
+    final name = folder.name.toLowerCase();
+    return terms.every((term) => name.contains(term));
   }).toList();
 
-  final filteredNotes = allNotes.where((note) {
-    return note.name.toLowerCase().contains(queryLower) ||
-        note.path.toLowerCase().contains(queryLower) ||
-        note.content.toLowerCase().contains(queryLower);
-  }).toList();
+  final filteredNotes =
+      allNotes.where((note) => noteMatchesAllTerms(note, terms)).toList();
 
-  return (folders: filteredFolders, notes: filteredNotes);
+  return (
+    folders: filteredFolders,
+    notes: _rankNotesByNameMatch(filteredNotes, terms)
+  );
 });
 
 final folderNotesProvider =

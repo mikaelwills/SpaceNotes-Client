@@ -14,6 +14,7 @@ class SessionChatScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    ref.watch(sessionSubscriptionProvider(sessionId));
     final items = ref.watch(chatTimelineBySessionProvider(sessionId));
     final isDesktop = PlatformUtils.isDesktopLayout(context);
 

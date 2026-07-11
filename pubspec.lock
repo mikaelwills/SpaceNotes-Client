@@ -1253,10 +1253,9 @@ packages:
   spacetimedb_sdk:
     dependency: "direct main"
     description:
-      name: spacetimedb_sdk
-      sha256: c4b09884f546aca68fffcf457b93ec3e5bf34572e067f50c9321d490b25eea4f
-      url: "https://pub.dev"
-    source: hosted
+      path: "../../Dart/spacetimedb_dart_sdk"
+      relative: true
+    source: path
     version: "2.2.0"
   sprintf:
     dependency: transitive

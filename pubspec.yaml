@@ -95,6 +95,10 @@ dev_dependencies:
   bloc_test: ^9.1.4 # Testing utilities for BLoC
   mocktail: ^1.0.4
 
+dependency_overrides:
+  spacetimedb_sdk:
+    path: ../../Dart/spacetimedb_dart_sdk
+
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
 

@@ -300,6 +300,7 @@ class _FolderTreeState extends ConsumerState<_FolderTree> {
     final notes = ref.watch(notesListProvider);
     final searchQuery = ref.watch(folderSearchQueryProvider).toLowerCase();
     final isSearching = searchQuery.isNotEmpty;
+    final terms = searchTerms(searchQuery);
 
     Set<String> visibleFolderPaths = {};
     Set<String> foldersToExpand = {};
@@ -308,9 +309,7 @@ class _FolderTreeState extends ConsumerState<_FolderTree> {
 
     if (isSearching) {
       for (final note in notes) {
-        if (note.name.toLowerCase().contains(searchQuery) ||
-            note.path.toLowerCase().contains(searchQuery) ||
-            note.content.toLowerCase().contains(searchQuery)) {
+        if (noteMatchesAllTerms(note, terms)) {
           matchingNotePaths.add(note.path);
           String parentPath = note.folderPath;
           while (parentPath.isNotEmpty) {
@@ -329,7 +328,8 @@ class _FolderTreeState extends ConsumerState<_FolderTree> {
       }
 
       for (final folder in folders) {
-        if (folder.name.toLowerCase().contains(searchQuery)) {
+        final folderName = folder.name.toLowerCase();
+        if (terms.every((term) => folderName.contains(term))) {
           matchingFolderPaths.add(folder.path);
           visibleFolderPaths.add(folder.path);
           String parentPath = folder.path;

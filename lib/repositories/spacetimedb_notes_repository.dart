@@ -52,6 +52,10 @@ class SpacetimeDbNotesRepository {
 
   final List<StreamSubscription> _subscriptions = [];
 
+  // Cold-start set: light/global tables only. The four per-session chat tables
+  // (message, tool_event, permission_request, question_request) are subscribed
+  // dynamically, scoped `WHERE session_id = <id>`, while a session screen is
+  // open — see subscribeSession/unsubscribeSession.
   static const _initialSubscriptions = [
     'SELECT * FROM note',
     'SELECT * FROM folder',
@@ -61,11 +65,33 @@ class SpacetimeDbNotesRepository {
     'SELECT * FROM audio_frame',
     'SELECT * FROM session',
     'SELECT * FROM session_activity',
-    'SELECT * FROM message',
-    'SELECT * FROM tool_event',
-    'SELECT * FROM permission_request',
-    'SELECT * FROM question_request',
   ];
+
+  static const _perSessionChatTables = [
+    'message',
+    'tool_event',
+    'permission_request',
+    'question_request',
+  ];
+
+  /// Subscribe the four per-session chat tables scoped to one session. Returns
+  /// the SDK querySetId to pass back to [unsubscribeSession]. Awaits
+  /// SubscribeApplied so the session's rows are in the cache on resolve.
+  Future<int?> subscribeSession(String sessionId) async {
+    final client = _client;
+    if (client == null) {
+      debugLogger.warning('SUB', 'subscribeSession: client null');
+      return null;
+    }
+    final queries = _perSessionChatTables
+        .map((t) => "SELECT * FROM $t WHERE session_id = '$sessionId'")
+        .toList();
+    return client.subscriptions.subscribe(queries);
+  }
+
+  void unsubscribeSession(int querySetId) {
+    _client?.subscriptions.unsubscribe(querySetId);
+  }
 
   static const _connectionConfig = ConnectionConfig(
     pingInterval: Duration(seconds: 15),

@@ -28,6 +28,7 @@ class ChatView extends ConsumerWidget {
     final isDesktop = PlatformUtils.isDesktopLayout(context);
     final showDefaultInput = showInput && isDesktop && customInput == null;
     final targetSession = ref.watch(targetSessionProvider);
+    ref.watch(sessionSubscriptionProvider(targetSession));
     final items = ref.watch(chatTimelineBySessionProvider(targetSession));
 
     return Stack(
