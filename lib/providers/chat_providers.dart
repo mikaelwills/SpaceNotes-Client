@@ -133,13 +133,23 @@ final targetSessionProvider = Provider<String>((ref) {
 /// unsubscribes when the last watcher disposes. autoDispose ref-counts
 /// watchers, so two widgets on the same session share ONE subscription.
 final sessionSubscriptionProvider =
-    Provider.autoDispose.family<void, String>((ref, sessionId) {
+    Provider.autoDispose.family<Future<int?>, String>((ref, sessionId) {
   final repo = ref.read(notesRepositoryProvider);
   final pending = repo.subscribeSession(sessionId);
   ref.onDispose(() async {
     final qsId = await pending;
     if (qsId != null) repo.unsubscribeSession(qsId);
   });
+  return pending;
+});
+
+/// True once the per-session subscription's SubscribeApplied has resolved
+/// (rows are in cache). Distinguishes "still hydrating" from "genuinely
+/// empty" so the chat empty-state doesn't flash during the hydration gap.
+final sessionHydratedProvider =
+    FutureProvider.autoDispose.family<bool, String>((ref, sessionId) async {
+  await ref.watch(sessionSubscriptionProvider(sessionId));
+  return true;
 });
 
 final _chatIndexProvider = Provider<_ChatIndex?>((ref) {

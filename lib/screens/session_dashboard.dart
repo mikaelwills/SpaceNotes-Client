@@ -9,6 +9,7 @@ import '../providers/connection_providers.dart';
 import '../providers/notes_providers.dart';
 import '../theme/spacenotes_theme.dart';
 import '../widgets/primitives/primitives.dart';
+import '../widgets/sessions/session_filter_bar.dart';
 import '../widgets/sessions/session_row_content.dart';
 import '../widgets/swipe_action.dart';
 
@@ -18,6 +19,7 @@ class SessionDashboard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final sessions = ref.watch(sessionsProvider);
+    final filtered = ref.watch(filteredSessionsProvider);
     final isConnected = ref.watch(spacetimeConnectedProvider);
 
     return Column(
@@ -34,9 +36,9 @@ class SessionDashboard extends ConsumerWidget {
               ? const _EmptyState()
               : ListView.builder(
                   padding: EdgeInsets.zero,
-                  itemCount: sessions.length,
+                  itemCount: filtered.length,
                   itemBuilder: (context, index) {
-                    final session = sessions[index];
+                    final session = filtered[index];
                     return _SessionRow(
                       key: ValueKey(session.id),
                       index: index + 1,
@@ -46,6 +48,7 @@ class SessionDashboard extends ConsumerWidget {
                   },
                 ),
         ),
+        const SessionFilterBar(),
         _Footer(isConnected: isConnected),
       ],
     );

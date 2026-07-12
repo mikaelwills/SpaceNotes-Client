@@ -28,7 +28,9 @@ class ChatView extends ConsumerWidget {
     final isDesktop = PlatformUtils.isDesktopLayout(context);
     final showDefaultInput = showInput && isDesktop && customInput == null;
     final targetSession = ref.watch(targetSessionProvider);
-    ref.watch(sessionSubscriptionProvider(targetSession));
+    final hydrated = ref
+        .watch(sessionHydratedProvider(targetSession))
+        .maybeWhen(data: (v) => v, orElse: () => false);
     final items = ref.watch(chatTimelineBySessionProvider(targetSession));
 
     return Stack(
@@ -44,6 +46,7 @@ class ChatView extends ConsumerWidget {
                 padding:
                     messagePadding ?? const EdgeInsets.fromLTRB(4, 8, 4, 80),
                 emptyText: 'Ask me anything...',
+                hydrating: !hydrated && items.isEmpty,
                 scrollController: scrollController,
               ),
             ),

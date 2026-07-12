@@ -14,7 +14,9 @@ class SessionChatScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    ref.watch(sessionSubscriptionProvider(sessionId));
+    final hydrated = ref
+        .watch(sessionHydratedProvider(sessionId))
+        .maybeWhen(data: (v) => v, orElse: () => false);
     final items = ref.watch(chatTimelineBySessionProvider(sessionId));
     final isDesktop = PlatformUtils.isDesktopLayout(context);
 
@@ -29,6 +31,7 @@ class SessionChatScreen extends ConsumerWidget {
                 itemBuilder: chatItemToWidget,
                 keyBuilder: chatItemKey,
                 padding: const EdgeInsets.fromLTRB(4, 8, 4, 140),
+                hydrating: !hydrated && items.isEmpty,
                 maxWidth: double.infinity,
               ),
               if (isDesktop)

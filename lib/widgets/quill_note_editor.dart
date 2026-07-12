@@ -44,6 +44,7 @@ class QuillNoteEditor extends StatefulWidget {
 
 class QuillNoteEditorState extends State<QuillNoteEditor> {
   late QuillController _controller;
+  final ScrollController _scrollController = ScrollController();
   late FocusNode _focusNode;
   late FocusNode _rawFocusNode;
   late TextEditingController _rawController;
@@ -78,6 +79,7 @@ class QuillNoteEditorState extends State<QuillNoteEditor> {
   @override
   void dispose() {
     _documentChangesSubscription?.cancel();
+    _scrollController.dispose();
     _controller.dispose();
     _rawController.dispose();
     _rawFocusNode.dispose();
@@ -172,9 +174,10 @@ class QuillNoteEditorState extends State<QuillNoteEditor> {
   Widget buildQuillEditor() {
     return ScrollConfiguration(
       behavior: ScrollConfiguration.of(context).copyWith(scrollbars: false),
-      child: QuillEditor.basic(
+      child: QuillEditor(
         controller: _controller,
         focusNode: _focusNode,
+        scrollController: _scrollController,
         config: QuillEditorConfig(
           contextMenuBuilder: SpaceNotesContextMenu.buildForQuill,
           padding: widget.padding,
@@ -413,9 +416,18 @@ class QuillNoteEditorState extends State<QuillNoteEditor> {
   void _applyExternalMarkdown(String markdown) {
     final hadFocus = _focusNode.hasFocus;
     final previousSelection = _controller.selection;
+    final previousOffset = _scrollController.hasClients
+        ? _scrollController.offset
+        : 0.0;
 
     _controller.document = Document.fromDelta(_mdToDelta.convert(markdown));
     _attachDocumentListener();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_scrollController.hasClients) return;
+      final max = _scrollController.position.maxScrollExtent;
+      _scrollController.jumpTo(previousOffset.clamp(0.0, max));
+    });
 
     if (!hadFocus) {
       _focusNode.unfocus();

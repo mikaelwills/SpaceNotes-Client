@@ -8,6 +8,7 @@ class ChatMessageList<T> extends StatefulWidget {
   final Key Function(T)? keyBuilder;
   final EdgeInsets padding;
   final String emptyText;
+  final bool hydrating;
   final bool showScrollToBottom;
   final double maxWidth;
   final ScrollController? scrollController;
@@ -19,6 +20,7 @@ class ChatMessageList<T> extends StatefulWidget {
     this.keyBuilder,
     this.padding = const EdgeInsets.fromLTRB(4, 8, 4, 140),
     this.emptyText = 'No messages yet',
+    this.hydrating = false,
     this.showScrollToBottom = true,
     this.maxWidth = 800,
     this.scrollController,
@@ -49,6 +51,18 @@ class ChatMessageListState<T> extends State<ChatMessageList<T>> {
   @override
   Widget build(BuildContext context) {
     if (widget.items.isEmpty) {
+      if (widget.hydrating) {
+        return const Center(
+          child: SizedBox(
+            width: 24,
+            height: 24,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: SpaceNotesTheme.accent,
+            ),
+          ),
+        );
+      }
       return Center(
         child: Text(
           widget.emptyText,
