@@ -122,7 +122,7 @@ class MobileNavBar extends ConsumerWidget {
 
   String _currentScreen(String location) {
     if (location.startsWith('/notes/chat')) return '/notes/chat';
-    if (location == '/notes/sessions') return '/notes/sessions';
+    if (location.startsWith('/notes/sessions')) return '/notes/sessions';
     // if (location == '/notes/users') return '/notes/users';
     return '/notes';
   }
