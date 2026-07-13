@@ -13,6 +13,7 @@ import '../generated/session_activity.dart';
 import '../generated/tool_event.dart';
 import '../services/debug_logger.dart';
 import 'notes_providers.dart';
+import 'recent_sessions_provider.dart';
 
 sealed class ChatItem {
   Int64 get timestamp;
@@ -68,9 +69,14 @@ final sessionsProvider = Provider<List<Session>>((ref) {
   final client = ref.watch(spacetimeClientProvider);
   if (client == null) return const [];
   final rows = watchListenable(ref, client.session.rows);
+  final recent = ref.watch(recentSessionsProvider);
   final sorted = rows.toList()
-    ..sort(
-        (a, b) => a.baseName.toLowerCase().compareTo(b.baseName.toLowerCase()));
+    ..sort((a, b) {
+      final ra = recent[a.id] ?? 0;
+      final rb = recent[b.id] ?? 0;
+      if (ra != rb) return rb.compareTo(ra);
+      return a.baseName.toLowerCase().compareTo(b.baseName.toLowerCase());
+    });
   return sorted;
 });
 
@@ -417,6 +423,7 @@ Future<void> sendChatMessage(
     debugLogger.chatError('sendChatMessage aborted', 'client=null');
     return;
   }
+  ref.read(recentSessionsProvider.notifier).markUsed(sessionId);
   final id = _mintMessageId();
   debugLogger.chat(
     'sendChatMessage',
