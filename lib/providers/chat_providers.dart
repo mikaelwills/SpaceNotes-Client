@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:spacetimedb_sdk/spacetimedb_sdk.dart';
@@ -366,6 +367,7 @@ class ChatSendStatusNotifier extends StateNotifier<Map<String, ChatSendEntry>> {
   void attachClient(SpacetimeDbClient? client) {
     _resultSub?.cancel();
     _resultSub = client?.onMutationSyncResult.listen(_onResult);
+    if (client != null) _seedFromPendingQueue(client);
   }
 
   void markPending(Message message) {
@@ -384,6 +386,44 @@ class ChatSendStatusNotifier extends StateNotifier<Map<String, ChatSendEntry>> {
     debugLogger.chat('sendStatus clear', 'id=$id');
     final next = Map<String, ChatSendEntry>.from(state)..remove(id);
     state = next;
+  }
+
+  /// Rebuild pending (clock) status from the SDK's durable mutation queue.
+  /// The in-memory status map dies on app kill, but the queued messages
+  /// survive in `pending_mutations.jsonl` — so on (re)attach, mark every
+  /// still-queued pushMessage as pending again. Without this, a message sent
+  /// offline then killed reopens with no clock and looks (wrongly) sent.
+  Future<void> _seedFromPendingQueue(SpacetimeDbClient client) async {
+    if (!client.hasOfflineStorage) return;
+    try {
+      final pending = await client.subscriptions.getPendingMutations();
+      var changed = false;
+      final next = Map<String, ChatSendEntry>.from(state);
+      for (final mutation in pending) {
+        if (mutation.reducerName != pushMessageDef.name) continue;
+        final insert = mutation.optimisticChanges?.firstWhereOrNull(
+          (c) => c.type == OptimisticChangeType.insert && c.newRowJson != null,
+        );
+        final row = insert?.newRowJson;
+        if (row == null) continue;
+        final id = row['id'];
+        if (id is! String || next.containsKey(id)) continue;
+        try {
+          next[id] = ChatSendEntry(
+            status: ChatSendStatus.pending,
+            message: Message.fromJson(row),
+          );
+          changed = true;
+        } catch (_) {}
+      }
+      if (changed) {
+        debugLogger.chat('sendStatus seed',
+            'restored ${next.length - state.length} pending from durable queue');
+        state = next;
+      }
+    } catch (e) {
+      debugLogger.chatError('sendStatus seed failed', '$e');
+    }
   }
 
   void _onResult(MutationSyncResult result) {
