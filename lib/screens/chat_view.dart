@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/chat_providers.dart';
+import '../providers/connection_providers.dart';
 import '../widgets/adaptive/platform_utils.dart';
 import '../widgets/chat_message_list.dart';
 import '../widgets/connection_status_row.dart';
@@ -31,6 +32,9 @@ class ChatView extends ConsumerWidget {
     final hydrated = ref
         .watch(sessionHydratedProvider(targetSession))
         .maybeWhen(data: (v) => v, orElse: () => false);
+    final connected = ref
+        .watch(spacetimeConnectionLiveProvider)
+        .maybeWhen(data: (v) => v, orElse: () => false);
     final items = ref.watch(chatTimelineBySessionProvider(targetSession));
 
     return Stack(
@@ -46,7 +50,7 @@ class ChatView extends ConsumerWidget {
                 padding:
                     messagePadding ?? const EdgeInsets.fromLTRB(4, 8, 4, 80),
                 emptyText: 'Ask me anything...',
-                hydrating: !hydrated && items.isEmpty,
+                hydrating: connected && !hydrated && items.isEmpty,
                 scrollController: scrollController,
               ),
             ),

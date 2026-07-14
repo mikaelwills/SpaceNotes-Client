@@ -96,6 +96,28 @@ class SpacetimeDbNotesRepository {
     _client?.subscriptions.unsubscribe(querySetId);
   }
 
+  /// Subscribe the four chat tables for several sessions in ONE query set,
+  /// so they stay warm in the offline cache (used for the recently-touched
+  /// sessions at connect). Uses the same proven `= id` scoped query shape as
+  /// [subscribeSession] — no dependency on IN-clause support. Awaits
+  /// SubscribeApplied. Returns the querySetId, or null if there are no ids.
+  Future<int?> subscribeSessions(List<String> sessionIds) async {
+    final client = _client;
+    if (client == null) {
+      debugLogger.warning('SUB', 'subscribeSessions: client null');
+      return null;
+    }
+    if (sessionIds.isEmpty) return null;
+    final queries = <String>[
+      for (final id in sessionIds)
+        for (final t in _perSessionChatTables)
+          "SELECT * FROM $t WHERE session_id = '$id'",
+    ];
+    debugLogger.connection(
+        'subscribeSessions: warming ${sessionIds.length} sessions (${queries.length} queries)');
+    return client.subscriptions.subscribe(queries);
+  }
+
   static const _connectionConfig = ConnectionConfig(
     pingInterval: Duration(seconds: 15),
     pongTimeout: Duration(seconds: 10),

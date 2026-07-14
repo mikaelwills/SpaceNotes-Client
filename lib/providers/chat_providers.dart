@@ -12,6 +12,7 @@ import '../generated/session.dart';
 import '../generated/session_activity.dart';
 import '../generated/tool_event.dart';
 import '../services/debug_logger.dart';
+import 'connection_providers.dart';
 import 'notes_providers.dart';
 import 'recent_sessions_provider.dart';
 
@@ -147,6 +148,36 @@ final sessionSubscriptionProvider =
     if (qsId != null) repo.unsubscribeSession(qsId);
   });
   return pending;
+});
+
+const _warmRecentSessionCount = 10;
+
+/// Keeps the chat tables for the most-recently-messaged sessions warm in the
+/// offline cache. Subscribes the top-N recent sessions (from the persisted
+/// recency map) as one query set whenever the socket is live, and re-subscribes
+/// on reconnect. This is the "load recent, not everything" middle path: cold
+/// start stays light, but reopening a recent session in a tunnel is instant and
+/// cached — no hydration gap, no infinite spinner. Deep-history sessions
+/// outside the warm set fall back to [sessionSubscriptionProvider].
+final warmRecentSessionsProvider = Provider<void>((ref) {
+  final connected = ref.watch(spacetimeConnectionLiveProvider).maybeWhen(
+        data: (v) => v,
+        orElse: () => false,
+      );
+  if (!connected) return;
+
+  final recent = ref.watch(recentSessionsProvider);
+  final ids = recent.entries.toList()
+    ..sort((a, b) => b.value.compareTo(a.value));
+  final topIds = ids.take(_warmRecentSessionCount).map((e) => e.key).toList();
+  if (topIds.isEmpty) return;
+
+  final repo = ref.read(notesRepositoryProvider);
+  final pending = repo.subscribeSessions(topIds);
+  ref.onDispose(() async {
+    final qsId = await pending;
+    if (qsId != null) repo.unsubscribeSession(qsId);
+  });
 });
 
 /// True once the per-session subscription's SubscribeApplied has resolved
