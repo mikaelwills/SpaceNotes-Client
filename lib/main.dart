@@ -90,7 +90,7 @@ class _SpaceNotesAppState extends State<SpaceNotesApp>
     if (state == AppLifecycleState.resumed) {
       debugLogger.info('APP', 'App resumed - checking connection health');
       final repo = widget.container.read(notesRepositoryProvider);
-      repo.tryReconnect();
+      repo.tryReconnect(resetAttempts: true);
     }
   }
 

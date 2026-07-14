@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:collection/collection.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart' show kIsWeb, ValueNotifier;
 import 'package:path_provider/path_provider.dart';
@@ -43,6 +44,8 @@ class SpacetimeDbNotesRepository {
   int _authErrorAttempts = 0;
   bool _nonTableListenersRegistered = false;
   bool _generalNotesFolderEnsured = false;
+  StreamSubscription<List<ConnectivityResult>>? _connectivitySub;
+  bool _lastConnectivityOnline = true;
 
   final ValueNotifier<SpacetimeDbClient?> clientNotifier =
       ValueNotifier<SpacetimeDbClient?>(null);
@@ -98,6 +101,9 @@ class SpacetimeDbNotesRepository {
     pongTimeout: Duration(seconds: 10),
     autoReconnect: true,
     connectTimeout: Duration(seconds: 15),
+    baseReconnectDelay: Duration(seconds: 10),
+    maxReconnectDelay: Duration(seconds: 10),
+    maxReconnectAttempts: 500,
   );
 
   SpacetimeDbNotesRepository({
@@ -580,12 +586,14 @@ class SpacetimeDbNotesRepository {
   /// Connect to SpacetimeDB
   Future<void> connectAndGetInitialData() async {
     debugLogger.connection('connectAndGetInitialData() called');
+    _startConnectivityWatch();
     await _ensureConnected();
   }
 
   /// Try to reconnect if currently disconnected or in slow reconnect backoff
-  Future<void> tryReconnect() async {
+  Future<void> tryReconnect({bool resetAttempts = false}) async {
     debugLogger.connection('tryReconnect() called');
+    if (resetAttempts) _retryAttempt = 0;
     if (_client == null) {
       debugLogger.connection('tryReconnect: _client is null, returning');
       return;
@@ -640,7 +648,11 @@ class SpacetimeDbNotesRepository {
       debugLogger.connection(
         'tryReconnect: reconnect() completed, state=${_client!.connection.state.displayName}',
       );
-      _retryAttempt = 0;
+      if (_client!.connection.state.isConnected) {
+        _retryAttempt = 0;
+      } else {
+        _scheduleRetry('reconnect completed but still disconnected');
+      }
     } on SpacetimeDbAuthException {
       debugLogger.warning(
           'AUTH', 'Auth expired during reconnect, clearing token');
@@ -722,6 +734,27 @@ class SpacetimeDbNotesRepository {
     _syncStateSubject.close();
     await _offlineStorage?.dispose();
     _offlineStorage = null;
+  }
+
+  /// Watch OS-level network connectivity. When the device transitions from
+  /// offline to online, kick a reconnect immediately — this covers the
+  /// cold-launched-while-offline case where the SDK never had a live socket
+  /// to auto-reconnect, so nothing else would trigger recovery until the app
+  /// was next resumed.
+  void _startConnectivityWatch() {
+    if (_connectivitySub != null) return;
+    _connectivitySub =
+        Connectivity().onConnectivityChanged.listen((results) {
+      final online = results.any((r) => r != ConnectivityResult.none);
+      final cameOnline = online && !_lastConnectivityOnline;
+      _lastConnectivityOnline = online;
+      debugLogger.connection(
+          'connectivity changed: online=$online, cameOnline=$cameOnline');
+      if (cameOnline) {
+        debugLogger.connection('Network restored - triggering reconnect');
+        tryReconnect(resetAttempts: true);
+      }
+    });
   }
 
   Future<void> _ensureConnected() async {
@@ -816,6 +849,7 @@ class SpacetimeDbNotesRepository {
 
     _client = client;
     clientNotifier.value = client;
+    _registerNonTableListeners();
 
     await client.connect(
       initialSubscriptions: _initialSubscriptions,
@@ -875,6 +909,12 @@ class SpacetimeDbNotesRepository {
     } on SpacetimeDbException catch (e) {
       debugLogger.error(
           'CONN', 'Error connecting to SpacetimeDB', e.toString());
+      if (_client != null) {
+        debugLogger.warning('CONN',
+            'Initial connect failed offline - arming retry ladder to recover autonomously');
+        _scheduleRetry('initial connect failed: $e');
+        return;
+      }
       rethrow;
     }
   }
@@ -944,28 +984,35 @@ class SpacetimeDbNotesRepository {
     await connectAndGetInitialData();
   }
 
-  /// Schedule the next reconnect attempt with capped exponential backoff.
-  /// Sequence: 2s, 4s, 8s, 15s, 30s, 60s, 60s, ...
+  /// Schedule the next reconnect attempt. Fixed 10s interval, up to
+  /// [_maxRetryAttempts] (~83 min of trying) — SpaceNotes reconnects
+  /// aggressively whether the drop was from a live connection or a failed
+  /// cold start. The loop stops once connected (checked at the top of
+  /// [tryReconnect]) or once the cap is hit.
+  static const _retryInterval = Duration(seconds: 10);
+  static const _maxRetryAttempts = 500;
+
   void _scheduleRetry(String reason) {
     if (_retryScheduled) return;
-    const ladder = [2, 4, 8, 15, 30, 60];
-    final delaySeconds = ladder[_retryAttempt.clamp(0, ladder.length - 1)];
+    if (_retryAttempt >= _maxRetryAttempts) {
+      debugLogger.warning('CONN',
+          'Reconnect cap ($_maxRetryAttempts) reached - stopping retry loop until next resume/connectivity event');
+      return;
+    }
     _retryAttempt += 1;
     _retryScheduled = true;
     debugLogger.warning(
       'CONN',
-      'Reconnection failed: $reason, retrying in ${delaySeconds}s (attempt $_retryAttempt)',
+      'Reconnection failed: $reason, retrying in ${_retryInterval.inSeconds}s (attempt $_retryAttempt/$_maxRetryAttempts)',
     );
-    Future.delayed(Duration(seconds: delaySeconds), () {
+    Future.delayed(_retryInterval, () {
       _retryScheduled = false;
       if (_client == null) return;
-      final retryState = _client!.connection.state;
-      debugLogger.connection(
-        'tryReconnect retry: state=${retryState.displayName}, canRetry=${retryState.canRetry}',
-      );
-      if (retryState.canRetry) {
-        tryReconnect();
+      if (_client!.connection.state.isConnected) {
+        _retryAttempt = 0;
+        return;
       }
+      tryReconnect();
     });
   }
 }
