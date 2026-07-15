@@ -33,6 +33,7 @@ class ChatMessageList<T> extends StatefulWidget {
 class ChatMessageListState<T> extends State<ChatMessageList<T>> {
   ScrollController? _ownScrollController;
   bool _showScrollButton = false;
+  bool _hasShownItems = false;
 
   @override
   void didUpdateWidget(ChatMessageList<T> oldWidget) {
@@ -50,7 +51,10 @@ class ChatMessageListState<T> extends State<ChatMessageList<T>> {
 
   @override
   Widget build(BuildContext context) {
+    if (widget.items.isNotEmpty) _hasShownItems = true;
+
     if (widget.items.isEmpty) {
+      if (_hasShownItems) return const SizedBox.shrink();
       if (widget.hydrating) {
         return const Center(
           child: SizedBox(

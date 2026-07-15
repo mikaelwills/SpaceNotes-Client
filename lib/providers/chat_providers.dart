@@ -174,8 +174,17 @@ final warmRecentSessionsProvider = Provider<void>((ref) {
   if (topIds.isEmpty) return;
 
   final repo = ref.read(notesRepositoryProvider);
+  debugLogger.connection(
+      'warmRecent: subscribing ${topIds.length} sessions', topIds.join(','));
   final pending = repo.subscribeSessions(topIds);
+  pending.then((qsId) {
+    debugLogger.connection('warmRecent: applied', 'querySetId=$qsId');
+  }).catchError((e, st) {
+    debugLogger.error('CONN', 'warmRecent: subscribe FAILED', '$e\n$st');
+    return null;
+  });
   ref.onDispose(() async {
+    debugLogger.connection('warmRecent: disposing (unsubscribe)');
     final qsId = await pending;
     if (qsId != null) repo.unsubscribeSession(qsId);
   });

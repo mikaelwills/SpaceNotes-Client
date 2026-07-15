@@ -949,6 +949,12 @@ class SpacetimeDbNotesRepository {
     if (_nonTableListenersRegistered) return;
     _nonTableListenersRegistered = true;
 
+    final ready = _client!.subscriptions.subscriptionsReady;
+    void readyLog() =>
+        debugLogger.connection('subscriptionsReady -> ${ready.value}');
+    ready.addListener(readyLog);
+    readyLog();
+
     if (_client!.hasOfflineStorage) {
       final syncStateSub = _client!.onSyncStateChanged.listen((state) {
         debugLogger.debug(
