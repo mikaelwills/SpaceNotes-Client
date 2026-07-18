@@ -87,10 +87,13 @@ class _SpaceNotesAppState extends State<SpaceNotesApp>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    final repo = widget.container.read(notesRepositoryProvider);
     if (state == AppLifecycleState.resumed) {
       debugLogger.info('APP', 'App resumed - checking connection health');
-      final repo = widget.container.read(notesRepositoryProvider);
-      repo.tryReconnect(resetAttempts: true);
+      repo.tryReconnect(resetAttempts: true, force: true);
+    } else if (state == AppLifecycleState.paused) {
+      debugLogger.info('APP', 'App paused - disconnecting');
+      repo.handleAppPaused();
     }
   }
 

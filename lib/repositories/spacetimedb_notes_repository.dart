@@ -612,8 +612,18 @@ class SpacetimeDbNotesRepository {
     await _ensureConnected();
   }
 
-  /// Try to reconnect if currently disconnected or in slow reconnect backoff
-  Future<void> tryReconnect({bool resetAttempts = false}) async {
+  /// Try to reconnect if currently disconnected or in slow reconnect backoff.
+  ///
+  /// [force] treats a lingering [stdb.Reconnecting] state as stale and tears it
+  /// down before reconnecting. Used by the resume path: while backgrounded the
+  /// isolate is frozen, so a reconnect scheduled before backgrounding can't run
+  /// and leaves a zombie `Reconnecting` that the `isConnecting` guard below
+  /// would otherwise wait out (~10s). It deliberately does NOT bypass a live
+  /// `Connecting`, so repeated manual reconnects still coalesce.
+  Future<void> tryReconnect({
+    bool resetAttempts = false,
+    bool force = false,
+  }) async {
     debugLogger.connection('tryReconnect() called');
     if (resetAttempts) _retryAttempt = 0;
     if (_client == null) {
@@ -624,13 +634,20 @@ class SpacetimeDbNotesRepository {
     final state = _client!.connection.state;
     debugLogger.connection('tryReconnect: state=${state.displayName}');
 
-    if (state.isConnecting) {
+    if (force && state is stdb.Reconnecting) {
+      debugLogger.connection(
+        'tryReconnect: force clearing stale Reconnecting state',
+      );
+      _retryScheduled = false;
+      await _client!.disconnect();
+    } else if (state.isConnecting) {
       debugLogger.connection('tryReconnect: already connecting, returning');
       return;
     }
 
     if (_retryScheduled) {
-      debugLogger.connection('tryReconnect: retry already scheduled, returning');
+      debugLogger
+          .connection('tryReconnect: retry already scheduled, returning');
       return;
     }
 
@@ -701,6 +718,24 @@ class SpacetimeDbNotesRepository {
     }
   }
 
+  /// Tear the connection down when the app is backgrounded. iOS/Android freeze
+  /// the isolate on pause, so any in-flight reconnect timer stops mid-flight
+  /// and the socket dies silently — leaving a zombie `Reconnecting` that the
+  /// resume path then has to wait out. Disconnecting proactively means resume
+  /// always starts from a clean `Disconnected`. Pending offline mutations live
+  /// in persisted offline storage and are untouched by [disconnect].
+  Future<void> handleAppPaused() async {
+    if (_client == null) return;
+    if (_client!.connection.state is stdb.Disconnected) return;
+    debugLogger.connection('App paused - disconnecting to avoid stale state');
+    _retryScheduled = false;
+    try {
+      await _client!.disconnect();
+    } on SpacetimeDbException catch (e) {
+      debugLogger.error('CONN', 'Error disconnecting on pause: $e');
+    }
+  }
+
   /// Update configuration when connecting to a new instance
   void updateConfiguration({
     required String host,
@@ -765,8 +800,7 @@ class SpacetimeDbNotesRepository {
   /// was next resumed.
   void _startConnectivityWatch() {
     if (_connectivitySub != null) return;
-    _connectivitySub =
-        Connectivity().onConnectivityChanged.listen((results) {
+    _connectivitySub = Connectivity().onConnectivityChanged.listen((results) {
       final online = results.any((r) => r != ConnectivityResult.none);
       final cameOnline = online && !_lastConnectivityOnline;
       _lastConnectivityOnline = online;
@@ -796,8 +830,7 @@ class SpacetimeDbNotesRepository {
       }
 
       if (state is stdb.AuthError) {
-        debugLogger.warning(
-            'CONN', 'Auth error - reconnecting in place');
+        debugLogger.warning('CONN', 'Auth error - reconnecting in place');
         await tryReconnect();
         return;
       }
@@ -809,8 +842,8 @@ class SpacetimeDbNotesRepository {
           debugLogger.connection('Offline mode: using existing client');
           return;
         }
-        debugLogger.warning(
-            'CONN', 'DEGRADED CONNECTION: ${state.displayName} - reconnecting in place');
+        debugLogger.warning('CONN',
+            'DEGRADED CONNECTION: ${state.displayName} - reconnecting in place');
         await tryReconnect();
         return;
       }
