@@ -161,29 +161,56 @@ const _warmRecentSessionCount = 10;
 /// cached — no hydration gap, no infinite spinner. Deep-history sessions
 /// outside the warm set fall back to [sessionSubscriptionProvider].
 final warmRecentSessionsProvider = Provider<void>((ref) {
-  final connected = ref.watch(spacetimeConnectionLiveProvider).maybeWhen(
+  final client = ref.watch(spacetimeClientProvider);
+  if (client == null) return;
+
+  final topIdsKey = ref.watch(recentSessionsProvider.select((recent) {
+    final byRecency = recent.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+    final members = byRecency
+        .take(_warmRecentSessionCount)
+        .map((e) => e.key)
+        .toList()
+      ..sort();
+    return members.join(',');
+  }));
+  if (topIdsKey.isEmpty) return;
+  final topIds = topIdsKey.split(',');
+
+  final repo = ref.read(notesRepositoryProvider);
+
+  var subscribed = false;
+  Future<int?>? pending;
+
+  void warmOnce() {
+    if (subscribed) return;
+    subscribed = true;
+    debugLogger.connection(
+        'warmRecent: subscribing ${topIds.length} sessions', topIds.join(','));
+    pending = repo.subscribeSessions(topIds);
+    pending!.then((qsId) {
+      debugLogger.connection('warmRecent: applied', 'querySetId=$qsId');
+    }).catchError((e, st) {
+      debugLogger.error('CONN', 'warmRecent: subscribe FAILED', '$e\n$st');
+      return null;
+    });
+  }
+
+  final live = ref.read(spacetimeConnectionLiveProvider).maybeWhen(
         data: (v) => v,
         orElse: () => false,
       );
-  if (!connected) return;
+  if (live) warmOnce();
+  final removeListener = ref.listen<AsyncValue<bool>>(
+    spacetimeConnectionLiveProvider,
+    (_, next) {
+      if (next.maybeWhen(data: (v) => v, orElse: () => false)) warmOnce();
+    },
+  );
 
-  final recent = ref.watch(recentSessionsProvider);
-  final ids = recent.entries.toList()
-    ..sort((a, b) => b.value.compareTo(a.value));
-  final topIds = ids.take(_warmRecentSessionCount).map((e) => e.key).toList();
-  if (topIds.isEmpty) return;
-
-  final repo = ref.read(notesRepositoryProvider);
-  debugLogger.connection(
-      'warmRecent: subscribing ${topIds.length} sessions', topIds.join(','));
-  final pending = repo.subscribeSessions(topIds);
-  pending.then((qsId) {
-    debugLogger.connection('warmRecent: applied', 'querySetId=$qsId');
-  }).catchError((e, st) {
-    debugLogger.error('CONN', 'warmRecent: subscribe FAILED', '$e\n$st');
-    return null;
-  });
   ref.onDispose(() async {
+    removeListener.close();
+    if (pending == null) return;
     debugLogger.connection('warmRecent: disposing (unsubscribe)');
     final qsId = await pending;
     if (qsId != null) repo.unsubscribeSession(qsId);
@@ -216,8 +243,7 @@ final _chatIndexProvider = Provider<_ChatIndex?>((ref) {
 });
 
 /// Timeline of merged message + tool + permission items for a session, sorted
-/// by timestamp ascending. Incrementally maintained by [_ChatIndex] — O(log n)
-/// insert via binary search, zero work on changes in other sessions.
+/// by timestamp ascending. Maintained by [_ChatIndex].
 final chatTimelineBySessionProvider =
     Provider.family<List<ChatItem>, String>((ref, sessionId) {
   final index = ref.watch(_chatIndexProvider);
@@ -268,10 +294,9 @@ class _SessionBucket extends ChangeNotifier {
 class _ChatIndex {
   final SpacetimeDbClient client;
   final Map<String, _SessionBucket> _buckets = {};
-  late final VoidCallback _messageListener;
-  late final VoidCallback _toolListener;
-  late final VoidCallback _permListener;
-  late final VoidCallback _questionListener;
+  late final VoidCallback _scheduleRebuild;
+  bool _rebuildScheduled = false;
+  bool _disposed = false;
 
   _ChatIndex(this.client) {
     debugLogger.chat(
@@ -281,24 +306,32 @@ class _ChatIndex {
           'perms=${client.permissionRequest.rows.value.length}',
     );
     _rebuild();
-    _messageListener = _rebuild;
-    _toolListener = _rebuild;
-    _permListener = _rebuild;
-    _questionListener = _rebuild;
-    client.message.rows.addListener(_messageListener);
-    client.toolEvent.rows.addListener(_toolListener);
-    client.permissionRequest.rows.addListener(_permListener);
-    client.questionRequest.rows.addListener(_questionListener);
+    _scheduleRebuild = _requestRebuild;
+    client.message.rows.addListener(_scheduleRebuild);
+    client.toolEvent.rows.addListener(_scheduleRebuild);
+    client.permissionRequest.rows.addListener(_scheduleRebuild);
+    client.questionRequest.rows.addListener(_scheduleRebuild);
   }
 
   _SessionBucket bucketFor(String sessionId) =>
       _buckets.putIfAbsent(sessionId, _SessionBucket.new);
 
+  void _requestRebuild() {
+    if (_rebuildScheduled) return;
+    _rebuildScheduled = true;
+    scheduleMicrotask(() {
+      _rebuildScheduled = false;
+      if (_disposed) return;
+      _rebuild();
+    });
+  }
+
   void dispose() {
-    client.message.rows.removeListener(_messageListener);
-    client.toolEvent.rows.removeListener(_toolListener);
-    client.permissionRequest.rows.removeListener(_permListener);
-    client.questionRequest.rows.removeListener(_questionListener);
+    _disposed = true;
+    client.message.rows.removeListener(_scheduleRebuild);
+    client.toolEvent.rows.removeListener(_scheduleRebuild);
+    client.permissionRequest.rows.removeListener(_scheduleRebuild);
+    client.questionRequest.rows.removeListener(_scheduleRebuild);
     for (final b in _buckets.values) {
       b.dispose();
     }

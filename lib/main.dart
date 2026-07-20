@@ -1,6 +1,8 @@
 // ignore_for_file: implementation_imports
 // SdkLogger is not publicly exported from spacetimedb_sdk; reaching into
 // src/ is intentional to wire the SDK's log stream into debugLogger.
+import 'dart:async';
+
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -68,6 +70,9 @@ class SpaceNotesApp extends StatefulWidget {
 
 class _SpaceNotesAppState extends State<SpaceNotesApp>
     with WidgetsBindingObserver {
+  Timer? _pauseTimer;
+  static const _pauseDebounce = Duration(milliseconds: 600);
+
   @override
   void initState() {
     super.initState();
@@ -81,6 +86,7 @@ class _SpaceNotesAppState extends State<SpaceNotesApp>
 
   @override
   void dispose() {
+    _pauseTimer?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -89,11 +95,17 @@ class _SpaceNotesAppState extends State<SpaceNotesApp>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     final repo = widget.container.read(notesRepositoryProvider);
     if (state == AppLifecycleState.resumed) {
+      _pauseTimer?.cancel();
+      _pauseTimer = null;
       debugLogger.info('APP', 'App resumed - checking connection health');
       repo.tryReconnect(resetAttempts: true, force: true);
     } else if (state == AppLifecycleState.paused) {
-      debugLogger.info('APP', 'App paused - disconnecting');
-      repo.handleAppPaused();
+      _pauseTimer?.cancel();
+      _pauseTimer = Timer(_pauseDebounce, () {
+        _pauseTimer = null;
+        debugLogger.info('APP', 'App paused - disconnecting');
+        repo.handleAppPaused();
+      });
     }
   }
 

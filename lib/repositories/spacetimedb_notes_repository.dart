@@ -77,6 +77,9 @@ class SpacetimeDbNotesRepository {
     'question_request',
   ];
 
+  final Map<int, SpacetimeDbClient> _querySetOwners = {};
+  final Set<int> _deferredUnsubscribes = {};
+
   /// Subscribe the four per-session chat tables scoped to one session. Returns
   /// the SDK querySetId to pass back to [unsubscribeSession]. Awaits
   /// SubscribeApplied so the session's rows are in the cache on resolve.
@@ -89,11 +92,30 @@ class SpacetimeDbNotesRepository {
     final queries = _perSessionChatTables
         .map((t) => "SELECT * FROM $t WHERE session_id = '$sessionId'")
         .toList();
-    return client.subscriptions.subscribe(queries);
+    final qsId = await client.subscriptions.subscribe(queries);
+    _querySetOwners[qsId] = client;
+    return qsId;
   }
 
   void unsubscribeSession(int querySetId) {
-    _client?.subscriptions.unsubscribe(querySetId);
+    final owner = _querySetOwners.remove(querySetId);
+    final client = _client;
+    if (client == null || !identical(owner, client)) return;
+    if (!client.connection.state.isConnected) {
+      _deferredUnsubscribes.add(querySetId);
+      return;
+    }
+    client.subscriptions.unsubscribe(querySetId);
+  }
+
+  void _flushDeferredUnsubscribes() {
+    final client = _client;
+    if (client == null || _deferredUnsubscribes.isEmpty) return;
+    final ids = _deferredUnsubscribes.toList();
+    _deferredUnsubscribes.clear();
+    for (final id in ids) {
+      client.subscriptions.unsubscribe(id);
+    }
   }
 
   /// Subscribe the four chat tables for several sessions in ONE query set,
@@ -115,7 +137,9 @@ class SpacetimeDbNotesRepository {
     ];
     debugLogger.connection(
         'subscribeSessions: warming ${sessionIds.length} sessions (${queries.length} queries)');
-    return client.subscriptions.subscribe(queries);
+    final qsId = await client.subscriptions.subscribe(queries);
+    _querySetOwners[qsId] = client;
+    return qsId;
   }
 
   static const _connectionConfig = ConnectionConfig(
@@ -759,6 +783,8 @@ class SpacetimeDbNotesRepository {
       sub.cancel();
     }
     _subscriptions.clear();
+    _querySetOwners.clear();
+    _deferredUnsubscribes.clear();
 
     if (_client != null) {
       try {
@@ -983,10 +1009,13 @@ class SpacetimeDbNotesRepository {
     _nonTableListenersRegistered = true;
 
     final ready = _client!.subscriptions.subscriptionsReady;
-    void readyLog() =>
-        debugLogger.connection('subscriptionsReady -> ${ready.value}');
-    ready.addListener(readyLog);
-    readyLog();
+    void onReady() {
+      debugLogger.connection('subscriptionsReady -> ${ready.value}');
+      if (ready.value) _flushDeferredUnsubscribes();
+    }
+
+    ready.addListener(onReady);
+    onReady();
 
     if (_client!.hasOfflineStorage) {
       final syncStateSub = _client!.onSyncStateChanged.listen((state) {
