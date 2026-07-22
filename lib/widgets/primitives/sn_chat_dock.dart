@@ -22,6 +22,9 @@ class SnChatDock extends StatelessWidget {
   final int maxLines;
   final int minLines;
   final bool showFade;
+  final double fieldMinHeight;
+  final double? fieldPadV;
+  final double sendTileSize;
 
   const SnChatDock({
     super.key,
@@ -38,6 +41,9 @@ class SnChatDock extends StatelessWidget {
     this.maxLines = 6,
     this.minLines = 1,
     this.showFade = true,
+    this.fieldMinHeight = 52,
+    this.fieldPadV,
+    this.sendTileSize = 52,
   });
 
   @override
@@ -105,6 +111,8 @@ class SnChatDock extends StatelessWidget {
             onSubmitted: (_) => onSend(),
             maxLines: maxLines,
             minLines: minLines,
+            height: fieldMinHeight,
+            autoGrowPadV: fieldPadV,
             trailing: fieldTrailing,
             background: Colors.transparent,
             borderColor: Colors.transparent,
@@ -117,6 +125,7 @@ class SnChatDock extends StatelessWidget {
           icon: Icons.arrow_upward,
           onTap: onSend,
           semanticLabel: 'send',
+          size: sendTileSize,
         ),
     ];
   }
@@ -127,6 +136,7 @@ class SnDockTile extends StatelessWidget {
   final VoidCallback onTap;
   final String semanticLabel;
   final Color color;
+  final double size;
 
   const SnDockTile({
     super.key,
@@ -134,6 +144,7 @@ class SnDockTile extends StatelessWidget {
     required this.onTap,
     required this.semanticLabel,
     this.color = SpaceNotesTheme.accent,
+    this.size = 52,
   });
 
   @override
@@ -148,8 +159,8 @@ class SnDockTile extends StatelessWidget {
         },
         behavior: HitTestBehavior.opaque,
         child: Container(
-          width: 52,
-          height: 52,
+          width: size,
+          height: size,
           alignment: Alignment.center,
           child: Icon(icon, size: 22, color: color),
         ),

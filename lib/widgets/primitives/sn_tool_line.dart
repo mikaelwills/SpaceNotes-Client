@@ -6,11 +6,13 @@ enum SnToolStatus { running, done, denied, ask }
 class SnToolLine extends StatefulWidget {
   final String label;
   final SnToolStatus status;
+  final bool expanded;
 
   const SnToolLine({
     super.key,
     required this.label,
     this.status = SnToolStatus.done,
+    this.expanded = false,
   });
 
   @override
@@ -77,8 +79,11 @@ class _SnToolLineState extends State<SnToolLine>
             Expanded(
               child: Text(
                 widget.label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+                maxLines: widget.expanded ? null : 1,
+                overflow: widget.expanded
+                    ? TextOverflow.visible
+                    : TextOverflow.ellipsis,
+                softWrap: widget.expanded,
                 style: const TextStyle(
                   fontFamily: SpaceNotesTheme.fontMono,
                   fontSize: 11,

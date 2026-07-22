@@ -36,7 +36,10 @@ class _NoteChatInputState extends ConsumerState<NoteChatInput> {
       focusNode: _focusNode,
       hint: _hint,
       onSend: _sendMessage,
-      padding: EdgeInsets.fromLTRB(14, 12, 14, 16 + keyboardHeight),
+      fieldMinHeight: 32,
+      fieldPadV: 15,
+      sendTileSize: 40,
+      padding: EdgeInsets.fromLTRB(14, 8, 14, 15 + keyboardHeight),
     );
   }
 
@@ -51,8 +54,6 @@ class _NoteChatInputState extends ConsumerState<NoteChatInput> {
     final message = _controller.text.trim();
     if (message.isEmpty) return;
 
-    FocusScope.of(context).unfocus();
-
     final targetSession = ref.read(targetSessionProvider);
     final text = widget.notePath.isEmpty
         ? message
@@ -63,5 +64,6 @@ class _NoteChatInputState extends ConsumerState<NoteChatInput> {
       text: text,
     );
     _controller.clear();
+    _focusNode.requestFocus();
   }
 }

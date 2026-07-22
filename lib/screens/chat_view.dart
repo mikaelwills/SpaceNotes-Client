@@ -45,7 +45,8 @@ class ChatView extends ConsumerWidget {
             Expanded(
               child: ChatMessageList<ChatItem>(
                 items: items,
-                itemBuilder: chatItemToWidget,
+                itemBuilder: (context, item) => chatItemToWidget(context, item,
+                    latestToolId: latestToolIdOf(items)),
                 keyBuilder: chatItemKey,
                 padding:
                     messagePadding ?? const EdgeInsets.fromLTRB(4, 8, 4, 80),

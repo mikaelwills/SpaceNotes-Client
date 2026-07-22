@@ -163,7 +163,6 @@ class _NoteBottomBarState extends ConsumerState<NoteBottomBar> {
               color: SpaceNotesTheme.hairlineStrong,
               width: 1,
             ),
-            borderRadius: BorderRadius.circular(SpaceNotesTheme.radiusDock),
           ),
           child: Icon(icon, size: 16, color: SpaceNotesTheme.accent),
         ),

@@ -11,13 +11,26 @@ import '../theme/spacenotes_theme.dart';
 import 'markdown_styles.dart';
 import 'primitives/primitives.dart';
 
-Widget chatItemToWidget(BuildContext context, ChatItem item) {
+Widget chatItemToWidget(
+  BuildContext context,
+  ChatItem item, {
+  String? latestToolId,
+}) {
   return switch (item) {
     ChatMessageItem(:final message) => TerminalMessage(message: message),
-    ChatToolItem(:final event) => ToolEventRow(event: event),
+    ChatToolItem(:final event) =>
+      ToolEventRow(event: event, isLatest: event.id == latestToolId),
     ChatPermissionItem(:final request) => PermissionRow(request: request),
     ChatQuestionItem(:final request) => QuestionRow(request: request),
   };
+}
+
+String? latestToolIdOf(List<ChatItem> items) {
+  for (var i = items.length - 1; i >= 0; i--) {
+    final item = items[i];
+    if (item is ChatToolItem) return item.event.id;
+  }
+  return null;
 }
 
 Key chatItemKey(ChatItem item) {
@@ -251,44 +264,62 @@ class _SendStatusTick extends ConsumerWidget {
   }
 }
 
-class ToolEventRow extends StatelessWidget {
+class ToolEventRow extends StatefulWidget {
   final ToolEvent event;
+  final bool isLatest;
 
-  const ToolEventRow({super.key, required this.event});
+  const ToolEventRow({super.key, required this.event, this.isLatest = false});
+
+  @override
+  State<ToolEventRow> createState() => _ToolEventRowState();
+}
+
+class _ToolEventRowState extends State<ToolEventRow> {
+  bool? _toggled;
 
   @override
   Widget build(BuildContext context) {
-    final detail = _parseDetail(event.detail);
-    final summary = _summarize(detail);
-    final label = summary.isEmpty ? event.tool : '${event.tool}  $summary';
+    final detail = _parseDetail(widget.event.detail);
+    final expanded = _toggled ?? widget.isLatest;
+    final summary =
+        expanded ? _fullDetail(detail) : _summarize(detail);
+    final label = summary.isEmpty
+        ? widget.event.tool
+        : '${widget.event.tool}  $summary';
 
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
-      child: Row(
-        children: [
-          Expanded(
-            child: SnToolLine(
-              label: label,
-              status: SnToolStatus.done,
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => setState(() => _toggled = !expanded),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: SnToolLine(
+                label: label,
+                status: SnToolStatus.done,
+                expanded: expanded,
+              ),
             ),
-          ),
-          const SizedBox(width: 10),
-          Text(
-            _time,
-            style: const TextStyle(
-              fontFamily: SpaceNotesTheme.fontMono,
-              fontSize: 10,
-              color: SpaceNotesTheme.dim,
-              letterSpacing: 0.5,
+            const SizedBox(width: 10),
+            Text(
+              _time,
+              style: const TextStyle(
+                fontFamily: SpaceNotesTheme.fontMono,
+                fontSize: 10,
+                color: SpaceNotesTheme.dim,
+                letterSpacing: 0.5,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
   String get _time {
-    final dt = timestampToDateTime(event.startedAt);
+    final dt = timestampToDateTime(widget.event.startedAt);
     final h = dt.hour.toString().padLeft(2, '0');
     final m = dt.minute.toString().padLeft(2, '0');
     return '$h:$m';
@@ -567,6 +598,20 @@ String _summarize(Map<String, dynamic> detail) {
         ? path.substring(path.lastIndexOf('/') + 1)
         : path;
   }
+  final pattern = input['pattern'];
+  if (pattern is String && pattern.isNotEmpty) return '"$pattern"';
+  final query = input['query'];
+  if (query is String && query.isNotEmpty) return '"$query"';
+  return '';
+}
+
+String _fullDetail(Map<String, dynamic> detail) {
+  final input = detail['input'];
+  if (input is! Map<String, dynamic>) return '';
+  final command = input['command'];
+  if (command is String && command.isNotEmpty) return command;
+  final path = input['file_path'] ?? input['path'] ?? input['filePath'];
+  if (path is String && path.isNotEmpty) return path;
   final pattern = input['pattern'];
   if (pattern is String && pattern.isNotEmpty) return '"$pattern"';
   final query = input['query'];

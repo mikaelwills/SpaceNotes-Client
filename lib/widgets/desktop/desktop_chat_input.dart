@@ -48,9 +48,9 @@ class _DesktopChatInputState extends ConsumerState<DesktopChatInput> {
           focusNode: _focusNode,
           hint: 'ask ai…',
           onSend: _onSend,
-          maxLines: 8,
+          maxLines: 6,
           showFade: false,
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 26),
+          padding: const EdgeInsets.fromLTRB(16, 6, 16, 16),
           trailing: [
             SnDockTile(
               icon: _pendingImageBytes != null

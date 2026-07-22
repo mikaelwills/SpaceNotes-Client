@@ -32,7 +32,8 @@ class SessionChatScreen extends ConsumerWidget {
             children: [
               ChatMessageList<ChatItem>(
                 items: items,
-                itemBuilder: chatItemToWidget,
+                itemBuilder: (context, item) => chatItemToWidget(context, item,
+                    latestToolId: latestToolIdOf(items)),
                 keyBuilder: chatItemKey,
                 padding: const EdgeInsets.fromLTRB(4, 8, 4, 140),
                 hydrating: connected && !hydrated && items.isEmpty,

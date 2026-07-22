@@ -69,16 +69,10 @@ class _NoteTabState extends ConsumerState<_NoteTab> {
                 : _isHovered
                     ? SpaceNotesTheme.bgAlt
                     : Colors.transparent,
-            border: Border(
-              right: const BorderSide(
+            border: const Border(
+              right: BorderSide(
                 color: SpaceNotesTheme.hairline,
                 width: 1,
-              ),
-              top: BorderSide(
-                color: widget.isActive
-                    ? SpaceNotesTheme.accent
-                    : Colors.transparent,
-                width: 2,
               ),
             ),
           ),
