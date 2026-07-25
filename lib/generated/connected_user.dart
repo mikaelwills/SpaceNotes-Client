@@ -56,7 +56,7 @@ class ConnectedUser {
 
   @override
   int get hashCode {
-    return Object.hash(identity, connectedAt, name);
+    return Object.hashAll([identity, connectedAt, name]);
   }
 
   @override

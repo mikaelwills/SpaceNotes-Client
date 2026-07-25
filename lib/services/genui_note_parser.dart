@@ -16,7 +16,7 @@ class GenuiNote {
 
 /// Pure parser/serializer for genui-in-markdown notes.
 ///
-/// Note body layout (when `genui: true` in frontmatter):
+/// Note body layout (detected from a leading ```genui``` fenced block):
 ///
 ///     ```genui
 ///     {"catalogId":"spacenotes/v0","components":[...],"data":{...}}

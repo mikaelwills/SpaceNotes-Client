@@ -32,7 +32,7 @@ class CallSession {
     encoder.writeU64(sessionId);
     encoder.writeIdentity(caller);
     encoder.writeIdentity(callee);
-    state.encode(encoder);
+    state.encodeBsatn(encoder);
   }
 
   static CallSession decodeBsatn(BsatnDecoder decoder) {
@@ -40,7 +40,7 @@ class CallSession {
       sessionId: decoder.readU64(),
       caller: decoder.readIdentity(),
       callee: decoder.readIdentity(),
-      state: CallState.decode(decoder),
+      state: CallState.decodeBsatn(decoder),
     );
   }
 
@@ -65,7 +65,7 @@ class CallSession {
 
   @override
   int get hashCode {
-    return Object.hash(sessionId, caller, callee, state);
+    return Object.hashAll([sessionId, caller, callee, state]);
   }
 
   @override

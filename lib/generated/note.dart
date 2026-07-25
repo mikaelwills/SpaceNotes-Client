@@ -10,7 +10,8 @@ class Note {
     required this.content,
     required this.folderPath,
     required this.depth,
-    required this.frontmatter,
+    required this.extension,
+    required this.kind,
     required this.size,
     required this.createdTime,
     required this.modifiedTime,
@@ -25,7 +26,8 @@ class Note {
       content: json['content'] ?? '',
       folderPath: json['folderPath'] ?? '',
       depth: json['depth'] ?? 0,
-      frontmatter: json['frontmatter'] ?? '',
+      extension: json['extension'] ?? '',
+      kind: json['kind'] ?? '',
       size: Int64(json['size'] ?? 0),
       createdTime: Int64(json['createdTime'] ?? 0),
       modifiedTime: Int64(json['modifiedTime'] ?? 0),
@@ -45,7 +47,9 @@ class Note {
 
   final int depth;
 
-  final String frontmatter;
+  final String extension;
+
+  final String kind;
 
   final Int64 size;
 
@@ -62,7 +66,8 @@ class Note {
     encoder.writeString(content);
     encoder.writeString(folderPath);
     encoder.writeU32(depth);
-    encoder.writeString(frontmatter);
+    encoder.writeString(extension);
+    encoder.writeString(kind);
     encoder.writeU64(size);
     encoder.writeU64(createdTime);
     encoder.writeU64(modifiedTime);
@@ -77,7 +82,8 @@ class Note {
       content: decoder.readString(),
       folderPath: decoder.readString(),
       depth: decoder.readU32(),
-      frontmatter: decoder.readString(),
+      extension: decoder.readString(),
+      kind: decoder.readString(),
       size: decoder.readU64(),
       createdTime: decoder.readU64(),
       modifiedTime: decoder.readU64(),
@@ -93,7 +99,8 @@ class Note {
       'content': content,
       'folderPath': folderPath,
       'depth': depth,
-      'frontmatter': frontmatter,
+      'extension': extension,
+      'kind': kind,
       'size': size.toInt(),
       'createdTime': createdTime.toInt(),
       'modifiedTime': modifiedTime.toInt(),
@@ -111,7 +118,8 @@ class Note {
             content == other.content &&
             folderPath == other.folderPath &&
             depth == other.depth &&
-            frontmatter == other.frontmatter &&
+            extension == other.extension &&
+            kind == other.kind &&
             size == other.size &&
             createdTime == other.createdTime &&
             modifiedTime == other.modifiedTime &&
@@ -120,24 +128,25 @@ class Note {
 
   @override
   int get hashCode {
-    return Object.hash(
+    return Object.hashAll([
       id,
       path,
       name,
       content,
       folderPath,
       depth,
-      frontmatter,
+      extension,
+      kind,
       size,
       createdTime,
       modifiedTime,
-      dbUpdatedAt,
-    );
+      dbUpdatedAt
+    ]);
   }
 
   @override
   String toString() {
-    return 'Note(id: $id, path: $path, name: $name, content: $content, folderPath: $folderPath, depth: $depth, frontmatter: $frontmatter, size: $size, createdTime: $createdTime, modifiedTime: $modifiedTime, dbUpdatedAt: $dbUpdatedAt)';
+    return 'Note(id: $id, path: $path, name: $name, content: $content, folderPath: $folderPath, depth: $depth, extension: $extension, kind: $kind, size: $size, createdTime: $createdTime, modifiedTime: $modifiedTime, dbUpdatedAt: $dbUpdatedAt)';
   }
 
   Note copyWith({
@@ -147,7 +156,8 @@ class Note {
     String? content,
     String? folderPath,
     int? depth,
-    String? frontmatter,
+    String? extension,
+    String? kind,
     Int64? size,
     Int64? createdTime,
     Int64? modifiedTime,
@@ -160,7 +170,8 @@ class Note {
       content: content ?? this.content,
       folderPath: folderPath ?? this.folderPath,
       depth: depth ?? this.depth,
-      frontmatter: frontmatter ?? this.frontmatter,
+      extension: extension ?? this.extension,
+      kind: kind ?? this.kind,
       size: size ?? this.size,
       createdTime: createdTime ?? this.createdTime,
       modifiedTime: modifiedTime ?? this.modifiedTime,

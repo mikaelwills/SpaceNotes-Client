@@ -72,7 +72,7 @@ class ToolEvent {
 
   @override
   int get hashCode {
-    return Object.hash(id, sessionId, tool, detail, startedAt);
+    return Object.hashAll([id, sessionId, tool, detail, startedAt]);
   }
 
   @override

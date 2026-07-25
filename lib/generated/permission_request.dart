@@ -88,15 +88,8 @@ class PermissionRequest {
 
   @override
   int get hashCode {
-    return Object.hash(
-      id,
-      sessionId,
-      tool,
-      input,
-      status,
-      createdAt,
-      resolvedAt,
-    );
+    return Object.hashAll(
+        [id, sessionId, tool, input, status, createdAt, resolvedAt]);
   }
 
   @override

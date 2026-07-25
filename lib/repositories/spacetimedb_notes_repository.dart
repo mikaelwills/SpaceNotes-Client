@@ -31,6 +31,17 @@ String _contentHash(String content) {
   return digest.toString().substring(0, 16);
 }
 
+String _extensionOf(String path) {
+  final basename = path.split('/').last;
+  final dotIndex = basename.lastIndexOf('.');
+  if (dotIndex < 0) return '';
+  return basename.substring(dotIndex + 1).toLowerCase();
+}
+
+String _kindOf(String extension) {
+  return extension == 'md' ? 'md' : 'file';
+}
+
 /// Notes repository implementation using SpacetimeDB
 class SpacetimeDbNotesRepository {
   String? _host;
@@ -273,6 +284,9 @@ class SpacetimeDbNotesRepository {
 
       final now = DateTime.now().millisecondsSinceEpoch;
 
+      final extension = _extensionOf(path);
+      final kind = _kindOf(extension);
+
       final newNote = Note(
         id: id,
         path: path,
@@ -280,7 +294,8 @@ class SpacetimeDbNotesRepository {
         content: content,
         folderPath: folderPath,
         depth: depth,
-        frontmatter: '',
+        extension: extension,
+        kind: kind,
         size: Int64(content.length),
         createdTime: Int64(now),
         modifiedTime: Int64(now),
@@ -294,7 +309,8 @@ class SpacetimeDbNotesRepository {
         content: content,
         folderPath: folderPath,
         depth: depth,
-        frontmatter: '',
+        extension: extension,
+        kind: kind,
         size: Int64(content.length),
         createdTime: Int64(now),
         modifiedTime: Int64(now),
@@ -330,7 +346,8 @@ class SpacetimeDbNotesRepository {
         content: content,
         folderPath: oldNote.folderPath,
         depth: oldNote.depth,
-        frontmatter: '',
+        extension: oldNote.extension,
+        kind: oldNote.kind,
         size: Int64(content.length),
         createdTime: oldNote.createdTime,
         modifiedTime: Int64(now),
@@ -340,7 +357,6 @@ class SpacetimeDbNotesRepository {
       await _client!.reducers.updateNoteContent(
         id: id,
         content: content,
-        frontmatter: '',
         size: Int64(content.length),
         modifiedTime: Int64(now),
         optimisticChanges: [
@@ -408,6 +424,9 @@ class SpacetimeDbNotesRepository {
           ? 0
           : newFolderPath.split('/').where((s) => s.isNotEmpty).length;
 
+      final newExtension = _extensionOf(newPath);
+      final newKind = _kindOf(newExtension);
+
       final newNote = Note(
         id: oldNote.id,
         path: newPath,
@@ -415,7 +434,8 @@ class SpacetimeDbNotesRepository {
         content: oldNote.content,
         folderPath: newFolderPath,
         depth: newDepth,
-        frontmatter: oldNote.frontmatter,
+        extension: newExtension,
+        kind: newKind,
         size: oldNote.size,
         createdTime: oldNote.createdTime,
         modifiedTime: Int64(DateTime.now().millisecondsSinceEpoch),

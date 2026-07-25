@@ -3,7 +3,10 @@
 import 'package:spacetimedb_sdk/codegen.dart';
 
 class MessageImage {
-  MessageImage({required this.messageId, required this.bytes});
+  MessageImage({
+    required this.messageId,
+    required this.bytes,
+  });
 
   factory MessageImage.fromJson(Map<String, dynamic> json) {
     return MessageImage(
@@ -29,7 +32,10 @@ class MessageImage {
   }
 
   Map<String, dynamic> toJson() {
-    return {'messageId': messageId, 'bytes': bytes};
+    return {
+      'messageId': messageId,
+      'bytes': bytes,
+    };
   }
 
   @override
@@ -42,7 +48,7 @@ class MessageImage {
 
   @override
   int get hashCode {
-    return Object.hash(messageId, bytes);
+    return Object.hashAll([messageId, bytes]);
   }
 
   @override
@@ -50,7 +56,10 @@ class MessageImage {
     return 'MessageImage(messageId: $messageId, bytes: $bytes)';
   }
 
-  MessageImage copyWith({String? messageId, List<int>? bytes}) {
+  MessageImage copyWith({
+    String? messageId,
+    List<int>? bytes,
+  }) {
     return MessageImage(
       messageId: messageId ?? this.messageId,
       bytes: bytes ?? this.bytes,

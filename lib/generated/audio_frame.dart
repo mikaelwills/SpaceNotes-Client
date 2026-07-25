@@ -64,7 +64,7 @@ class AudioFrame {
 
   @override
   int get hashCode {
-    return Object.hash(sessionId, from, seq, pcm);
+    return Object.hashAll([sessionId, from, seq, pcm]);
   }
 
   @override

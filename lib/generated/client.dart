@@ -5,20 +5,20 @@ import 'dart:async';
 import 'package:spacetimedb_sdk/codegen.dart';
 import 'reducers.dart';
 import 'reducer_args.dart';
-import 'folder.dart';
-import 'message.dart';
 import 'session_activity.dart';
-import 'connected_user.dart';
-import 'session.dart';
-import 'user_profile.dart';
 import 'note.dart';
+import 'session.dart';
+import 'folder.dart';
 import 'call_session.dart';
-import 'question_request.dart';
+import 'message.dart';
+import 'permission_request.dart';
 import 'tool_event.dart';
 import 'message_image.dart';
-import 'permission_request.dart';
+import 'question_request.dart';
+import 'user_profile.dart';
 import 'video_frame.dart';
 import 'audio_frame.dart';
+import 'connected_user.dart';
 
 class SpacetimeDbClient {
   SpacetimeDbClient._({
@@ -26,8 +26,8 @@ class SpacetimeDbClient {
     required this.subscriptions,
     required AuthTokenStore authStorage,
     required bool ssl,
-  }) : _authStorage = authStorage,
-       _ssl = ssl {
+  })  : _authStorage = authStorage,
+        _ssl = ssl {
     reducers = Reducers(subscriptions.reducers, subscriptions.reducerEmitter);
   }
 
@@ -77,46 +77,34 @@ class SpacetimeDbClient {
     subscriptions.clearSyncErrors();
   }
 
-  TableCache<Folder> get folder {
-    return subscriptions.cache.getTableByTypedName<Folder>('folder');
-  }
-
-  TableCache<Message> get message {
-    return subscriptions.cache.getTableByTypedName<Message>('message');
-  }
-
   TableCache<SessionActivity> get sessionActivity {
-    return subscriptions.cache.getTableByTypedName<SessionActivity>(
-      'session_activity',
-    );
-  }
-
-  TableCache<ConnectedUser> get connectedUser {
-    return subscriptions.cache.getTableByTypedName<ConnectedUser>(
-      'connected_user',
-    );
-  }
-
-  TableCache<Session> get session {
-    return subscriptions.cache.getTableByTypedName<Session>('session');
-  }
-
-  TableCache<UserProfile> get userProfile {
-    return subscriptions.cache.getTableByTypedName<UserProfile>('user_profile');
+    return subscriptions.cache
+        .getTableByTypedName<SessionActivity>('session_activity');
   }
 
   TableCache<Note> get note {
     return subscriptions.cache.getTableByTypedName<Note>('note');
   }
 
+  TableCache<Session> get session {
+    return subscriptions.cache.getTableByTypedName<Session>('session');
+  }
+
+  TableCache<Folder> get folder {
+    return subscriptions.cache.getTableByTypedName<Folder>('folder');
+  }
+
   TableCache<CallSession> get callSession {
     return subscriptions.cache.getTableByTypedName<CallSession>('call_session');
   }
 
-  TableCache<QuestionRequest> get questionRequest {
-    return subscriptions.cache.getTableByTypedName<QuestionRequest>(
-      'question_request',
-    );
+  TableCache<Message> get message {
+    return subscriptions.cache.getTableByTypedName<Message>('message');
+  }
+
+  TableCache<PermissionRequest> get permissionRequest {
+    return subscriptions.cache
+        .getTableByTypedName<PermissionRequest>('permission_request');
   }
 
   TableCache<ToolEvent> get toolEvent {
@@ -124,15 +112,17 @@ class SpacetimeDbClient {
   }
 
   TableCache<MessageImage> get messageImage {
-    return subscriptions.cache.getTableByTypedName<MessageImage>(
-      'message_image',
-    );
+    return subscriptions.cache
+        .getTableByTypedName<MessageImage>('message_image');
   }
 
-  TableCache<PermissionRequest> get permissionRequest {
-    return subscriptions.cache.getTableByTypedName<PermissionRequest>(
-      'permission_request',
-    );
+  TableCache<QuestionRequest> get questionRequest {
+    return subscriptions.cache
+        .getTableByTypedName<QuestionRequest>('question_request');
+  }
+
+  TableCache<UserProfile> get userProfile {
+    return subscriptions.cache.getTableByTypedName<UserProfile>('user_profile');
   }
 
   TableCache<VideoFrame> get videoFrame {
@@ -141,6 +131,11 @@ class SpacetimeDbClient {
 
   TableCache<AudioFrame> get audioFrame {
     return subscriptions.cache.getTableByTypedName<AudioFrame>('audio_frame');
+  }
+
+  TableCache<ConnectedUser> get connectedUser {
+    return subscriptions.cache
+        .getTableByTypedName<ConnectedUser>('connected_user');
   }
 
   static Future<SpacetimeDbClient> create({
@@ -161,67 +156,38 @@ class SpacetimeDbClient {
       ssl: ssl,
       config: config,
     );
-    final subscriptionManager = SubscriptionManager(
-      connection,
-      offlineStorage: offlineStorage,
-      queuePolicy: queuePolicy,
-    );
+    final subscriptionManager = SubscriptionManager(connection,
+        offlineStorage: offlineStorage, queuePolicy: queuePolicy);
 
-    subscriptionManager.cache.registerDecoder<Folder>(
-      'folder',
-      FolderDecoder(),
-    );
-    subscriptionManager.cache.registerDecoder<Message>(
-      'message',
-      MessageDecoder(),
-    );
     subscriptionManager.cache.registerDecoder<SessionActivity>(
-      'session_activity',
-      SessionActivityDecoder(),
-    );
-    subscriptionManager.cache.registerDecoder<ConnectedUser>(
-      'connected_user',
-      ConnectedUserDecoder(),
-    );
-    subscriptionManager.cache.registerDecoder<Session>(
-      'session',
-      SessionDecoder(),
-    );
-    subscriptionManager.cache.registerDecoder<UserProfile>(
-      'user_profile',
-      UserProfileDecoder(),
-    );
+        'session_activity', SessionActivityDecoder());
     subscriptionManager.cache.registerDecoder<Note>('note', NoteDecoder());
-    subscriptionManager.cache.registerDecoder<CallSession>(
-      'call_session',
-      CallSessionDecoder(),
-    );
-    subscriptionManager.cache.registerDecoder<QuestionRequest>(
-      'question_request',
-      QuestionRequestDecoder(),
-    );
-    subscriptionManager.cache.registerDecoder<ToolEvent>(
-      'tool_event',
-      ToolEventDecoder(),
-    );
-    subscriptionManager.cache.registerDecoder<MessageImage>(
-      'message_image',
-      MessageImageDecoder(),
-    );
+    subscriptionManager.cache
+        .registerDecoder<Session>('session', SessionDecoder());
+    subscriptionManager.cache
+        .registerDecoder<Folder>('folder', FolderDecoder());
+    subscriptionManager.cache
+        .registerDecoder<CallSession>('call_session', CallSessionDecoder());
+    subscriptionManager.cache
+        .registerDecoder<Message>('message', MessageDecoder());
     subscriptionManager.cache.registerDecoder<PermissionRequest>(
-      'permission_request',
-      PermissionRequestDecoder(),
-    );
+        'permission_request', PermissionRequestDecoder());
+    subscriptionManager.cache
+        .registerDecoder<ToolEvent>('tool_event', ToolEventDecoder());
+    subscriptionManager.cache
+        .registerDecoder<MessageImage>('message_image', MessageImageDecoder());
+    subscriptionManager.cache.registerDecoder<QuestionRequest>(
+        'question_request', QuestionRequestDecoder());
+    subscriptionManager.cache
+        .registerDecoder<UserProfile>('user_profile', UserProfileDecoder());
     subscriptionManager.cache.registerDecoder<VideoFrame>(
-      'video_frame',
-      VideoFrameDecoder(),
-      isEvent: true,
-    );
+        'video_frame', VideoFrameDecoder(),
+        isEvent: true);
     subscriptionManager.cache.registerDecoder<AudioFrame>(
-      'audio_frame',
-      AudioFrameDecoder(),
-      isEvent: true,
-    );
+        'audio_frame', AudioFrameDecoder(),
+        isEvent: true);
+    subscriptionManager.cache.registerDecoder<ConnectedUser>(
+        'connected_user', ConnectedUserDecoder());
 
     subscriptionManager.reducerRegistry.register(acceptCallDef);
     subscriptionManager.reducerRegistry.register(appendToNoteDef);
@@ -302,21 +268,18 @@ class SpacetimeDbClient {
     await connection.disconnect();
   }
 
-  String getAuthUrl(String provider, {String? redirectUri}) {
+  String getAuthUrl(
+    String provider, {
+    String? redirectUri,
+  }) {
     final helper = OidcHelper(
-      host: connection.host,
-      database: connection.database,
-      ssl: _ssl,
-    );
+        host: connection.host, database: connection.database, ssl: _ssl);
     return helper.getAuthUrl(provider, redirectUri: redirectUri);
   }
 
   String? parseTokenFromCallback(String callbackUrl) {
     final helper = OidcHelper(
-      host: connection.host,
-      database: connection.database,
-      ssl: _ssl,
-    );
+        host: connection.host, database: connection.database, ssl: _ssl);
     return helper.parseTokenFromCallback(callbackUrl);
   }
 }

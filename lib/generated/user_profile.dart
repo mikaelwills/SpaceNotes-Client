@@ -3,7 +3,10 @@
 import 'package:spacetimedb_sdk/codegen.dart';
 
 class UserProfile {
-  UserProfile({required this.identity, required this.name});
+  UserProfile({
+    required this.identity,
+    required this.name,
+  });
 
   factory UserProfile.fromJson(Map<String, dynamic> json) {
     return UserProfile(
@@ -29,7 +32,10 @@ class UserProfile {
   }
 
   Map<String, dynamic> toJson() {
-    return {'identity': identity.toJson(), 'name': name};
+    return {
+      'identity': identity.toJson(),
+      'name': name,
+    };
   }
 
   @override
@@ -42,7 +48,7 @@ class UserProfile {
 
   @override
   int get hashCode {
-    return Object.hash(identity, name);
+    return Object.hashAll([identity, name]);
   }
 
   @override
@@ -50,7 +56,10 @@ class UserProfile {
     return 'UserProfile(identity: $identity, name: $name)';
   }
 
-  UserProfile copyWith({Identity? identity, String? name}) {
+  UserProfile copyWith({
+    Identity? identity,
+    String? name,
+  }) {
     return UserProfile(
       identity: identity ?? this.identity,
       name: name ?? this.name,

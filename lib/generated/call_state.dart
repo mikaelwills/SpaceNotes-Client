@@ -5,15 +5,15 @@ import 'package:spacetimedb_sdk/codegen.dart';
 sealed class CallState {
   const CallState();
 
-  factory CallState.decode(BsatnDecoder decoder) {
+  factory CallState.decodeBsatn(BsatnDecoder decoder) {
     final tag = decoder.readU8();
     switch (tag) {
       case 0:
-        return CallStateRinging.decode(decoder);
+        return CallStateRinging.decodeBsatn(decoder);
       case 1:
-        return CallStateActive.decode(decoder);
+        return CallStateActive.decodeBsatn(decoder);
       case 2:
-        return CallStateEnded.decode(decoder);
+        return CallStateEnded.decodeBsatn(decoder);
       default:
         throw Exception('Unknown CallState variant: $tag');
     }
@@ -33,14 +33,14 @@ sealed class CallState {
     }
   }
 
-  void encode(BsatnEncoder encoder);
+  void encodeBsatn(BsatnEncoder encoder);
   Map<String, dynamic> toJson();
 }
 
 class CallStateRinging extends CallState {
   const CallStateRinging();
 
-  factory CallStateRinging.decode(BsatnDecoder decoder) {
+  factory CallStateRinging.decodeBsatn(BsatnDecoder decoder) {
     return const CallStateRinging();
   }
 
@@ -49,7 +49,7 @@ class CallStateRinging extends CallState {
   }
 
   @override
-  void encode(BsatnEncoder encoder) {
+  void encodeBsatn(BsatnEncoder encoder) {
     encoder.writeU8(0);
   }
 
@@ -77,7 +77,7 @@ class CallStateRinging extends CallState {
 class CallStateActive extends CallState {
   const CallStateActive();
 
-  factory CallStateActive.decode(BsatnDecoder decoder) {
+  factory CallStateActive.decodeBsatn(BsatnDecoder decoder) {
     return const CallStateActive();
   }
 
@@ -86,7 +86,7 @@ class CallStateActive extends CallState {
   }
 
   @override
-  void encode(BsatnEncoder encoder) {
+  void encodeBsatn(BsatnEncoder encoder) {
     encoder.writeU8(1);
   }
 
@@ -114,7 +114,7 @@ class CallStateActive extends CallState {
 class CallStateEnded extends CallState {
   const CallStateEnded();
 
-  factory CallStateEnded.decode(BsatnDecoder decoder) {
+  factory CallStateEnded.decodeBsatn(BsatnDecoder decoder) {
     return const CallStateEnded();
   }
 
@@ -123,7 +123,7 @@ class CallStateEnded extends CallState {
   }
 
   @override
-  void encode(BsatnEncoder encoder) {
+  void encodeBsatn(BsatnEncoder encoder) {
     encoder.writeU8(2);
   }
 

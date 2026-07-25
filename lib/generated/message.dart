@@ -80,7 +80,7 @@ class Message {
 
   @override
   int get hashCode {
-    return Object.hash(id, sessionId, role, text, source, createdAt);
+    return Object.hashAll([id, sessionId, role, text, source, createdAt]);
   }
 
   @override

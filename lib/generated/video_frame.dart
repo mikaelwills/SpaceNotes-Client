@@ -80,7 +80,7 @@ class VideoFrame {
 
   @override
   int get hashCode {
-    return Object.hash(sessionId, from, seq, codec, isKeyframe, data);
+    return Object.hashAll([sessionId, from, seq, codec, isKeyframe, data]);
   }
 
   @override
