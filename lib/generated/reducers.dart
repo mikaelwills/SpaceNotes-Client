@@ -32,14 +32,14 @@ class Reducers {
         optimisticChanges: optimisticChanges, dropIfOffline: dropIfOffline);
   }
 
-  /// Calls the `append_to_note` reducer.
+  /// Calls the `append_to_file` reducer.
   ///
   /// Returns a [TransactionResult] on success. Throws
   /// [SpacetimeDbReducerException] if the reducer returns `Failed` or
   /// `InternalError`. The returned status is one of `Committed`,
   /// `Pending` (queued to offline storage), or `Dropped` (skipped via
   /// `dropIfOffline: true` while offline).
-  Future<TransactionResult> appendToNote({
+  Future<TransactionResult> appendToFile({
     required String path,
     required String content,
     List<OptimisticChange>? optimisticChanges,
@@ -48,7 +48,7 @@ class Reducers {
     final encoder = BsatnEncoder();
     encoder.writeString(path);
     encoder.writeString(content);
-    return await _reducerCaller.call(appendToNoteDef.name, encoder.toBytes(),
+    return await _reducerCaller.call(appendToFileDef.name, encoder.toBytes(),
         optimisticChanges: optimisticChanges, dropIfOffline: dropIfOffline);
   }
 
@@ -85,6 +85,42 @@ class Reducers {
         optimisticChanges: optimisticChanges, dropIfOffline: dropIfOffline);
   }
 
+  /// Calls the `create_file` reducer.
+  ///
+  /// Returns a [TransactionResult] on success. Throws
+  /// [SpacetimeDbReducerException] if the reducer returns `Failed` or
+  /// `InternalError`. The returned status is one of `Committed`,
+  /// `Pending` (queued to offline storage), or `Dropped` (skipped via
+  /// `dropIfOffline: true` while offline).
+  Future<TransactionResult> createFile({
+    required String id,
+    required String path,
+    required String name,
+    required String content,
+    required String folderPath,
+    required int depth,
+    required String extension,
+    required Int64 size,
+    required Int64 createdTime,
+    required Int64 modifiedTime,
+    List<OptimisticChange>? optimisticChanges,
+    bool dropIfOffline = false,
+  }) async {
+    final encoder = BsatnEncoder();
+    encoder.writeString(id);
+    encoder.writeString(path);
+    encoder.writeString(name);
+    encoder.writeString(content);
+    encoder.writeString(folderPath);
+    encoder.writeU32(depth);
+    encoder.writeString(extension);
+    encoder.writeU64(size);
+    encoder.writeU64(createdTime);
+    encoder.writeU64(modifiedTime);
+    return await _reducerCaller.call(createFileDef.name, encoder.toBytes(),
+        optimisticChanges: optimisticChanges, dropIfOffline: dropIfOffline);
+  }
+
   /// Calls the `create_folder` reducer.
   ///
   /// Returns a [TransactionResult] on success. Throws
@@ -107,41 +143,21 @@ class Reducers {
         optimisticChanges: optimisticChanges, dropIfOffline: dropIfOffline);
   }
 
-  /// Calls the `create_note` reducer.
+  /// Calls the `delete_file` reducer.
   ///
   /// Returns a [TransactionResult] on success. Throws
   /// [SpacetimeDbReducerException] if the reducer returns `Failed` or
   /// `InternalError`. The returned status is one of `Committed`,
   /// `Pending` (queued to offline storage), or `Dropped` (skipped via
   /// `dropIfOffline: true` while offline).
-  Future<TransactionResult> createNote({
+  Future<TransactionResult> deleteFile({
     required String id,
-    required String path,
-    required String name,
-    required String content,
-    required String folderPath,
-    required int depth,
-    required String extension,
-    required String kind,
-    required Int64 size,
-    required Int64 createdTime,
-    required Int64 modifiedTime,
     List<OptimisticChange>? optimisticChanges,
     bool dropIfOffline = false,
   }) async {
     final encoder = BsatnEncoder();
     encoder.writeString(id);
-    encoder.writeString(path);
-    encoder.writeString(name);
-    encoder.writeString(content);
-    encoder.writeString(folderPath);
-    encoder.writeU32(depth);
-    encoder.writeString(extension);
-    encoder.writeString(kind);
-    encoder.writeU64(size);
-    encoder.writeU64(createdTime);
-    encoder.writeU64(modifiedTime);
-    return await _reducerCaller.call(createNoteDef.name, encoder.toBytes(),
+    return await _reducerCaller.call(deleteFileDef.name, encoder.toBytes(),
         optimisticChanges: optimisticChanges, dropIfOffline: dropIfOffline);
   }
 
@@ -160,24 +176,6 @@ class Reducers {
     final encoder = BsatnEncoder();
     encoder.writeString(path);
     return await _reducerCaller.call(deleteFolderDef.name, encoder.toBytes(),
-        optimisticChanges: optimisticChanges, dropIfOffline: dropIfOffline);
-  }
-
-  /// Calls the `delete_note` reducer.
-  ///
-  /// Returns a [TransactionResult] on success. Throws
-  /// [SpacetimeDbReducerException] if the reducer returns `Failed` or
-  /// `InternalError`. The returned status is one of `Committed`,
-  /// `Pending` (queued to offline storage), or `Dropped` (skipped via
-  /// `dropIfOffline: true` while offline).
-  Future<TransactionResult> deleteNote({
-    required String id,
-    List<OptimisticChange>? optimisticChanges,
-    bool dropIfOffline = false,
-  }) async {
-    final encoder = BsatnEncoder();
-    encoder.writeString(id);
-    return await _reducerCaller.call(deleteNoteDef.name, encoder.toBytes(),
         optimisticChanges: optimisticChanges, dropIfOffline: dropIfOffline);
   }
 
@@ -255,14 +253,14 @@ class Reducers {
         optimisticChanges: optimisticChanges, dropIfOffline: dropIfOffline);
   }
 
-  /// Calls the `find_replace_in_note` reducer.
+  /// Calls the `find_replace_in_file` reducer.
   ///
   /// Returns a [TransactionResult] on success. Throws
   /// [SpacetimeDbReducerException] if the reducer returns `Failed` or
   /// `InternalError`. The returned status is one of `Committed`,
   /// `Pending` (queued to offline storage), or `Dropped` (skipped via
   /// `dropIfOffline: true` while offline).
-  Future<TransactionResult> findReplaceInNote({
+  Future<TransactionResult> findReplaceInFile({
     required String path,
     required String oldText,
     required String newText,
@@ -276,25 +274,25 @@ class Reducers {
     encoder.writeString(newText);
     encoder.writeBool(replaceAll);
     return await _reducerCaller.call(
-        findReplaceInNoteDef.name, encoder.toBytes(),
+        findReplaceInFileDef.name, encoder.toBytes(),
         optimisticChanges: optimisticChanges, dropIfOffline: dropIfOffline);
   }
 
-  /// Calls the `get_recent_notes` reducer.
+  /// Calls the `get_recent_files` reducer.
   ///
   /// Returns a [TransactionResult] on success. Throws
   /// [SpacetimeDbReducerException] if the reducer returns `Failed` or
   /// `InternalError`. The returned status is one of `Committed`,
   /// `Pending` (queued to offline storage), or `Dropped` (skipped via
   /// `dropIfOffline: true` while offline).
-  Future<TransactionResult> getRecentNotes({
+  Future<TransactionResult> getRecentFiles({
     required int limit,
     List<OptimisticChange>? optimisticChanges,
     bool dropIfOffline = false,
   }) async {
     final encoder = BsatnEncoder();
     encoder.writeU32(limit);
-    return await _reducerCaller.call(getRecentNotesDef.name, encoder.toBytes(),
+    return await _reducerCaller.call(getRecentFilesDef.name, encoder.toBytes(),
         optimisticChanges: optimisticChanges, dropIfOffline: dropIfOffline);
   }
 
@@ -313,6 +311,26 @@ class Reducers {
     final encoder = BsatnEncoder();
     encoder.writeString(sessionId);
     return await _reducerCaller.call(heartbeatDef.name, encoder.toBytes(),
+        optimisticChanges: optimisticChanges, dropIfOffline: dropIfOffline);
+  }
+
+  /// Calls the `move_file` reducer.
+  ///
+  /// Returns a [TransactionResult] on success. Throws
+  /// [SpacetimeDbReducerException] if the reducer returns `Failed` or
+  /// `InternalError`. The returned status is one of `Committed`,
+  /// `Pending` (queued to offline storage), or `Dropped` (skipped via
+  /// `dropIfOffline: true` while offline).
+  Future<TransactionResult> moveFile({
+    required String oldPath,
+    required String newPath,
+    List<OptimisticChange>? optimisticChanges,
+    bool dropIfOffline = false,
+  }) async {
+    final encoder = BsatnEncoder();
+    encoder.writeString(oldPath);
+    encoder.writeString(newPath);
+    return await _reducerCaller.call(moveFileDef.name, encoder.toBytes(),
         optimisticChanges: optimisticChanges, dropIfOffline: dropIfOffline);
   }
 
@@ -336,34 +354,14 @@ class Reducers {
         optimisticChanges: optimisticChanges, dropIfOffline: dropIfOffline);
   }
 
-  /// Calls the `move_note` reducer.
+  /// Calls the `prepend_to_file` reducer.
   ///
   /// Returns a [TransactionResult] on success. Throws
   /// [SpacetimeDbReducerException] if the reducer returns `Failed` or
   /// `InternalError`. The returned status is one of `Committed`,
   /// `Pending` (queued to offline storage), or `Dropped` (skipped via
   /// `dropIfOffline: true` while offline).
-  Future<TransactionResult> moveNote({
-    required String oldPath,
-    required String newPath,
-    List<OptimisticChange>? optimisticChanges,
-    bool dropIfOffline = false,
-  }) async {
-    final encoder = BsatnEncoder();
-    encoder.writeString(oldPath);
-    encoder.writeString(newPath);
-    return await _reducerCaller.call(moveNoteDef.name, encoder.toBytes(),
-        optimisticChanges: optimisticChanges, dropIfOffline: dropIfOffline);
-  }
-
-  /// Calls the `prepend_to_note` reducer.
-  ///
-  /// Returns a [TransactionResult] on success. Throws
-  /// [SpacetimeDbReducerException] if the reducer returns `Failed` or
-  /// `InternalError`. The returned status is one of `Committed`,
-  /// `Pending` (queued to offline storage), or `Dropped` (skipped via
-  /// `dropIfOffline: true` while offline).
-  Future<TransactionResult> prependToNote({
+  Future<TransactionResult> prependToFile({
     required String path,
     required String content,
     List<OptimisticChange>? optimisticChanges,
@@ -372,7 +370,7 @@ class Reducers {
     final encoder = BsatnEncoder();
     encoder.writeString(path);
     encoder.writeString(content);
-    return await _reducerCaller.call(prependToNoteDef.name, encoder.toBytes(),
+    return await _reducerCaller.call(prependToFileDef.name, encoder.toBytes(),
         optimisticChanges: optimisticChanges, dropIfOffline: dropIfOffline);
   }
 
@@ -517,14 +515,14 @@ class Reducers {
         optimisticChanges: optimisticChanges, dropIfOffline: dropIfOffline);
   }
 
-  /// Calls the `rename_note` reducer.
+  /// Calls the `rename_file` reducer.
   ///
   /// Returns a [TransactionResult] on success. Throws
   /// [SpacetimeDbReducerException] if the reducer returns `Failed` or
   /// `InternalError`. The returned status is one of `Committed`,
   /// `Pending` (queued to offline storage), or `Dropped` (skipped via
   /// `dropIfOffline: true` while offline).
-  Future<TransactionResult> renameNote({
+  Future<TransactionResult> renameFile({
     required String id,
     required String newPath,
     List<OptimisticChange>? optimisticChanges,
@@ -533,7 +531,7 @@ class Reducers {
     final encoder = BsatnEncoder();
     encoder.writeString(id);
     encoder.writeString(newPath);
-    return await _reducerCaller.call(renameNoteDef.name, encoder.toBytes(),
+    return await _reducerCaller.call(renameFileDef.name, encoder.toBytes(),
         optimisticChanges: optimisticChanges, dropIfOffline: dropIfOffline);
   }
 
@@ -733,14 +731,14 @@ class Reducers {
         optimisticChanges: optimisticChanges, dropIfOffline: dropIfOffline);
   }
 
-  /// Calls the `update_note_content` reducer.
+  /// Calls the `update_file_content` reducer.
   ///
   /// Returns a [TransactionResult] on success. Throws
   /// [SpacetimeDbReducerException] if the reducer returns `Failed` or
   /// `InternalError`. The returned status is one of `Committed`,
   /// `Pending` (queued to offline storage), or `Dropped` (skipped via
   /// `dropIfOffline: true` while offline).
-  Future<TransactionResult> updateNoteContent({
+  Future<TransactionResult> updateFileContent({
     required String id,
     required String content,
     required Int64 size,
@@ -754,18 +752,18 @@ class Reducers {
     encoder.writeU64(size);
     encoder.writeU64(modifiedTime);
     return await _reducerCaller.call(
-        updateNoteContentDef.name, encoder.toBytes(),
+        updateFileContentDef.name, encoder.toBytes(),
         optimisticChanges: optimisticChanges, dropIfOffline: dropIfOffline);
   }
 
-  /// Calls the `update_note_path` reducer.
+  /// Calls the `update_file_path` reducer.
   ///
   /// Returns a [TransactionResult] on success. Throws
   /// [SpacetimeDbReducerException] if the reducer returns `Failed` or
   /// `InternalError`. The returned status is one of `Committed`,
   /// `Pending` (queued to offline storage), or `Dropped` (skipped via
   /// `dropIfOffline: true` while offline).
-  Future<TransactionResult> updateNotePath({
+  Future<TransactionResult> updateFilePath({
     required String id,
     required String newPath,
     List<OptimisticChange>? optimisticChanges,
@@ -774,7 +772,43 @@ class Reducers {
     final encoder = BsatnEncoder();
     encoder.writeString(id);
     encoder.writeString(newPath);
-    return await _reducerCaller.call(updateNotePathDef.name, encoder.toBytes(),
+    return await _reducerCaller.call(updateFilePathDef.name, encoder.toBytes(),
+        optimisticChanges: optimisticChanges, dropIfOffline: dropIfOffline);
+  }
+
+  /// Calls the `upsert_file` reducer.
+  ///
+  /// Returns a [TransactionResult] on success. Throws
+  /// [SpacetimeDbReducerException] if the reducer returns `Failed` or
+  /// `InternalError`. The returned status is one of `Committed`,
+  /// `Pending` (queued to offline storage), or `Dropped` (skipped via
+  /// `dropIfOffline: true` while offline).
+  Future<TransactionResult> upsertFile({
+    required String id,
+    required String path,
+    required String name,
+    required String content,
+    required String folderPath,
+    required int depth,
+    required String extension,
+    required Int64 size,
+    required Int64 createdTime,
+    required Int64 modifiedTime,
+    List<OptimisticChange>? optimisticChanges,
+    bool dropIfOffline = false,
+  }) async {
+    final encoder = BsatnEncoder();
+    encoder.writeString(id);
+    encoder.writeString(path);
+    encoder.writeString(name);
+    encoder.writeString(content);
+    encoder.writeString(folderPath);
+    encoder.writeU32(depth);
+    encoder.writeString(extension);
+    encoder.writeU64(size);
+    encoder.writeU64(createdTime);
+    encoder.writeU64(modifiedTime);
+    return await _reducerCaller.call(upsertFileDef.name, encoder.toBytes(),
         optimisticChanges: optimisticChanges, dropIfOffline: dropIfOffline);
   }
 
@@ -800,44 +834,6 @@ class Reducers {
         optimisticChanges: optimisticChanges, dropIfOffline: dropIfOffline);
   }
 
-  /// Calls the `upsert_note` reducer.
-  ///
-  /// Returns a [TransactionResult] on success. Throws
-  /// [SpacetimeDbReducerException] if the reducer returns `Failed` or
-  /// `InternalError`. The returned status is one of `Committed`,
-  /// `Pending` (queued to offline storage), or `Dropped` (skipped via
-  /// `dropIfOffline: true` while offline).
-  Future<TransactionResult> upsertNote({
-    required String id,
-    required String path,
-    required String name,
-    required String content,
-    required String folderPath,
-    required int depth,
-    required String extension,
-    required String kind,
-    required Int64 size,
-    required Int64 createdTime,
-    required Int64 modifiedTime,
-    List<OptimisticChange>? optimisticChanges,
-    bool dropIfOffline = false,
-  }) async {
-    final encoder = BsatnEncoder();
-    encoder.writeString(id);
-    encoder.writeString(path);
-    encoder.writeString(name);
-    encoder.writeString(content);
-    encoder.writeString(folderPath);
-    encoder.writeU32(depth);
-    encoder.writeString(extension);
-    encoder.writeString(kind);
-    encoder.writeU64(size);
-    encoder.writeU64(createdTime);
-    encoder.writeU64(modifiedTime);
-    return await _reducerCaller.call(upsertNoteDef.name, encoder.toBytes(),
-        optimisticChanges: optimisticChanges, dropIfOffline: dropIfOffline);
-  }
-
   StreamSubscription<void> onAcceptCall(
       void Function(EventContext ctx, Int64 sessionId) callback) {
     return _reducerEmitter.on(acceptCallDef).listen((EventContext ctx) {
@@ -849,13 +845,13 @@ class Reducers {
     });
   }
 
-  StreamSubscription<void> onAppendToNote(
+  StreamSubscription<void> onAppendToFile(
       void Function(EventContext ctx, String path, String content) callback) {
-    return _reducerEmitter.on(appendToNoteDef).listen((EventContext ctx) {
+    return _reducerEmitter.on(appendToFileDef).listen((EventContext ctx) {
       final event = ctx.event;
       if (event is! ReducerEvent) return;
       final args = event.reducerArgs;
-      if (args is! AppendToNoteArgs) return;
+      if (args is! AppendToFileArgs) return;
       callback(ctx, args.path, args.content);
     });
   }
@@ -882,6 +878,40 @@ class Reducers {
     });
   }
 
+  StreamSubscription<void> onCreateFile(
+      void Function(
+              EventContext ctx,
+              String id,
+              String path,
+              String name,
+              String content,
+              String folderPath,
+              int depth,
+              String extension,
+              Int64 size,
+              Int64 createdTime,
+              Int64 modifiedTime)
+          callback) {
+    return _reducerEmitter.on(createFileDef).listen((EventContext ctx) {
+      final event = ctx.event;
+      if (event is! ReducerEvent) return;
+      final args = event.reducerArgs;
+      if (args is! CreateFileArgs) return;
+      callback(
+          ctx,
+          args.id,
+          args.path,
+          args.name,
+          args.content,
+          args.folderPath,
+          args.depth,
+          args.extension,
+          args.size,
+          args.createdTime,
+          args.modifiedTime);
+    });
+  }
+
   StreamSubscription<void> onCreateFolder(
       void Function(EventContext ctx, String path, String name, int depth)
           callback) {
@@ -894,39 +924,14 @@ class Reducers {
     });
   }
 
-  StreamSubscription<void> onCreateNote(
-      void Function(
-              EventContext ctx,
-              String id,
-              String path,
-              String name,
-              String content,
-              String folderPath,
-              int depth,
-              String extension,
-              String kind,
-              Int64 size,
-              Int64 createdTime,
-              Int64 modifiedTime)
-          callback) {
-    return _reducerEmitter.on(createNoteDef).listen((EventContext ctx) {
+  StreamSubscription<void> onDeleteFile(
+      void Function(EventContext ctx, String id) callback) {
+    return _reducerEmitter.on(deleteFileDef).listen((EventContext ctx) {
       final event = ctx.event;
       if (event is! ReducerEvent) return;
       final args = event.reducerArgs;
-      if (args is! CreateNoteArgs) return;
-      callback(
-          ctx,
-          args.id,
-          args.path,
-          args.name,
-          args.content,
-          args.folderPath,
-          args.depth,
-          args.extension,
-          args.kind,
-          args.size,
-          args.createdTime,
-          args.modifiedTime);
+      if (args is! DeleteFileArgs) return;
+      callback(ctx, args.id);
     });
   }
 
@@ -938,17 +943,6 @@ class Reducers {
       final args = event.reducerArgs;
       if (args is! DeleteFolderArgs) return;
       callback(ctx, args.path);
-    });
-  }
-
-  StreamSubscription<void> onDeleteNote(
-      void Function(EventContext ctx, String id) callback) {
-    return _reducerEmitter.on(deleteNoteDef).listen((EventContext ctx) {
-      final event = ctx.event;
-      if (event is! ReducerEvent) return;
-      final args = event.reducerArgs;
-      if (args is! DeleteNoteArgs) return;
-      callback(ctx, args.id);
     });
   }
 
@@ -996,26 +990,26 @@ class Reducers {
     });
   }
 
-  StreamSubscription<void> onFindReplaceInNote(
+  StreamSubscription<void> onFindReplaceInFile(
       void Function(EventContext ctx, String path, String oldText,
               String newText, bool replaceAll)
           callback) {
-    return _reducerEmitter.on(findReplaceInNoteDef).listen((EventContext ctx) {
+    return _reducerEmitter.on(findReplaceInFileDef).listen((EventContext ctx) {
       final event = ctx.event;
       if (event is! ReducerEvent) return;
       final args = event.reducerArgs;
-      if (args is! FindReplaceInNoteArgs) return;
+      if (args is! FindReplaceInFileArgs) return;
       callback(ctx, args.path, args.oldText, args.newText, args.replaceAll);
     });
   }
 
-  StreamSubscription<void> onGetRecentNotes(
+  StreamSubscription<void> onGetRecentFiles(
       void Function(EventContext ctx, int limit) callback) {
-    return _reducerEmitter.on(getRecentNotesDef).listen((EventContext ctx) {
+    return _reducerEmitter.on(getRecentFilesDef).listen((EventContext ctx) {
       final event = ctx.event;
       if (event is! ReducerEvent) return;
       final args = event.reducerArgs;
-      if (args is! GetRecentNotesArgs) return;
+      if (args is! GetRecentFilesArgs) return;
       callback(ctx, args.limit);
     });
   }
@@ -1031,6 +1025,18 @@ class Reducers {
     });
   }
 
+  StreamSubscription<void> onMoveFile(
+      void Function(EventContext ctx, String oldPath, String newPath)
+          callback) {
+    return _reducerEmitter.on(moveFileDef).listen((EventContext ctx) {
+      final event = ctx.event;
+      if (event is! ReducerEvent) return;
+      final args = event.reducerArgs;
+      if (args is! MoveFileArgs) return;
+      callback(ctx, args.oldPath, args.newPath);
+    });
+  }
+
   StreamSubscription<void> onMoveFolder(
       void Function(EventContext ctx, String oldPath, String newPath)
           callback) {
@@ -1043,25 +1049,13 @@ class Reducers {
     });
   }
 
-  StreamSubscription<void> onMoveNote(
-      void Function(EventContext ctx, String oldPath, String newPath)
-          callback) {
-    return _reducerEmitter.on(moveNoteDef).listen((EventContext ctx) {
-      final event = ctx.event;
-      if (event is! ReducerEvent) return;
-      final args = event.reducerArgs;
-      if (args is! MoveNoteArgs) return;
-      callback(ctx, args.oldPath, args.newPath);
-    });
-  }
-
-  StreamSubscription<void> onPrependToNote(
+  StreamSubscription<void> onPrependToFile(
       void Function(EventContext ctx, String path, String content) callback) {
-    return _reducerEmitter.on(prependToNoteDef).listen((EventContext ctx) {
+    return _reducerEmitter.on(prependToFileDef).listen((EventContext ctx) {
       final event = ctx.event;
       if (event is! ReducerEvent) return;
       final args = event.reducerArgs;
-      if (args is! PrependToNoteArgs) return;
+      if (args is! PrependToFileArgs) return;
       callback(ctx, args.path, args.content);
     });
   }
@@ -1143,13 +1137,13 @@ class Reducers {
     });
   }
 
-  StreamSubscription<void> onRenameNote(
+  StreamSubscription<void> onRenameFile(
       void Function(EventContext ctx, String id, String newPath) callback) {
-    return _reducerEmitter.on(renameNoteDef).listen((EventContext ctx) {
+    return _reducerEmitter.on(renameFileDef).listen((EventContext ctx) {
       final event = ctx.event;
       if (event is! ReducerEvent) return;
       final args = event.reducerArgs;
-      if (args is! RenameNoteArgs) return;
+      if (args is! RenameFileArgs) return;
       callback(ctx, args.id, args.newPath);
     });
   }
@@ -1262,27 +1256,61 @@ class Reducers {
     });
   }
 
-  StreamSubscription<void> onUpdateNoteContent(
+  StreamSubscription<void> onUpdateFileContent(
       void Function(EventContext ctx, String id, String content, Int64 size,
               Int64 modifiedTime)
           callback) {
-    return _reducerEmitter.on(updateNoteContentDef).listen((EventContext ctx) {
+    return _reducerEmitter.on(updateFileContentDef).listen((EventContext ctx) {
       final event = ctx.event;
       if (event is! ReducerEvent) return;
       final args = event.reducerArgs;
-      if (args is! UpdateNoteContentArgs) return;
+      if (args is! UpdateFileContentArgs) return;
       callback(ctx, args.id, args.content, args.size, args.modifiedTime);
     });
   }
 
-  StreamSubscription<void> onUpdateNotePath(
+  StreamSubscription<void> onUpdateFilePath(
       void Function(EventContext ctx, String id, String newPath) callback) {
-    return _reducerEmitter.on(updateNotePathDef).listen((EventContext ctx) {
+    return _reducerEmitter.on(updateFilePathDef).listen((EventContext ctx) {
       final event = ctx.event;
       if (event is! ReducerEvent) return;
       final args = event.reducerArgs;
-      if (args is! UpdateNotePathArgs) return;
+      if (args is! UpdateFilePathArgs) return;
       callback(ctx, args.id, args.newPath);
+    });
+  }
+
+  StreamSubscription<void> onUpsertFile(
+      void Function(
+              EventContext ctx,
+              String id,
+              String path,
+              String name,
+              String content,
+              String folderPath,
+              int depth,
+              String extension,
+              Int64 size,
+              Int64 createdTime,
+              Int64 modifiedTime)
+          callback) {
+    return _reducerEmitter.on(upsertFileDef).listen((EventContext ctx) {
+      final event = ctx.event;
+      if (event is! ReducerEvent) return;
+      final args = event.reducerArgs;
+      if (args is! UpsertFileArgs) return;
+      callback(
+          ctx,
+          args.id,
+          args.path,
+          args.name,
+          args.content,
+          args.folderPath,
+          args.depth,
+          args.extension,
+          args.size,
+          args.createdTime,
+          args.modifiedTime);
     });
   }
 
@@ -1295,42 +1323,6 @@ class Reducers {
       final args = event.reducerArgs;
       if (args is! UpsertFolderArgs) return;
       callback(ctx, args.path, args.name, args.depth);
-    });
-  }
-
-  StreamSubscription<void> onUpsertNote(
-      void Function(
-              EventContext ctx,
-              String id,
-              String path,
-              String name,
-              String content,
-              String folderPath,
-              int depth,
-              String extension,
-              String kind,
-              Int64 size,
-              Int64 createdTime,
-              Int64 modifiedTime)
-          callback) {
-    return _reducerEmitter.on(upsertNoteDef).listen((EventContext ctx) {
-      final event = ctx.event;
-      if (event is! ReducerEvent) return;
-      final args = event.reducerArgs;
-      if (args is! UpsertNoteArgs) return;
-      callback(
-          ctx,
-          args.id,
-          args.path,
-          args.name,
-          args.content,
-          args.folderPath,
-          args.depth,
-          args.extension,
-          args.kind,
-          args.size,
-          args.createdTime,
-          args.modifiedTime);
     });
   }
 }

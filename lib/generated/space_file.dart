@@ -2,8 +2,8 @@
 
 import 'package:spacetimedb_sdk/codegen.dart';
 
-class Note {
-  Note({
+class SpaceFile {
+  SpaceFile({
     required this.id,
     required this.path,
     required this.name,
@@ -11,15 +11,14 @@ class Note {
     required this.folderPath,
     required this.depth,
     required this.extension,
-    required this.kind,
     required this.size,
     required this.createdTime,
     required this.modifiedTime,
     required this.dbUpdatedAt,
   });
 
-  factory Note.fromJson(Map<String, dynamic> json) {
-    return Note(
+  factory SpaceFile.fromJson(Map<String, dynamic> json) {
+    return SpaceFile(
       id: json['id'] ?? '',
       path: json['path'] ?? '',
       name: json['name'] ?? '',
@@ -27,7 +26,6 @@ class Note {
       folderPath: json['folderPath'] ?? '',
       depth: json['depth'] ?? 0,
       extension: json['extension'] ?? '',
-      kind: json['kind'] ?? '',
       size: Int64(json['size'] ?? 0),
       createdTime: Int64(json['createdTime'] ?? 0),
       modifiedTime: Int64(json['modifiedTime'] ?? 0),
@@ -49,8 +47,6 @@ class Note {
 
   final String extension;
 
-  final String kind;
-
   final Int64 size;
 
   final Int64 createdTime;
@@ -67,15 +63,14 @@ class Note {
     encoder.writeString(folderPath);
     encoder.writeU32(depth);
     encoder.writeString(extension);
-    encoder.writeString(kind);
     encoder.writeU64(size);
     encoder.writeU64(createdTime);
     encoder.writeU64(modifiedTime);
     encoder.writeI64(dbUpdatedAt);
   }
 
-  static Note decodeBsatn(BsatnDecoder decoder) {
-    return Note(
+  static SpaceFile decodeBsatn(BsatnDecoder decoder) {
+    return SpaceFile(
       id: decoder.readString(),
       path: decoder.readString(),
       name: decoder.readString(),
@@ -83,7 +78,6 @@ class Note {
       folderPath: decoder.readString(),
       depth: decoder.readU32(),
       extension: decoder.readString(),
-      kind: decoder.readString(),
       size: decoder.readU64(),
       createdTime: decoder.readU64(),
       modifiedTime: decoder.readU64(),
@@ -100,7 +94,6 @@ class Note {
       'folderPath': folderPath,
       'depth': depth,
       'extension': extension,
-      'kind': kind,
       'size': size.toInt(),
       'createdTime': createdTime.toInt(),
       'modifiedTime': modifiedTime.toInt(),
@@ -111,7 +104,7 @@ class Note {
   @override
   bool operator ==(Object other) {
     return identical(this, other) ||
-        other is Note &&
+        other is SpaceFile &&
             id == other.id &&
             path == other.path &&
             name == other.name &&
@@ -119,7 +112,6 @@ class Note {
             folderPath == other.folderPath &&
             depth == other.depth &&
             extension == other.extension &&
-            kind == other.kind &&
             size == other.size &&
             createdTime == other.createdTime &&
             modifiedTime == other.modifiedTime &&
@@ -136,7 +128,6 @@ class Note {
       folderPath,
       depth,
       extension,
-      kind,
       size,
       createdTime,
       modifiedTime,
@@ -146,10 +137,10 @@ class Note {
 
   @override
   String toString() {
-    return 'Note(id: $id, path: $path, name: $name, content: $content, folderPath: $folderPath, depth: $depth, extension: $extension, kind: $kind, size: $size, createdTime: $createdTime, modifiedTime: $modifiedTime, dbUpdatedAt: $dbUpdatedAt)';
+    return 'SpaceFile(id: $id, path: $path, name: $name, content: $content, folderPath: $folderPath, depth: $depth, extension: $extension, size: $size, createdTime: $createdTime, modifiedTime: $modifiedTime, dbUpdatedAt: $dbUpdatedAt)';
   }
 
-  Note copyWith({
+  SpaceFile copyWith({
     String? id,
     String? path,
     String? name,
@@ -157,13 +148,12 @@ class Note {
     String? folderPath,
     int? depth,
     String? extension,
-    String? kind,
     Int64? size,
     Int64? createdTime,
     Int64? modifiedTime,
     Int64? dbUpdatedAt,
   }) {
-    return Note(
+    return SpaceFile(
       id: id ?? this.id,
       path: path ?? this.path,
       name: name ?? this.name,
@@ -171,7 +161,6 @@ class Note {
       folderPath: folderPath ?? this.folderPath,
       depth: depth ?? this.depth,
       extension: extension ?? this.extension,
-      kind: kind ?? this.kind,
       size: size ?? this.size,
       createdTime: createdTime ?? this.createdTime,
       modifiedTime: modifiedTime ?? this.modifiedTime,
@@ -180,25 +169,25 @@ class Note {
   }
 }
 
-class NoteDecoder extends RowDecoder<Note> {
+class SpaceFileDecoder extends RowDecoder<SpaceFile> {
   @override
-  Note decode(BsatnDecoder decoder) {
-    return Note.decodeBsatn(decoder);
+  SpaceFile decode(BsatnDecoder decoder) {
+    return SpaceFile.decodeBsatn(decoder);
   }
 
   @override
-  String? getPrimaryKey(Note row) {
+  String? getPrimaryKey(SpaceFile row) {
     return row.id;
   }
 
   @override
-  Map<String, dynamic>? toJson(Note row) {
+  Map<String, dynamic>? toJson(SpaceFile row) {
     return row.toJson();
   }
 
   @override
-  Note? fromJson(Map<String, dynamic> json) {
-    return Note.fromJson(json);
+  SpaceFile? fromJson(Map<String, dynamic> json) {
+    return SpaceFile.fromJson(json);
   }
 
   @override

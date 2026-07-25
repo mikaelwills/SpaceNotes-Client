@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../theme/spacenotes_theme.dart';
 import '../providers/notes_providers.dart';
 import '../generated/folder.dart';
-import '../generated/note.dart';
+import '../generated/space_file.dart';
 import '../widgets/folder_list_item.dart';
 import '../widgets/note_list_item.dart';
 import '../dialogs/notes_list_dialogs.dart';
@@ -48,7 +48,7 @@ class _FolderListViewState extends ConsumerState<FolderListView> {
     return _buildLoadedState(data.folders, data.notes);
   }
 
-  Widget _buildLoadedState(List<Folder> folders, List<Note> notes) {
+  Widget _buildLoadedState(List<Folder> folders, List<SpaceFile> notes) {
     final searchQuery = ref.watch(folderSearchQueryProvider);
 
     if (searchQuery.trim().isNotEmpty && folders.isEmpty && notes.isEmpty) {
@@ -166,7 +166,7 @@ class _FolderListViewState extends ConsumerState<FolderListView> {
     );
   }
 
-  Widget _buildNoteItem(Note note, int index) {
+  Widget _buildNoteItem(SpaceFile note, int index) {
     return NoteListItem(
       key: ValueKey(note.id),
       note: note,

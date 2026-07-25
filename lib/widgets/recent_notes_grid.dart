@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../generated/note.dart';
+import '../generated/space_file.dart';
 import '../theme/spacenotes_theme.dart';
 import '../providers/notes_providers.dart';
 import '../dialogs/notes_list_dialogs.dart';
@@ -58,7 +58,7 @@ class RecentNotesGrid extends ConsumerWidget {
   }
 
   Widget _buildNotesGrid(
-      BuildContext context, WidgetRef ref, List<Note> notes) {
+      BuildContext context, WidgetRef ref, List<SpaceFile> notes) {
     return KeyboardDismissOnScroll(
       child: CustomScrollView(
         slivers: [
@@ -74,7 +74,7 @@ class RecentNotesGrid extends ConsumerWidget {
   }
 
   Widget _buildStaggeredGrid(
-      BuildContext context, WidgetRef ref, List<Note> notes) {
+      BuildContext context, WidgetRef ref, List<SpaceFile> notes) {
     final leftColumn = <_IndexedNote>[];
     final rightColumn = <_IndexedNote>[];
 
@@ -121,7 +121,7 @@ class RecentNotesGrid extends ConsumerWidget {
   }
 
   Widget _buildRecentNoteCard(
-      BuildContext context, WidgetRef ref, Note note, int index) {
+      BuildContext context, WidgetRef ref, SpaceFile note, int index) {
     final preview = note.content.trim();
     final hasPreview = preview.isNotEmpty;
 
@@ -191,7 +191,7 @@ class RecentNotesGrid extends ConsumerWidget {
 }
 
 class _IndexedNote {
-  final Note note;
+  final SpaceFile note;
   final int index;
   _IndexedNote({required this.note, required this.index});
 }

@@ -7,7 +7,7 @@ import '../../blocs/desktop_notes/desktop_notes_bloc.dart';
 import '../../blocs/desktop_notes/desktop_notes_event.dart';
 import '../../blocs/desktop_notes/desktop_notes_state.dart';
 import '../../generated/folder.dart';
-import '../../generated/note.dart';
+import '../../generated/space_file.dart';
 import '../../providers/notes_providers.dart';
 import '../../providers/connection_providers.dart';
 import '../../theme/spacenotes_theme.dart';
@@ -485,7 +485,7 @@ class _DraggableData {
 class _FolderTreeItem extends ConsumerStatefulWidget {
   final Folder folder;
   final List<Folder> allFolders;
-  final List<Note> allNotes;
+  final List<SpaceFile> allNotes;
   final int indentLevel;
   final String searchQuery;
   final Set<String> visibleFolderPaths;
@@ -900,7 +900,7 @@ class _FolderTreeItemState extends ConsumerState<_FolderTreeItem> {
 }
 
 class _NoteTreeItem extends ConsumerWidget {
-  final Note note;
+  final SpaceFile note;
   final List<Folder> allFolders;
   final int indentLevel;
   final bool isMatch;
@@ -1012,7 +1012,7 @@ class _NoteTreeItem extends ConsumerWidget {
   }
 
   void _handleNoteAction(
-      BuildContext context, WidgetRef ref, Note note, String action) async {
+      BuildContext context, WidgetRef ref, SpaceFile note, String action) async {
     final repo = ref.read(notesRepositoryProvider);
     switch (action) {
       case 'rename':

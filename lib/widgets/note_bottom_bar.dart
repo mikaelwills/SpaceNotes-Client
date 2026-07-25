@@ -7,7 +7,7 @@ import '../providers/notes_providers.dart';
 import '../providers/connection_providers.dart';
 import '../providers/chat_providers.dart';
 import '../dialogs/notes_list_dialogs.dart';
-import '../generated/note.dart';
+import '../generated/space_file.dart';
 import 'desktop/desktop_shell.dart';
 import 'quill_note_editor.dart';
 import 'adaptive/platform_utils.dart';
@@ -279,7 +279,7 @@ class _NoteBottomBarState extends ConsumerState<NoteBottomBar> {
     );
   }
 
-  Note? _getCurrentNote() {
+  SpaceFile? _getCurrentNote() {
     if (widget.notePath == null) return null;
     final notes = ref.read(notesListProvider);
     return notes.firstWhereOrNull((n) => n.path == widget.notePath);

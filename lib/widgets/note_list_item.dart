@@ -2,7 +2,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../theme/spacenotes_theme.dart';
-import '../generated/note.dart';
+import '../generated/space_file.dart';
 import 'swipe_action.dart';
 
 class _LeftOnlyHorizontalDragGestureRecognizer
@@ -21,7 +21,7 @@ class _LeftOnlyHorizontalDragGestureRecognizer
 }
 
 class NoteListItem extends StatefulWidget {
-  final Note note;
+  final SpaceFile note;
   final int? index;
   final VoidCallback onTap;
   final VoidCallback? onLongPress;

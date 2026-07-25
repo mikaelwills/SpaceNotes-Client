@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/foundation.dart' show ValueListenable, kIsWeb;
 import '../generated/client.dart';
 import '../generated/folder.dart';
-import '../generated/note.dart';
+import '../generated/space_file.dart';
 
 String _getDefaultHost() {
   if (kIsWeb) {
@@ -43,10 +43,10 @@ final spacetimeClientProvider = Provider<SpacetimeDbClient?>((ref) {
   return watchListenable(ref, repository.clientNotifier);
 });
 
-final notesListProvider = Provider<List<Note>>((ref) {
+final notesListProvider = Provider<List<SpaceFile>>((ref) {
   final client = ref.watch(spacetimeClientProvider);
   if (client == null) return const [];
-  final rows = watchListenable(ref, client.note.rows);
+  final rows = watchListenable(ref, client.spaceFile.rows);
   final sorted = rows.toList()
     ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
   return sorted;
@@ -61,10 +61,10 @@ final foldersListProvider = Provider<List<Folder>>((ref) {
   return sorted;
 });
 
-final noteByIdProvider = Provider.family<Note?, String>((ref, id) {
+final noteByIdProvider = Provider.family<SpaceFile?, String>((ref, id) {
   final client = ref.watch(spacetimeClientProvider);
   if (client == null) return null;
-  return watchListenable(ref, client.note.rowNotifier(id));
+  return watchListenable(ref, client.spaceFile.rowNotifier(id));
 });
 
 final folderByIdProvider = Provider.family<Folder?, String>((ref, path) {
@@ -85,7 +85,7 @@ List<String> searchTerms(String query) => query
     .where((term) => term.isNotEmpty)
     .toList();
 
-bool noteMatchesAllTerms(Note note, List<String> terms) {
+bool noteMatchesAllTerms(SpaceFile note, List<String> terms) {
   final name = note.name.toLowerCase();
   final path = note.path.toLowerCase();
   final content = note.content.toLowerCase();
@@ -93,9 +93,9 @@ bool noteMatchesAllTerms(Note note, List<String> terms) {
       name.contains(term) || path.contains(term) || content.contains(term));
 }
 
-List<Note> _rankNotesByNameMatch(List<Note> notes, List<String> terms) {
-  final nameMatches = <Note>[];
-  final otherMatches = <Note>[];
+List<SpaceFile> _rankNotesByNameMatch(List<SpaceFile> notes, List<String> terms) {
+  final nameMatches = <SpaceFile>[];
+  final otherMatches = <SpaceFile>[];
   for (final note in notes) {
     final name = note.name.toLowerCase();
     if (terms.every((term) => name.contains(term))) {
@@ -109,7 +109,7 @@ List<Note> _rankNotesByNameMatch(List<Note> notes, List<String> terms) {
   return [...nameMatches, ...otherMatches];
 }
 
-final filteredNotesProvider = Provider.autoDispose<List<Note>>((ref) {
+final filteredNotesProvider = Provider.autoDispose<List<SpaceFile>>((ref) {
   final notes = ref.watch(notesListProvider);
   final searchQuery = ref.watch(searchQueryProvider);
 
@@ -139,7 +139,7 @@ final filteredFoldersProvider = Provider.autoDispose<List<Folder>>((ref) {
 });
 
 final dynamicFolderContentsProvider = Provider.family
-    .autoDispose<({List<Folder> folders, List<Note> notes}), String>(
+    .autoDispose<({List<Folder> folders, List<SpaceFile> notes}), String>(
         (ref, currentPath) {
   final allFolders = ref.watch(foldersListProvider);
   final allNotes = ref.watch(notesListProvider);
@@ -153,7 +153,7 @@ final dynamicFolderContentsProvider = Provider.family
 
   if (searchQuery.trim().isEmpty) {
     List<Folder> childFolders;
-    List<Note> childNotes;
+    List<SpaceFile> childNotes;
 
     if (normalizedPath.isEmpty) {
       childFolders = allFolders.where((folder) => folder.depth == 0).toList();
@@ -191,7 +191,7 @@ final dynamicFolderContentsProvider = Provider.family
 });
 
 final folderNotesProvider =
-    Provider.family.autoDispose<List<Note>, String>((ref, folderPath) {
+    Provider.family.autoDispose<List<SpaceFile>, String>((ref, folderPath) {
   final notes = ref.watch(notesListProvider);
   final folderPathWithSlash =
       folderPath.endsWith('/') ? folderPath : '$folderPath/';
@@ -213,7 +213,7 @@ final folderSubfoldersProvider =
 });
 
 /// Recently edited notes (top 20, by modifiedTime desc).
-final recentNotesProvider = Provider<List<Note>>((ref) {
+final recentNotesProvider = Provider<List<SpaceFile>>((ref) {
   final notes = ref.watch(notesListProvider);
   if (notes.isEmpty) return const [];
 

@@ -20,11 +20,11 @@ void main() {
     );
 
     await client.connect(
-      initialSubscriptions: const ['SELECT * FROM note'],
+      initialSubscriptions: const ['SELECT * FROM space_file'],
       subscriptionTimeout: const Duration(seconds: 15),
     );
 
-    final rows = client.note.rows.value;
+    final rows = client.spaceFile.rows.value;
     // ignore: avoid_print
     print('>>> note rows hydrated: ${rows.length}');
 

@@ -21,7 +21,7 @@ import 'package:spacetimedb_sdk/spacetimedb_sdk.dart'
         SpacetimeDbAuthException;
 import 'package:uuid/uuid.dart';
 import '../generated/client.dart';
-import '../generated/note.dart';
+import '../generated/space_file.dart';
 import 'shared_preferences_token_store.dart';
 import 'package:rxdart/rxdart.dart';
 
@@ -36,10 +36,6 @@ String _extensionOf(String path) {
   final dotIndex = basename.lastIndexOf('.');
   if (dotIndex < 0) return '';
   return basename.substring(dotIndex + 1).toLowerCase();
-}
-
-String _kindOf(String extension) {
-  return extension == 'md' ? 'md' : 'file';
 }
 
 /// Notes repository implementation using SpacetimeDB
@@ -71,7 +67,7 @@ class SpacetimeDbNotesRepository {
   // dynamically, scoped `WHERE session_id = <id>`, while a session screen is
   // open — see subscribeSession/unsubscribeSession.
   static const _initialSubscriptions = [
-    'SELECT * FROM note',
+    'SELECT * FROM space_file',
     'SELECT * FROM folder',
     'SELECT * FROM call_session',
     'SELECT * FROM connected_user',
@@ -234,13 +230,13 @@ class SpacetimeDbNotesRepository {
     return _client!.connection.state.isConnected;
   }
 
-  Future<Note?> getNote(String id) async {
+  Future<SpaceFile?> getNote(String id) async {
     try {
       await _ensureConnected();
 
       if (_client == null) return null;
 
-      final noteTable = _client!.note;
+      final noteTable = _client!.spaceFile;
       final note = noteTable.find(id);
 
       return note;
@@ -262,7 +258,7 @@ class SpacetimeDbNotesRepository {
       }
 
       final existingNote =
-          _client!.note.iter().firstWhereOrNull((n) => n.path == path);
+          _client!.spaceFile.iter().firstWhereOrNull((n) => n.path == path);
       if (existingNote != null) {
         debugLogger
             .save('Note already exists at path: $path, returning existing ID');
@@ -285,9 +281,8 @@ class SpacetimeDbNotesRepository {
       final now = DateTime.now().millisecondsSinceEpoch;
 
       final extension = _extensionOf(path);
-      final kind = _kindOf(extension);
 
-      final newNote = Note(
+      final newNote = SpaceFile(
         id: id,
         path: path,
         name: name,
@@ -295,14 +290,13 @@ class SpacetimeDbNotesRepository {
         folderPath: folderPath,
         depth: depth,
         extension: extension,
-        kind: kind,
         size: Int64(content.length),
         createdTime: Int64(now),
         modifiedTime: Int64(now),
         dbUpdatedAt: Int64(0),
       );
 
-      await _client!.reducers.createNote(
+      await _client!.reducers.createFile(
         id: id,
         path: path,
         name: name,
@@ -310,11 +304,10 @@ class SpacetimeDbNotesRepository {
         folderPath: folderPath,
         depth: depth,
         extension: extension,
-        kind: kind,
         size: Int64(content.length),
         createdTime: Int64(now),
         modifiedTime: Int64(now),
-        optimisticChanges: [OptimisticChange.insert('note', newNote.toJson())],
+        optimisticChanges: [OptimisticChange.insert('space_file', newNote.toJson())],
       );
 
       debugLogger.save('Note created: $id');
@@ -331,7 +324,7 @@ class SpacetimeDbNotesRepository {
 
       if (_client == null) return false;
 
-      final oldNote = _client!.note.find(id);
+      final oldNote = _client!.spaceFile.find(id);
       if (oldNote == null) return false;
 
       debugLogger.save(
@@ -339,7 +332,7 @@ class SpacetimeDbNotesRepository {
 
       final now = DateTime.now().millisecondsSinceEpoch;
 
-      final newNote = Note(
+      final newNote = SpaceFile(
         id: oldNote.id,
         path: oldNote.path,
         name: oldNote.name,
@@ -347,20 +340,19 @@ class SpacetimeDbNotesRepository {
         folderPath: oldNote.folderPath,
         depth: oldNote.depth,
         extension: oldNote.extension,
-        kind: oldNote.kind,
         size: Int64(content.length),
         createdTime: oldNote.createdTime,
         modifiedTime: Int64(now),
         dbUpdatedAt: oldNote.dbUpdatedAt,
       );
 
-      await _client!.reducers.updateNoteContent(
+      await _client!.reducers.updateFileContent(
         id: id,
         content: content,
         size: Int64(content.length),
         modifiedTime: Int64(now),
         optimisticChanges: [
-          OptimisticChange.update('note', oldNote.toJson(), newNote.toJson())
+          OptimisticChange.update('space_file', oldNote.toJson(), newNote.toJson())
         ],
       );
 
@@ -382,7 +374,7 @@ class SpacetimeDbNotesRepository {
         return false;
       }
 
-      final oldNote = _client!.note.find(id);
+      final oldNote = _client!.spaceFile.find(id);
       if (oldNote == null) {
         debugLogger.error('SAVE', 'Note not found in cache: $id');
         return false;
@@ -390,9 +382,9 @@ class SpacetimeDbNotesRepository {
 
       final optimisticPayload = oldNote.toJson();
 
-      await _client!.reducers.deleteNote(
+      await _client!.reducers.deleteFile(
         id: id,
-        optimisticChanges: [OptimisticChange.delete('note', optimisticPayload)],
+        optimisticChanges: [OptimisticChange.delete('space_file', optimisticPayload)],
       );
 
       debugLogger.save('Note deleted: $id');
@@ -412,7 +404,7 @@ class SpacetimeDbNotesRepository {
         return false;
       }
 
-      final oldNote = _client!.note.find(id);
+      final oldNote = _client!.spaceFile.find(id);
       if (oldNote == null) return false;
 
       final newName = newPath.split('/').last.replaceAll('.md', '');
@@ -425,9 +417,8 @@ class SpacetimeDbNotesRepository {
           : newFolderPath.split('/').where((s) => s.isNotEmpty).length;
 
       final newExtension = _extensionOf(newPath);
-      final newKind = _kindOf(newExtension);
 
-      final newNote = Note(
+      final newNote = SpaceFile(
         id: oldNote.id,
         path: newPath,
         name: newName,
@@ -435,18 +426,17 @@ class SpacetimeDbNotesRepository {
         folderPath: newFolderPath,
         depth: newDepth,
         extension: newExtension,
-        kind: newKind,
         size: oldNote.size,
         createdTime: oldNote.createdTime,
         modifiedTime: Int64(DateTime.now().millisecondsSinceEpoch),
         dbUpdatedAt: oldNote.dbUpdatedAt,
       );
 
-      await _client!.reducers.renameNote(
+      await _client!.reducers.renameFile(
         id: id,
         newPath: newPath,
         optimisticChanges: [
-          OptimisticChange.update('note', oldNote.toJson(), newNote.toJson())
+          OptimisticChange.update('space_file', oldNote.toJson(), newNote.toJson())
         ],
       );
 
@@ -477,7 +467,7 @@ class SpacetimeDbNotesRepository {
         );
       }
 
-      final noteTable = _client!.note;
+      final noteTable = _client!.spaceFile;
       final rootNotes = noteTable
           .iter()
           .where((note) => note.folderPath.isEmpty || note.depth == 0)
@@ -488,7 +478,7 @@ class SpacetimeDbNotesRepository {
             'Migrating ${rootNotes.length} root-level notes to All Notes');
         for (final note in rootNotes) {
           final newPath = 'All Notes/${note.path}';
-          await _client!.reducers.moveNote(
+          await _client!.reducers.moveFile(
             oldPath: note.path,
             newPath: newPath,
           );
@@ -612,7 +602,7 @@ class SpacetimeDbNotesRepository {
         return false;
       }
 
-      await _client!.reducers.moveNote(
+      await _client!.reducers.moveFile(
         oldPath: oldPath,
         newPath: newPath,
       );
@@ -625,13 +615,13 @@ class SpacetimeDbNotesRepository {
     }
   }
 
-  Future<List<Note>> searchNotes(String query) async {
+  Future<List<SpaceFile>> searchNotes(String query) async {
     try {
       await _ensureConnected();
 
       if (_client == null) return [];
 
-      final noteTable = _client!.note;
+      final noteTable = _client!.spaceFile;
       final notes = noteTable.iter().toList();
 
       final queryLower = query.toLowerCase();

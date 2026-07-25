@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../generated/note.dart';
+import '../generated/space_file.dart';
 import '../generated/folder.dart';
 import '../theme/spacenotes_theme.dart';
 import '../providers/notes_providers.dart';
@@ -12,7 +12,7 @@ class NotesListDialogs {
   static void showNoteContextMenu(
     BuildContext context,
     WidgetRef ref,
-    Note note,
+    SpaceFile note,
   ) {
     showDialog(
       context: context,
@@ -351,7 +351,7 @@ class NotesListDialogs {
   static void showDeleteNoteConfirmation(
     BuildContext context,
     WidgetRef ref,
-    Note note, {
+    SpaceFile note, {
     String? navigateToAfterDelete,
   }) {
     showDialog(
@@ -480,7 +480,7 @@ class NotesListDialogs {
   static void showMoveNoteDialog(
     BuildContext context,
     WidgetRef ref,
-    Note note,
+    SpaceFile note,
   ) {
     final folders = ref.read(foldersListProvider);
 

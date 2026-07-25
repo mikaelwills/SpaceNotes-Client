@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:spacetimedb_sdk/spacetimedb_sdk.dart';
 import '../generated/client.dart';
-import '../generated/note.dart';
+import '../generated/space_file.dart';
 import '../providers/notes_providers.dart';
 import '../services/genui_note_parser.dart';
 import '../widgets/dashboard/genui_surface.dart';
@@ -40,8 +40,8 @@ class _NoteScreenState extends ConsumerState<NoteScreen> {
 
   Timer? _debounceTimer;
   SpacetimeDbClient? _listenedClient;
-  StreamSubscription<TableUpdateEvent<Note>>? _contentSubscription;
-  StreamSubscription<TableUpdateEvent<Note>>? _pathSubscription;
+  StreamSubscription<TableUpdateEvent<SpaceFile>>? _contentSubscription;
+  StreamSubscription<TableUpdateEvent<SpaceFile>>? _pathSubscription;
 
   @override
   void initState() {
@@ -94,7 +94,7 @@ class _NoteScreenState extends ConsumerState<NoteScreen> {
     );
   }
 
-  Widget _buildDesktopLayout(Note? note) {
+  Widget _buildDesktopLayout(SpaceFile? note) {
     return Stack(
       children: [
         _buildEditor(note),
@@ -112,7 +112,7 @@ class _NoteScreenState extends ConsumerState<NoteScreen> {
     );
   }
 
-  Widget _buildMobileLayout(Note? note) {
+  Widget _buildMobileLayout(SpaceFile? note) {
     return Column(
       children: [
         Expanded(
@@ -192,7 +192,7 @@ class _NoteScreenState extends ConsumerState<NoteScreen> {
     );
   }
 
-  Widget _buildEditor(Note? note) {
+  Widget _buildEditor(SpaceFile? note) {
     final content =
         _currentContent.isNotEmpty ? _currentContent : (note?.content ?? '');
 
@@ -278,14 +278,14 @@ class _NoteScreenState extends ConsumerState<NoteScreen> {
 
     if (client == null) return;
 
-    _pathSubscription = client.note.onUpdate.listen((event) {
+    _pathSubscription = client.spaceFile.onUpdate.listen((event) {
       if (event.newRow.id != widget.noteId) return;
       if (event.newRow.path == _currentPath) return;
       _currentPath = event.newRow.path;
       ref.read(currentNotePathProvider.notifier).state = _currentPath;
     });
 
-    _contentSubscription = client.note.onUpdate.listen((event) {
+    _contentSubscription = client.spaceFile.onUpdate.listen((event) {
       if (event.newRow.id != widget.noteId) return;
 
       debugLogger.info(

@@ -20,8 +20,8 @@ class AcceptCallArgsDecoder implements ReducerArgDecoder<AcceptCallArgs> {
   }
 }
 
-class AppendToNoteArgs {
-  AppendToNoteArgs({
+class AppendToFileArgs {
+  AppendToFileArgs({
     required this.path,
     required this.content,
   });
@@ -31,14 +31,14 @@ class AppendToNoteArgs {
   final String content;
 }
 
-class AppendToNoteArgsDecoder implements ReducerArgDecoder<AppendToNoteArgs> {
-  const AppendToNoteArgsDecoder();
+class AppendToFileArgsDecoder implements ReducerArgDecoder<AppendToFileArgs> {
+  const AppendToFileArgsDecoder();
 
   @override
-  AppendToNoteArgs decode(BsatnDecoder decoder) {
+  AppendToFileArgs decode(BsatnDecoder decoder) {
     final path = decoder.readString();
     final content = decoder.readString();
-    return AppendToNoteArgs(
+    return AppendToFileArgs(
       path: path,
       content: content,
     );
@@ -72,6 +72,71 @@ class ClearAllSessionsArgsDecoder
   }
 }
 
+class CreateFileArgs {
+  CreateFileArgs({
+    required this.id,
+    required this.path,
+    required this.name,
+    required this.content,
+    required this.folderPath,
+    required this.depth,
+    required this.extension,
+    required this.size,
+    required this.createdTime,
+    required this.modifiedTime,
+  });
+
+  final String id;
+
+  final String path;
+
+  final String name;
+
+  final String content;
+
+  final String folderPath;
+
+  final int depth;
+
+  final String extension;
+
+  final Int64 size;
+
+  final Int64 createdTime;
+
+  final Int64 modifiedTime;
+}
+
+class CreateFileArgsDecoder implements ReducerArgDecoder<CreateFileArgs> {
+  const CreateFileArgsDecoder();
+
+  @override
+  CreateFileArgs decode(BsatnDecoder decoder) {
+    final id = decoder.readString();
+    final path = decoder.readString();
+    final name = decoder.readString();
+    final content = decoder.readString();
+    final folderPath = decoder.readString();
+    final depth = decoder.readU32();
+    final extension = decoder.readString();
+    final size = decoder.readU64();
+    final createdTime = decoder.readU64();
+    final modifiedTime = decoder.readU64();
+    return CreateFileArgs(
+      id: id,
+      path: path,
+      name: name,
+      content: content,
+      folderPath: folderPath,
+      depth: depth,
+      extension: extension,
+      size: size,
+      createdTime: createdTime,
+      modifiedTime: modifiedTime,
+    );
+  }
+}
+
 class CreateFolderArgs {
   CreateFolderArgs({
     required this.path,
@@ -102,72 +167,20 @@ class CreateFolderArgsDecoder implements ReducerArgDecoder<CreateFolderArgs> {
   }
 }
 
-class CreateNoteArgs {
-  CreateNoteArgs({
-    required this.id,
-    required this.path,
-    required this.name,
-    required this.content,
-    required this.folderPath,
-    required this.depth,
-    required this.extension,
-    required this.kind,
-    required this.size,
-    required this.createdTime,
-    required this.modifiedTime,
-  });
+class DeleteFileArgs {
+  DeleteFileArgs({required this.id});
 
   final String id;
-
-  final String path;
-
-  final String name;
-
-  final String content;
-
-  final String folderPath;
-
-  final int depth;
-
-  final String extension;
-
-  final String kind;
-
-  final Int64 size;
-
-  final Int64 createdTime;
-
-  final Int64 modifiedTime;
 }
 
-class CreateNoteArgsDecoder implements ReducerArgDecoder<CreateNoteArgs> {
-  const CreateNoteArgsDecoder();
+class DeleteFileArgsDecoder implements ReducerArgDecoder<DeleteFileArgs> {
+  const DeleteFileArgsDecoder();
 
   @override
-  CreateNoteArgs decode(BsatnDecoder decoder) {
+  DeleteFileArgs decode(BsatnDecoder decoder) {
     final id = decoder.readString();
-    final path = decoder.readString();
-    final name = decoder.readString();
-    final content = decoder.readString();
-    final folderPath = decoder.readString();
-    final depth = decoder.readU32();
-    final extension = decoder.readString();
-    final kind = decoder.readString();
-    final size = decoder.readU64();
-    final createdTime = decoder.readU64();
-    final modifiedTime = decoder.readU64();
-    return CreateNoteArgs(
+    return DeleteFileArgs(
       id: id,
-      path: path,
-      name: name,
-      content: content,
-      folderPath: folderPath,
-      depth: depth,
-      extension: extension,
-      kind: kind,
-      size: size,
-      createdTime: createdTime,
-      modifiedTime: modifiedTime,
     );
   }
 }
@@ -186,24 +199,6 @@ class DeleteFolderArgsDecoder implements ReducerArgDecoder<DeleteFolderArgs> {
     final path = decoder.readString();
     return DeleteFolderArgs(
       path: path,
-    );
-  }
-}
-
-class DeleteNoteArgs {
-  DeleteNoteArgs({required this.id});
-
-  final String id;
-}
-
-class DeleteNoteArgsDecoder implements ReducerArgDecoder<DeleteNoteArgs> {
-  const DeleteNoteArgsDecoder();
-
-  @override
-  DeleteNoteArgs decode(BsatnDecoder decoder) {
-    final id = decoder.readString();
-    return DeleteNoteArgs(
-      id: id,
     );
   }
 }
@@ -287,8 +282,8 @@ class EndSessionArgsDecoder implements ReducerArgDecoder<EndSessionArgs> {
   }
 }
 
-class FindReplaceInNoteArgs {
-  FindReplaceInNoteArgs({
+class FindReplaceInFileArgs {
+  FindReplaceInFileArgs({
     required this.path,
     required this.oldText,
     required this.newText,
@@ -304,17 +299,17 @@ class FindReplaceInNoteArgs {
   final bool replaceAll;
 }
 
-class FindReplaceInNoteArgsDecoder
-    implements ReducerArgDecoder<FindReplaceInNoteArgs> {
-  const FindReplaceInNoteArgsDecoder();
+class FindReplaceInFileArgsDecoder
+    implements ReducerArgDecoder<FindReplaceInFileArgs> {
+  const FindReplaceInFileArgsDecoder();
 
   @override
-  FindReplaceInNoteArgs decode(BsatnDecoder decoder) {
+  FindReplaceInFileArgs decode(BsatnDecoder decoder) {
     final path = decoder.readString();
     final oldText = decoder.readString();
     final newText = decoder.readString();
     final replaceAll = decoder.readBool();
-    return FindReplaceInNoteArgs(
+    return FindReplaceInFileArgs(
       path: path,
       oldText: oldText,
       newText: newText,
@@ -323,20 +318,20 @@ class FindReplaceInNoteArgsDecoder
   }
 }
 
-class GetRecentNotesArgs {
-  GetRecentNotesArgs({required this.limit});
+class GetRecentFilesArgs {
+  GetRecentFilesArgs({required this.limit});
 
   final int limit;
 }
 
-class GetRecentNotesArgsDecoder
-    implements ReducerArgDecoder<GetRecentNotesArgs> {
-  const GetRecentNotesArgsDecoder();
+class GetRecentFilesArgsDecoder
+    implements ReducerArgDecoder<GetRecentFilesArgs> {
+  const GetRecentFilesArgsDecoder();
 
   @override
-  GetRecentNotesArgs decode(BsatnDecoder decoder) {
+  GetRecentFilesArgs decode(BsatnDecoder decoder) {
     final limit = decoder.readU32();
-    return GetRecentNotesArgs(
+    return GetRecentFilesArgs(
       limit: limit,
     );
   }
@@ -356,6 +351,31 @@ class HeartbeatArgsDecoder implements ReducerArgDecoder<HeartbeatArgs> {
     final sessionId = decoder.readString();
     return HeartbeatArgs(
       sessionId: sessionId,
+    );
+  }
+}
+
+class MoveFileArgs {
+  MoveFileArgs({
+    required this.oldPath,
+    required this.newPath,
+  });
+
+  final String oldPath;
+
+  final String newPath;
+}
+
+class MoveFileArgsDecoder implements ReducerArgDecoder<MoveFileArgs> {
+  const MoveFileArgsDecoder();
+
+  @override
+  MoveFileArgs decode(BsatnDecoder decoder) {
+    final oldPath = decoder.readString();
+    final newPath = decoder.readString();
+    return MoveFileArgs(
+      oldPath: oldPath,
+      newPath: newPath,
     );
   }
 }
@@ -385,33 +405,8 @@ class MoveFolderArgsDecoder implements ReducerArgDecoder<MoveFolderArgs> {
   }
 }
 
-class MoveNoteArgs {
-  MoveNoteArgs({
-    required this.oldPath,
-    required this.newPath,
-  });
-
-  final String oldPath;
-
-  final String newPath;
-}
-
-class MoveNoteArgsDecoder implements ReducerArgDecoder<MoveNoteArgs> {
-  const MoveNoteArgsDecoder();
-
-  @override
-  MoveNoteArgs decode(BsatnDecoder decoder) {
-    final oldPath = decoder.readString();
-    final newPath = decoder.readString();
-    return MoveNoteArgs(
-      oldPath: oldPath,
-      newPath: newPath,
-    );
-  }
-}
-
-class PrependToNoteArgs {
-  PrependToNoteArgs({
+class PrependToFileArgs {
+  PrependToFileArgs({
     required this.path,
     required this.content,
   });
@@ -421,14 +416,14 @@ class PrependToNoteArgs {
   final String content;
 }
 
-class PrependToNoteArgsDecoder implements ReducerArgDecoder<PrependToNoteArgs> {
-  const PrependToNoteArgsDecoder();
+class PrependToFileArgsDecoder implements ReducerArgDecoder<PrependToFileArgs> {
+  const PrependToFileArgsDecoder();
 
   @override
-  PrependToNoteArgs decode(BsatnDecoder decoder) {
+  PrependToFileArgs decode(BsatnDecoder decoder) {
     final path = decoder.readString();
     final content = decoder.readString();
-    return PrependToNoteArgs(
+    return PrependToFileArgs(
       path: path,
       content: content,
     );
@@ -637,8 +632,8 @@ class RegisterSessionArgsDecoder
   }
 }
 
-class RenameNoteArgs {
-  RenameNoteArgs({
+class RenameFileArgs {
+  RenameFileArgs({
     required this.id,
     required this.newPath,
   });
@@ -648,14 +643,14 @@ class RenameNoteArgs {
   final String newPath;
 }
 
-class RenameNoteArgsDecoder implements ReducerArgDecoder<RenameNoteArgs> {
-  const RenameNoteArgsDecoder();
+class RenameFileArgsDecoder implements ReducerArgDecoder<RenameFileArgs> {
+  const RenameFileArgsDecoder();
 
   @override
-  RenameNoteArgs decode(BsatnDecoder decoder) {
+  RenameFileArgs decode(BsatnDecoder decoder) {
     final id = decoder.readString();
     final newPath = decoder.readString();
-    return RenameNoteArgs(
+    return RenameFileArgs(
       id: id,
       newPath: newPath,
     );
@@ -919,8 +914,8 @@ class SweepOldMessagesArgsDecoder
   }
 }
 
-class UpdateNoteContentArgs {
-  UpdateNoteContentArgs({
+class UpdateFileContentArgs {
+  UpdateFileContentArgs({
     required this.id,
     required this.content,
     required this.size,
@@ -936,17 +931,17 @@ class UpdateNoteContentArgs {
   final Int64 modifiedTime;
 }
 
-class UpdateNoteContentArgsDecoder
-    implements ReducerArgDecoder<UpdateNoteContentArgs> {
-  const UpdateNoteContentArgsDecoder();
+class UpdateFileContentArgsDecoder
+    implements ReducerArgDecoder<UpdateFileContentArgs> {
+  const UpdateFileContentArgsDecoder();
 
   @override
-  UpdateNoteContentArgs decode(BsatnDecoder decoder) {
+  UpdateFileContentArgs decode(BsatnDecoder decoder) {
     final id = decoder.readString();
     final content = decoder.readString();
     final size = decoder.readU64();
     final modifiedTime = decoder.readU64();
-    return UpdateNoteContentArgs(
+    return UpdateFileContentArgs(
       id: id,
       content: content,
       size: size,
@@ -955,8 +950,8 @@ class UpdateNoteContentArgsDecoder
   }
 }
 
-class UpdateNotePathArgs {
-  UpdateNotePathArgs({
+class UpdateFilePathArgs {
+  UpdateFilePathArgs({
     required this.id,
     required this.newPath,
   });
@@ -966,17 +961,82 @@ class UpdateNotePathArgs {
   final String newPath;
 }
 
-class UpdateNotePathArgsDecoder
-    implements ReducerArgDecoder<UpdateNotePathArgs> {
-  const UpdateNotePathArgsDecoder();
+class UpdateFilePathArgsDecoder
+    implements ReducerArgDecoder<UpdateFilePathArgs> {
+  const UpdateFilePathArgsDecoder();
 
   @override
-  UpdateNotePathArgs decode(BsatnDecoder decoder) {
+  UpdateFilePathArgs decode(BsatnDecoder decoder) {
     final id = decoder.readString();
     final newPath = decoder.readString();
-    return UpdateNotePathArgs(
+    return UpdateFilePathArgs(
       id: id,
       newPath: newPath,
+    );
+  }
+}
+
+class UpsertFileArgs {
+  UpsertFileArgs({
+    required this.id,
+    required this.path,
+    required this.name,
+    required this.content,
+    required this.folderPath,
+    required this.depth,
+    required this.extension,
+    required this.size,
+    required this.createdTime,
+    required this.modifiedTime,
+  });
+
+  final String id;
+
+  final String path;
+
+  final String name;
+
+  final String content;
+
+  final String folderPath;
+
+  final int depth;
+
+  final String extension;
+
+  final Int64 size;
+
+  final Int64 createdTime;
+
+  final Int64 modifiedTime;
+}
+
+class UpsertFileArgsDecoder implements ReducerArgDecoder<UpsertFileArgs> {
+  const UpsertFileArgsDecoder();
+
+  @override
+  UpsertFileArgs decode(BsatnDecoder decoder) {
+    final id = decoder.readString();
+    final path = decoder.readString();
+    final name = decoder.readString();
+    final content = decoder.readString();
+    final folderPath = decoder.readString();
+    final depth = decoder.readU32();
+    final extension = decoder.readString();
+    final size = decoder.readU64();
+    final createdTime = decoder.readU64();
+    final modifiedTime = decoder.readU64();
+    return UpsertFileArgs(
+      id: id,
+      path: path,
+      name: name,
+      content: content,
+      folderPath: folderPath,
+      depth: depth,
+      extension: extension,
+      size: size,
+      createdTime: createdTime,
+      modifiedTime: modifiedTime,
     );
   }
 }
@@ -1011,92 +1071,22 @@ class UpsertFolderArgsDecoder implements ReducerArgDecoder<UpsertFolderArgs> {
   }
 }
 
-class UpsertNoteArgs {
-  UpsertNoteArgs({
-    required this.id,
-    required this.path,
-    required this.name,
-    required this.content,
-    required this.folderPath,
-    required this.depth,
-    required this.extension,
-    required this.kind,
-    required this.size,
-    required this.createdTime,
-    required this.modifiedTime,
-  });
-
-  final String id;
-
-  final String path;
-
-  final String name;
-
-  final String content;
-
-  final String folderPath;
-
-  final int depth;
-
-  final String extension;
-
-  final String kind;
-
-  final Int64 size;
-
-  final Int64 createdTime;
-
-  final Int64 modifiedTime;
-}
-
-class UpsertNoteArgsDecoder implements ReducerArgDecoder<UpsertNoteArgs> {
-  const UpsertNoteArgsDecoder();
-
-  @override
-  UpsertNoteArgs decode(BsatnDecoder decoder) {
-    final id = decoder.readString();
-    final path = decoder.readString();
-    final name = decoder.readString();
-    final content = decoder.readString();
-    final folderPath = decoder.readString();
-    final depth = decoder.readU32();
-    final extension = decoder.readString();
-    final kind = decoder.readString();
-    final size = decoder.readU64();
-    final createdTime = decoder.readU64();
-    final modifiedTime = decoder.readU64();
-    return UpsertNoteArgs(
-      id: id,
-      path: path,
-      name: name,
-      content: content,
-      folderPath: folderPath,
-      depth: depth,
-      extension: extension,
-      kind: kind,
-      size: size,
-      createdTime: createdTime,
-      modifiedTime: modifiedTime,
-    );
-  }
-}
-
 const acceptCallDef =
     ReducerDef<AcceptCallArgs>('accept_call', AcceptCallArgsDecoder());
-const appendToNoteDef =
-    ReducerDef<AppendToNoteArgs>('append_to_note', AppendToNoteArgsDecoder());
+const appendToFileDef =
+    ReducerDef<AppendToFileArgs>('append_to_file', AppendToFileArgsDecoder());
 const clearAllDef =
     ReducerDef<ClearAllArgs>('clear_all', ClearAllArgsDecoder());
 const clearAllSessionsDef = ReducerDef<ClearAllSessionsArgs>(
     'clear_all_sessions', ClearAllSessionsArgsDecoder());
+const createFileDef =
+    ReducerDef<CreateFileArgs>('create_file', CreateFileArgsDecoder());
 const createFolderDef =
     ReducerDef<CreateFolderArgs>('create_folder', CreateFolderArgsDecoder());
-const createNoteDef =
-    ReducerDef<CreateNoteArgs>('create_note', CreateNoteArgsDecoder());
+const deleteFileDef =
+    ReducerDef<DeleteFileArgs>('delete_file', DeleteFileArgsDecoder());
 const deleteFolderDef =
     ReducerDef<DeleteFolderArgs>('delete_folder', DeleteFolderArgsDecoder());
-const deleteNoteDef =
-    ReducerDef<DeleteNoteArgs>('delete_note', DeleteNoteArgsDecoder());
 const deleteSessionDef =
     ReducerDef<DeleteSessionArgs>('delete_session', DeleteSessionArgsDecoder());
 const editMessageDef =
@@ -1104,18 +1094,18 @@ const editMessageDef =
 const endCallDef = ReducerDef<EndCallArgs>('end_call', EndCallArgsDecoder());
 const endSessionDef =
     ReducerDef<EndSessionArgs>('end_session', EndSessionArgsDecoder());
-const findReplaceInNoteDef = ReducerDef<FindReplaceInNoteArgs>(
-    'find_replace_in_note', FindReplaceInNoteArgsDecoder());
-const getRecentNotesDef = ReducerDef<GetRecentNotesArgs>(
-    'get_recent_notes', GetRecentNotesArgsDecoder());
+const findReplaceInFileDef = ReducerDef<FindReplaceInFileArgs>(
+    'find_replace_in_file', FindReplaceInFileArgsDecoder());
+const getRecentFilesDef = ReducerDef<GetRecentFilesArgs>(
+    'get_recent_files', GetRecentFilesArgsDecoder());
 const heartbeatDef =
     ReducerDef<HeartbeatArgs>('heartbeat', HeartbeatArgsDecoder());
+const moveFileDef =
+    ReducerDef<MoveFileArgs>('move_file', MoveFileArgsDecoder());
 const moveFolderDef =
     ReducerDef<MoveFolderArgs>('move_folder', MoveFolderArgsDecoder());
-const moveNoteDef =
-    ReducerDef<MoveNoteArgs>('move_note', MoveNoteArgsDecoder());
-const prependToNoteDef = ReducerDef<PrependToNoteArgs>(
-    'prepend_to_note', PrependToNoteArgsDecoder());
+const prependToFileDef = ReducerDef<PrependToFileArgs>(
+    'prepend_to_file', PrependToFileArgsDecoder());
 const pushContextUsageDef = ReducerDef<PushContextUsageArgs>(
     'push_context_usage', PushContextUsageArgsDecoder());
 const pushImageDef =
@@ -1128,8 +1118,8 @@ const pushToolEventDef = ReducerDef<PushToolEventArgs>(
     'push_tool_event', PushToolEventArgsDecoder());
 const registerSessionDef = ReducerDef<RegisterSessionArgs>(
     'register_session', RegisterSessionArgsDecoder());
-const renameNoteDef =
-    ReducerDef<RenameNoteArgs>('rename_note', RenameNoteArgsDecoder());
+const renameFileDef =
+    ReducerDef<RenameFileArgs>('rename_file', RenameFileArgsDecoder());
 const requestCallDef =
     ReducerDef<RequestCallArgs>('request_call', RequestCallArgsDecoder());
 const requestPermissionDef = ReducerDef<RequestPermissionArgs>(
@@ -1148,11 +1138,11 @@ const setDisplayNameDef = ReducerDef<SetDisplayNameArgs>(
     'set_display_name', SetDisplayNameArgsDecoder());
 const sweepOldMessagesDef = ReducerDef<SweepOldMessagesArgs>(
     'sweep_old_messages', SweepOldMessagesArgsDecoder());
-const updateNoteContentDef = ReducerDef<UpdateNoteContentArgs>(
-    'update_note_content', UpdateNoteContentArgsDecoder());
-const updateNotePathDef = ReducerDef<UpdateNotePathArgs>(
-    'update_note_path', UpdateNotePathArgsDecoder());
+const updateFileContentDef = ReducerDef<UpdateFileContentArgs>(
+    'update_file_content', UpdateFileContentArgsDecoder());
+const updateFilePathDef = ReducerDef<UpdateFilePathArgs>(
+    'update_file_path', UpdateFilePathArgsDecoder());
+const upsertFileDef =
+    ReducerDef<UpsertFileArgs>('upsert_file', UpsertFileArgsDecoder());
 const upsertFolderDef =
     ReducerDef<UpsertFolderArgs>('upsert_folder', UpsertFolderArgsDecoder());
-const upsertNoteDef =
-    ReducerDef<UpsertNoteArgs>('upsert_note', UpsertNoteArgsDecoder());
