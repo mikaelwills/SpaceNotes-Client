@@ -1,6 +1,7 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../services/debug_logger.dart';
 import '../theme/spacenotes_theme.dart';
 import '../generated/space_file.dart';
 import 'swipe_action.dart';
@@ -306,9 +307,16 @@ class _NoteListItemState extends State<NoteListItem>
     return firstLine.trim();
   }
 
+  static const _maxTimestampMs = 8640000000000000;
+
   String get _timeAgo {
     final ms = widget.note.modifiedTime.toInt();
     if (ms == 0) return '';
+    // Some vault files carry corrupt far-future filesystem mtimes, which are past
+    // DateTime's range and used to throw during build and take out the whole list.
+    if (ms.abs() > _maxTimestampMs) {
+      return '';
+    }
     final dt = DateTime.fromMillisecondsSinceEpoch(ms);
     final diff = DateTime.now().difference(dt);
     if (diff.inSeconds < 60) return '${diff.inSeconds}s';
