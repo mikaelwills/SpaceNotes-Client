@@ -446,6 +446,8 @@ class QuestionRow extends ConsumerStatefulWidget {
 }
 
 class _QuestionRowState extends ConsumerState<QuestionRow> {
+  static const _noneLabel = 'none of these';
+
   final Set<String> _selected = {};
 
   List<String> get _options {
@@ -512,6 +514,8 @@ class _QuestionRowState extends ConsumerState<QuestionRow> {
           ),
           const SizedBox(height: 10),
           for (final label in _options) _option(label, multi),
+          // Exclusive: answers immediately even in multi-select, and ignores any ticked boxes.
+          _option(_noneLabel, false),
           if (multi) ...[
             const SizedBox(height: 10),
             SnButton(
@@ -559,10 +563,12 @@ class _QuestionRowState extends ConsumerState<QuestionRow> {
             Expanded(
               child: Text(
                 label,
-                style: const TextStyle(
+                style: TextStyle(
                   fontFamily: SpaceNotesTheme.fontSans,
                   fontSize: 14,
-                  color: SpaceNotesTheme.fg,
+                  color: label == _noneLabel
+                      ? SpaceNotesTheme.dim
+                      : SpaceNotesTheme.fg,
                   height: 1.45,
                 ),
               ),

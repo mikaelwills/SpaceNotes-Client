@@ -1,7 +1,6 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../services/debug_logger.dart';
 import '../theme/spacenotes_theme.dart';
 import '../generated/space_file.dart';
 import 'swipe_action.dart';
