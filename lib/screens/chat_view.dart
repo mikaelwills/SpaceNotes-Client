@@ -28,14 +28,14 @@ class ChatView extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final isDesktop = PlatformUtils.isDesktopLayout(context);
     final showDefaultInput = showInput && isDesktop && customInput == null;
-    final targetSession = ref.watch(targetSessionProvider);
+    final targetAgent = ref.watch(targetAgentProvider);
     final hydrated = ref
-        .watch(sessionHydratedProvider(targetSession))
+        .watch(agentHydratedProvider(targetAgent))
         .maybeWhen(data: (v) => v, orElse: () => false);
     final connected = ref
         .watch(spacetimeConnectionLiveProvider)
         .maybeWhen(data: (v) => v, orElse: () => false);
-    final items = ref.watch(chatTimelineBySessionProvider(targetSession));
+    final items = ref.watch(chatTimelineByAgentProvider(targetAgent));
 
     return Stack(
       children: [

@@ -10,9 +10,9 @@ import '../../services/paste_image_listener.dart';
 import '../primitives/primitives.dart';
 
 class DesktopChatInput extends ConsumerStatefulWidget {
-  final String? sessionId;
+  final String? agentId;
 
-  const DesktopChatInput({super.key, this.sessionId});
+  const DesktopChatInput({super.key, this.agentId});
 
   @override
   ConsumerState<DesktopChatInput> createState() => _DesktopChatInputState();
@@ -91,11 +91,11 @@ class _DesktopChatInputState extends ConsumerState<DesktopChatInput> {
     final image = _pendingImageBytes;
     if (message.isEmpty && image == null) return;
 
-    final String session = widget.sessionId ?? ref.read(targetSessionProvider);
+    final String agent = widget.agentId ?? ref.read(targetAgentProvider);
     if (image != null) {
-      sendChatImage(ref, sessionId: session, caption: message, pngBytes: image);
+      sendChatImage(ref, agentId: agent, caption: message, pngBytes: image);
     } else {
-      sendChatMessage(ref, sessionId: session, text: message);
+      sendChatMessage(ref, agentId: agent, text: message);
     }
     _controller.clear();
     setState(() => _pendingImageBytes = null);

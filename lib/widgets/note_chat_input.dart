@@ -54,13 +54,13 @@ class _NoteChatInputState extends ConsumerState<NoteChatInput> {
     final message = _controller.text.trim();
     if (message.isEmpty) return;
 
-    final targetSession = ref.read(targetSessionProvider);
+    final targetAgent = ref.read(targetAgentProvider);
     final text = widget.notePath.isEmpty
         ? message
         : '[Viewing note: ${widget.notePath}]\n\n$message';
     sendChatMessage(
       ref,
-      sessionId: targetSession,
+      agentId: targetAgent,
       text: text,
     );
     _controller.clear();

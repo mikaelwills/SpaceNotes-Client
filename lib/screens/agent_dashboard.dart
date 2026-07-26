@@ -3,52 +3,52 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../generated/session.dart';
+import '../generated/agent.dart';
 import '../providers/chat_providers.dart';
 import '../providers/connection_providers.dart';
 import '../providers/notes_providers.dart';
 import '../theme/spacenotes_theme.dart';
 import '../widgets/primitives/primitives.dart';
-import '../widgets/sessions/session_filter_bar.dart';
-import '../widgets/sessions/session_row_content.dart';
+import '../widgets/agents/agent_filter_bar.dart';
+import '../widgets/agents/agent_row_content.dart';
 import '../widgets/swipe_action.dart';
 
-class SessionDashboard extends ConsumerWidget {
-  const SessionDashboard({super.key});
+class AgentDashboard extends ConsumerWidget {
+  const AgentDashboard({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final sessions = ref.watch(sessionsProvider);
-    final filtered = ref.watch(filteredSessionsProvider);
+    final agents = ref.watch(agentsProvider);
+    final filtered = ref.watch(filteredAgentsProvider);
     final isConnected = ref.watch(spacetimeConnectedProvider);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _Header(
-          count: sessions.length,
+          count: agents.length,
           onClearAll:
-              sessions.isEmpty ? null : () => _confirmClearAll(context, ref),
+              agents.isEmpty ? null : () => _confirmClearAll(context, ref),
         ),
         const _ColumnHeader(),
         Expanded(
-          child: sessions.isEmpty
+          child: agents.isEmpty
               ? const _EmptyState()
               : ListView.builder(
                   padding: EdgeInsets.zero,
                   itemCount: filtered.length,
                   itemBuilder: (context, index) {
-                    final session = filtered[index];
-                    return _SessionRow(
-                      key: ValueKey(session.id),
+                    final agent = filtered[index];
+                    return _AgentRow(
+                      key: ValueKey(agent.id),
                       index: index + 1,
-                      session: session,
+                      agent: agent,
                       showHost: true,
                     );
                   },
                 ),
         ),
-        const SessionFilterBar(),
+        const AgentFilterBar(),
         _Footer(isConnected: isConnected),
       ],
     );
@@ -65,7 +65,7 @@ class SessionDashboard extends ConsumerWidget {
           side: BorderSide(color: SpaceNotesTheme.hairline),
         ),
         title: const Text(
-          'Clear all sessions?',
+          'Clear all agents?',
           style: TextStyle(
             fontFamily: SpaceNotesTheme.fontSans,
             fontSize: 16,
@@ -73,7 +73,7 @@ class SessionDashboard extends ConsumerWidget {
           ),
         ),
         content: const Text(
-          'Wipes every session, all chat history, all tool events. Live sessions will reregister automatically. This cannot be undone.',
+          'Wipes every agent, all chat history, all tool events. Live agents will reregister automatically. This cannot be undone.',
           style: TextStyle(
             fontFamily: SpaceNotesTheme.fontSans,
             fontSize: 13,
@@ -101,7 +101,7 @@ class SessionDashboard extends ConsumerWidget {
     if (confirmed != true) return;
     final client = ref.read(spacetimeClientProvider);
     if (client == null) return;
-    await client.reducers.clearAllSessions();
+    await client.reducers.clearAllAgents();
   }
 }
 
@@ -117,7 +117,7 @@ class _Header extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          const SnMicroLabel('mcp · sessions'),
+          const SnMicroLabel('mcp · agents'),
           const Spacer(),
           SnUiText(
             '$count / ∞',
@@ -185,7 +185,7 @@ class _EmptyState extends StatelessWidget {
         children: [
           Icon(Icons.memory, size: 48, color: SpaceNotesTheme.dim),
           SizedBox(height: 16),
-          SnMicroLabel('no sessions connected'),
+          SnMicroLabel('no agents connected'),
         ],
       ),
     );
@@ -219,23 +219,23 @@ class _Footer extends StatelessWidget {
   }
 }
 
-class _SessionRow extends ConsumerStatefulWidget {
+class _AgentRow extends ConsumerStatefulWidget {
   final int index;
-  final Session session;
+  final Agent agent;
   final bool showHost;
 
-  const _SessionRow({
+  const _AgentRow({
     super.key,
     required this.index,
-    required this.session,
+    required this.agent,
     required this.showHost,
   });
 
   @override
-  ConsumerState<_SessionRow> createState() => _SessionRowState();
+  ConsumerState<_AgentRow> createState() => _AgentRowState();
 }
 
-class _SessionRowState extends ConsumerState<_SessionRow>
+class _AgentRowState extends ConsumerState<_AgentRow>
     with SingleTickerProviderStateMixin {
   double _swipeOffset = 0;
   late AnimationController _animationController;
@@ -264,10 +264,10 @@ class _SessionRowState extends ConsumerState<_SessionRow>
 
   @override
   Widget build(BuildContext context) {
-    final activity = ref.watch(sessionActivityProvider(widget.session.id));
-    final targetSession = ref.watch(targetSessionProvider);
-    final state = resolveSessionState(activity?.state);
-    final isActive = widget.session.id == targetSession;
+    final activity = ref.watch(agentActivityProvider(widget.agent.id));
+    final targetAgent = ref.watch(targetAgentProvider);
+    final state = resolveAgentState(activity?.state);
+    final isActive = widget.agent.id == targetAgent;
 
     final showAction = _swipeOffset < 0 || _animationController.isAnimating;
     final rowBg = isActive
@@ -290,7 +290,7 @@ class _SessionRowState extends ConsumerState<_SessionRow>
                   width: _actionButtonWidth,
                   onTap: () {
                     _animateToOffset(0);
-                    _deleteSession();
+                    _deleteAgent();
                   },
                 ),
               ],
@@ -335,9 +335,9 @@ class _SessionRowState extends ConsumerState<_SessionRow>
               color: rowBg,
               child: InkWell(
                 onTap: _handleTap,
-                child: SessionRowContent(
+                child: AgentRowContent(
                   index: widget.index,
-                  session: widget.session,
+                  agent: widget.agent,
                   state: state,
                   showHost: widget.showHost,
                   isActive: isActive,
@@ -357,7 +357,7 @@ class _SessionRowState extends ConsumerState<_SessionRow>
     }
     HapticFeedback.selectionClick();
     context.push(
-        '/notes/sessions/${Uri.encodeComponent(widget.session.id)}');
+        '/notes/sessions/${Uri.encodeComponent(widget.agent.id)}');
   }
 
   void _animateToOffset(double target) {
@@ -369,11 +369,11 @@ class _SessionRowState extends ConsumerState<_SessionRow>
     });
   }
 
-  Future<void> _deleteSession() async {
+  Future<void> _deleteAgent() async {
     HapticFeedback.mediumImpact();
     final client = ref.read(spacetimeClientProvider);
     if (client == null) return;
-    await client.reducers.deleteSession(sessionId: widget.session.id);
+    await client.reducers.deleteAgent(agentId: widget.agent.id);
   }
 
 }

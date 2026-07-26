@@ -62,10 +62,10 @@ class SpacetimeDbNotesRepository {
 
   final List<StreamSubscription> _subscriptions = [];
 
-  // Cold-start set: light/global tables only. The four per-session chat tables
+  // Cold-start set: light/global tables only. The four per-agent chat tables
   // (message, tool_event, permission_request, question_request) are subscribed
-  // dynamically, scoped `WHERE session_id = <id>`, while a session screen is
-  // open — see subscribeSession/unsubscribeSession.
+  // dynamically, scoped `WHERE agent_id = <id>`, while an agent screen is
+  // open — see subscribeAgent/unsubscribeAgent.
   static const _initialSubscriptions = [
     'SELECT * FROM space_file',
     'SELECT * FROM folder',
@@ -73,11 +73,11 @@ class SpacetimeDbNotesRepository {
     'SELECT * FROM connected_user',
     'SELECT * FROM video_frame',
     'SELECT * FROM audio_frame',
-    'SELECT * FROM session',
-    'SELECT * FROM session_activity',
+    'SELECT * FROM agent',
+    'SELECT * FROM agent_activity',
   ];
 
-  static const _perSessionChatTables = [
+  static const _perAgentChatTables = [
     'message',
     'tool_event',
     'permission_request',
@@ -87,24 +87,24 @@ class SpacetimeDbNotesRepository {
   final Map<int, SpacetimeDbClient> _querySetOwners = {};
   final Set<int> _deferredUnsubscribes = {};
 
-  /// Subscribe the four per-session chat tables scoped to one session. Returns
-  /// the SDK querySetId to pass back to [unsubscribeSession]. Awaits
-  /// SubscribeApplied so the session's rows are in the cache on resolve.
-  Future<int?> subscribeSession(String sessionId) async {
+  /// Subscribe the four per-agent chat tables scoped to one agent. Returns
+  /// the SDK querySetId to pass back to [unsubscribeAgent]. Awaits
+  /// SubscribeApplied so the agent's rows are in the cache on resolve.
+  Future<int?> subscribeAgent(String agentId) async {
     final client = _client;
     if (client == null) {
-      debugLogger.warning('SUB', 'subscribeSession: client null');
+      debugLogger.warning('SUB', 'subscribeAgent: client null');
       return null;
     }
-    final queries = _perSessionChatTables
-        .map((t) => "SELECT * FROM $t WHERE session_id = '$sessionId'")
+    final queries = _perAgentChatTables
+        .map((t) => "SELECT * FROM $t WHERE agent_id = '$agentId'")
         .toList();
     final qsId = await client.subscriptions.subscribe(queries);
     _querySetOwners[qsId] = client;
     return qsId;
   }
 
-  void unsubscribeSession(int querySetId) {
+  void unsubscribeAgent(int querySetId) {
     final owner = _querySetOwners.remove(querySetId);
     final client = _client;
     if (client == null || !identical(owner, client)) return;
@@ -125,25 +125,25 @@ class SpacetimeDbNotesRepository {
     }
   }
 
-  /// Subscribe the four chat tables for several sessions in ONE query set,
+  /// Subscribe the four chat tables for several agents in ONE query set,
   /// so they stay warm in the offline cache (used for the recently-touched
-  /// sessions at connect). Uses the same proven `= id` scoped query shape as
-  /// [subscribeSession] — no dependency on IN-clause support. Awaits
+  /// agents at connect). Uses the same proven `= id` scoped query shape as
+  /// [subscribeAgent] — no dependency on IN-clause support. Awaits
   /// SubscribeApplied. Returns the querySetId, or null if there are no ids.
-  Future<int?> subscribeSessions(List<String> sessionIds) async {
+  Future<int?> subscribeAgents(List<String> agentIds) async {
     final client = _client;
     if (client == null) {
-      debugLogger.warning('SUB', 'subscribeSessions: client null');
+      debugLogger.warning('SUB', 'subscribeAgents: client null');
       return null;
     }
-    if (sessionIds.isEmpty) return null;
+    if (agentIds.isEmpty) return null;
     final queries = <String>[
-      for (final id in sessionIds)
-        for (final t in _perSessionChatTables)
-          "SELECT * FROM $t WHERE session_id = '$id'",
+      for (final id in agentIds)
+        for (final t in _perAgentChatTables)
+          "SELECT * FROM $t WHERE agent_id = '$id'",
     ];
     debugLogger.connection(
-        'subscribeSessions: warming ${sessionIds.length} sessions (${queries.length} queries)');
+        'subscribeAgents: warming ${agentIds.length} agents (${queries.length} queries)');
     final qsId = await client.subscriptions.subscribe(queries);
     _querySetOwners[qsId] = client;
     return qsId;

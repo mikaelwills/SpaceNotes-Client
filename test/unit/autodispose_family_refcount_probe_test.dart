@@ -6,10 +6,10 @@ void main() {
     final subscribeCalls = <String>[];
     final unsubscribeCalls = <String>[];
 
-    final provider = Provider.autoDispose.family<int, String>((ref, sessionId) {
-      subscribeCalls.add(sessionId);
+    final provider = Provider.autoDispose.family<int, String>((ref, agentId) {
+      subscribeCalls.add(agentId);
       final qsId = subscribeCalls.length;
-      ref.onDispose(() => unsubscribeCalls.add('$sessionId:$qsId'));
+      ref.onDispose(() => unsubscribeCalls.add('$agentId:$qsId'));
       return qsId;
     });
 
@@ -37,10 +37,10 @@ void main() {
     final subscribeCalls = <String>[];
     final unsubscribeCalls = <String>[];
 
-    final provider = Provider.autoDispose.family<int, String>((ref, sessionId) {
-      subscribeCalls.add(sessionId);
+    final provider = Provider.autoDispose.family<int, String>((ref, agentId) {
+      subscribeCalls.add(agentId);
       final qsId = subscribeCalls.length;
-      ref.onDispose(() => unsubscribeCalls.add('$sessionId:$qsId'));
+      ref.onDispose(() => unsubscribeCalls.add('$agentId:$qsId'));
       return qsId;
     });
 

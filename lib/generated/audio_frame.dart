@@ -4,7 +4,7 @@ import 'package:spacetimedb_sdk/codegen.dart';
 
 class AudioFrame {
   AudioFrame({
-    required this.sessionId,
+    required this.callId,
     required this.from,
     required this.seq,
     required this.pcm,
@@ -12,14 +12,14 @@ class AudioFrame {
 
   factory AudioFrame.fromJson(Map<String, dynamic> json) {
     return AudioFrame(
-      sessionId: Int64(json['sessionId'] ?? 0),
+      callId: Int64(json['callId'] ?? 0),
       from: Identity.fromJson(json['from'] ?? ''),
       seq: json['seq'] ?? 0,
       pcm: json['pcm'],
     );
   }
 
-  final Int64 sessionId;
+  final Int64 callId;
 
   final Identity from;
 
@@ -28,7 +28,7 @@ class AudioFrame {
   final List<int> pcm;
 
   void encodeBsatn(BsatnEncoder encoder) {
-    encoder.writeU64(sessionId);
+    encoder.writeU64(callId);
     encoder.writeIdentity(from);
     encoder.writeU32(seq);
     encoder.writeByteArray(pcm);
@@ -36,7 +36,7 @@ class AudioFrame {
 
   static AudioFrame decodeBsatn(BsatnDecoder decoder) {
     return AudioFrame(
-      sessionId: decoder.readU64(),
+      callId: decoder.readU64(),
       from: decoder.readIdentity(),
       seq: decoder.readU32(),
       pcm: decoder.readByteArray(),
@@ -45,7 +45,7 @@ class AudioFrame {
 
   Map<String, dynamic> toJson() {
     return {
-      'sessionId': sessionId.toInt(),
+      'callId': callId.toInt(),
       'from': from.toJson(),
       'seq': seq,
       'pcm': pcm,
@@ -56,7 +56,7 @@ class AudioFrame {
   bool operator ==(Object other) {
     return identical(this, other) ||
         other is AudioFrame &&
-            sessionId == other.sessionId &&
+            callId == other.callId &&
             from == other.from &&
             seq == other.seq &&
             pcm == other.pcm;
@@ -64,22 +64,22 @@ class AudioFrame {
 
   @override
   int get hashCode {
-    return Object.hashAll([sessionId, from, seq, pcm]);
+    return Object.hashAll([callId, from, seq, pcm]);
   }
 
   @override
   String toString() {
-    return 'AudioFrame(sessionId: $sessionId, from: $from, seq: $seq, pcm: $pcm)';
+    return 'AudioFrame(callId: $callId, from: $from, seq: $seq, pcm: $pcm)';
   }
 
   AudioFrame copyWith({
-    Int64? sessionId,
+    Int64? callId,
     Identity? from,
     int? seq,
     List<int>? pcm,
   }) {
     return AudioFrame(
-      sessionId: sessionId ?? this.sessionId,
+      callId: callId ?? this.callId,
       from: from ?? this.from,
       seq: seq ?? this.seq,
       pcm: pcm ?? this.pcm,

@@ -259,10 +259,10 @@ class _NoteBottomBarState extends ConsumerState<NoteBottomBar> {
     FocusScope.of(context).unfocus();
 
     final prefixedMessage = '[Viewing note: ${widget.notePath}]\n\n$message';
-    final targetSession = ref.read(targetSessionProvider);
+    final targetAgent = ref.read(targetAgentProvider);
     sendChatMessage(
       ref,
-      sessionId: targetSession,
+      agentId: targetAgent,
       text: prefixedMessage,
     );
     _controller.clear();

@@ -255,7 +255,7 @@ class _SendStatusTick extends ConsumerWidget {
         ref.read(chatSendStatusProvider.notifier).clear(message.id);
         sendChatMessage(
           ref,
-          sessionId: message.sessionId,
+          agentId: message.agentId,
           text: message.text,
         );
       },

@@ -4,7 +4,7 @@ import '../providers/chat_providers.dart';
 import '../widgets/adaptive/platform_utils.dart';
 import '../widgets/mobile_bottom_input_bar.dart';
 
-enum HomeViewType { folders, chat, note, sessions, sessionChat }
+enum HomeViewType { folders, chat, note, agents, agentChat }
 
 /// HomeScreen shell that provides the shared bottom input area (mobile only)
 class HomeScreen extends ConsumerWidget {
@@ -14,9 +14,9 @@ class HomeScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Keep the recently-touched sessions warm in the offline cache for the
+    // Keep the recently-touched agents warm in the offline cache for the
     // whole time the app shell is mounted.
-    ref.watch(warmRecentSessionsProvider);
+    ref.watch(warmRecentAgentsProvider);
 
     if (PlatformUtils.isDesktopLayout(context)) {
       return child;

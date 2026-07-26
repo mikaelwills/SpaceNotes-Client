@@ -52,7 +52,7 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
   Widget build(BuildContext context) {
     final viewType = _getCurrentViewType();
 
-    if (viewType == HomeViewType.note || viewType == HomeViewType.sessions) {
+    if (viewType == HomeViewType.note || viewType == HomeViewType.agents) {
       return const SizedBox.shrink();
     }
     final location = GoRouterState.of(context).uri.toString();
@@ -61,8 +61,8 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
     }
 
     final isChat =
-        viewType == HomeViewType.chat || viewType == HomeViewType.sessionChat;
-    final isSessionChat = viewType == HomeViewType.sessionChat;
+        viewType == HomeViewType.chat || viewType == HomeViewType.agentChat;
+    final isAgentChat = viewType == HomeViewType.agentChat;
 
     final searchQuery = ref.watch(folderSearchQueryProvider);
     if (!isChat && searchQuery.isEmpty && _textController.text.isNotEmpty) {
@@ -84,7 +84,7 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
         onSend: _onSend,
         showSend: isChat || _isFocused || _hasText,
         leading: [
-          if (isSessionChat)
+          if (isAgentChat)
             SnDockTile(
               icon: Icons.arrow_back,
               onTap: () => context.pop(),
@@ -98,9 +98,9 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
 
   String _computeHint(bool isChat) {
     if (!isChat) return 'search notes…';
-    final sid = _getCurrentSessionId();
-    if (sid != null) return sid;
-    return ref.read(targetSessionProvider);
+    final aid = _getCurrentAgentId();
+    if (aid != null) return aid;
+    return ref.read(targetAgentProvider);
   }
 
   List<Widget> _buildTrailing(bool isChat, String folderPath) {
@@ -144,12 +144,12 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
     final l = GoRouterState.of(context).uri.toString();
     if (l.startsWith('/notes/chat')) return HomeViewType.chat;
     if (l.startsWith('/notes/note/')) return HomeViewType.note;
-    if (l == '/notes/sessions') return HomeViewType.sessions;
-    if (l.startsWith('/notes/sessions/')) return HomeViewType.sessionChat;
+    if (l == '/notes/sessions') return HomeViewType.agents;
+    if (l.startsWith('/notes/sessions/')) return HomeViewType.agentChat;
     return HomeViewType.folders;
   }
 
-  String? _getCurrentSessionId() {
+  String? _getCurrentAgentId() {
     final l = GoRouterState.of(context).uri.toString();
     if (!l.startsWith('/notes/sessions/')) return null;
     final encoded = l.substring('/notes/sessions/'.length);
@@ -167,25 +167,24 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
 
     FocusManager.instance.primaryFocus?.unfocus();
 
-    final sessionId = _getCurrentSessionId();
-    if (sessionId != null) {
+    final agentId = _getCurrentAgentId();
+    if (agentId != null) {
       if (image != null) {
-        sendChatImage(ref,
-            sessionId: sessionId, caption: message, pngBytes: image);
+        sendChatImage(ref, agentId: agentId, caption: message, pngBytes: image);
       } else {
-        sendChatMessage(ref, sessionId: sessionId, text: message);
+        sendChatMessage(ref, agentId: agentId, text: message);
       }
       _textController.clear();
       setState(() => _pendingImageBytes = null);
       return;
     }
 
-    final targetSession = ref.read(targetSessionProvider);
+    final targetAgent = ref.read(targetAgentProvider);
     if (image != null) {
       sendChatImage(ref,
-          sessionId: targetSession, caption: message, pngBytes: image);
+          agentId: targetAgent, caption: message, pngBytes: image);
     } else {
-      sendChatMessage(ref, sessionId: targetSession, text: message);
+      sendChatMessage(ref, agentId: targetAgent, text: message);
     }
     context.go('/notes/chat');
 

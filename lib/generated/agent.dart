@@ -2,8 +2,8 @@
 
 import 'package:spacetimedb_sdk/codegen.dart';
 
-class Session {
-  Session({
+class Agent {
+  Agent({
     required this.id,
     required this.baseName,
     required this.host,
@@ -14,8 +14,8 @@ class Session {
     required this.contextWindow,
   });
 
-  factory Session.fromJson(Map<String, dynamic> json) {
-    return Session(
+  factory Agent.fromJson(Map<String, dynamic> json) {
+    return Agent(
       id: json['id'] ?? '',
       baseName: json['baseName'] ?? '',
       host: json['host'] ?? '',
@@ -54,8 +54,8 @@ class Session {
     encoder.writeU64(contextWindow);
   }
 
-  static Session decodeBsatn(BsatnDecoder decoder) {
-    return Session(
+  static Agent decodeBsatn(BsatnDecoder decoder) {
+    return Agent(
       id: decoder.readString(),
       baseName: decoder.readString(),
       host: decoder.readString(),
@@ -83,7 +83,7 @@ class Session {
   @override
   bool operator ==(Object other) {
     return identical(this, other) ||
-        other is Session &&
+        other is Agent &&
             id == other.id &&
             baseName == other.baseName &&
             host == other.host &&
@@ -110,10 +110,10 @@ class Session {
 
   @override
   String toString() {
-    return 'Session(id: $id, baseName: $baseName, host: $host, clientId: $clientId, createdAt: $createdAt, lastSeen: $lastSeen, contextUsed: $contextUsed, contextWindow: $contextWindow)';
+    return 'Agent(id: $id, baseName: $baseName, host: $host, clientId: $clientId, createdAt: $createdAt, lastSeen: $lastSeen, contextUsed: $contextUsed, contextWindow: $contextWindow)';
   }
 
-  Session copyWith({
+  Agent copyWith({
     String? id,
     String? baseName,
     String? host,
@@ -123,7 +123,7 @@ class Session {
     Int64? contextUsed,
     Int64? contextWindow,
   }) {
-    return Session(
+    return Agent(
       id: id ?? this.id,
       baseName: baseName ?? this.baseName,
       host: host ?? this.host,
@@ -136,25 +136,25 @@ class Session {
   }
 }
 
-class SessionDecoder extends RowDecoder<Session> {
+class AgentDecoder extends RowDecoder<Agent> {
   @override
-  Session decode(BsatnDecoder decoder) {
-    return Session.decodeBsatn(decoder);
+  Agent decode(BsatnDecoder decoder) {
+    return Agent.decodeBsatn(decoder);
   }
 
   @override
-  String? getPrimaryKey(Session row) {
+  String? getPrimaryKey(Agent row) {
     return row.id;
   }
 
   @override
-  Map<String, dynamic>? toJson(Session row) {
+  Map<String, dynamic>? toJson(Agent row) {
     return row.toJson();
   }
 
   @override
-  Session? fromJson(Map<String, dynamic> json) {
-    return Session.fromJson(json);
+  Agent? fromJson(Map<String, dynamic> json) {
+    return Agent.fromJson(json);
   }
 
   @override

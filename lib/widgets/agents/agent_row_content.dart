@@ -1,46 +1,46 @@
 import 'package:fixnum/fixnum.dart';
 import 'package:flutter/material.dart';
-import '../../generated/session.dart';
+import '../../generated/agent.dart';
 import '../../providers/chat_providers.dart';
 import '../../theme/spacenotes_theme.dart';
 import '../primitives/primitives.dart';
 
-enum SessionState { idle, thinking, running }
+enum AgentState { idle, thinking, running }
 
-SessionState resolveSessionState(String? raw) {
+AgentState resolveAgentState(String? raw) {
   switch (raw) {
     case 'thinking':
-      return SessionState.thinking;
+      return AgentState.thinking;
     case 'tool_use':
-      return SessionState.running;
+      return AgentState.running;
     default:
-      return SessionState.idle;
+      return AgentState.idle;
   }
 }
 
-Color sessionStateColor(SessionState state) => switch (state) {
-      SessionState.idle => SpaceNotesTheme.dim,
-      SessionState.thinking => SpaceNotesTheme.accent2,
-      SessionState.running => SpaceNotesTheme.accent,
+Color agentStateColor(AgentState state) => switch (state) {
+      AgentState.idle => SpaceNotesTheme.dim,
+      AgentState.thinking => SpaceNotesTheme.accent2,
+      AgentState.running => SpaceNotesTheme.accent,
     };
 
-String sessionStateLabel(SessionState state) => switch (state) {
-      SessionState.idle => 'IDLE',
-      SessionState.thinking => 'THINKING',
-      SessionState.running => 'TOOL · RUN',
+String agentStateLabel(AgentState state) => switch (state) {
+      AgentState.idle => 'IDLE',
+      AgentState.thinking => 'THINKING',
+      AgentState.running => 'TOOL · RUN',
     };
 
-String sessionBaseName(String sessionKey) {
-  final idx = sessionKey.indexOf('@');
-  return idx < 0 ? sessionKey : sessionKey.substring(0, idx);
+String agentBaseName(String agentKey) {
+  final idx = agentKey.indexOf('@');
+  return idx < 0 ? agentKey : agentKey.substring(0, idx);
 }
 
-String sessionHostPart(String sessionKey) {
-  final idx = sessionKey.indexOf('@');
-  return idx < 0 ? '' : sessionKey.substring(idx + 1);
+String agentHostPart(String agentKey) {
+  final idx = agentKey.indexOf('@');
+  return idx < 0 ? '' : agentKey.substring(idx + 1);
 }
 
-String sessionTimeAgo(Int64 ts) {
+String agentTimeAgo(Int64 ts) {
   final dt = timestampToDateTime(ts);
   final diff = DateTime.now().difference(dt);
   if (diff.inSeconds < 60) return '${diff.inSeconds}s';
@@ -49,7 +49,7 @@ String sessionTimeAgo(Int64 ts) {
   return '${diff.inDays}d';
 }
 
-String sessionContextUsage(int used, int window) {
+String agentContextUsage(int used, int window) {
   return '${_fmtTokens(used)}/${_fmtTokens(window)}';
 }
 
@@ -65,18 +65,18 @@ String _fmtTokens(int n) {
   return '$n';
 }
 
-class SessionRowContent extends StatelessWidget {
+class AgentRowContent extends StatelessWidget {
   final int index;
-  final Session session;
-  final SessionState state;
+  final Agent agent;
+  final AgentState state;
   final bool showHost;
   final bool isActive;
   final EdgeInsets padding;
 
-  const SessionRowContent({
+  const AgentRowContent({
     super.key,
     required this.index,
-    required this.session,
+    required this.agent,
     required this.state,
     this.showHost = true,
     this.isActive = false,
@@ -115,7 +115,7 @@ class SessionRowContent extends StatelessWidget {
               const SizedBox(width: 14),
               Expanded(
                 child: _NameBlock(
-                  session: session,
+                  agent: agent,
                   showHost: showHost,
                   state: state,
                 ),
@@ -131,20 +131,20 @@ class SessionRowContent extends StatelessWidget {
 }
 
 class _NameBlock extends StatelessWidget {
-  final Session session;
+  final Agent agent;
   final bool showHost;
-  final SessionState state;
+  final AgentState state;
 
   const _NameBlock({
-    required this.session,
+    required this.agent,
     required this.showHost,
     required this.state,
   });
 
   @override
   Widget build(BuildContext context) {
-    final base = sessionBaseName(session.id);
-    final host = sessionHostPart(session.id);
+    final base = agentBaseName(agent.id);
+    final host = agentHostPart(agent.id);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -184,31 +184,31 @@ class _NameBlock extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 6),
-        _MetaLine(session: session),
+        _MetaLine(agent: agent),
       ],
     );
   }
 }
 
 class _MetaLine extends StatelessWidget {
-  final Session session;
-  const _MetaLine({required this.session});
+  final Agent agent;
+  const _MetaLine({required this.agent});
 
   @override
   Widget build(BuildContext context) {
-    final hasCtx = session.contextWindow.toInt() > 0;
+    final hasCtx = agent.contextWindow.toInt() > 0;
     final ctxValue = hasCtx
-        ? sessionContextUsage(
-            session.contextUsed.toInt(),
-            session.contextWindow.toInt(),
+        ? agentContextUsage(
+            agent.contextUsed.toInt(),
+            agent.contextWindow.toInt(),
           )
         : null;
 
     final spans = <InlineSpan>[
       _metaLabel('REG'),
-      _metaValue(' ${sessionTimeAgo(session.createdAt)}'),
+      _metaValue(' ${agentTimeAgo(agent.createdAt)}'),
       _metaLabel('   SEEN'),
-      _metaValue(' ${sessionTimeAgo(session.lastSeen)}'),
+      _metaValue(' ${agentTimeAgo(agent.lastSeen)}'),
       if (ctxValue != null) ...[
         _metaLabel('   CTX'),
         _metaValue(' $ctxValue'),
@@ -256,7 +256,7 @@ class _LeftRule extends StatelessWidget {
 }
 
 class _StateTail extends StatelessWidget {
-  final SessionState state;
+  final AgentState state;
   const _StateTail({required this.state});
 
   @override
@@ -266,11 +266,11 @@ class _StateTail extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(
-          sessionStateLabel(state),
+          agentStateLabel(state),
           style: TextStyle(
             fontFamily: SpaceNotesTheme.fontMono,
             fontSize: 10,
-            color: sessionStateColor(state),
+            color: agentStateColor(state),
             letterSpacing: 1,
           ),
         ),
@@ -290,7 +290,7 @@ class _StateTail extends StatelessWidget {
 }
 
 class StateDot extends StatefulWidget {
-  final SessionState state;
+  final AgentState state;
   const StateDot({super.key, required this.state});
 
   @override
@@ -308,7 +308,7 @@ class _StateDotState extends State<StateDot>
       vsync: this,
       duration: const Duration(milliseconds: 1400),
     );
-    if (widget.state != SessionState.idle) {
+    if (widget.state != AgentState.idle) {
       _controller.repeat(reverse: true);
     }
   }
@@ -316,9 +316,9 @@ class _StateDotState extends State<StateDot>
   @override
   void didUpdateWidget(covariant StateDot oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.state != SessionState.idle && !_controller.isAnimating) {
+    if (widget.state != AgentState.idle && !_controller.isAnimating) {
       _controller.repeat(reverse: true);
-    } else if (widget.state == SessionState.idle && _controller.isAnimating) {
+    } else if (widget.state == AgentState.idle && _controller.isAnimating) {
       _controller.stop();
       _controller.value = 0;
     }
@@ -332,11 +332,11 @@ class _StateDotState extends State<StateDot>
 
   @override
   Widget build(BuildContext context) {
-    final color = sessionStateColor(widget.state);
+    final color = agentStateColor(widget.state);
     return AnimatedBuilder(
       animation: _controller,
       builder: (_, __) {
-        final opacity = widget.state == SessionState.idle
+        final opacity = widget.state == AgentState.idle
             ? 1.0
             : 0.35 + (1.0 - 0.35) * _controller.value;
         return Opacity(

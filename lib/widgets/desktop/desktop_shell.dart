@@ -7,7 +7,7 @@ import '../../theme/spacenotes_theme.dart';
 import '../note_chat_panel.dart';
 import '../sync_state_indicator.dart';
 import 'desktop_note_view.dart';
-import 'desktop_sessions_layout.dart';
+import 'desktop_agents_layout.dart';
 import 'note_tabs.dart';
 import 'sidebar.dart';
 
@@ -39,15 +39,15 @@ class _DesktopShellState extends ConsumerState<DesktopShell> {
   Widget build(BuildContext context) {
     final location = GoRouterState.of(context).uri.toString();
     if (location.startsWith('/notes/sessions')) {
-      String? activeSessionId;
+      String? activeAgentId;
       if (location.startsWith('/notes/sessions/')) {
         final encoded = location.substring('/notes/sessions/'.length);
-        activeSessionId = Uri.decodeComponent(encoded);
+        activeAgentId = Uri.decodeComponent(encoded);
       }
       return Scaffold(
         backgroundColor: SpaceNotesTheme.bg,
         // ignore: prefer_const_constructors
-        body: DesktopSessionsLayout(activeSessionId: activeSessionId),
+        body: DesktopAgentsLayout(activeAgentId: activeAgentId),
       );
     }
 

@@ -98,7 +98,7 @@ class _IncomingCallBody extends ConsumerWidget {
                     final callService = ref.read(callServiceProvider);
                     final repo = ref.read(notesRepositoryProvider);
                     callService.setClient(repo.client);
-                    callService.endCall(session.sessionId);
+                    callService.endCall(session.callId);
                   },
                 ),
                 const SizedBox(width: 64),
@@ -111,9 +111,9 @@ class _IncomingCallBody extends ConsumerWidget {
                     final callService = ref.read(callServiceProvider);
                     final repo = ref.read(notesRepositoryProvider);
                     callService.setClient(repo.client);
-                    callService.acceptCall(session.sessionId);
+                    callService.acceptCall(session.callId);
                     context.goNamed('call', pathParameters: {
-                      'sessionId': session.sessionId.toString()
+                      'sessionId': session.callId.toString()
                     });
                   },
                 ),

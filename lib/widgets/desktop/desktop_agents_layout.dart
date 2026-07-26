@@ -4,23 +4,23 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../blocs/desktop_notes/desktop_notes_bloc.dart';
 import '../../blocs/desktop_notes/desktop_notes_event.dart';
-import '../../generated/session.dart';
+import '../../generated/agent.dart';
 import '../../providers/chat_providers.dart';
 import '../../providers/connection_providers.dart';
 import '../../providers/notes_providers.dart';
-import '../../screens/session_chat.dart';
+import '../../screens/agent_chat.dart';
 import '../../theme/spacenotes_theme.dart';
 import '../primitives/primitives.dart';
-import '../sessions/session_row_content.dart';
+import '../agents/agent_row_content.dart';
 
-class DesktopSessionsLayout extends ConsumerWidget {
-  final String? activeSessionId;
+class DesktopAgentsLayout extends ConsumerWidget {
+  final String? activeAgentId;
 
-  const DesktopSessionsLayout({super.key, this.activeSessionId});
+  const DesktopAgentsLayout({super.key, this.activeAgentId});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final sessions = ref.watch(sessionsProvider);
+    final agents = ref.watch(agentsProvider);
     final isConnected = ref.watch(spacetimeConnectedProvider);
 
     return Row(
@@ -40,17 +40,17 @@ class DesktopSessionsLayout extends ConsumerWidget {
                 _Header(isConnected: isConnected),
                 const _ColumnHeader(),
                 Expanded(
-                  child: sessions.isEmpty
+                  child: agents.isEmpty
                       ? const _EmptyList()
                       : ListView.builder(
                           padding: EdgeInsets.zero,
-                          itemCount: sessions.length,
+                          itemCount: agents.length,
                           itemBuilder: (context, index) {
-                            final session = sessions[index];
-                            final isActive = session.id == activeSessionId;
-                            return _SessionRow(
+                            final agent = agents[index];
+                            final isActive = agent.id == activeAgentId;
+                            return _AgentRow(
                               index: index + 1,
-                              session: session,
+                              agent: agent,
                               isActive: isActive,
                             );
                           },
@@ -62,11 +62,11 @@ class DesktopSessionsLayout extends ConsumerWidget {
           ),
         ),
         Expanded(
-          child: activeSessionId == null
+          child: activeAgentId == null
               ? const _EmptyPane()
-              : SessionChatScreen(
-                  key: ValueKey(activeSessionId),
-                  sessionId: activeSessionId!,
+              : AgentChatScreen(
+                  key: ValueKey(activeAgentId),
+                  agentId: activeAgentId!,
                 ),
         ),
       ],
@@ -94,7 +94,7 @@ class _Header extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const SnMicroLabel('mcp · sessions'),
+                const SnMicroLabel('mcp · agents'),
                 const SizedBox(height: 6),
                 RichText(
                   text: const TextSpan(
@@ -107,7 +107,7 @@ class _Header extends StatelessWidget {
                       height: 1,
                     ),
                     children: [
-                      TextSpan(text: 'Sessions'),
+                      TextSpan(text: 'Agents'),
                       TextSpan(
                         text: '.',
                         style: TextStyle(color: SpaceNotesTheme.accent),
@@ -178,7 +178,7 @@ class _Footer extends StatelessWidget {
             icon: Icon(Icons.terminal_outlined),
             onPressed: null,
             active: true,
-            tooltip: 'sessions',
+            tooltip: 'agents',
           ),
           const Spacer(),
           SnIconButton(
@@ -244,7 +244,7 @@ class _EmptyList extends StatelessWidget {
     return const Center(
       child: Padding(
         padding: EdgeInsets.all(24),
-        child: SnMicroLabel('no sessions connected'),
+        child: SnMicroLabel('no agents connected'),
       ),
     );
   }
@@ -265,28 +265,28 @@ class _EmptyPane extends StatelessWidget {
             color: SpaceNotesTheme.dim,
           ),
           SizedBox(height: 20),
-          SnMicroLabel('select a session from the sidebar'),
+          SnMicroLabel('select an agent from the sidebar'),
         ],
       ),
     );
   }
 }
 
-class _SessionRow extends ConsumerWidget {
+class _AgentRow extends ConsumerWidget {
   final int index;
-  final Session session;
+  final Agent agent;
   final bool isActive;
 
-  const _SessionRow({
+  const _AgentRow({
     required this.index,
-    required this.session,
+    required this.agent,
     required this.isActive,
   });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final activity = ref.watch(sessionActivityProvider(session.id));
-    final state = resolveSessionState(activity?.state);
+    final activity = ref.watch(agentActivityProvider(agent.id));
+    final state = resolveAgentState(activity?.state);
 
     return Material(
       color: isActive
@@ -294,10 +294,10 @@ class _SessionRow extends ConsumerWidget {
           : Colors.transparent,
       child: InkWell(
         onTap: () =>
-            context.go('/notes/sessions/${Uri.encodeComponent(session.id)}'),
-        child: SessionRowContent(
+            context.go('/notes/sessions/${Uri.encodeComponent(agent.id)}'),
+        child: AgentRowContent(
           index: index,
-          session: session,
+          agent: agent,
           state: state,
           showHost: true,
           isActive: isActive,

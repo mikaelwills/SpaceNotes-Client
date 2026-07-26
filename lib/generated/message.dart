@@ -5,7 +5,7 @@ import 'package:spacetimedb_sdk/codegen.dart';
 class Message {
   Message({
     required this.id,
-    required this.sessionId,
+    required this.agentId,
     required this.role,
     required this.text,
     required this.source,
@@ -15,7 +15,7 @@ class Message {
   factory Message.fromJson(Map<String, dynamic> json) {
     return Message(
       id: json['id'] ?? '',
-      sessionId: json['sessionId'] ?? '',
+      agentId: json['agentId'] ?? '',
       role: json['role'] ?? '',
       text: json['text'] ?? '',
       source: json['source'] ?? '',
@@ -25,7 +25,7 @@ class Message {
 
   final String id;
 
-  final String sessionId;
+  final String agentId;
 
   final String role;
 
@@ -37,7 +37,7 @@ class Message {
 
   void encodeBsatn(BsatnEncoder encoder) {
     encoder.writeString(id);
-    encoder.writeString(sessionId);
+    encoder.writeString(agentId);
     encoder.writeString(role);
     encoder.writeString(text);
     encoder.writeString(source);
@@ -47,7 +47,7 @@ class Message {
   static Message decodeBsatn(BsatnDecoder decoder) {
     return Message(
       id: decoder.readString(),
-      sessionId: decoder.readString(),
+      agentId: decoder.readString(),
       role: decoder.readString(),
       text: decoder.readString(),
       source: decoder.readString(),
@@ -58,7 +58,7 @@ class Message {
   Map<String, dynamic> toJson() {
     return {
       'id': id,
-      'sessionId': sessionId,
+      'agentId': agentId,
       'role': role,
       'text': text,
       'source': source,
@@ -71,7 +71,7 @@ class Message {
     return identical(this, other) ||
         other is Message &&
             id == other.id &&
-            sessionId == other.sessionId &&
+            agentId == other.agentId &&
             role == other.role &&
             text == other.text &&
             source == other.source &&
@@ -80,17 +80,17 @@ class Message {
 
   @override
   int get hashCode {
-    return Object.hashAll([id, sessionId, role, text, source, createdAt]);
+    return Object.hashAll([id, agentId, role, text, source, createdAt]);
   }
 
   @override
   String toString() {
-    return 'Message(id: $id, sessionId: $sessionId, role: $role, text: $text, source: $source, createdAt: $createdAt)';
+    return 'Message(id: $id, agentId: $agentId, role: $role, text: $text, source: $source, createdAt: $createdAt)';
   }
 
   Message copyWith({
     String? id,
-    String? sessionId,
+    String? agentId,
     String? role,
     String? text,
     String? source,
@@ -98,7 +98,7 @@ class Message {
   }) {
     return Message(
       id: id ?? this.id,
-      sessionId: sessionId ?? this.sessionId,
+      agentId: agentId ?? this.agentId,
       role: role ?? this.role,
       text: text ?? this.text,
       source: source ?? this.source,

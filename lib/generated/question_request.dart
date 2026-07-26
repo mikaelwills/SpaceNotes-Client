@@ -5,7 +5,7 @@ import 'package:spacetimedb_sdk/codegen.dart';
 class QuestionRequest {
   QuestionRequest({
     required this.id,
-    required this.sessionId,
+    required this.agentId,
     required this.question,
     required this.header,
     required this.options,
@@ -19,7 +19,7 @@ class QuestionRequest {
   factory QuestionRequest.fromJson(Map<String, dynamic> json) {
     return QuestionRequest(
       id: json['id'] ?? '',
-      sessionId: json['sessionId'] ?? '',
+      agentId: json['agentId'] ?? '',
       question: json['question'] ?? '',
       header: json['header'] ?? '',
       options: json['options'] ?? '',
@@ -33,7 +33,7 @@ class QuestionRequest {
 
   final String id;
 
-  final String sessionId;
+  final String agentId;
 
   final String question;
 
@@ -53,7 +53,7 @@ class QuestionRequest {
 
   void encodeBsatn(BsatnEncoder encoder) {
     encoder.writeString(id);
-    encoder.writeString(sessionId);
+    encoder.writeString(agentId);
     encoder.writeString(question);
     encoder.writeString(header);
     encoder.writeString(options);
@@ -68,7 +68,7 @@ class QuestionRequest {
   static QuestionRequest decodeBsatn(BsatnDecoder decoder) {
     return QuestionRequest(
       id: decoder.readString(),
-      sessionId: decoder.readString(),
+      agentId: decoder.readString(),
       question: decoder.readString(),
       header: decoder.readString(),
       options: decoder.readString(),
@@ -83,7 +83,7 @@ class QuestionRequest {
   Map<String, dynamic> toJson() {
     return {
       'id': id,
-      'sessionId': sessionId,
+      'agentId': agentId,
       'question': question,
       'header': header,
       'options': options,
@@ -100,7 +100,7 @@ class QuestionRequest {
     return identical(this, other) ||
         other is QuestionRequest &&
             id == other.id &&
-            sessionId == other.sessionId &&
+            agentId == other.agentId &&
             question == other.question &&
             header == other.header &&
             options == other.options &&
@@ -115,7 +115,7 @@ class QuestionRequest {
   int get hashCode {
     return Object.hashAll([
       id,
-      sessionId,
+      agentId,
       question,
       header,
       options,
@@ -129,12 +129,12 @@ class QuestionRequest {
 
   @override
   String toString() {
-    return 'QuestionRequest(id: $id, sessionId: $sessionId, question: $question, header: $header, options: $options, multiSelect: $multiSelect, status: $status, response: $response, createdAt: $createdAt, resolvedAt: $resolvedAt)';
+    return 'QuestionRequest(id: $id, agentId: $agentId, question: $question, header: $header, options: $options, multiSelect: $multiSelect, status: $status, response: $response, createdAt: $createdAt, resolvedAt: $resolvedAt)';
   }
 
   QuestionRequest copyWith({
     String? id,
-    String? sessionId,
+    String? agentId,
     String? question,
     String? header,
     String? options,
@@ -146,7 +146,7 @@ class QuestionRequest {
   }) {
     return QuestionRequest(
       id: id ?? this.id,
-      sessionId: sessionId ?? this.sessionId,
+      agentId: agentId ?? this.agentId,
       question: question ?? this.question,
       header: header ?? this.header,
       options: options ?? this.options,

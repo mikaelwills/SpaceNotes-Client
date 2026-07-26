@@ -3,9 +3,9 @@
 import 'package:spacetimedb_sdk/codegen.dart';
 
 class AcceptCallArgs {
-  AcceptCallArgs({required this.sessionId});
+  AcceptCallArgs({required this.callId});
 
-  final Int64 sessionId;
+  final Int64 callId;
 }
 
 class AcceptCallArgsDecoder implements ReducerArgDecoder<AcceptCallArgs> {
@@ -13,9 +13,9 @@ class AcceptCallArgsDecoder implements ReducerArgDecoder<AcceptCallArgs> {
 
   @override
   AcceptCallArgs decode(BsatnDecoder decoder) {
-    final sessionId = decoder.readU64();
+    final callId = decoder.readU64();
     return AcceptCallArgs(
-      sessionId: sessionId,
+      callId: callId,
     );
   }
 }
@@ -58,17 +58,17 @@ class ClearAllArgsDecoder implements ReducerArgDecoder<ClearAllArgs> {
   }
 }
 
-class ClearAllSessionsArgs {
-  ClearAllSessionsArgs();
+class ClearAllAgentsArgs {
+  ClearAllAgentsArgs();
 }
 
-class ClearAllSessionsArgsDecoder
-    implements ReducerArgDecoder<ClearAllSessionsArgs> {
-  const ClearAllSessionsArgsDecoder();
+class ClearAllAgentsArgsDecoder
+    implements ReducerArgDecoder<ClearAllAgentsArgs> {
+  const ClearAllAgentsArgsDecoder();
 
   @override
-  ClearAllSessionsArgs decode(BsatnDecoder decoder) {
-    return ClearAllSessionsArgs();
+  ClearAllAgentsArgs decode(BsatnDecoder decoder) {
+    return ClearAllAgentsArgs();
   }
 }
 
@@ -167,6 +167,24 @@ class CreateFolderArgsDecoder implements ReducerArgDecoder<CreateFolderArgs> {
   }
 }
 
+class DeleteAgentArgs {
+  DeleteAgentArgs({required this.agentId});
+
+  final String agentId;
+}
+
+class DeleteAgentArgsDecoder implements ReducerArgDecoder<DeleteAgentArgs> {
+  const DeleteAgentArgsDecoder();
+
+  @override
+  DeleteAgentArgs decode(BsatnDecoder decoder) {
+    final agentId = decoder.readString();
+    return DeleteAgentArgs(
+      agentId: agentId,
+    );
+  }
+}
+
 class DeleteFileArgs {
   DeleteFileArgs({required this.id});
 
@@ -203,24 +221,6 @@ class DeleteFolderArgsDecoder implements ReducerArgDecoder<DeleteFolderArgs> {
   }
 }
 
-class DeleteSessionArgs {
-  DeleteSessionArgs({required this.sessionId});
-
-  final String sessionId;
-}
-
-class DeleteSessionArgsDecoder implements ReducerArgDecoder<DeleteSessionArgs> {
-  const DeleteSessionArgsDecoder();
-
-  @override
-  DeleteSessionArgs decode(BsatnDecoder decoder) {
-    final sessionId = decoder.readString();
-    return DeleteSessionArgs(
-      sessionId: sessionId,
-    );
-  }
-}
-
 class EditMessageArgs {
   EditMessageArgs({
     required this.id,
@@ -246,10 +246,28 @@ class EditMessageArgsDecoder implements ReducerArgDecoder<EditMessageArgs> {
   }
 }
 
-class EndCallArgs {
-  EndCallArgs({required this.sessionId});
+class EndAgentArgs {
+  EndAgentArgs({required this.agentId});
 
-  final Int64 sessionId;
+  final String agentId;
+}
+
+class EndAgentArgsDecoder implements ReducerArgDecoder<EndAgentArgs> {
+  const EndAgentArgsDecoder();
+
+  @override
+  EndAgentArgs decode(BsatnDecoder decoder) {
+    final agentId = decoder.readString();
+    return EndAgentArgs(
+      agentId: agentId,
+    );
+  }
+}
+
+class EndCallArgs {
+  EndCallArgs({required this.callId});
+
+  final Int64 callId;
 }
 
 class EndCallArgsDecoder implements ReducerArgDecoder<EndCallArgs> {
@@ -257,27 +275,9 @@ class EndCallArgsDecoder implements ReducerArgDecoder<EndCallArgs> {
 
   @override
   EndCallArgs decode(BsatnDecoder decoder) {
-    final sessionId = decoder.readU64();
+    final callId = decoder.readU64();
     return EndCallArgs(
-      sessionId: sessionId,
-    );
-  }
-}
-
-class EndSessionArgs {
-  EndSessionArgs({required this.sessionId});
-
-  final String sessionId;
-}
-
-class EndSessionArgsDecoder implements ReducerArgDecoder<EndSessionArgs> {
-  const EndSessionArgsDecoder();
-
-  @override
-  EndSessionArgs decode(BsatnDecoder decoder) {
-    final sessionId = decoder.readString();
-    return EndSessionArgs(
-      sessionId: sessionId,
+      callId: callId,
     );
   }
 }
@@ -338,9 +338,9 @@ class GetRecentFilesArgsDecoder
 }
 
 class HeartbeatArgs {
-  HeartbeatArgs({required this.sessionId});
+  HeartbeatArgs({required this.agentId});
 
-  final String sessionId;
+  final String agentId;
 }
 
 class HeartbeatArgsDecoder implements ReducerArgDecoder<HeartbeatArgs> {
@@ -348,9 +348,9 @@ class HeartbeatArgsDecoder implements ReducerArgDecoder<HeartbeatArgs> {
 
   @override
   HeartbeatArgs decode(BsatnDecoder decoder) {
-    final sessionId = decoder.readString();
+    final agentId = decoder.readString();
     return HeartbeatArgs(
-      sessionId: sessionId,
+      agentId: agentId,
     );
   }
 }
@@ -432,12 +432,12 @@ class PrependToFileArgsDecoder implements ReducerArgDecoder<PrependToFileArgs> {
 
 class PushContextUsageArgs {
   PushContextUsageArgs({
-    required this.sessionId,
+    required this.agentId,
     required this.used,
     required this.window,
   });
 
-  final String sessionId;
+  final String agentId;
 
   final Int64 used;
 
@@ -450,11 +450,11 @@ class PushContextUsageArgsDecoder
 
   @override
   PushContextUsageArgs decode(BsatnDecoder decoder) {
-    final sessionId = decoder.readString();
+    final agentId = decoder.readString();
     final used = decoder.readU64();
     final window = decoder.readU64();
     return PushContextUsageArgs(
-      sessionId: sessionId,
+      agentId: agentId,
       used: used,
       window: window,
     );
@@ -464,14 +464,14 @@ class PushContextUsageArgsDecoder
 class PushImageArgs {
   PushImageArgs({
     required this.id,
-    required this.sessionId,
+    required this.agentId,
     required this.caption,
     required this.bytes,
   });
 
   final String id;
 
-  final String sessionId;
+  final String agentId;
 
   final String caption;
 
@@ -484,12 +484,12 @@ class PushImageArgsDecoder implements ReducerArgDecoder<PushImageArgs> {
   @override
   PushImageArgs decode(BsatnDecoder decoder) {
     final id = decoder.readString();
-    final sessionId = decoder.readString();
+    final agentId = decoder.readString();
     final caption = decoder.readString();
     final bytes = decoder.readByteArray();
     return PushImageArgs(
       id: id,
-      sessionId: sessionId,
+      agentId: agentId,
       caption: caption,
       bytes: bytes,
     );
@@ -499,7 +499,7 @@ class PushImageArgsDecoder implements ReducerArgDecoder<PushImageArgs> {
 class PushMessageArgs {
   PushMessageArgs({
     required this.id,
-    required this.sessionId,
+    required this.agentId,
     required this.role,
     required this.text,
     required this.source,
@@ -507,7 +507,7 @@ class PushMessageArgs {
 
   final String id;
 
-  final String sessionId;
+  final String agentId;
 
   final String role;
 
@@ -522,13 +522,13 @@ class PushMessageArgsDecoder implements ReducerArgDecoder<PushMessageArgs> {
   @override
   PushMessageArgs decode(BsatnDecoder decoder) {
     final id = decoder.readString();
-    final sessionId = decoder.readString();
+    final agentId = decoder.readString();
     final role = decoder.readString();
     final text = decoder.readString();
     final source = decoder.readString();
     return PushMessageArgs(
       id: id,
-      sessionId: sessionId,
+      agentId: agentId,
       role: role,
       text: text,
       source: source,
@@ -538,11 +538,11 @@ class PushMessageArgsDecoder implements ReducerArgDecoder<PushMessageArgs> {
 
 class PushStatusArgs {
   PushStatusArgs({
-    required this.sessionId,
+    required this.agentId,
     required this.state,
   });
 
-  final String sessionId;
+  final String agentId;
 
   final String state;
 }
@@ -552,10 +552,10 @@ class PushStatusArgsDecoder implements ReducerArgDecoder<PushStatusArgs> {
 
   @override
   PushStatusArgs decode(BsatnDecoder decoder) {
-    final sessionId = decoder.readString();
+    final agentId = decoder.readString();
     final state = decoder.readString();
     return PushStatusArgs(
-      sessionId: sessionId,
+      agentId: agentId,
       state: state,
     );
   }
@@ -564,14 +564,14 @@ class PushStatusArgsDecoder implements ReducerArgDecoder<PushStatusArgs> {
 class PushToolEventArgs {
   PushToolEventArgs({
     required this.id,
-    required this.sessionId,
+    required this.agentId,
     required this.tool,
     required this.detail,
   });
 
   final String id;
 
-  final String sessionId;
+  final String agentId;
 
   final String tool;
 
@@ -584,20 +584,20 @@ class PushToolEventArgsDecoder implements ReducerArgDecoder<PushToolEventArgs> {
   @override
   PushToolEventArgs decode(BsatnDecoder decoder) {
     final id = decoder.readString();
-    final sessionId = decoder.readString();
+    final agentId = decoder.readString();
     final tool = decoder.readString();
     final detail = decoder.readString();
     return PushToolEventArgs(
       id: id,
-      sessionId: sessionId,
+      agentId: agentId,
       tool: tool,
       detail: detail,
     );
   }
 }
 
-class RegisterSessionArgs {
-  RegisterSessionArgs({
+class RegisterAgentArgs {
+  RegisterAgentArgs({
     required this.id,
     required this.baseName,
     required this.host,
@@ -613,17 +613,16 @@ class RegisterSessionArgs {
   final String clientId;
 }
 
-class RegisterSessionArgsDecoder
-    implements ReducerArgDecoder<RegisterSessionArgs> {
-  const RegisterSessionArgsDecoder();
+class RegisterAgentArgsDecoder implements ReducerArgDecoder<RegisterAgentArgs> {
+  const RegisterAgentArgsDecoder();
 
   @override
-  RegisterSessionArgs decode(BsatnDecoder decoder) {
+  RegisterAgentArgs decode(BsatnDecoder decoder) {
     final id = decoder.readString();
     final baseName = decoder.readString();
     final host = decoder.readString();
     final clientId = decoder.readString();
-    return RegisterSessionArgs(
+    return RegisterAgentArgs(
       id: id,
       baseName: baseName,
       host: host,
@@ -678,14 +677,14 @@ class RequestCallArgsDecoder implements ReducerArgDecoder<RequestCallArgs> {
 class RequestPermissionArgs {
   RequestPermissionArgs({
     required this.id,
-    required this.sessionId,
+    required this.agentId,
     required this.tool,
     required this.input,
   });
 
   final String id;
 
-  final String sessionId;
+  final String agentId;
 
   final String tool;
 
@@ -699,12 +698,12 @@ class RequestPermissionArgsDecoder
   @override
   RequestPermissionArgs decode(BsatnDecoder decoder) {
     final id = decoder.readString();
-    final sessionId = decoder.readString();
+    final agentId = decoder.readString();
     final tool = decoder.readString();
     final input = decoder.readString();
     return RequestPermissionArgs(
       id: id,
-      sessionId: sessionId,
+      agentId: agentId,
       tool: tool,
       input: input,
     );
@@ -714,7 +713,7 @@ class RequestPermissionArgsDecoder
 class RequestQuestionArgs {
   RequestQuestionArgs({
     required this.id,
-    required this.sessionId,
+    required this.agentId,
     required this.question,
     required this.header,
     required this.options,
@@ -723,7 +722,7 @@ class RequestQuestionArgs {
 
   final String id;
 
-  final String sessionId;
+  final String agentId;
 
   final String question;
 
@@ -741,14 +740,14 @@ class RequestQuestionArgsDecoder
   @override
   RequestQuestionArgs decode(BsatnDecoder decoder) {
     final id = decoder.readString();
-    final sessionId = decoder.readString();
+    final agentId = decoder.readString();
     final question = decoder.readString();
     final header = decoder.readString();
     final options = decoder.readString();
     final multiSelect = decoder.readBool();
     return RequestQuestionArgs(
       id: id,
-      sessionId: sessionId,
+      agentId: agentId,
       question: question,
       header: header,
       options: options,
@@ -811,12 +810,12 @@ class RespondToQuestionArgsDecoder
 
 class SendAudioFrameArgs {
   SendAudioFrameArgs({
-    required this.sessionId,
+    required this.callId,
     required this.seq,
     required this.pcm,
   });
 
-  final Int64 sessionId;
+  final Int64 callId;
 
   final int seq;
 
@@ -829,11 +828,11 @@ class SendAudioFrameArgsDecoder
 
   @override
   SendAudioFrameArgs decode(BsatnDecoder decoder) {
-    final sessionId = decoder.readU64();
+    final callId = decoder.readU64();
     final seq = decoder.readU32();
     final pcm = decoder.readByteArray();
     return SendAudioFrameArgs(
-      sessionId: sessionId,
+      callId: callId,
       seq: seq,
       pcm: pcm,
     );
@@ -842,14 +841,14 @@ class SendAudioFrameArgsDecoder
 
 class SendVideoFrameArgs {
   SendVideoFrameArgs({
-    required this.sessionId,
+    required this.callId,
     required this.seq,
     required this.codec,
     required this.isKeyframe,
     required this.data,
   });
 
-  final Int64 sessionId;
+  final Int64 callId;
 
   final int seq;
 
@@ -866,13 +865,13 @@ class SendVideoFrameArgsDecoder
 
   @override
   SendVideoFrameArgs decode(BsatnDecoder decoder) {
-    final sessionId = decoder.readU64();
+    final callId = decoder.readU64();
     final seq = decoder.readU32();
     final codec = decoder.readU8();
     final isKeyframe = decoder.readBool();
     final data = decoder.readByteArray();
     return SendVideoFrameArgs(
-      sessionId: sessionId,
+      callId: callId,
       seq: seq,
       codec: codec,
       isKeyframe: isKeyframe,
@@ -1077,23 +1076,23 @@ const appendToFileDef =
     ReducerDef<AppendToFileArgs>('append_to_file', AppendToFileArgsDecoder());
 const clearAllDef =
     ReducerDef<ClearAllArgs>('clear_all', ClearAllArgsDecoder());
-const clearAllSessionsDef = ReducerDef<ClearAllSessionsArgs>(
-    'clear_all_sessions', ClearAllSessionsArgsDecoder());
+const clearAllAgentsDef = ReducerDef<ClearAllAgentsArgs>(
+    'clear_all_agents', ClearAllAgentsArgsDecoder());
 const createFileDef =
     ReducerDef<CreateFileArgs>('create_file', CreateFileArgsDecoder());
 const createFolderDef =
     ReducerDef<CreateFolderArgs>('create_folder', CreateFolderArgsDecoder());
+const deleteAgentDef =
+    ReducerDef<DeleteAgentArgs>('delete_agent', DeleteAgentArgsDecoder());
 const deleteFileDef =
     ReducerDef<DeleteFileArgs>('delete_file', DeleteFileArgsDecoder());
 const deleteFolderDef =
     ReducerDef<DeleteFolderArgs>('delete_folder', DeleteFolderArgsDecoder());
-const deleteSessionDef =
-    ReducerDef<DeleteSessionArgs>('delete_session', DeleteSessionArgsDecoder());
 const editMessageDef =
     ReducerDef<EditMessageArgs>('edit_message', EditMessageArgsDecoder());
+const endAgentDef =
+    ReducerDef<EndAgentArgs>('end_agent', EndAgentArgsDecoder());
 const endCallDef = ReducerDef<EndCallArgs>('end_call', EndCallArgsDecoder());
-const endSessionDef =
-    ReducerDef<EndSessionArgs>('end_session', EndSessionArgsDecoder());
 const findReplaceInFileDef = ReducerDef<FindReplaceInFileArgs>(
     'find_replace_in_file', FindReplaceInFileArgsDecoder());
 const getRecentFilesDef = ReducerDef<GetRecentFilesArgs>(
@@ -1116,8 +1115,8 @@ const pushStatusDef =
     ReducerDef<PushStatusArgs>('push_status', PushStatusArgsDecoder());
 const pushToolEventDef = ReducerDef<PushToolEventArgs>(
     'push_tool_event', PushToolEventArgsDecoder());
-const registerSessionDef = ReducerDef<RegisterSessionArgs>(
-    'register_session', RegisterSessionArgsDecoder());
+const registerAgentDef =
+    ReducerDef<RegisterAgentArgs>('register_agent', RegisterAgentArgsDecoder());
 const renameFileDef =
     ReducerDef<RenameFileArgs>('rename_file', RenameFileArgsDecoder());
 const requestCallDef =

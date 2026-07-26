@@ -4,14 +4,14 @@ import '../../providers/chat_providers.dart';
 import '../../theme/spacenotes_theme.dart';
 import '../primitives/primitives.dart';
 
-class SessionFilterBar extends ConsumerStatefulWidget {
-  const SessionFilterBar({super.key});
+class AgentFilterBar extends ConsumerStatefulWidget {
+  const AgentFilterBar({super.key});
 
   @override
-  ConsumerState<SessionFilterBar> createState() => _SessionFilterBarState();
+  ConsumerState<AgentFilterBar> createState() => _AgentFilterBarState();
 }
 
-class _SessionFilterBarState extends ConsumerState<SessionFilterBar> {
+class _AgentFilterBarState extends ConsumerState<AgentFilterBar> {
   final _controller = TextEditingController();
   final _focusNode = FocusNode();
 
@@ -24,7 +24,7 @@ class _SessionFilterBarState extends ConsumerState<SessionFilterBar> {
 
   @override
   Widget build(BuildContext context) {
-    final query = ref.watch(sessionFilterProvider);
+    final query = ref.watch(agentFilterProvider);
 
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
@@ -60,7 +60,7 @@ class _SessionFilterBarState extends ConsumerState<SessionFilterBar> {
                   disabledBorder: InputBorder.none,
                   errorBorder: InputBorder.none,
                   focusedErrorBorder: InputBorder.none,
-                  hintText: 'filter sessions',
+                  hintText: 'filter agents',
                   hintStyle: TextStyle(
                     fontFamily: SpaceNotesTheme.fontMono,
                     fontSize: 11,
@@ -69,14 +69,14 @@ class _SessionFilterBarState extends ConsumerState<SessionFilterBar> {
                   ),
                 ),
                 onChanged: (v) =>
-                    ref.read(sessionFilterProvider.notifier).state = v,
+                    ref.read(agentFilterProvider.notifier).state = v,
               ),
             ),
             if (query.isNotEmpty)
               GestureDetector(
                 onTap: () {
                   _controller.clear();
-                  ref.read(sessionFilterProvider.notifier).state = '';
+                  ref.read(agentFilterProvider.notifier).state = '';
                   _focusNode.requestFocus();
                 },
                 behavior: HitTestBehavior.opaque,

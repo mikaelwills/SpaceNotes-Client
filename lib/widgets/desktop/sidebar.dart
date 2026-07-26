@@ -1323,7 +1323,7 @@ class _CollapsedSidebar extends ConsumerWidget {
           ),
           _CollapsedIconButton(
             icon: Icons.terminal_outlined,
-            tooltip: 'Sessions',
+            tooltip: 'Agents',
             onTap: () => context.go('/notes/sessions'),
           ),
           _CollapsedIconButton(
@@ -1440,7 +1440,7 @@ class _SidebarFooter extends ConsumerWidget {
             icon: const Icon(Icons.terminal_outlined),
             onPressed: onSessions ? null : () => context.go('/notes/sessions'),
             active: onSessions,
-            tooltip: 'sessions',
+            tooltip: 'agents',
           ),
           const Spacer(),
           SnIconButton(

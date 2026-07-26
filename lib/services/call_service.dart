@@ -47,7 +47,7 @@ class CallService {
       }
       videoStats?.recordSend(seq: _videoSeq, sizeBytes: frame.data.length);
       _client!.reducers.sendVideoFrame(
-        sessionId: _activeSessionId!,
+        callId: _activeSessionId!,
         seq: _videoSeq,
         codec: frame.codec,
         isKeyframe: frame.isKeyframe,
@@ -78,7 +78,7 @@ class CallService {
     audioService!.onAudioChunk = (Uint8List pcm, int seq) {
       if (_client == null || _activeSessionId == null) return;
       _client!.reducers.sendAudioFrame(
-        sessionId: _activeSessionId!,
+        callId: _activeSessionId!,
         seq: seq,
         pcm: pcm.toList(),
         dropIfOffline: true,
@@ -113,14 +113,14 @@ class CallService {
 
   Future<void> acceptCall(Int64 sessionId) async {
     if (_client == null) return;
-    await _client!.reducers.acceptCall(sessionId: sessionId);
+    await _client!.reducers.acceptCall(callId: sessionId);
     debugLogger.info('CALL', 'Accepted call session $sessionId');
   }
 
   Future<void> endCall(Int64 sessionId) async {
     if (_client == null) return;
     stopCapture();
-    await _client!.reducers.endCall(sessionId: sessionId);
+    await _client!.reducers.endCall(callId: sessionId);
     debugLogger.info('CALL', 'Ended call session $sessionId');
   }
 

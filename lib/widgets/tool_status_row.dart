@@ -1,10 +1,10 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import '../generated/session_activity.dart';
+import '../generated/agent_activity.dart';
 import '../theme/spacenotes_theme.dart';
 
 class ToolStatusRow extends StatelessWidget {
-  final SessionActivity? activity;
+  final AgentActivity? activity;
   final EdgeInsets padding;
 
   const ToolStatusRow({

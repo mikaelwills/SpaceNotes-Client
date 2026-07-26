@@ -2,17 +2,18 @@ import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-class RecentSessions extends StateNotifier<Map<String, int>> {
-  RecentSessions() : super(const {}) {
+class RecentAgents extends StateNotifier<Map<String, int>> {
+  RecentAgents() : super(const {}) {
     _load();
   }
 
-  void markUsed(String sessionId) {
+  void markUsed(String agentId) {
     final now = DateTime.now().millisecondsSinceEpoch;
-    state = {...state, sessionId: now};
+    state = {...state, agentId: now};
     _persist();
   }
 
+  // Key value kept as-is so existing users' recency history survives the rename.
   static const _prefsKey = 'recent_sessions_v1';
 
   Future<void> _load() async {
@@ -36,7 +37,7 @@ class RecentSessions extends StateNotifier<Map<String, int>> {
   }
 }
 
-final recentSessionsProvider =
-    StateNotifierProvider<RecentSessions, Map<String, int>>(
-  (ref) => RecentSessions(),
+final recentAgentsProvider =
+    StateNotifierProvider<RecentAgents, Map<String, int>>(
+  (ref) => RecentAgents(),
 );

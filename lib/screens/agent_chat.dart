@@ -8,25 +8,25 @@ import '../widgets/connection_status_row.dart';
 import '../widgets/desktop/desktop_chat_input.dart';
 import '../widgets/terminal_message.dart';
 
-class SessionChatScreen extends ConsumerWidget {
-  final String sessionId;
+class AgentChatScreen extends ConsumerWidget {
+  final String agentId;
 
-  const SessionChatScreen({super.key, required this.sessionId});
+  const AgentChatScreen({super.key, required this.agentId});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final hydrated = ref
-        .watch(sessionHydratedProvider(sessionId))
+        .watch(agentHydratedProvider(agentId))
         .maybeWhen(data: (v) => v, orElse: () => false);
     final connected = ref
         .watch(spacetimeConnectionLiveProvider)
         .maybeWhen(data: (v) => v, orElse: () => false);
-    final items = ref.watch(chatTimelineBySessionProvider(sessionId));
+    final items = ref.watch(chatTimelineByAgentProvider(agentId));
     final isDesktop = PlatformUtils.isDesktopLayout(context);
 
     return Column(
       children: [
-        ConnectionStatusRow(sessionId: sessionId),
+        ConnectionStatusRow(agentId: agentId),
         Expanded(
           child: Stack(
             children: [
@@ -44,7 +44,7 @@ class SessionChatScreen extends ConsumerWidget {
                   left: 0,
                   right: 0,
                   bottom: 0,
-                  child: DesktopChatInput(sessionId: sessionId),
+                  child: DesktopChatInput(agentId: agentId),
                 ),
             ],
           ),

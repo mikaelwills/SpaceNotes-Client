@@ -26,7 +26,7 @@ final activeCallSessionProvider = Provider<CallSession?>((ref) {
   if (session != null) {
     debugLogger.info(
       'CALL_SESSION',
-      'Active session: id=${session.sessionId} state=${session.state.runtimeType}',
+      'Active session: id=${session.callId} state=${session.state.runtimeType}',
     );
   }
 
@@ -46,7 +46,7 @@ final incomingCallProvider = Provider<CallSession?>((ref) {
   );
 
   if (ringing != null) {
-    debugLogger.info('INCOMING_CALL', 'Ringing: id=${ringing.sessionId}');
+    debugLogger.info('INCOMING_CALL', 'Ringing: id=${ringing.callId}');
   }
 
   return ringing;

@@ -5,16 +5,15 @@ import '../theme/spacenotes_theme.dart';
 import 'primitives/primitives.dart';
 
 class ConnectionStatusRow extends ConsumerWidget {
-  final String? sessionId;
+  final String? agentId;
 
-  const ConnectionStatusRow({super.key, this.sessionId});
+  const ConnectionStatusRow({super.key, this.agentId});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final String resolvedSession =
-        sessionId ?? ref.watch(targetSessionProvider);
-    final activity = ref.watch(sessionActivityProvider(resolvedSession));
-    final session = ref.watch(sessionByIdProvider(resolvedSession));
+    final String resolvedAgent = agentId ?? ref.watch(targetAgentProvider);
+    final activity = ref.watch(agentActivityProvider(resolvedAgent));
+    final agent = ref.watch(agentByIdProvider(resolvedAgent));
 
     final state = activity?.state ?? 'idle';
     final isActive = state == 'thinking' || state == 'tool_use';
@@ -25,8 +24,8 @@ class ConnectionStatusRow extends ConsumerWidget {
     };
     final accent = isActive ? SpaceNotesTheme.accent2 : SpaceNotesTheme.dim;
 
-    final ctxWindow = session?.contextWindow.toInt() ?? 0;
-    final ctxUsed = session?.contextUsed.toInt() ?? 0;
+    final ctxWindow = agent?.contextWindow.toInt() ?? 0;
+    final ctxUsed = agent?.contextUsed.toInt() ?? 0;
     final ctxLabel = ctxWindow > 0
         ? '${_fmtTokens(ctxUsed)}/${_fmtTokens(ctxWindow)}'
         : null;
@@ -46,7 +45,7 @@ class ConnectionStatusRow extends ConsumerWidget {
           const SizedBox(width: 10),
           Flexible(
             child: SnUiText(
-              resolvedSession,
+              resolvedAgent,
               color: SpaceNotesTheme.accent,
               fontSize: 10,
               maxLines: 1,

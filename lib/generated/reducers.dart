@@ -22,12 +22,12 @@ class Reducers {
   /// `Pending` (queued to offline storage), or `Dropped` (skipped via
   /// `dropIfOffline: true` while offline).
   Future<TransactionResult> acceptCall({
-    required Int64 sessionId,
+    required Int64 callId,
     List<OptimisticChange>? optimisticChanges,
     bool dropIfOffline = false,
   }) async {
     final encoder = BsatnEncoder();
-    encoder.writeU64(sessionId);
+    encoder.writeU64(callId);
     return await _reducerCaller.call(acceptCallDef.name, encoder.toBytes(),
         optimisticChanges: optimisticChanges, dropIfOffline: dropIfOffline);
   }
@@ -68,20 +68,19 @@ class Reducers {
         optimisticChanges: optimisticChanges, dropIfOffline: dropIfOffline);
   }
 
-  /// Calls the `clear_all_sessions` reducer.
+  /// Calls the `clear_all_agents` reducer.
   ///
   /// Returns a [TransactionResult] on success. Throws
   /// [SpacetimeDbReducerException] if the reducer returns `Failed` or
   /// `InternalError`. The returned status is one of `Committed`,
   /// `Pending` (queued to offline storage), or `Dropped` (skipped via
   /// `dropIfOffline: true` while offline).
-  Future<TransactionResult> clearAllSessions({
+  Future<TransactionResult> clearAllAgents({
     List<OptimisticChange>? optimisticChanges,
     bool dropIfOffline = false,
   }) async {
     final encoder = BsatnEncoder();
-    return await _reducerCaller.call(
-        clearAllSessionsDef.name, encoder.toBytes(),
+    return await _reducerCaller.call(clearAllAgentsDef.name, encoder.toBytes(),
         optimisticChanges: optimisticChanges, dropIfOffline: dropIfOffline);
   }
 
@@ -143,6 +142,24 @@ class Reducers {
         optimisticChanges: optimisticChanges, dropIfOffline: dropIfOffline);
   }
 
+  /// Calls the `delete_agent` reducer.
+  ///
+  /// Returns a [TransactionResult] on success. Throws
+  /// [SpacetimeDbReducerException] if the reducer returns `Failed` or
+  /// `InternalError`. The returned status is one of `Committed`,
+  /// `Pending` (queued to offline storage), or `Dropped` (skipped via
+  /// `dropIfOffline: true` while offline).
+  Future<TransactionResult> deleteAgent({
+    required String agentId,
+    List<OptimisticChange>? optimisticChanges,
+    bool dropIfOffline = false,
+  }) async {
+    final encoder = BsatnEncoder();
+    encoder.writeString(agentId);
+    return await _reducerCaller.call(deleteAgentDef.name, encoder.toBytes(),
+        optimisticChanges: optimisticChanges, dropIfOffline: dropIfOffline);
+  }
+
   /// Calls the `delete_file` reducer.
   ///
   /// Returns a [TransactionResult] on success. Throws
@@ -179,24 +196,6 @@ class Reducers {
         optimisticChanges: optimisticChanges, dropIfOffline: dropIfOffline);
   }
 
-  /// Calls the `delete_session` reducer.
-  ///
-  /// Returns a [TransactionResult] on success. Throws
-  /// [SpacetimeDbReducerException] if the reducer returns `Failed` or
-  /// `InternalError`. The returned status is one of `Committed`,
-  /// `Pending` (queued to offline storage), or `Dropped` (skipped via
-  /// `dropIfOffline: true` while offline).
-  Future<TransactionResult> deleteSession({
-    required String sessionId,
-    List<OptimisticChange>? optimisticChanges,
-    bool dropIfOffline = false,
-  }) async {
-    final encoder = BsatnEncoder();
-    encoder.writeString(sessionId);
-    return await _reducerCaller.call(deleteSessionDef.name, encoder.toBytes(),
-        optimisticChanges: optimisticChanges, dropIfOffline: dropIfOffline);
-  }
-
   /// Calls the `edit_message` reducer.
   ///
   /// Returns a [TransactionResult] on success. Throws
@@ -217,6 +216,24 @@ class Reducers {
         optimisticChanges: optimisticChanges, dropIfOffline: dropIfOffline);
   }
 
+  /// Calls the `end_agent` reducer.
+  ///
+  /// Returns a [TransactionResult] on success. Throws
+  /// [SpacetimeDbReducerException] if the reducer returns `Failed` or
+  /// `InternalError`. The returned status is one of `Committed`,
+  /// `Pending` (queued to offline storage), or `Dropped` (skipped via
+  /// `dropIfOffline: true` while offline).
+  Future<TransactionResult> endAgent({
+    required String agentId,
+    List<OptimisticChange>? optimisticChanges,
+    bool dropIfOffline = false,
+  }) async {
+    final encoder = BsatnEncoder();
+    encoder.writeString(agentId);
+    return await _reducerCaller.call(endAgentDef.name, encoder.toBytes(),
+        optimisticChanges: optimisticChanges, dropIfOffline: dropIfOffline);
+  }
+
   /// Calls the `end_call` reducer.
   ///
   /// Returns a [TransactionResult] on success. Throws
@@ -225,31 +242,13 @@ class Reducers {
   /// `Pending` (queued to offline storage), or `Dropped` (skipped via
   /// `dropIfOffline: true` while offline).
   Future<TransactionResult> endCall({
-    required Int64 sessionId,
+    required Int64 callId,
     List<OptimisticChange>? optimisticChanges,
     bool dropIfOffline = false,
   }) async {
     final encoder = BsatnEncoder();
-    encoder.writeU64(sessionId);
+    encoder.writeU64(callId);
     return await _reducerCaller.call(endCallDef.name, encoder.toBytes(),
-        optimisticChanges: optimisticChanges, dropIfOffline: dropIfOffline);
-  }
-
-  /// Calls the `end_session` reducer.
-  ///
-  /// Returns a [TransactionResult] on success. Throws
-  /// [SpacetimeDbReducerException] if the reducer returns `Failed` or
-  /// `InternalError`. The returned status is one of `Committed`,
-  /// `Pending` (queued to offline storage), or `Dropped` (skipped via
-  /// `dropIfOffline: true` while offline).
-  Future<TransactionResult> endSession({
-    required String sessionId,
-    List<OptimisticChange>? optimisticChanges,
-    bool dropIfOffline = false,
-  }) async {
-    final encoder = BsatnEncoder();
-    encoder.writeString(sessionId);
-    return await _reducerCaller.call(endSessionDef.name, encoder.toBytes(),
         optimisticChanges: optimisticChanges, dropIfOffline: dropIfOffline);
   }
 
@@ -304,12 +303,12 @@ class Reducers {
   /// `Pending` (queued to offline storage), or `Dropped` (skipped via
   /// `dropIfOffline: true` while offline).
   Future<TransactionResult> heartbeat({
-    required String sessionId,
+    required String agentId,
     List<OptimisticChange>? optimisticChanges,
     bool dropIfOffline = false,
   }) async {
     final encoder = BsatnEncoder();
-    encoder.writeString(sessionId);
+    encoder.writeString(agentId);
     return await _reducerCaller.call(heartbeatDef.name, encoder.toBytes(),
         optimisticChanges: optimisticChanges, dropIfOffline: dropIfOffline);
   }
@@ -382,14 +381,14 @@ class Reducers {
   /// `Pending` (queued to offline storage), or `Dropped` (skipped via
   /// `dropIfOffline: true` while offline).
   Future<TransactionResult> pushContextUsage({
-    required String sessionId,
+    required String agentId,
     required Int64 used,
     required Int64 window,
     List<OptimisticChange>? optimisticChanges,
     bool dropIfOffline = false,
   }) async {
     final encoder = BsatnEncoder();
-    encoder.writeString(sessionId);
+    encoder.writeString(agentId);
     encoder.writeU64(used);
     encoder.writeU64(window);
     return await _reducerCaller.call(
@@ -406,7 +405,7 @@ class Reducers {
   /// `dropIfOffline: true` while offline).
   Future<TransactionResult> pushImage({
     required String id,
-    required String sessionId,
+    required String agentId,
     required String caption,
     required List<int> bytes,
     List<OptimisticChange>? optimisticChanges,
@@ -414,7 +413,7 @@ class Reducers {
   }) async {
     final encoder = BsatnEncoder();
     encoder.writeString(id);
-    encoder.writeString(sessionId);
+    encoder.writeString(agentId);
     encoder.writeString(caption);
     encoder.writeByteArray(bytes);
     return await _reducerCaller.call(pushImageDef.name, encoder.toBytes(),
@@ -430,7 +429,7 @@ class Reducers {
   /// `dropIfOffline: true` while offline).
   Future<TransactionResult> pushMessage({
     required String id,
-    required String sessionId,
+    required String agentId,
     required String role,
     required String text,
     required String source,
@@ -439,7 +438,7 @@ class Reducers {
   }) async {
     final encoder = BsatnEncoder();
     encoder.writeString(id);
-    encoder.writeString(sessionId);
+    encoder.writeString(agentId);
     encoder.writeString(role);
     encoder.writeString(text);
     encoder.writeString(source);
@@ -455,13 +454,13 @@ class Reducers {
   /// `Pending` (queued to offline storage), or `Dropped` (skipped via
   /// `dropIfOffline: true` while offline).
   Future<TransactionResult> pushStatus({
-    required String sessionId,
+    required String agentId,
     required String state,
     List<OptimisticChange>? optimisticChanges,
     bool dropIfOffline = false,
   }) async {
     final encoder = BsatnEncoder();
-    encoder.writeString(sessionId);
+    encoder.writeString(agentId);
     encoder.writeString(state);
     return await _reducerCaller.call(pushStatusDef.name, encoder.toBytes(),
         optimisticChanges: optimisticChanges, dropIfOffline: dropIfOffline);
@@ -476,7 +475,7 @@ class Reducers {
   /// `dropIfOffline: true` while offline).
   Future<TransactionResult> pushToolEvent({
     required String id,
-    required String sessionId,
+    required String agentId,
     required String tool,
     required String detail,
     List<OptimisticChange>? optimisticChanges,
@@ -484,21 +483,21 @@ class Reducers {
   }) async {
     final encoder = BsatnEncoder();
     encoder.writeString(id);
-    encoder.writeString(sessionId);
+    encoder.writeString(agentId);
     encoder.writeString(tool);
     encoder.writeString(detail);
     return await _reducerCaller.call(pushToolEventDef.name, encoder.toBytes(),
         optimisticChanges: optimisticChanges, dropIfOffline: dropIfOffline);
   }
 
-  /// Calls the `register_session` reducer.
+  /// Calls the `register_agent` reducer.
   ///
   /// Returns a [TransactionResult] on success. Throws
   /// [SpacetimeDbReducerException] if the reducer returns `Failed` or
   /// `InternalError`. The returned status is one of `Committed`,
   /// `Pending` (queued to offline storage), or `Dropped` (skipped via
   /// `dropIfOffline: true` while offline).
-  Future<TransactionResult> registerSession({
+  Future<TransactionResult> registerAgent({
     required String id,
     required String baseName,
     required String host,
@@ -511,7 +510,7 @@ class Reducers {
     encoder.writeString(baseName);
     encoder.writeString(host);
     encoder.writeString(clientId);
-    return await _reducerCaller.call(registerSessionDef.name, encoder.toBytes(),
+    return await _reducerCaller.call(registerAgentDef.name, encoder.toBytes(),
         optimisticChanges: optimisticChanges, dropIfOffline: dropIfOffline);
   }
 
@@ -562,7 +561,7 @@ class Reducers {
   /// `dropIfOffline: true` while offline).
   Future<TransactionResult> requestPermission({
     required String id,
-    required String sessionId,
+    required String agentId,
     required String tool,
     required String input,
     List<OptimisticChange>? optimisticChanges,
@@ -570,7 +569,7 @@ class Reducers {
   }) async {
     final encoder = BsatnEncoder();
     encoder.writeString(id);
-    encoder.writeString(sessionId);
+    encoder.writeString(agentId);
     encoder.writeString(tool);
     encoder.writeString(input);
     return await _reducerCaller.call(
@@ -587,7 +586,7 @@ class Reducers {
   /// `dropIfOffline: true` while offline).
   Future<TransactionResult> requestQuestion({
     required String id,
-    required String sessionId,
+    required String agentId,
     required String question,
     required String header,
     required String options,
@@ -597,7 +596,7 @@ class Reducers {
   }) async {
     final encoder = BsatnEncoder();
     encoder.writeString(id);
-    encoder.writeString(sessionId);
+    encoder.writeString(agentId);
     encoder.writeString(question);
     encoder.writeString(header);
     encoder.writeString(options);
@@ -656,14 +655,14 @@ class Reducers {
   /// `Pending` (queued to offline storage), or `Dropped` (skipped via
   /// `dropIfOffline: true` while offline).
   Future<TransactionResult> sendAudioFrame({
-    required Int64 sessionId,
+    required Int64 callId,
     required int seq,
     required List<int> pcm,
     List<OptimisticChange>? optimisticChanges,
     bool dropIfOffline = false,
   }) async {
     final encoder = BsatnEncoder();
-    encoder.writeU64(sessionId);
+    encoder.writeU64(callId);
     encoder.writeU32(seq);
     encoder.writeByteArray(pcm);
     return await _reducerCaller.call(sendAudioFrameDef.name, encoder.toBytes(),
@@ -678,7 +677,7 @@ class Reducers {
   /// `Pending` (queued to offline storage), or `Dropped` (skipped via
   /// `dropIfOffline: true` while offline).
   Future<TransactionResult> sendVideoFrame({
-    required Int64 sessionId,
+    required Int64 callId,
     required int seq,
     required int codec,
     required bool isKeyframe,
@@ -687,7 +686,7 @@ class Reducers {
     bool dropIfOffline = false,
   }) async {
     final encoder = BsatnEncoder();
-    encoder.writeU64(sessionId);
+    encoder.writeU64(callId);
     encoder.writeU32(seq);
     encoder.writeU8(codec);
     encoder.writeBool(isKeyframe);
@@ -835,13 +834,13 @@ class Reducers {
   }
 
   StreamSubscription<void> onAcceptCall(
-      void Function(EventContext ctx, Int64 sessionId) callback) {
+      void Function(EventContext ctx, Int64 callId) callback) {
     return _reducerEmitter.on(acceptCallDef).listen((EventContext ctx) {
       final event = ctx.event;
       if (event is! ReducerEvent) return;
       final args = event.reducerArgs;
       if (args is! AcceptCallArgs) return;
-      callback(ctx, args.sessionId);
+      callback(ctx, args.callId);
     });
   }
 
@@ -867,13 +866,13 @@ class Reducers {
     });
   }
 
-  StreamSubscription<void> onClearAllSessions(
+  StreamSubscription<void> onClearAllAgents(
       void Function(EventContext ctx) callback) {
-    return _reducerEmitter.on(clearAllSessionsDef).listen((EventContext ctx) {
+    return _reducerEmitter.on(clearAllAgentsDef).listen((EventContext ctx) {
       final event = ctx.event;
       if (event is! ReducerEvent) return;
       final args = event.reducerArgs;
-      if (args is! ClearAllSessionsArgs) return;
+      if (args is! ClearAllAgentsArgs) return;
       callback(ctx);
     });
   }
@@ -924,6 +923,17 @@ class Reducers {
     });
   }
 
+  StreamSubscription<void> onDeleteAgent(
+      void Function(EventContext ctx, String agentId) callback) {
+    return _reducerEmitter.on(deleteAgentDef).listen((EventContext ctx) {
+      final event = ctx.event;
+      if (event is! ReducerEvent) return;
+      final args = event.reducerArgs;
+      if (args is! DeleteAgentArgs) return;
+      callback(ctx, args.agentId);
+    });
+  }
+
   StreamSubscription<void> onDeleteFile(
       void Function(EventContext ctx, String id) callback) {
     return _reducerEmitter.on(deleteFileDef).listen((EventContext ctx) {
@@ -946,17 +956,6 @@ class Reducers {
     });
   }
 
-  StreamSubscription<void> onDeleteSession(
-      void Function(EventContext ctx, String sessionId) callback) {
-    return _reducerEmitter.on(deleteSessionDef).listen((EventContext ctx) {
-      final event = ctx.event;
-      if (event is! ReducerEvent) return;
-      final args = event.reducerArgs;
-      if (args is! DeleteSessionArgs) return;
-      callback(ctx, args.sessionId);
-    });
-  }
-
   StreamSubscription<void> onEditMessage(
       void Function(EventContext ctx, String id, String text) callback) {
     return _reducerEmitter.on(editMessageDef).listen((EventContext ctx) {
@@ -968,25 +967,25 @@ class Reducers {
     });
   }
 
+  StreamSubscription<void> onEndAgent(
+      void Function(EventContext ctx, String agentId) callback) {
+    return _reducerEmitter.on(endAgentDef).listen((EventContext ctx) {
+      final event = ctx.event;
+      if (event is! ReducerEvent) return;
+      final args = event.reducerArgs;
+      if (args is! EndAgentArgs) return;
+      callback(ctx, args.agentId);
+    });
+  }
+
   StreamSubscription<void> onEndCall(
-      void Function(EventContext ctx, Int64 sessionId) callback) {
+      void Function(EventContext ctx, Int64 callId) callback) {
     return _reducerEmitter.on(endCallDef).listen((EventContext ctx) {
       final event = ctx.event;
       if (event is! ReducerEvent) return;
       final args = event.reducerArgs;
       if (args is! EndCallArgs) return;
-      callback(ctx, args.sessionId);
-    });
-  }
-
-  StreamSubscription<void> onEndSession(
-      void Function(EventContext ctx, String sessionId) callback) {
-    return _reducerEmitter.on(endSessionDef).listen((EventContext ctx) {
-      final event = ctx.event;
-      if (event is! ReducerEvent) return;
-      final args = event.reducerArgs;
-      if (args is! EndSessionArgs) return;
-      callback(ctx, args.sessionId);
+      callback(ctx, args.callId);
     });
   }
 
@@ -1015,13 +1014,13 @@ class Reducers {
   }
 
   StreamSubscription<void> onHeartbeat(
-      void Function(EventContext ctx, String sessionId) callback) {
+      void Function(EventContext ctx, String agentId) callback) {
     return _reducerEmitter.on(heartbeatDef).listen((EventContext ctx) {
       final event = ctx.event;
       if (event is! ReducerEvent) return;
       final args = event.reducerArgs;
       if (args is! HeartbeatArgs) return;
-      callback(ctx, args.sessionId);
+      callback(ctx, args.agentId);
     });
   }
 
@@ -1061,33 +1060,32 @@ class Reducers {
   }
 
   StreamSubscription<void> onPushContextUsage(
-      void Function(
-              EventContext ctx, String sessionId, Int64 used, Int64 window)
+      void Function(EventContext ctx, String agentId, Int64 used, Int64 window)
           callback) {
     return _reducerEmitter.on(pushContextUsageDef).listen((EventContext ctx) {
       final event = ctx.event;
       if (event is! ReducerEvent) return;
       final args = event.reducerArgs;
       if (args is! PushContextUsageArgs) return;
-      callback(ctx, args.sessionId, args.used, args.window);
+      callback(ctx, args.agentId, args.used, args.window);
     });
   }
 
   StreamSubscription<void> onPushImage(
-      void Function(EventContext ctx, String id, String sessionId,
-              String caption, List<int> bytes)
+      void Function(EventContext ctx, String id, String agentId, String caption,
+              List<int> bytes)
           callback) {
     return _reducerEmitter.on(pushImageDef).listen((EventContext ctx) {
       final event = ctx.event;
       if (event is! ReducerEvent) return;
       final args = event.reducerArgs;
       if (args is! PushImageArgs) return;
-      callback(ctx, args.id, args.sessionId, args.caption, args.bytes);
+      callback(ctx, args.id, args.agentId, args.caption, args.bytes);
     });
   }
 
   StreamSubscription<void> onPushMessage(
-      void Function(EventContext ctx, String id, String sessionId, String role,
+      void Function(EventContext ctx, String id, String agentId, String role,
               String text, String source)
           callback) {
     return _reducerEmitter.on(pushMessageDef).listen((EventContext ctx) {
@@ -1095,24 +1093,23 @@ class Reducers {
       if (event is! ReducerEvent) return;
       final args = event.reducerArgs;
       if (args is! PushMessageArgs) return;
-      callback(ctx, args.id, args.sessionId, args.role, args.text, args.source);
+      callback(ctx, args.id, args.agentId, args.role, args.text, args.source);
     });
   }
 
   StreamSubscription<void> onPushStatus(
-      void Function(EventContext ctx, String sessionId, String state)
-          callback) {
+      void Function(EventContext ctx, String agentId, String state) callback) {
     return _reducerEmitter.on(pushStatusDef).listen((EventContext ctx) {
       final event = ctx.event;
       if (event is! ReducerEvent) return;
       final args = event.reducerArgs;
       if (args is! PushStatusArgs) return;
-      callback(ctx, args.sessionId, args.state);
+      callback(ctx, args.agentId, args.state);
     });
   }
 
   StreamSubscription<void> onPushToolEvent(
-      void Function(EventContext ctx, String id, String sessionId, String tool,
+      void Function(EventContext ctx, String id, String agentId, String tool,
               String detail)
           callback) {
     return _reducerEmitter.on(pushToolEventDef).listen((EventContext ctx) {
@@ -1120,19 +1117,19 @@ class Reducers {
       if (event is! ReducerEvent) return;
       final args = event.reducerArgs;
       if (args is! PushToolEventArgs) return;
-      callback(ctx, args.id, args.sessionId, args.tool, args.detail);
+      callback(ctx, args.id, args.agentId, args.tool, args.detail);
     });
   }
 
-  StreamSubscription<void> onRegisterSession(
+  StreamSubscription<void> onRegisterAgent(
       void Function(EventContext ctx, String id, String baseName, String host,
               String clientId)
           callback) {
-    return _reducerEmitter.on(registerSessionDef).listen((EventContext ctx) {
+    return _reducerEmitter.on(registerAgentDef).listen((EventContext ctx) {
       final event = ctx.event;
       if (event is! ReducerEvent) return;
       final args = event.reducerArgs;
-      if (args is! RegisterSessionArgs) return;
+      if (args is! RegisterAgentArgs) return;
       callback(ctx, args.id, args.baseName, args.host, args.clientId);
     });
   }
@@ -1160,7 +1157,7 @@ class Reducers {
   }
 
   StreamSubscription<void> onRequestPermission(
-      void Function(EventContext ctx, String id, String sessionId, String tool,
+      void Function(EventContext ctx, String id, String agentId, String tool,
               String input)
           callback) {
     return _reducerEmitter.on(requestPermissionDef).listen((EventContext ctx) {
@@ -1168,12 +1165,12 @@ class Reducers {
       if (event is! ReducerEvent) return;
       final args = event.reducerArgs;
       if (args is! RequestPermissionArgs) return;
-      callback(ctx, args.id, args.sessionId, args.tool, args.input);
+      callback(ctx, args.id, args.agentId, args.tool, args.input);
     });
   }
 
   StreamSubscription<void> onRequestQuestion(
-      void Function(EventContext ctx, String id, String sessionId,
+      void Function(EventContext ctx, String id, String agentId,
               String question, String header, String options, bool multiSelect)
           callback) {
     return _reducerEmitter.on(requestQuestionDef).listen((EventContext ctx) {
@@ -1181,7 +1178,7 @@ class Reducers {
       if (event is! ReducerEvent) return;
       final args = event.reducerArgs;
       if (args is! RequestQuestionArgs) return;
-      callback(ctx, args.id, args.sessionId, args.question, args.header,
+      callback(ctx, args.id, args.agentId, args.question, args.header,
           args.options, args.multiSelect);
     });
   }
@@ -1209,19 +1206,19 @@ class Reducers {
   }
 
   StreamSubscription<void> onSendAudioFrame(
-      void Function(EventContext ctx, Int64 sessionId, int seq, List<int> pcm)
+      void Function(EventContext ctx, Int64 callId, int seq, List<int> pcm)
           callback) {
     return _reducerEmitter.on(sendAudioFrameDef).listen((EventContext ctx) {
       final event = ctx.event;
       if (event is! ReducerEvent) return;
       final args = event.reducerArgs;
       if (args is! SendAudioFrameArgs) return;
-      callback(ctx, args.sessionId, args.seq, args.pcm);
+      callback(ctx, args.callId, args.seq, args.pcm);
     });
   }
 
   StreamSubscription<void> onSendVideoFrame(
-      void Function(EventContext ctx, Int64 sessionId, int seq, int codec,
+      void Function(EventContext ctx, Int64 callId, int seq, int codec,
               bool isKeyframe, List<int> data)
           callback) {
     return _reducerEmitter.on(sendVideoFrameDef).listen((EventContext ctx) {
@@ -1229,8 +1226,8 @@ class Reducers {
       if (event is! ReducerEvent) return;
       final args = event.reducerArgs;
       if (args is! SendVideoFrameArgs) return;
-      callback(ctx, args.sessionId, args.seq, args.codec, args.isKeyframe,
-          args.data);
+      callback(
+          ctx, args.callId, args.seq, args.codec, args.isKeyframe, args.data);
     });
   }
 

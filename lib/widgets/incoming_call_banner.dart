@@ -84,7 +84,7 @@ class IncomingCallBanner extends ConsumerWidget {
                 final callService = ref.read(callServiceProvider);
                 final repo = ref.read(notesRepositoryProvider);
                 callService.setClient(repo.client);
-                callService.endCall(session.sessionId);
+                callService.endCall(session.callId);
               },
               child: Container(
                 width: 44,
@@ -103,9 +103,9 @@ class IncomingCallBanner extends ConsumerWidget {
                 final callService = ref.read(callServiceProvider);
                 final repo = ref.read(notesRepositoryProvider);
                 callService.setClient(repo.client);
-                callService.acceptCall(session.sessionId);
+                callService.acceptCall(session.callId);
                 context.goNamed('call', pathParameters: {
-                  'sessionId': session.sessionId.toString()
+                  'sessionId': session.callId.toString()
                 });
               },
               child: Container(

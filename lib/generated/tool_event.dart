@@ -5,7 +5,7 @@ import 'package:spacetimedb_sdk/codegen.dart';
 class ToolEvent {
   ToolEvent({
     required this.id,
-    required this.sessionId,
+    required this.agentId,
     required this.tool,
     required this.detail,
     required this.startedAt,
@@ -14,7 +14,7 @@ class ToolEvent {
   factory ToolEvent.fromJson(Map<String, dynamic> json) {
     return ToolEvent(
       id: json['id'] ?? '',
-      sessionId: json['sessionId'] ?? '',
+      agentId: json['agentId'] ?? '',
       tool: json['tool'] ?? '',
       detail: json['detail'] ?? '',
       startedAt: Int64(json['startedAt'] ?? 0),
@@ -23,7 +23,7 @@ class ToolEvent {
 
   final String id;
 
-  final String sessionId;
+  final String agentId;
 
   final String tool;
 
@@ -33,7 +33,7 @@ class ToolEvent {
 
   void encodeBsatn(BsatnEncoder encoder) {
     encoder.writeString(id);
-    encoder.writeString(sessionId);
+    encoder.writeString(agentId);
     encoder.writeString(tool);
     encoder.writeString(detail);
     encoder.writeI64(startedAt);
@@ -42,7 +42,7 @@ class ToolEvent {
   static ToolEvent decodeBsatn(BsatnDecoder decoder) {
     return ToolEvent(
       id: decoder.readString(),
-      sessionId: decoder.readString(),
+      agentId: decoder.readString(),
       tool: decoder.readString(),
       detail: decoder.readString(),
       startedAt: decoder.readI64(),
@@ -52,7 +52,7 @@ class ToolEvent {
   Map<String, dynamic> toJson() {
     return {
       'id': id,
-      'sessionId': sessionId,
+      'agentId': agentId,
       'tool': tool,
       'detail': detail,
       'startedAt': startedAt.toInt(),
@@ -64,7 +64,7 @@ class ToolEvent {
     return identical(this, other) ||
         other is ToolEvent &&
             id == other.id &&
-            sessionId == other.sessionId &&
+            agentId == other.agentId &&
             tool == other.tool &&
             detail == other.detail &&
             startedAt == other.startedAt;
@@ -72,24 +72,24 @@ class ToolEvent {
 
   @override
   int get hashCode {
-    return Object.hashAll([id, sessionId, tool, detail, startedAt]);
+    return Object.hashAll([id, agentId, tool, detail, startedAt]);
   }
 
   @override
   String toString() {
-    return 'ToolEvent(id: $id, sessionId: $sessionId, tool: $tool, detail: $detail, startedAt: $startedAt)';
+    return 'ToolEvent(id: $id, agentId: $agentId, tool: $tool, detail: $detail, startedAt: $startedAt)';
   }
 
   ToolEvent copyWith({
     String? id,
-    String? sessionId,
+    String? agentId,
     String? tool,
     String? detail,
     Int64? startedAt,
   }) {
     return ToolEvent(
       id: id ?? this.id,
-      sessionId: sessionId ?? this.sessionId,
+      agentId: agentId ?? this.agentId,
       tool: tool ?? this.tool,
       detail: detail ?? this.detail,
       startedAt: startedAt ?? this.startedAt,

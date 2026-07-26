@@ -224,7 +224,7 @@ class OnlineUsersScreen extends ConsumerWidget {
       }).toList();
       if (sessions.isNotEmpty) {
         navigator.goNamed('call',
-            pathParameters: {'sessionId': sessions.last.sessionId.toString()});
+            pathParameters: {'sessionId': sessions.last.callId.toString()});
       }
     });
   }

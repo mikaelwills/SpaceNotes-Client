@@ -5,7 +5,7 @@ import 'call_state.dart';
 
 class CallSession {
   CallSession({
-    required this.sessionId,
+    required this.callId,
     required this.caller,
     required this.callee,
     required this.state,
@@ -13,14 +13,14 @@ class CallSession {
 
   factory CallSession.fromJson(Map<String, dynamic> json) {
     return CallSession(
-      sessionId: Int64(json['sessionId'] ?? 0),
+      callId: Int64(json['callId'] ?? 0),
       caller: Identity.fromJson(json['caller'] ?? ''),
       callee: Identity.fromJson(json['callee'] ?? ''),
       state: CallState.fromJson(Map<String, dynamic>.from(json['state'] ?? {})),
     );
   }
 
-  final Int64 sessionId;
+  final Int64 callId;
 
   final Identity caller;
 
@@ -29,7 +29,7 @@ class CallSession {
   final CallState state;
 
   void encodeBsatn(BsatnEncoder encoder) {
-    encoder.writeU64(sessionId);
+    encoder.writeU64(callId);
     encoder.writeIdentity(caller);
     encoder.writeIdentity(callee);
     state.encodeBsatn(encoder);
@@ -37,7 +37,7 @@ class CallSession {
 
   static CallSession decodeBsatn(BsatnDecoder decoder) {
     return CallSession(
-      sessionId: decoder.readU64(),
+      callId: decoder.readU64(),
       caller: decoder.readIdentity(),
       callee: decoder.readIdentity(),
       state: CallState.decodeBsatn(decoder),
@@ -46,7 +46,7 @@ class CallSession {
 
   Map<String, dynamic> toJson() {
     return {
-      'sessionId': sessionId.toInt(),
+      'callId': callId.toInt(),
       'caller': caller.toJson(),
       'callee': callee.toJson(),
       'state': state.toJson(),
@@ -57,7 +57,7 @@ class CallSession {
   bool operator ==(Object other) {
     return identical(this, other) ||
         other is CallSession &&
-            sessionId == other.sessionId &&
+            callId == other.callId &&
             caller == other.caller &&
             callee == other.callee &&
             state == other.state;
@@ -65,22 +65,22 @@ class CallSession {
 
   @override
   int get hashCode {
-    return Object.hashAll([sessionId, caller, callee, state]);
+    return Object.hashAll([callId, caller, callee, state]);
   }
 
   @override
   String toString() {
-    return 'CallSession(sessionId: $sessionId, caller: $caller, callee: $callee, state: $state)';
+    return 'CallSession(callId: $callId, caller: $caller, callee: $callee, state: $state)';
   }
 
   CallSession copyWith({
-    Int64? sessionId,
+    Int64? callId,
     Identity? caller,
     Identity? callee,
     CallState? state,
   }) {
     return CallSession(
-      sessionId: sessionId ?? this.sessionId,
+      callId: callId ?? this.callId,
       caller: caller ?? this.caller,
       callee: callee ?? this.callee,
       state: state ?? this.state,
@@ -96,7 +96,7 @@ class CallSessionDecoder extends RowDecoder<CallSession> {
 
   @override
   Int64? getPrimaryKey(CallSession row) {
-    return row.sessionId;
+    return row.callId;
   }
 
   @override

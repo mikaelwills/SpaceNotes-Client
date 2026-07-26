@@ -149,7 +149,7 @@ class _CallScreenState extends ConsumerState<CallScreen> {
 
   void _endCall(CallSession session) {
     _callService?.setClient(ref.read(notesRepositoryProvider).client);
-    _callService?.endCall(session.sessionId);
+    _callService?.endCall(session.callId);
   }
 }
 
@@ -341,7 +341,7 @@ class _RingingOverlay extends ConsumerWidget {
                       final callService = ref.read(callServiceProvider);
                       final repo = ref.read(notesRepositoryProvider);
                       callService.setClient(repo.client);
-                      callService.acceptCall(session.sessionId);
+                      callService.acceptCall(session.callId);
                     },
                   ),
                   const SizedBox(width: 48),
@@ -352,7 +352,7 @@ class _RingingOverlay extends ConsumerWidget {
                       final callService = ref.read(callServiceProvider);
                       final repo = ref.read(notesRepositoryProvider);
                       callService.setClient(repo.client);
-                      callService.endCall(session.sessionId);
+                      callService.endCall(session.callId);
                     },
                   ),
                 ],
@@ -365,7 +365,7 @@ class _RingingOverlay extends ConsumerWidget {
                   final callService = ref.read(callServiceProvider);
                   final repo = ref.read(notesRepositoryProvider);
                   callService.setClient(repo.client);
-                  callService.endCall(session.sessionId);
+                  callService.endCall(session.callId);
                 },
               ),
             ],

@@ -9,13 +9,13 @@ import '../generated/message.dart';
 import '../generated/reducer_args.dart';
 import '../generated/permission_request.dart';
 import '../generated/question_request.dart';
-import '../generated/session.dart';
-import '../generated/session_activity.dart';
+import '../generated/agent.dart';
+import '../generated/agent_activity.dart';
 import '../generated/tool_event.dart';
 import '../services/debug_logger.dart';
 import 'connection_providers.dart';
 import 'notes_providers.dart';
-import 'recent_sessions_provider.dart';
+import 'recent_agents_provider.dart';
 
 sealed class ChatItem {
   Int64 get timestamp;
@@ -58,7 +58,7 @@ class ChatQuestionItem extends ChatItem {
   String get id => 'question:${request.id}';
 }
 
-const String defaultTargetSession = 'workflow-agent';
+const String defaultTargetAgent = 'workflow-agent';
 
 const List<String> hostPriority = ['robert', 'M1MAX', 'Mikaels-Work'];
 
@@ -67,11 +67,11 @@ int _hostRank(String host) {
   return i == -1 ? hostPriority.length : i;
 }
 
-final sessionsProvider = Provider<List<Session>>((ref) {
+final agentsProvider = Provider<List<Agent>>((ref) {
   final client = ref.watch(spacetimeClientProvider);
   if (client == null) return const [];
-  final rows = watchListenable(ref, client.session.rows);
-  final recent = ref.watch(recentSessionsProvider);
+  final rows = watchListenable(ref, client.agent.rows);
+  final recent = ref.watch(recentAgentsProvider);
   final sorted = rows.toList()
     ..sort((a, b) {
       final ra = recent[a.id] ?? 0;
@@ -82,26 +82,26 @@ final sessionsProvider = Provider<List<Session>>((ref) {
   return sorted;
 });
 
-final sessionFilterProvider = StateProvider<String>((ref) => '');
+final agentFilterProvider = StateProvider<String>((ref) => '');
 
-final filteredSessionsProvider = Provider<List<Session>>((ref) {
-  final sessions = ref.watch(sessionsProvider);
-  final query = ref.watch(sessionFilterProvider).trim().toLowerCase();
-  if (query.isEmpty) return sessions;
-  return sessions.where((s) => s.id.toLowerCase().contains(query)).toList();
+final filteredAgentsProvider = Provider<List<Agent>>((ref) {
+  final agents = ref.watch(agentsProvider);
+  final query = ref.watch(agentFilterProvider).trim().toLowerCase();
+  if (query.isEmpty) return agents;
+  return agents.where((s) => s.id.toLowerCase().contains(query)).toList();
 });
 
-final sessionByIdProvider = Provider.family<Session?, String>((ref, id) {
+final agentByIdProvider = Provider.family<Agent?, String>((ref, id) {
   final client = ref.watch(spacetimeClientProvider);
   if (client == null) return null;
-  return watchListenable(ref, client.session.rowNotifier(id));
+  return watchListenable(ref, client.agent.rowNotifier(id));
 });
 
-final sessionActivityProvider =
-    Provider.family<SessionActivity?, String>((ref, sessionId) {
+final agentActivityProvider =
+    Provider.family<AgentActivity?, String>((ref, agentId) {
   final client = ref.watch(spacetimeClientProvider);
   if (client == null) return null;
-  return watchListenable(ref, client.sessionActivity.rowNotifier(sessionId));
+  return watchListenable(ref, client.agentActivity.rowNotifier(agentId));
 });
 
 final permissionByIdProvider =
@@ -118,57 +118,57 @@ final questionByIdProvider =
   return watchListenable(ref, client.questionRequest.rowNotifier(id));
 });
 
-/// Manual override. Null = auto-pick from sessions list.
-final targetSessionOverrideProvider = StateProvider<String?>((ref) => null);
+/// Manual override. Null = auto-pick from agents list.
+final targetAgentOverrideProvider = StateProvider<String?>((ref) => null);
 
-/// Session id used by the main chat. Picks the [defaultTargetSession] instance
+/// Agent id used by the main chat. Picks the [defaultTargetAgent] instance
 /// on the highest-priority host (see [hostPriority]); falls back to the bare
-/// default. Never falls through to an unrelated session.
-final targetSessionProvider = Provider<String>((ref) {
-  final override = ref.watch(targetSessionOverrideProvider);
+/// default. Never falls through to an unrelated agent.
+final targetAgentProvider = Provider<String>((ref) {
+  final override = ref.watch(targetAgentOverrideProvider);
   if (override != null) return override;
-  final sessions = ref.watch(sessionsProvider);
+  final agents = ref.watch(agentsProvider);
   final candidates =
-      sessions.where((s) => s.baseName == defaultTargetSession).toList()
+      agents.where((s) => s.baseName == defaultTargetAgent).toList()
         ..sort((a, b) => _hostRank(a.host).compareTo(_hostRank(b.host)));
   if (candidates.isNotEmpty) return candidates.first.id;
-  return defaultTargetSession;
+  return defaultTargetAgent;
 });
 
-/// Owns the per-session chat subscription lifecycle. Watching
-/// `sessionSubscriptionProvider(sessionId)` subscribes the four per-session
-/// chat tables (scoped `WHERE session_id = <id>`) on first watch and
+/// Owns the per-agent chat subscription lifecycle. Watching
+/// `agentSubscriptionProvider(agentId)` subscribes the four per-agent
+/// chat tables (scoped `WHERE agent_id = <id>`) on first watch and
 /// unsubscribes when the last watcher disposes. autoDispose ref-counts
-/// watchers, so two widgets on the same session share ONE subscription.
-final sessionSubscriptionProvider =
-    Provider.autoDispose.family<Future<int?>, String>((ref, sessionId) {
+/// watchers, so two widgets on the same agent share ONE subscription.
+final agentSubscriptionProvider =
+    Provider.autoDispose.family<Future<int?>, String>((ref, agentId) {
   final repo = ref.read(notesRepositoryProvider);
-  final pending = repo.subscribeSession(sessionId);
+  final pending = repo.subscribeAgent(agentId);
   ref.onDispose(() async {
     final qsId = await pending;
-    if (qsId != null) repo.unsubscribeSession(qsId);
+    if (qsId != null) repo.unsubscribeAgent(qsId);
   });
   return pending;
 });
 
-const _warmRecentSessionCount = 10;
+const _warmRecentAgentCount = 10;
 
-/// Keeps the chat tables for the most-recently-messaged sessions warm in the
-/// offline cache. Subscribes the top-N recent sessions (from the persisted
+/// Keeps the chat tables for the most-recently-messaged agents warm in the
+/// offline cache. Subscribes the top-N recent agents (from the persisted
 /// recency map) as one query set whenever the socket is live, and re-subscribes
 /// on reconnect. This is the "load recent, not everything" middle path: cold
-/// start stays light, but reopening a recent session in a tunnel is instant and
-/// cached — no hydration gap, no infinite spinner. Deep-history sessions
-/// outside the warm set fall back to [sessionSubscriptionProvider].
-final warmRecentSessionsProvider = Provider<void>((ref) {
+/// start stays light, but reopening a recent agent in a tunnel is instant and
+/// cached — no hydration gap, no infinite spinner. Deep-history agents
+/// outside the warm set fall back to [agentSubscriptionProvider].
+final warmRecentAgentsProvider = Provider<void>((ref) {
   final client = ref.watch(spacetimeClientProvider);
   if (client == null) return;
 
-  final topIdsKey = ref.watch(recentSessionsProvider.select((recent) {
+  final topIdsKey = ref.watch(recentAgentsProvider.select((recent) {
     final byRecency = recent.entries.toList()
       ..sort((a, b) => b.value.compareTo(a.value));
     final members = byRecency
-        .take(_warmRecentSessionCount)
+        .take(_warmRecentAgentCount)
         .map((e) => e.key)
         .toList()
       ..sort();
@@ -186,8 +186,8 @@ final warmRecentSessionsProvider = Provider<void>((ref) {
     if (subscribed) return;
     subscribed = true;
     debugLogger.connection(
-        'warmRecent: subscribing ${topIds.length} sessions', topIds.join(','));
-    pending = repo.subscribeSessions(topIds);
+        'warmRecent: subscribing ${topIds.length} agents', topIds.join(','));
+    pending = repo.subscribeAgents(topIds);
     pending!.then((qsId) {
       debugLogger.connection('warmRecent: applied', 'querySetId=$qsId');
     }).catchError((e, st) {
@@ -213,16 +213,16 @@ final warmRecentSessionsProvider = Provider<void>((ref) {
     if (pending == null) return;
     debugLogger.connection('warmRecent: disposing (unsubscribe)');
     final qsId = await pending;
-    if (qsId != null) repo.unsubscribeSession(qsId);
+    if (qsId != null) repo.unsubscribeAgent(qsId);
   });
 });
 
-/// True once the per-session subscription's SubscribeApplied has resolved
+/// True once the per-agent subscription's SubscribeApplied has resolved
 /// (rows are in cache). Distinguishes "still hydrating" from "genuinely
 /// empty" so the chat empty-state doesn't flash during the hydration gap.
-final sessionHydratedProvider =
-    FutureProvider.autoDispose.family<bool, String>((ref, sessionId) async {
-  await ref.watch(sessionSubscriptionProvider(sessionId));
+final agentHydratedProvider =
+    FutureProvider.autoDispose.family<bool, String>((ref, agentId) async {
+  await ref.watch(agentSubscriptionProvider(agentId));
   return true;
 });
 
@@ -242,13 +242,13 @@ final _chatIndexProvider = Provider<_ChatIndex?>((ref) {
   return index;
 });
 
-/// Timeline of merged message + tool + permission items for a session, sorted
+/// Timeline of merged message + tool + permission items for an agent, sorted
 /// by timestamp ascending. Maintained by [_ChatIndex].
-final chatTimelineBySessionProvider =
-    Provider.family<List<ChatItem>, String>((ref, sessionId) {
+final chatTimelineByAgentProvider =
+    Provider.family<List<ChatItem>, String>((ref, agentId) {
   final index = ref.watch(_chatIndexProvider);
   if (index == null) return const [];
-  final bucket = index.bucketFor(sessionId);
+  final bucket = index.bucketFor(agentId);
   void listener() => ref.invalidateSelf();
   bucket.addListener(listener);
   ref.onDispose(() => bucket.removeListener(listener));
@@ -261,7 +261,7 @@ final chatTimelineBySessionProvider =
   final orphanedFailures = [
     for (final entry in sendStatus.values)
       if (entry.status == ChatSendStatus.failed &&
-          entry.message.sessionId == sessionId &&
+          entry.message.agentId == agentId &&
           !present.contains(entry.message.id))
         ChatMessageItem(entry.message),
   ];
@@ -273,12 +273,12 @@ final chatTimelineBySessionProvider =
   return List<ChatItem>.unmodifiable(merged);
 });
 
-/// Per-session bucket holding the merged sorted timeline. Reconciled from the
+/// Per-agent bucket holding the merged sorted timeline. Reconciled from the
 /// full `rows` snapshot of each source table — no incremental insert/update
 /// delta handling. Correctness over cleverness: `onInsert`/`onUpdate` streams
 /// can silently misclassify server echoes as updates when a row is already in
 /// cache from offline hydration or SubscribeApplied, leaving the UI empty.
-class _SessionBucket extends ChangeNotifier {
+class _AgentBucket extends ChangeNotifier {
   List<ChatItem> items = const [];
 
   void setItems(List<ChatItem> next) {
@@ -287,13 +287,13 @@ class _SessionBucket extends ChangeNotifier {
   }
 }
 
-/// Maintains per-session timelines from the source-of-truth `rows`
-/// ValueListenables. On every change it re-buckets each row by sessionId and
+/// Maintains per-agent timelines from the source-of-truth `rows`
+/// ValueListenables. On every change it re-buckets each row by agentId and
 /// publishes sorted timelines. Zero reliance on insert/update/delete stream
 /// classification.
 class _ChatIndex {
   final SpacetimeDbClient client;
-  final Map<String, _SessionBucket> _buckets = {};
+  final Map<String, _AgentBucket> _buckets = {};
   late final VoidCallback _scheduleRebuild;
   bool _rebuildScheduled = false;
   bool _disposed = false;
@@ -313,8 +313,8 @@ class _ChatIndex {
     client.questionRequest.rows.addListener(_scheduleRebuild);
   }
 
-  _SessionBucket bucketFor(String sessionId) =>
-      _buckets.putIfAbsent(sessionId, _SessionBucket.new);
+  _AgentBucket bucketFor(String agentId) =>
+      _buckets.putIfAbsent(agentId, _AgentBucket.new);
 
   void _requestRebuild() {
     if (_rebuildScheduled) return;
@@ -339,22 +339,22 @@ class _ChatIndex {
   }
 
   void _rebuild() {
-    final perSession = <String, List<ChatItem>>{};
+    final perAgent = <String, List<ChatItem>>{};
 
     for (final m in client.message.rows.value) {
-      (perSession[m.sessionId] ??= []).add(ChatMessageItem(m));
+      (perAgent[m.agentId] ??= []).add(ChatMessageItem(m));
     }
     for (final t in client.toolEvent.rows.value) {
-      (perSession[t.sessionId] ??= []).add(ChatToolItem(t));
+      (perAgent[t.agentId] ??= []).add(ChatToolItem(t));
     }
     for (final p in client.permissionRequest.rows.value) {
       if (p.status == 'pending') {
-        (perSession[p.sessionId] ??= []).add(ChatPermissionItem(p));
+        (perAgent[p.agentId] ??= []).add(ChatPermissionItem(p));
       }
     }
     for (final q in client.questionRequest.rows.value) {
       if (q.status == 'pending') {
-        (perSession[q.sessionId] ??= []).add(ChatQuestionItem(q));
+        (perAgent[q.agentId] ??= []).add(ChatQuestionItem(q));
       }
     }
 
@@ -362,18 +362,18 @@ class _ChatIndex {
       'ChatIndex rebuild',
       'msgs=${client.message.rows.value.length} '
           'tools=${client.toolEvent.rows.value.length} '
-          'sessions=${perSession.length}',
+          'agents=${perAgent.length}',
     );
 
-    for (final entry in perSession.entries) {
+    for (final entry in perAgent.entries) {
       entry.value.sort((a, b) => a.timestamp.compareTo(b.timestamp));
       bucketFor(entry.key).setItems(entry.value);
     }
 
-    for (final sessionId in _buckets.keys) {
-      if (!perSession.containsKey(sessionId) &&
-          _buckets[sessionId]!.items.isNotEmpty) {
-        _buckets[sessionId]!.setItems(const []);
+    for (final agentId in _buckets.keys) {
+      if (!perAgent.containsKey(agentId) &&
+          _buckets[agentId]!.items.isNotEmpty) {
+        _buckets[agentId]!.setItems(const []);
       }
     }
   }
@@ -528,7 +528,7 @@ String _mintMessageId() {
 
 Future<void> sendChatMessage(
   WidgetRef ref, {
-  required String sessionId,
+  required String agentId,
   required String text,
 }) async {
   final client = ref.read(spacetimeClientProvider);
@@ -536,15 +536,15 @@ Future<void> sendChatMessage(
     debugLogger.chatError('sendChatMessage aborted', 'client=null');
     return;
   }
-  ref.read(recentSessionsProvider.notifier).markUsed(sessionId);
+  ref.read(recentAgentsProvider.notifier).markUsed(agentId);
   final id = _mintMessageId();
   debugLogger.chat(
     'sendChatMessage',
-    'id=$id session=$sessionId textLen=${text.length}',
+    'id=$id agent=$agentId textLen=${text.length}',
   );
   final message = Message(
     id: id,
-    sessionId: sessionId,
+    agentId: agentId,
     role: 'user',
     text: text,
     source: 'flutter',
@@ -554,7 +554,7 @@ Future<void> sendChatMessage(
   try {
     await client.reducers.pushMessage(
       id: id,
-      sessionId: sessionId,
+      agentId: agentId,
       role: 'user',
       text: text,
       source: 'flutter',
@@ -585,7 +585,7 @@ void _probeEcho(SpacetimeDbClient client, String id, String kind) {
 
 Future<void> sendChatImage(
   WidgetRef ref, {
-  required String sessionId,
+  required String agentId,
   required String caption,
   required Uint8List pngBytes,
 }) async {
@@ -597,12 +597,12 @@ Future<void> sendChatImage(
   final id = _mintMessageId();
   debugLogger.chat(
     'sendChatImage',
-    'id=$id session=$sessionId bytes=${pngBytes.length} captionLen=${caption.length}',
+    'id=$id agent=$agentId bytes=${pngBytes.length} captionLen=${caption.length}',
   );
   try {
     await client.reducers.pushImage(
       id: id,
-      sessionId: sessionId,
+      agentId: agentId,
       caption: caption,
       bytes: pngBytes,
     );
@@ -629,7 +629,7 @@ Future<void> respondToPermission(
 
 /// Answers an AskUserQuestion. [labels] holds the selected option label(s) —
 /// one for single-select, one or more for multi-select. Encoded as JSON so the
-/// space-channel bridge can inject it back into the session.
+/// space-channel bridge can inject it back into the agent.
 Future<void> respondToQuestion(
   WidgetRef ref, {
   required String requestId,

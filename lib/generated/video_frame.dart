@@ -4,7 +4,7 @@ import 'package:spacetimedb_sdk/codegen.dart';
 
 class VideoFrame {
   VideoFrame({
-    required this.sessionId,
+    required this.callId,
     required this.from,
     required this.seq,
     required this.codec,
@@ -14,7 +14,7 @@ class VideoFrame {
 
   factory VideoFrame.fromJson(Map<String, dynamic> json) {
     return VideoFrame(
-      sessionId: Int64(json['sessionId'] ?? 0),
+      callId: Int64(json['callId'] ?? 0),
       from: Identity.fromJson(json['from'] ?? ''),
       seq: json['seq'] ?? 0,
       codec: json['codec'] ?? 0,
@@ -23,7 +23,7 @@ class VideoFrame {
     );
   }
 
-  final Int64 sessionId;
+  final Int64 callId;
 
   final Identity from;
 
@@ -36,7 +36,7 @@ class VideoFrame {
   final List<int> data;
 
   void encodeBsatn(BsatnEncoder encoder) {
-    encoder.writeU64(sessionId);
+    encoder.writeU64(callId);
     encoder.writeIdentity(from);
     encoder.writeU32(seq);
     encoder.writeU8(codec);
@@ -46,7 +46,7 @@ class VideoFrame {
 
   static VideoFrame decodeBsatn(BsatnDecoder decoder) {
     return VideoFrame(
-      sessionId: decoder.readU64(),
+      callId: decoder.readU64(),
       from: decoder.readIdentity(),
       seq: decoder.readU32(),
       codec: decoder.readU8(),
@@ -57,7 +57,7 @@ class VideoFrame {
 
   Map<String, dynamic> toJson() {
     return {
-      'sessionId': sessionId.toInt(),
+      'callId': callId.toInt(),
       'from': from.toJson(),
       'seq': seq,
       'codec': codec,
@@ -70,7 +70,7 @@ class VideoFrame {
   bool operator ==(Object other) {
     return identical(this, other) ||
         other is VideoFrame &&
-            sessionId == other.sessionId &&
+            callId == other.callId &&
             from == other.from &&
             seq == other.seq &&
             codec == other.codec &&
@@ -80,16 +80,16 @@ class VideoFrame {
 
   @override
   int get hashCode {
-    return Object.hashAll([sessionId, from, seq, codec, isKeyframe, data]);
+    return Object.hashAll([callId, from, seq, codec, isKeyframe, data]);
   }
 
   @override
   String toString() {
-    return 'VideoFrame(sessionId: $sessionId, from: $from, seq: $seq, codec: $codec, isKeyframe: $isKeyframe, data: $data)';
+    return 'VideoFrame(callId: $callId, from: $from, seq: $seq, codec: $codec, isKeyframe: $isKeyframe, data: $data)';
   }
 
   VideoFrame copyWith({
-    Int64? sessionId,
+    Int64? callId,
     Identity? from,
     int? seq,
     int? codec,
@@ -97,7 +97,7 @@ class VideoFrame {
     List<int>? data,
   }) {
     return VideoFrame(
-      sessionId: sessionId ?? this.sessionId,
+      callId: callId ?? this.callId,
       from: from ?? this.from,
       seq: seq ?? this.seq,
       codec: codec ?? this.codec,
