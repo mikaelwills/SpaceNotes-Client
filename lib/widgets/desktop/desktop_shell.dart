@@ -38,10 +38,10 @@ class _DesktopShellState extends ConsumerState<DesktopShell> {
   @override
   Widget build(BuildContext context) {
     final location = GoRouterState.of(context).uri.toString();
-    if (location.startsWith('/notes/sessions')) {
+    if (location.startsWith('/notes/agents')) {
       String? activeAgentId;
-      if (location.startsWith('/notes/sessions/')) {
-        final encoded = location.substring('/notes/sessions/'.length);
+      if (location.startsWith('/notes/agents/')) {
+        final encoded = location.substring('/notes/agents/'.length);
         activeAgentId = Uri.decodeComponent(encoded);
       }
       return Scaffold(
@@ -114,9 +114,9 @@ class _DesktopContentArea extends ConsumerWidget {
     final isChat = location.startsWith('/notes/chat');
     final isSettings = location.startsWith('/settings');
     final isConnect = location.startsWith('/connect');
-    final isSessions = location.startsWith('/notes/sessions');
+    final isAgents = location.startsWith('/notes/agents');
     final isNotesView =
-        !isChat && !isSettings && !isConnect && !isSessions;
+        !isChat && !isSettings && !isConnect && !isAgents;
 
     if (!isNotesView) {
       return Column(
@@ -231,8 +231,8 @@ class _DesktopTopBar extends ConsumerWidget {
     if (location == '/notes/chat') {
       return 'chat';
     }
-    if (location.startsWith('/notes/sessions')) {
-      return 'sessions';
+    if (location.startsWith('/notes/agents')) {
+      return 'agents';
     }
     if (location == '/settings') {
       return 'settings';

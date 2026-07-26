@@ -357,7 +357,7 @@ class _AgentRowState extends ConsumerState<_AgentRow>
     }
     HapticFeedback.selectionClick();
     context.push(
-        '/notes/sessions/${Uri.encodeComponent(widget.agent.id)}');
+        '/notes/agents/${Uri.encodeComponent(widget.agent.id)}');
   }
 
   void _animateToOffset(double target) {

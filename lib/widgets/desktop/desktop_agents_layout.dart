@@ -294,7 +294,7 @@ class _AgentRow extends ConsumerWidget {
           : Colors.transparent,
       child: InkWell(
         onTap: () =>
-            context.go('/notes/sessions/${Uri.encodeComponent(agent.id)}'),
+            context.go('/notes/agents/${Uri.encodeComponent(agent.id)}'),
         child: AgentRowContent(
           index: index,
           agent: agent,

@@ -48,7 +48,7 @@ void main() {
     addTearDown(container.dispose);
 
     final subA = container.listen(provider('A'), (_, __) {}, fireImmediately: true);
-    final subB = container.listen(provider('B'), (_, __) {}, fireImmediately: true);
+    container.listen(provider('B'), (_, __) {}, fireImmediately: true);
 
     expect(subscribeCalls, ['A', 'B'], reason: 'distinct keys -> separate creates');
 

@@ -144,15 +144,15 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
     final l = GoRouterState.of(context).uri.toString();
     if (l.startsWith('/notes/chat')) return HomeViewType.chat;
     if (l.startsWith('/notes/note/')) return HomeViewType.note;
-    if (l == '/notes/sessions') return HomeViewType.agents;
-    if (l.startsWith('/notes/sessions/')) return HomeViewType.agentChat;
+    if (l == '/notes/agents') return HomeViewType.agents;
+    if (l.startsWith('/notes/agents/')) return HomeViewType.agentChat;
     return HomeViewType.folders;
   }
 
   String? _getCurrentAgentId() {
     final l = GoRouterState.of(context).uri.toString();
-    if (!l.startsWith('/notes/sessions/')) return null;
-    final encoded = l.substring('/notes/sessions/'.length);
+    if (!l.startsWith('/notes/agents/')) return null;
+    final encoded = l.substring('/notes/agents/'.length);
     return Uri.decodeComponent(encoded);
   }
 

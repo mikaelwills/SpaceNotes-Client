@@ -1324,7 +1324,7 @@ class _CollapsedSidebar extends ConsumerWidget {
           _CollapsedIconButton(
             icon: Icons.terminal_outlined,
             tooltip: 'Agents',
-            onTap: () => context.go('/notes/sessions'),
+            onTap: () => context.go('/notes/agents'),
           ),
           _CollapsedIconButton(
             icon: Icons.search,
@@ -1396,9 +1396,9 @@ class _SidebarFooter extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final location = GoRouterState.of(context).uri.toString();
     final onChat = location.startsWith('/notes/chat');
-    final onSessions = location.startsWith('/notes/sessions');
+    final onAgents = location.startsWith('/notes/agents');
     final onSettings = location == '/settings';
-    final onNotes = !onChat && !onSessions && !onSettings;
+    final onNotes = !onChat && !onAgents && !onSettings;
 
     return Container(
       padding: const EdgeInsets.fromLTRB(10, 4, 10, 10),
@@ -1438,8 +1438,8 @@ class _SidebarFooter extends ConsumerWidget {
           const SizedBox(width: 4),
           SnIconButton(
             icon: const Icon(Icons.terminal_outlined),
-            onPressed: onSessions ? null : () => context.go('/notes/sessions'),
-            active: onSessions,
+            onPressed: onAgents ? null : () => context.go('/notes/agents'),
+            active: onAgents,
             tooltip: 'agents',
           ),
           const Spacer(),

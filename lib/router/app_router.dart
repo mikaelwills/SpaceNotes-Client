@@ -157,19 +157,19 @@ GoRouter createAppRouter(ProviderContainer container) {
                 ),
               ),
               GoRoute(
-                path: '/notes/sessions',
-                name: 'sessions',
+                path: '/notes/agents',
+                name: 'agents',
                 pageBuilder: (context, state) => _buildFadeTransitionPage(
                   key: state.pageKey,
                   child: const AgentDashboard(),
                 ),
               ),
               GoRoute(
-                path: '/notes/sessions/:sessionId',
-                name: 'session-chat',
+                path: '/notes/agents/:agentId',
+                name: 'agent-chat',
                 pageBuilder: (context, state) {
                   final agentId =
-                      Uri.decodeComponent(state.pathParameters['sessionId']!);
+                      Uri.decodeComponent(state.pathParameters['agentId']!);
                   return _buildFadeTransitionPage(
                     key: state.pageKey,
                     child: AgentChatScreen(agentId: agentId),
