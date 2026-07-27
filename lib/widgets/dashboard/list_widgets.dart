@@ -138,6 +138,8 @@ class DashPropertyCard extends StatelessWidget {
                       const SizedBox(height: 3),
                       Text(
                         subtitle!,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                           fontFamily: SpaceNotesTheme.fontMono,
                           fontSize: 11,
@@ -152,7 +154,7 @@ class DashPropertyCard extends StatelessWidget {
               ),
               if (status != null) ...[
                 const SizedBox(width: 8),
-                status!,
+                Flexible(child: status!),
               ],
             ],
           ),
@@ -337,7 +339,7 @@ class DashCountdownItem extends StatelessWidget {
             ),
           ),
           if (status != null) ...[
-            status!,
+            Flexible(child: status!),
             const SizedBox(width: 10),
           ],
           Text(

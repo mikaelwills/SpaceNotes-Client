@@ -31,6 +31,8 @@ class DashStatusBadge extends StatelessWidget {
       ),
       child: Text(
         label.toUpperCase(),
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
         style: TextStyle(
           fontFamily: SpaceNotesTheme.fontMono,
           fontSize: 9,

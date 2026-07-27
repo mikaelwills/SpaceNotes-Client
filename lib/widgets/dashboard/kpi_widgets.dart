@@ -139,8 +139,10 @@ class DashMetricRow extends StatelessWidget {
       child: Row(
         children: [
           Expanded(
+            flex: 3,
             child: Text(
               label,
+              maxLines: 2,
               style: const TextStyle(
                 fontFamily: SpaceNotesTheme.fontSans,
                 fontSize: 13,
@@ -163,7 +165,17 @@ class DashMetricRow extends StatelessWidget {
           ),
           if (delta != null) ...[
             const SizedBox(width: 10),
-            _TrendChip(text: delta!, trend: trend ?? DashTrend.flat, dense: true),
+            Expanded(
+              flex: 2,
+              child: Align(
+                alignment: Alignment.centerRight,
+                child: _TrendChip(
+                  text: delta!,
+                  trend: trend ?? DashTrend.flat,
+                  dense: true,
+                ),
+              ),
+            ),
           ],
         ],
       ),
@@ -213,14 +225,18 @@ class _TrendChip extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 4),
-          Text(
-            text,
-            style: TextStyle(
-              fontFamily: SpaceNotesTheme.fontMono,
-              fontSize: dense ? 10 : 11,
-              color: color,
-              letterSpacing: 0.3,
-              height: 1,
+          Flexible(
+            child: Text(
+              text,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontFamily: SpaceNotesTheme.fontMono,
+                fontSize: dense ? 10 : 11,
+                color: color,
+                letterSpacing: 0.3,
+                height: 1,
+              ),
             ),
           ),
         ],
