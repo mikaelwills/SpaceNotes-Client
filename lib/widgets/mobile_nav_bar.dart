@@ -133,10 +133,11 @@ class MobileNavBar extends ConsumerWidget {
     final icons = <Widget>[];
     for (final (route, icon) in _mainScreens) {
       final isActive = route == current;
+      final isAtRoot = isActive && location == route;
       icons.add(
         _NavIcon(
           icon: icon,
-          onTap: isActive ? null : () => context.go(route),
+          onTap: isAtRoot ? null : () => context.go(route),
           active: isActive,
           slotWidth: 46,
         ),
