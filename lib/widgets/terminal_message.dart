@@ -591,12 +591,18 @@ Map<String, dynamic> _parseDetail(String jsonStr) {
   }
 }
 
+String _truncateLabel(String value) {
+  if (value.length <= 60) return value;
+  final cut = (value.codeUnitAt(59) & 0xFC00) == 0xD800 ? 59 : 60;
+  return '${value.substring(0, cut)}…';
+}
+
 String _summarize(Map<String, dynamic> detail) {
   final input = detail['input'];
   if (input is! Map<String, dynamic>) return '';
   final command = input['command'];
   if (command is String && command.isNotEmpty) {
-    return command.length > 60 ? '${command.substring(0, 60)}…' : command;
+    return _truncateLabel(command);
   }
   final path = input['file_path'] ?? input['path'] ?? input['filePath'];
   if (path is String && path.isNotEmpty) {
@@ -608,6 +614,10 @@ String _summarize(Map<String, dynamic> detail) {
   if (pattern is String && pattern.isNotEmpty) return '"$pattern"';
   final query = input['query'];
   if (query is String && query.isNotEmpty) return '"$query"';
+  final description = input['description'];
+  if (description is String && description.isNotEmpty) {
+    return _truncateLabel(description);
+  }
   return '';
 }
 
@@ -622,5 +632,12 @@ String _fullDetail(Map<String, dynamic> detail) {
   if (pattern is String && pattern.isNotEmpty) return '"$pattern"';
   final query = input['query'];
   if (query is String && query.isNotEmpty) return '"$query"';
+  final description = input['description'];
+  if (description is String && description.isNotEmpty) {
+    final subagentType = input['subagent_type'];
+    return subagentType is String && subagentType.isNotEmpty
+        ? '$description ($subagentType)'
+        : description;
+  }
   return '';
 }
