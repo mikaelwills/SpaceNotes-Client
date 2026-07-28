@@ -282,8 +282,26 @@ class _AgentBucket extends ChangeNotifier {
   List<ChatItem> items = const [];
 
   void setItems(List<ChatItem> next) {
+    if (_sameItems(items, next)) return;
     items = next;
     notifyListeners();
+  }
+
+  static bool _sameItems(List<ChatItem> a, List<ChatItem> b) {
+    if (a.length != b.length) return false;
+    for (var i = 0; i < a.length; i++) {
+      if (!_sameItem(a[i], b[i])) return false;
+    }
+    return true;
+  }
+
+  static bool _sameItem(ChatItem a, ChatItem b) {
+    return switch (a) {
+      ChatMessageItem() => b is ChatMessageItem && a.message == b.message,
+      ChatToolItem() => b is ChatToolItem && a.event == b.event,
+      ChatPermissionItem() => b is ChatPermissionItem && a.request == b.request,
+      ChatQuestionItem() => b is ChatQuestionItem && a.request == b.request,
+    };
   }
 }
 
@@ -339,6 +357,7 @@ class _ChatIndex {
   }
 
   void _rebuild() {
+    final stopwatch = Stopwatch()..start();
     final perAgent = <String, List<ChatItem>>{};
 
     for (final m in client.message.rows.value) {
@@ -358,13 +377,6 @@ class _ChatIndex {
       }
     }
 
-    debugLogger.chat(
-      'ChatIndex rebuild',
-      'msgs=${client.message.rows.value.length} '
-          'tools=${client.toolEvent.rows.value.length} '
-          'agents=${perAgent.length}',
-    );
-
     for (final entry in perAgent.entries) {
       entry.value.sort((a, b) => a.timestamp.compareTo(b.timestamp));
       bucketFor(entry.key).setItems(entry.value);
@@ -376,6 +388,15 @@ class _ChatIndex {
         _buckets[agentId]!.setItems(const []);
       }
     }
+
+    stopwatch.stop();
+    debugLogger.chat(
+      'ChatIndex rebuild',
+      'msgs=${client.message.rows.value.length} '
+          'tools=${client.toolEvent.rows.value.length} '
+          'agents=${perAgent.length} '
+          'took=${stopwatch.elapsedMicroseconds}us',
+    );
   }
 }
 
