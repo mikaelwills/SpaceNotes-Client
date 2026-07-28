@@ -50,6 +50,8 @@ class DebugLogger {
   void sseError(String msg, [String? details]) => error('SSE', msg, details);
   void queue(String msg, [String? details]) => info('QUEUE', msg, details);
 
+  LogSpan span(String category, String name) => LogSpan._(this, category, name);
+
   Future<List<platform.LogFileData>> getLogFiles() async {
     if (_storage == null) return [];
     return await _storage!.getLogFiles();
@@ -88,6 +90,28 @@ class DebugLogger {
         '${now.minute.toString().padLeft(2, '0')}:'
         '${now.second.toString().padLeft(2, '0')}.'
         '${now.millisecond.toString().padLeft(3, '0')}';
+  }
+}
+
+class LogSpan {
+  final DebugLogger _logger;
+  final String category;
+  final String name;
+  final Stopwatch _watch = Stopwatch()..start();
+
+  LogSpan._(this._logger, this.category, this.name) {
+    _logger.log('I', category, '$name: span start');
+  }
+
+  void lap(String label) {
+    _logger.log(
+        'I', category, '$name: $label +${_watch.elapsedMilliseconds}ms');
+  }
+
+  void end([String? details]) {
+    _watch.stop();
+    _logger.log('I', category, '$name: complete ${_watch.elapsedMilliseconds}ms',
+        details);
   }
 }
 

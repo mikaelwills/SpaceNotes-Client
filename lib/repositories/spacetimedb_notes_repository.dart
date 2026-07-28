@@ -50,6 +50,7 @@ class SpacetimeDbNotesRepository {
   int _retryAttempt = 0;
   int _authErrorAttempts = 0;
   bool _nonTableListenersRegistered = false;
+  LogSpan? _hydrationSpan;
   bool _generalNotesFolderEnsured = false;
   StreamSubscription<List<ConnectivityResult>>? _connectivitySub;
   bool _lastConnectivityOnline = true;
@@ -716,8 +717,11 @@ class SpacetimeDbNotesRepository {
     }
 
     debugLogger.connection('Attempting to reconnect...');
+    final reconnectSpan = debugLogger.span('CONN', 'reconnect');
     try {
       await _client!.connection.reconnect();
+      reconnectSpan
+          .end('state=${_client!.connection.state.displayName}');
       debugLogger.connection(
         'tryReconnect: reconnect() completed, state=${_client!.connection.state.displayName}',
       );
@@ -727,6 +731,7 @@ class SpacetimeDbNotesRepository {
         _scheduleRetry('reconnect completed but still disconnected');
       }
     } on SpacetimeDbAuthException {
+      reconnectSpan.end('auth expired');
       debugLogger.warning(
           'AUTH', 'Auth expired during reconnect, clearing token');
       final storage = _authStorage ?? SharedPreferencesTokenStore();
@@ -741,8 +746,10 @@ class SpacetimeDbNotesRepository {
         await _handleAuthError();
       }
     } on SpacetimeDbException catch (e) {
+      reconnectSpan.end('failed: $e');
       _scheduleRetry(e.toString());
     } catch (e, st) {
+      reconnectSpan.end('failed: $e');
       debugLogger.error(
         'CONN',
         'tryReconnect: reconnect() threw unexpected exception',
@@ -795,6 +802,8 @@ class SpacetimeDbNotesRepository {
     _subscriptions.clear();
     _querySetOwners.clear();
     _deferredUnsubscribes.clear();
+    _hydrationSpan?.end('aborted: connection reset');
+    _hydrationSpan = null;
 
     if (_client != null) {
       try {
@@ -1021,7 +1030,11 @@ class SpacetimeDbNotesRepository {
     final ready = _client!.subscriptions.subscriptionsReady;
     void onReady() {
       debugLogger.connection('subscriptionsReady -> ${ready.value}');
-      if (ready.value) _flushDeferredUnsubscribes();
+      if (ready.value) {
+        _hydrationSpan?.end('subscriptionsReady');
+        _hydrationSpan = null;
+        _flushDeferredUnsubscribes();
+      }
     }
 
     ready.addListener(onReady);
@@ -1044,8 +1057,14 @@ class SpacetimeDbNotesRepository {
         _client!.connection.onStateChanged.listen((state) {
       debugLogger.connection('state -> ${state.displayName}');
       if (state is stdb.Connected) {
+        _hydrationSpan?.end('superseded by new Connected');
+        _hydrationSpan = debugLogger.span('CONN', 'resume-hydration');
         _authErrorAttempts = 0;
         return;
+      }
+      if (_hydrationSpan != null) {
+        _hydrationSpan!.end('aborted: ${state.displayName}');
+        _hydrationSpan = null;
       }
       if (state is stdb.AuthError) {
         _handleAuthErrorGated();
@@ -1058,6 +1077,14 @@ class SpacetimeDbNotesRepository {
       }
     });
     _subscriptions.add(connectionStateSub);
+
+    final subscribeAppliedSub =
+        _client!.subscriptions.onSubscribeApplied.listen((applied) {
+      _hydrationSpan?.lap(
+        'SubscribeApplied querySetId=${applied.querySetId} tables=${applied.rows.tables.length}',
+      );
+    });
+    _subscriptions.add(subscribeAppliedSub);
 
     debugLogger.sync('Non-table listeners registered');
   }
