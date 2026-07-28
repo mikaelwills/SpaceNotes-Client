@@ -51,15 +51,28 @@ void main() async {
   ));
 }
 
-const _sdkLogNoisePrefixes = ['WS_RX', 'RX_MSG'];
+const _sdkLogNoisePrefixes = [
+  'WS_RX',
+  'RX_MSG',
+  'syncPendingMutations: no pending mutations',
+  'syncPendingMutations: finished',
+  'syncPendingMutations: starting',
+];
+
+final _singleRowChangePattern = RegExp(
+  r'^EMIT_CHANGES\[\w+\]: inserts=0, updates=1, deletes=0$',
+);
+
+bool _isSdkLogNoise(String msg) {
+  for (final prefix in _sdkLogNoisePrefixes) {
+    if (msg.startsWith(prefix)) return true;
+  }
+  return _singleRowChangePattern.hasMatch(msg);
+}
 
 void configureSdkLogging() {
   SdkLogger.onLog = (level, msg) {
-    if (level == 'D') {
-      for (final prefix in _sdkLogNoisePrefixes) {
-        if (msg.startsWith(prefix)) return;
-      }
-    }
+    if (level == 'D' && _isSdkLogNoise(msg)) return;
     debugLogger.log(level, 'SDK', msg);
   };
   SdkLogger.level = SdkLogLevel.debug;
