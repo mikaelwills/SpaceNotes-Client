@@ -1,6 +1,3 @@
-// ignore_for_file: implementation_imports
-// SdkLogger is not publicly exported from spacetimedb_sdk; reaching into
-// src/ is intentional to wire the SDK's log stream into debugLogger.
 import 'dart:async';
 
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -11,7 +8,7 @@ import 'package:flutter_quill/flutter_quill.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart' hide Provider;
 import 'package:get_it/get_it.dart';
 import 'package:spacenotes_client/providers/notes_providers.dart';
-import 'package:spacetimedb_sdk/src/utils/sdk_logger.dart' show SdkLogger;
+import 'package:spacetimedb_sdk/protocol.dart' show SdkLogger, SdkLogLevel;
 
 import 'theme/spacenotes_theme.dart';
 import 'services/debug_logger.dart';
@@ -26,7 +23,7 @@ void main() async {
   await debugLogger.ensureInitialized();
   debugLogger.info('APP', 'SpaceNotes starting');
 
-  SdkLogger.onLog = (level, msg) => debugLogger.log(level, 'SDK', msg);
+  configureSdkLogging();
 
   final configCubit = ConfigCubit();
   await configCubit.initialize();
@@ -54,6 +51,20 @@ void main() async {
   ));
 }
 
+const _sdkLogNoisePrefixes = ['WS_RX', 'RX_MSG'];
+
+void configureSdkLogging() {
+  SdkLogger.onLog = (level, msg) {
+    if (level == 'D') {
+      for (final prefix in _sdkLogNoisePrefixes) {
+        if (msg.startsWith(prefix)) return;
+      }
+    }
+    debugLogger.log(level, 'SDK', msg);
+  };
+  SdkLogger.level = SdkLogLevel.debug;
+}
+
 class SpaceNotesApp extends StatefulWidget {
   final ConfigCubit configCubit;
   final ProviderContainer container;
@@ -71,7 +82,7 @@ class SpaceNotesApp extends StatefulWidget {
 class _SpaceNotesAppState extends State<SpaceNotesApp>
     with WidgetsBindingObserver {
   Timer? _pauseTimer;
-  static const _pauseDebounce = Duration(milliseconds: 600);
+  static const _pauseDebounce = Duration(seconds: 3);
 
   @override
   void initState() {
@@ -93,6 +104,7 @@ class _SpaceNotesAppState extends State<SpaceNotesApp>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    debugLogger.info('APP', 'Lifecycle: ${state.name}');
     final repo = widget.container.read(notesRepositoryProvider);
     if (state == AppLifecycleState.resumed) {
       _pauseTimer?.cancel();
