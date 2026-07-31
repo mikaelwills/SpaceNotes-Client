@@ -14,6 +14,7 @@ class PlatformLogStorage {
   final List<String> _pendingLines = [];
 
   static const int _maxChars = 5000;
+  static const int _maxLogFiles = 10;
 
   Future<void> initialize() async {
     final appDir = await getApplicationDocumentsDirectory();
@@ -41,6 +42,7 @@ class PlatformLogStorage {
       _flushInProgress = false;
       _drainPending();
     }
+    await _pruneOldLogFiles();
   }
 
   void writeLine(String line) {
@@ -114,6 +116,32 @@ class PlatformLogStorage {
           LogFileData(path: file.path, timestamp: timestamp, content: content));
     }
     return results;
+  }
+
+  Future<void> _pruneOldLogFiles() async {
+    if (_logDir == null || !await _logDir!.exists()) return;
+
+    final files = await _logDir!
+        .list()
+        .where((e) =>
+            e is File && e.path.contains('debug_') && e.path.endsWith('.log'))
+        .cast<File>()
+        .toList();
+
+    if (files.length <= _maxLogFiles) return;
+
+    files.sort((a, b) => a.path.compareTo(b.path));
+
+    final currentPath = _currentLogFile?.path;
+    final deletable = files.where((f) => f.path != currentPath).toList();
+    final keepCount = currentPath == null ? _maxLogFiles : _maxLogFiles - 1;
+    if (deletable.length <= keepCount) return;
+
+    for (final file in deletable.take(deletable.length - keepCount)) {
+      try {
+        await file.delete();
+      } catch (_) {}
+    }
   }
 
   Future<String?> getCurrentLogContent() async {
@@ -193,6 +221,7 @@ class PlatformLogStorage {
       unawaited(Future(() async {
         await oldSink?.flush();
         await oldSink?.close();
+        await _pruneOldLogFiles();
         _isRotating = false;
       }));
     }

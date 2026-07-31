@@ -10,6 +10,7 @@ class PlatformLogStorage {
   int _charCount = 0;
 
   static const int _maxChars = 5000;
+  static const int _maxLogFiles = 10;
 
   Future<void> initialize() async {
     await startNewLogFile();
@@ -23,7 +24,11 @@ class PlatformLogStorage {
     _sessions.add(_currentSession!);
     _charCount = header.length;
 
-    if (_sessions.length > 10) {
+    _pruneOldSessions();
+  }
+
+  void _pruneOldSessions() {
+    while (_sessions.length > _maxLogFiles) {
       _sessions.removeAt(0);
     }
   }
@@ -98,9 +103,7 @@ class PlatformLogStorage {
       _sessions.add(_currentSession!);
       _charCount = header.length;
 
-      if (_sessions.length > 10) {
-        _sessions.removeAt(0);
-      }
+      _pruneOldSessions();
     }
   }
 }
