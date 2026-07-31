@@ -151,7 +151,7 @@ final agentSubscriptionProvider =
   return pending;
 });
 
-const _warmRecentAgentCount = 10;
+const _warmRecentAgentCount = 5;
 
 /// Keeps the chat tables for the most-recently-messaged agents warm in the
 /// offline cache. Subscribes the top-N recent agents (from the persisted
