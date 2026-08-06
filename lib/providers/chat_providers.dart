@@ -13,7 +13,6 @@ import '../generated/agent.dart';
 import '../generated/agent_activity.dart';
 import '../generated/tool_event.dart';
 import '../services/debug_logger.dart';
-import 'connection_providers.dart';
 import 'notes_providers.dart';
 import 'recent_agents_provider.dart';
 
@@ -149,72 +148,6 @@ final agentSubscriptionProvider =
     if (qsId != null) repo.unsubscribeAgent(qsId);
   });
   return pending;
-});
-
-const _warmRecentAgentCount = 5;
-
-/// Keeps the chat tables for the most-recently-messaged agents warm in the
-/// offline cache. Subscribes the top-N recent agents (from the persisted
-/// recency map) as one query set whenever the socket is live, and re-subscribes
-/// on reconnect. This is the "load recent, not everything" middle path: cold
-/// start stays light, but reopening a recent agent in a tunnel is instant and
-/// cached — no hydration gap, no infinite spinner. Deep-history agents
-/// outside the warm set fall back to [agentSubscriptionProvider].
-final warmRecentAgentsProvider = Provider<void>((ref) {
-  final client = ref.watch(spacetimeClientProvider);
-  if (client == null) return;
-
-  final topIdsKey = ref.watch(recentAgentsProvider.select((recent) {
-    final byRecency = recent.entries.toList()
-      ..sort((a, b) => b.value.compareTo(a.value));
-    final members = byRecency
-        .take(_warmRecentAgentCount)
-        .map((e) => e.key)
-        .toList()
-      ..sort();
-    return members.join(',');
-  }));
-  if (topIdsKey.isEmpty) return;
-  final topIds = topIdsKey.split(',');
-
-  final repo = ref.read(notesRepositoryProvider);
-
-  var subscribed = false;
-  Future<int?>? pending;
-
-  void warmOnce() {
-    if (subscribed) return;
-    subscribed = true;
-    debugLogger.connection(
-        'warmRecent: subscribing ${topIds.length} agents', topIds.join(','));
-    pending = repo.subscribeAgents(topIds);
-    pending!.then((qsId) {
-      debugLogger.connection('warmRecent: applied', 'querySetId=$qsId');
-    }).catchError((e, st) {
-      debugLogger.error('CONN', 'warmRecent: subscribe FAILED', '$e\n$st');
-      return null;
-    });
-  }
-
-  final live = ref.read(spacetimeConnectionLiveProvider).maybeWhen(
-        data: (v) => v,
-        orElse: () => false,
-      );
-  if (live) warmOnce();
-  final removeListener = ref.listen<AsyncValue<bool>>(
-    spacetimeConnectionLiveProvider,
-    (_, next) {
-      if (next.maybeWhen(data: (v) => v, orElse: () => false)) warmOnce();
-    },
-  );
-
-  ref.onDispose(() async {
-    removeListener.close();
-    if (pending == null) return;
-    debugLogger.connection('warmRecent: disposing (unsubscribe)');
-    final qsId = await pending;
-    if (qsId != null) repo.unsubscribeAgent(qsId);
-  });
 });
 
 /// True once the per-agent subscription's SubscribeApplied has resolved
