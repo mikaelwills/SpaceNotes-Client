@@ -426,7 +426,10 @@ class ChatSendStatusNotifier extends StateNotifier<Map<String, ChatSendEntry>> {
   }
 
   void _onResult(MutationSyncResult result) {
-    if (result.reducerName != pushMessageDef.name) return;
+    if (result.reducerName != pushMessageDef.name &&
+        result.reducerName != pushImageDef.name) {
+      return;
+    }
     debugLogger.chat('sendStatus result',
         'success=${result.success} reqId=${result.requestId}');
     if (result.success) {
