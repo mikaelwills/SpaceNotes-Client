@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart' show ValueListenable, kIsWeb;
 import '../generated/client.dart';
 import '../generated/folder.dart';
 import '../generated/space_file.dart';
+import '../services/debug_logger.dart';
 
 String _getDefaultHost() {
   if (kIsWeb) {
@@ -45,8 +46,14 @@ final spacetimeClientProvider = Provider<SpacetimeDbClient?>((ref) {
 
 final notesListProvider = Provider<List<SpaceFile>>((ref) {
   final client = ref.watch(spacetimeClientProvider);
-  if (client == null) return const [];
+  if (client == null) {
+    debugLogger.warning('NOTES_LIST', 'client is null -> rendering 0 notes');
+    return const [];
+  }
   final rows = watchListenable(ref, client.spaceFile.rows);
+  if (rows.isEmpty) {
+    debugLogger.warning('NOTES_LIST', 'client present but spaceFile.rows is 0');
+  }
   final sorted = rows.toList()
     ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
   return sorted;

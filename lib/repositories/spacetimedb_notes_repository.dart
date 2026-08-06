@@ -3,7 +3,8 @@ import 'dart:convert';
 import 'package:collection/collection.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:crypto/crypto.dart';
-import 'package:flutter/foundation.dart' show kIsWeb, ValueNotifier;
+import 'package:flutter/foundation.dart'
+    show kIsWeb, ValueNotifier, visibleForTesting;
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:spacetimedb_sdk/spacetimedb_sdk.dart' as stdb;
@@ -44,6 +45,9 @@ class SpacetimeDbNotesRepository {
   String? _database;
   stdb.AuthTokenStore? _authStorage;
   OfflineStorage? _offlineStorage;
+  bool _hasEverConnected = false;
+  bool _initialConnectAttempted = false;
+  int _connectAttempts = 0;
   SpacetimeDbClient? _client;
   Future<void>? _connectingFuture;
   bool _retryScheduled = false;
@@ -151,12 +155,14 @@ class SpacetimeDbNotesRepository {
   }
 
   static const _connectionConfig = ConnectionConfig(
-    pingInterval: Duration(seconds: 15),
-    pongTimeout: Duration(seconds: 10),
+    pingInterval: Duration(seconds: 10),
+    pongTimeout: Duration(seconds: 5),
     autoReconnect: true,
-    connectTimeout: Duration(seconds: 15),
-    baseReconnectDelay: Duration(seconds: 10),
-    maxReconnectDelay: Duration(seconds: 10),
+    appLevelKeepAlive: true,
+    retryInitialConnect: true,
+    connectTimeout: Duration(seconds: 5),
+    baseReconnectDelay: Duration(seconds: 5),
+    maxReconnectDelay: Duration(seconds: 5),
     maxReconnectAttempts: 500,
   );
 
@@ -796,6 +802,9 @@ class SpacetimeDbNotesRepository {
   void resetConnection() {
     debugLogger.connection('Resetting connection');
 
+    _hasEverConnected = false;
+    _initialConnectAttempted = false;
+
     for (final sub in _subscriptions) {
       sub.cancel();
     }
@@ -883,6 +892,22 @@ class SpacetimeDbNotesRepository {
       if (state is stdb.Disconnected) {
         debugLogger.connection(
             '_ensureConnected Disconnected: hasOfflineStorage=${_client!.hasOfflineStorage}');
+        if (!_hasEverConnected && !_initialConnectAttempted) {
+          _initialConnectAttempted = true;
+          debugLogger.connection(
+              'cache-hydrated client has never connected - connecting now');
+          try {
+            await _connectClient(_client!);
+          } catch (e, st) {
+            debugLogger.error(
+              'CONN',
+              'initial connect of cache-hydrated client failed - SDK retried '
+                  'and gave up; FatalError re-arms recovery',
+              '$e\n$st',
+            );
+          }
+          return;
+        }
         if (_client!.hasOfflineStorage) {
           debugLogger.connection('Offline mode: using existing client');
           return;
@@ -935,9 +960,13 @@ class SpacetimeDbNotesRepository {
     }
   }
 
-  Future<SpacetimeDbClient> _createAndConnectClient(
+  Future<SpacetimeDbClient> _createClient(
     stdb.AuthTokenStore storage,
   ) async {
+    debugLogger.connection(
+      'client create: starting',
+      'offlineStorage=${_offlineStorage != null}',
+    );
     final client = await SpacetimeDbClient.create(
       host: _host!,
       database: _database!,
@@ -949,15 +978,60 @@ class SpacetimeDbNotesRepository {
 
     _client = client;
     clientNotifier.value = client;
-    _registerNonTableListeners();
-
-    await client.connect(
-      initialSubscriptions: _initialSubscriptions,
-      subscriptionTimeout: const Duration(seconds: 10),
+    debugLogger.connection(
+      'client create: visible to UI',
+      'spaceFile=${client.spaceFile.rows.value.length} '
+      'folder=${client.folder.rows.value.length} '
+      'message=${client.message.rows.value.length}',
     );
+    _registerNonTableListeners();
 
     return client;
   }
+
+  Future<void> _connectClient(SpacetimeDbClient client) async {
+    _connectAttempts++;
+    await client.connect(
+      initialSubscriptions: _initialSubscriptions,
+      subscriptionTimeout: const Duration(seconds: 5),
+    );
+    _hasEverConnected = true;
+  }
+
+  Future<SpacetimeDbClient> _createAndConnectClient(
+    stdb.AuthTokenStore storage,
+  ) async {
+    final client = await _createClient(storage);
+    await _connectClient(client);
+    return client;
+  }
+
+  Future<void> initializeOfflineFirst() async {
+    if (_client != null) return;
+    if (!await isConfigured()) {
+      debugLogger
+          .connection('initializeOfflineFirst: not configured, skipping');
+      return;
+    }
+    try {
+      final storage = _authStorage ?? SharedPreferencesTokenStore();
+      _offlineStorage ??= await _createOfflineStorage();
+      await _createClient(storage);
+    } catch (e, st) {
+      debugLogger.error('CONN', 'initializeOfflineFirst failed', '$e\n$st');
+    }
+  }
+
+  @visibleForTesting
+  void debugSetOfflineStorage(OfflineStorage storage) {
+    _offlineStorage = storage;
+  }
+
+  @visibleForTesting
+  int get debugConnectAttempts => _connectAttempts;
+
+  @visibleForTesting
+  bool get debugRetryScheduled => _retryScheduled;
 
   Future<void> _connect() async {
     try {
@@ -1011,8 +1085,7 @@ class SpacetimeDbNotesRepository {
           'CONN', 'Error connecting to SpacetimeDB', e.toString());
       if (_client != null) {
         debugLogger.warning('CONN',
-            'Initial connect failed offline - arming retry ladder to recover autonomously');
-        _scheduleRetry('initial connect failed: $e');
+            'Initial connect failed offline - SDK retried and gave up; client stays usable offline');
         return;
       }
       rethrow;
@@ -1111,12 +1184,12 @@ class SpacetimeDbNotesRepository {
     await connectAndGetInitialData();
   }
 
-  /// Schedule the next reconnect attempt. Fixed 10s interval, up to
-  /// [_maxRetryAttempts] (~83 min of trying) — SpaceNotes reconnects
+  /// Schedule the next reconnect attempt. Fixed 5s interval, up to
+  /// [_maxRetryAttempts] (~42 min of trying) — SpaceNotes reconnects
   /// aggressively whether the drop was from a live connection or a failed
   /// cold start. The loop stops once connected (checked at the top of
   /// [tryReconnect]) or once the cap is hit.
-  static const _retryInterval = Duration(seconds: 10);
+  static const _retryInterval = Duration(seconds: 5);
   static const _maxRetryAttempts = 500;
 
   void _scheduleRetry(String reason) {

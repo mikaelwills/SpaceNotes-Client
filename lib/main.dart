@@ -42,6 +42,8 @@ void main() async {
     await WebConfigService.tryAutoConfigureFromServer(repo);
   }
 
+  await repo.initializeOfflineFirst();
+
   runApp(UncontrolledProviderScope(
     container: container,
     child: SpaceNotesApp(
