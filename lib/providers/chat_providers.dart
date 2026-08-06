@@ -454,7 +454,7 @@ class ChatSendStatusNotifier extends StateNotifier<Map<String, ChatSendEntry>> {
   /// Rebuild pending (clock) status from the SDK's durable mutation queue.
   /// The in-memory status map dies on app kill, but the queued messages
   /// survive in `pending_mutations.jsonl` — so on (re)attach, mark every
-  /// still-queued pushMessage as pending again. Without this, a message sent
+  /// still-queued pushMessage/pushImage as pending again. Without this, a message sent
   /// offline then killed reopens with no clock and looks (wrongly) sent.
   Future<void> _seedFromPendingQueue(SpacetimeDbClient client) async {
     if (!client.hasOfflineStorage) return;
@@ -463,7 +463,10 @@ class ChatSendStatusNotifier extends StateNotifier<Map<String, ChatSendEntry>> {
       var changed = false;
       final next = Map<String, ChatSendEntry>.from(state);
       for (final mutation in pending) {
-        if (mutation.reducerName != pushMessageDef.name) continue;
+        if (mutation.reducerName != pushMessageDef.name &&
+            mutation.reducerName != pushImageDef.name) {
+          continue;
+        }
         final insert = mutation.optimisticChanges?.firstWhereOrNull(
           (c) => c.type == OptimisticChangeType.insert && c.newRowJson != null,
         );
@@ -620,12 +623,22 @@ Future<void> sendChatImage(
     'sendChatImage',
     'id=$id agent=$agentId bytes=${pngBytes.length} captionLen=${caption.length}',
   );
+  final message = Message(
+    id: id,
+    agentId: agentId,
+    role: 'user',
+    text: caption,
+    source: 'flutter',
+    createdAt: Int64(DateTime.now().microsecondsSinceEpoch),
+  );
+  ref.read(chatSendStatusProvider.notifier).markPending(message);
   try {
     await client.reducers.pushImage(
       id: id,
       agentId: agentId,
       caption: caption,
       bytes: pngBytes,
+      optimisticChanges: [OptimisticChange.insertRow(client.message, message)],
     );
     debugLogger.chat('sendChatImage ok', 'id=$id');
     _probeEcho(client, id, 'img');
