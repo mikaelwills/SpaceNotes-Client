@@ -248,6 +248,7 @@ class _ChatIndex {
   late final VoidCallback _scheduleRebuild;
   bool _rebuildScheduled = false;
   bool _disposed = false;
+  int? _lastMsgCount;
 
   _ChatIndex(this.client) {
     debugLogger.chat(
@@ -323,9 +324,19 @@ class _ChatIndex {
     }
 
     stopwatch.stop();
+    final msgCount = client.message.rows.value.length;
+    if (_lastMsgCount != null && msgCount < _lastMsgCount!) {
+      debugLogger.chatError(
+        'CACHE SHRANK: message rows lost',
+        '$_lastMsgCount -> $msgCount (${_lastMsgCount! - msgCount} row(s)) — '
+            'messages are append-only, so a drop means local rows were evicted '
+            'or an optimistic row was rolled back over a committed one',
+      );
+    }
+    _lastMsgCount = msgCount;
     debugLogger.chat(
       'ChatIndex rebuild',
-      'msgs=${client.message.rows.value.length} '
+      'msgs=$msgCount '
           'tools=${client.toolEvent.rows.value.length} '
           'agents=${perAgent.length} '
           'took=${stopwatch.elapsedMicroseconds}us',
@@ -407,6 +418,14 @@ class ChatSendStatusNotifier extends StateNotifier<Map<String, ChatSendEntry>> {
         if (row == null) continue;
         final id = row['id'];
         if (id is! String || next.containsKey(id)) continue;
+        if (_echoConfirmedIds.contains(id)) {
+          debugLogger.chatError(
+            'STILL QUEUED after confirmed echo',
+            'id=$id reducer=${mutation.reducerName} — the server already '
+                'broadcast this row back, so re-sending it risks a duplicate '
+                'commit rolling back the committed row',
+          );
+        }
         try {
           next[id] = ChatSendEntry(
             status: ChatSendStatus.pending,
@@ -528,10 +547,13 @@ Future<void> sendChatMessage(
   }
 }
 
+final Set<String> _echoConfirmedIds = {};
+
 void _probeEcho(SpacetimeDbClient client, String id, String kind) {
   Future.delayed(const Duration(seconds: 2), () {
     final found = client.message.rows.value.any((m) => m.id == id);
     if (found) {
+      _echoConfirmedIds.add(id);
       debugLogger.chat('echo ok', 'kind=$kind id=$id');
     } else {
       debugLogger.chatError(

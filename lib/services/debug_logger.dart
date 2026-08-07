@@ -98,9 +98,21 @@ class LogSpan {
   final String category;
   final String name;
   final Stopwatch _watch = Stopwatch()..start();
+  bool _sawPause = false;
 
   LogSpan._(this._logger, this.category, this.name) {
     _logger.log('I', category, '$name: span start');
+  }
+
+  void pause() {
+    if (!_watch.isRunning) return;
+    _watch.stop();
+    _sawPause = true;
+  }
+
+  void resume() {
+    if (_watch.isRunning) return;
+    _watch.start();
   }
 
   void lap(String label) {
@@ -110,8 +122,12 @@ class LogSpan {
 
   void end([String? details]) {
     _watch.stop();
-    _logger.log('I', category, '$name: complete ${_watch.elapsedMilliseconds}ms',
-        details);
+    final aborted = details != null && details.startsWith('aborted');
+    final suffix = _sawPause ? ' (excludes background time)' : '';
+    final measure = aborted
+        ? 'abandoned after ${_watch.elapsedMilliseconds}ms$suffix'
+        : 'complete ${_watch.elapsedMilliseconds}ms$suffix';
+    _logger.log('I', category, '$name: $measure', details);
   }
 }
 

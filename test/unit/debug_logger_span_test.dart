@@ -64,8 +64,57 @@ void main() {
       span.end('aborted: Disconnected');
 
       final endLine =
-          printed.lastWhere((l) => l.contains('resume-hydration: complete'));
+          printed.lastWhere((l) => l.contains('resume-hydration:'));
       expect(endLine, contains('| aborted: Disconnected'));
+    });
+
+    test('an aborted span reads abandoned, not complete', () {
+      final span = debugLogger.span('CONN', 'resume-hydration');
+
+      span.end('aborted: Reconnecting...');
+
+      final endLine =
+          printed.lastWhere((l) => l.contains('resume-hydration:'));
+      expect(endLine, contains('abandoned after'));
+      expect(
+        endLine,
+        isNot(contains('complete')),
+        reason: 'an aborted span never did complete — saying so misreads as a '
+            'duration of real work',
+      );
+    });
+
+    test('a successful span still reads complete', () {
+      final span = debugLogger.span('CONN', 'resume-hydration');
+
+      span.end('subscriptionsReady');
+
+      final endLine =
+          printed.lastWhere((l) => l.contains('resume-hydration:'));
+      expect(endLine, contains('complete'));
+      expect(endLine, isNot(contains('abandoned')));
+    });
+
+    test('paused time is excluded from the duration and flagged', () {
+      final span = debugLogger.span('CONN', 'resume-hydration');
+
+      span.pause();
+      span.resume();
+      span.end('subscriptionsReady');
+
+      final endLine =
+          printed.lastWhere((l) => l.contains('resume-hydration:'));
+      expect(endLine, contains('(excludes background time)'));
+    });
+
+    test('a span that never paused carries no background-time caveat', () {
+      final span = debugLogger.span('CONN', 'resume-hydration');
+
+      span.end('subscriptionsReady');
+
+      final endLine =
+          printed.lastWhere((l) => l.contains('resume-hydration:'));
+      expect(endLine, isNot(contains('excludes background time')));
     });
   });
 }

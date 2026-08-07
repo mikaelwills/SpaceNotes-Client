@@ -124,9 +124,11 @@ class _SpaceNotesAppState extends State<SpaceNotesApp>
     if (state == AppLifecycleState.resumed) {
       _pauseTimer?.cancel();
       _pauseTimer = null;
+      repo.resumeSpanClocks();
       debugLogger.info('APP', 'App resumed - checking connection health');
       repo.tryReconnect(resetAttempts: true, force: true);
     } else if (state == AppLifecycleState.paused) {
+      repo.pauseSpanClocks();
       _pauseTimer?.cancel();
       _pauseTimer = Timer(_pauseDebounce, () {
         _pauseTimer = null;

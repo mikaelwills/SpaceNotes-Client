@@ -771,6 +771,10 @@ class SpacetimeDbNotesRepository {
   /// resume path then has to wait out. Disconnecting proactively means resume
   /// always starts from a clean `Disconnected`. Pending offline mutations live
   /// in persisted offline storage and are untouched by [disconnect].
+  void pauseSpanClocks() => _hydrationSpan?.pause();
+
+  void resumeSpanClocks() => _hydrationSpan?.resume();
+
   Future<void> handleAppPaused() async {
     if (_client == null) return;
     if (_client!.connection.state is stdb.Disconnected) return;
