@@ -85,6 +85,40 @@ void main() {
     );
   });
 
+  test(
+      'a 401 on the offline-first initial connect clears the stale token '
+      'instead of being swallowed', () async {
+    final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+    addTearDown(() => server.close(force: true));
+    server.listen((request) async {
+      request.response.statusCode = HttpStatus.unauthorized;
+      await request.response.close();
+    });
+
+    final tokens = InMemoryTokenStore();
+    await tokens.saveToken('stale-token-from-a-wiped-database');
+
+    final repo = SpacetimeDbNotesRepository(
+      host: '127.0.0.1:${server.port}',
+      database: 'spacenotes',
+      authStorage: tokens,
+    );
+    addTearDown(repo.dispose);
+    repo.debugSetOfflineStorage(InMemoryOfflineStorage());
+    await repo.initializeOfflineFirst();
+
+    await repo.searchNotes('anything');
+
+    expect(
+      await tokens.loadToken(),
+      isNot('stale-token-from-a-wiped-database'),
+      reason:
+          'a 401 means the token belongs to a database that no longer exists '
+          '(a wipe/republish); leaving it on disk makes every later connect '
+          'fail the same way with no recovery path',
+    );
+  });
+
   test('resetConnection re-arms the one-shot initial connect', () async {
     final repo = await _offlineColdStartRepo();
     addTearDown(repo.dispose);

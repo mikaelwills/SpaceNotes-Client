@@ -995,11 +995,31 @@ class SpacetimeDbNotesRepository {
 
   Future<void> _connectClient(SpacetimeDbClient client) async {
     _connectAttempts++;
+    try {
+      await client.connect(
+        initialSubscriptions: _initialSubscriptions,
+        subscriptionTimeout: const Duration(seconds: 5),
+      );
+    } on SpacetimeDbAuthException {
+      await _clearStaleTokenAndReconnect(client);
+    }
+    _hasEverConnected = true;
+  }
+
+  Future<void> _clearStaleTokenAndReconnect(SpacetimeDbClient client) async {
+    debugLogger.warning(
+      'AUTH',
+      'Auth failure (401) on connect - clearing stale token and retrying '
+          'with a fresh identity',
+    );
+    final storage = _authStorage ?? SharedPreferencesTokenStore();
+    await storage.clearToken();
+    _connectAttempts++;
     await client.connect(
       initialSubscriptions: _initialSubscriptions,
       subscriptionTimeout: const Duration(seconds: 5),
     );
-    _hasEverConnected = true;
+    debugLogger.connection('Reconnected with fresh anonymous identity');
   }
 
   Future<SpacetimeDbClient> _createAndConnectClient(
@@ -1052,13 +1072,6 @@ class SpacetimeDbNotesRepository {
       for (var attempt = 1; attempt <= maxRetries; attempt++) {
         try {
           await _createAndConnectClient(storage);
-          break;
-        } on SpacetimeDbAuthException {
-          debugLogger.warning(
-              'AUTH', 'Auth failure (401) - clearing token and retrying');
-          await storage.clearToken();
-          await _createAndConnectClient(storage);
-          debugLogger.connection('Reconnected with fresh anonymous identity');
           break;
         } catch (e) {
           if (attempt < maxRetries) {
