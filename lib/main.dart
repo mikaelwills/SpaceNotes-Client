@@ -62,7 +62,8 @@ const _sdkLogNoisePrefixes = [
 ];
 
 final _singleRowChangePattern = RegExp(
-  r'^EMIT_CHANGES\[\w+\]: inserts=0, updates=1, deletes=0$',
+  r'^EMIT_CHANGES\[\w+\]: inserts=(0, updates=(0, deletes=1|1, deletes=0)'
+  r'|1, updates=0, deletes=0)$',
 );
 
 bool _isSdkLogNoise(String msg) {

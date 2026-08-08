@@ -55,6 +55,47 @@ void main() {
       );
     });
 
+    test(
+        'drops single-row EMIT_CHANGES so a bulk re-ingest cannot rotate the '
+        'diagnostic window away', () {
+      final printed = <String>[];
+      final original = debugPrint;
+      debugPrint = (String? message, {int? wrapWidth}) {
+        if (message != null) printed.add(message);
+      };
+      addTearDown(() => debugPrint = original);
+
+      configureSdkLogging();
+      SdkLogger.d('EMIT_CHANGES[space_file]: inserts=1, updates=0, deletes=0');
+      SdkLogger.d('EMIT_CHANGES[message]: inserts=0, updates=1, deletes=0');
+      SdkLogger.d('EMIT_CHANGES[folder]: inserts=0, updates=0, deletes=1');
+      SdkLogger.d('EMIT_CHANGES[space_file]: inserts=1916, updates=0, deletes=0');
+
+      expect(
+        printed.any((l) => l.contains('inserts=1, updates=0, deletes=0')),
+        isFalse,
+        reason:
+            'a vault re-ingest emits one of these per row; thousands of them '
+            'blow through the 5000-char log rotation and destroy the window '
+            'containing whatever actually went wrong',
+      );
+      expect(
+        printed.any((l) => l.contains('inserts=0, updates=1, deletes=0')),
+        isFalse,
+      );
+      expect(
+        printed.any((l) => l.contains('inserts=0, updates=0, deletes=1')),
+        isFalse,
+      );
+      expect(
+        printed.any((l) => l.contains('inserts=1916')),
+        isTrue,
+        reason:
+            'the aggregate line for a bulk apply is the useful one and must '
+            'survive the filter',
+      );
+    });
+
     test('routes SDK info lines into debugLogger', () {
       final printed = <String>[];
       final original = debugPrint;
