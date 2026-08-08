@@ -90,7 +90,9 @@ void main() {
       'instead of being swallowed', () async {
     final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
     addTearDown(() => server.close(force: true));
+    final tokensSeen = <String?>[];
     server.listen((request) async {
+      tokensSeen.add(request.uri.queryParameters['token']);
       request.response.statusCode = HttpStatus.unauthorized;
       await request.response.close();
     });
@@ -116,6 +118,12 @@ void main() {
           'a 401 means the token belongs to a database that no longer exists '
           '(a wipe/republish); leaving it on disk makes every later connect '
           'fail the same way with no recovery path',
+    );
+
+    expect(
+      tokensSeen.length,
+      greaterThan(1),
+      reason: 'the 401 handler must actually re-dial, not just clear storage',
     );
   });
 

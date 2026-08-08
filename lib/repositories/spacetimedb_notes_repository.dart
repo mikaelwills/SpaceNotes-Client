@@ -1014,6 +1014,7 @@ class SpacetimeDbNotesRepository {
     );
     final storage = _authStorage ?? SharedPreferencesTokenStore();
     await storage.clearToken();
+    client.connection.clearToken();
     _connectAttempts++;
     await client.connect(
       initialSubscriptions: _initialSubscriptions,
