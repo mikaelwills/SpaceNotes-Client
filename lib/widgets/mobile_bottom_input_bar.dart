@@ -100,6 +100,9 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
   }
 
   String _computeHint(bool isChat) {
+    if (_getCurrentViewType() == HomeViewType.passwords) {
+      return 'search passwords…';
+    }
     if (!isChat) return 'search notes…';
     final aid = _getCurrentAgentId();
     if (aid != null) return aid;

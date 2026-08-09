@@ -72,6 +72,8 @@ class MobileNavBar extends ConsumerWidget {
                 return _EditableNoteName(
                   notePath: notePath,
                   currentName: noteName,
+                  isRenameable:
+                      FileTypeRegistry.forFileName(fileName).isRenameable,
                 );
               }),
             ),
@@ -154,6 +156,12 @@ class MobileNavBar extends ConsumerWidget {
   void _navigateBackFromNote(BuildContext context, String notePath) {
     if (notePath.isEmpty) {
       context.go('/notes');
+      return;
+    }
+
+    final fileName = notePath.split('/').last;
+    if (FileTypeRegistry.forFileName(fileName).extension == 'gpg') {
+      context.go('/notes/passwords');
       return;
     }
 
@@ -254,10 +262,12 @@ class _NavIcon extends StatelessWidget {
 class _EditableNoteName extends ConsumerStatefulWidget {
   final String notePath;
   final String currentName;
+  final bool isRenameable;
 
   const _EditableNoteName({
     required this.notePath,
     required this.currentName,
+    required this.isRenameable,
   });
 
   @override
@@ -336,7 +346,7 @@ class _EditableNoteNameState extends ConsumerState<_EditableNoteName> {
     }
 
     return GestureDetector(
-      onTap: _startEditing,
+      onTap: widget.isRenameable ? _startEditing : null,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
@@ -385,6 +395,7 @@ class _EditableNoteNameState extends ConsumerState<_EditableNoteName> {
   }
 
   void _startEditing() {
+    if (!widget.isRenameable) return;
     setState(() {
       _isEditing = true;
       _controller.text = widget.currentName;
@@ -514,7 +525,9 @@ class _EditableFolderNameState extends ConsumerState<_EditableFolderName> {
     }
 
     return GestureDetector(
-      onLongPress: _startEditing,
+      onLongPress: FileTypeRegistry.isProtectedPath(widget.folderPath)
+          ? null
+          : _startEditing,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
@@ -553,6 +566,7 @@ class _EditableFolderNameState extends ConsumerState<_EditableFolderName> {
   }
 
   void _startEditing() {
+    if (FileTypeRegistry.isProtectedPath(widget.folderPath)) return;
     setState(() {
       _isEditing = true;
       _controller.text = widget.currentName;
