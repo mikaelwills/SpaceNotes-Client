@@ -1,0 +1,22 @@
+name: spacenotes_pgp
+description: OpenPGP decryption for SpaceNotes credentials.
+version: 0.0.1
+publish_to: none
+
+environment:
+  sdk: ^3.5.0
+  flutter: ">=3.3.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+flutter:
+  plugin:
+    platforms:
+      ios:
+        pluginClass: SpaceNotesPgpPlugin
+        sharedDarwinSource: true
+      macos:
+        pluginClass: SpaceNotesPgpPlugin
+        sharedDarwinSource: true
