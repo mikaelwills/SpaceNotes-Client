@@ -65,7 +65,9 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
         viewType == HomeViewType.chat || viewType == HomeViewType.agentChat;
     final isAgentChat = viewType == HomeViewType.agentChat;
 
-    final searchQuery = ref.watch(folderSearchQueryProvider);
+    final searchQuery = viewType == HomeViewType.passwords
+        ? ref.watch(credentialFilterProvider)
+        : ref.watch(folderSearchQueryProvider);
     if (!isChat && searchQuery.isEmpty && _textController.text.isNotEmpty) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _textController.clear();
@@ -145,6 +147,7 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
     final l = GoRouterState.of(context).uri.toString();
     if (l.startsWith('/notes/chat')) return HomeViewType.chat;
     if (l.startsWith('/notes/note/')) return HomeViewType.note;
+    if (l.startsWith('/notes/passwords')) return HomeViewType.passwords;
     if (l == '/notes/agents') return HomeViewType.agents;
     if (l.startsWith('/notes/agents/')) return HomeViewType.agentChat;
     return HomeViewType.folders;
@@ -158,6 +161,10 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
   }
 
   void _onSearchChanged(String query) {
+    if (_getCurrentViewType() == HomeViewType.passwords) {
+      ref.read(credentialFilterProvider.notifier).state = query;
+      return;
+    }
     ref.read(folderSearchQueryProvider.notifier).state = query;
   }
 

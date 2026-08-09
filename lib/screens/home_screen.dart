@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../widgets/adaptive/platform_utils.dart';
 import '../widgets/mobile_bottom_input_bar.dart';
 
-enum HomeViewType { folders, chat, note, agents, agentChat }
+enum HomeViewType { folders, chat, note, agents, agentChat, passwords }
 
 /// HomeScreen shell that provides the shared bottom input area (mobile only)
 class HomeScreen extends ConsumerWidget {

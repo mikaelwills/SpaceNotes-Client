@@ -6,119 +6,50 @@ import '../providers/notes_providers.dart';
 import '../theme/spacenotes_theme.dart';
 import 'credential_screen.dart';
 
-class PasswordsScreen extends ConsumerStatefulWidget {
+class PasswordsScreen extends ConsumerWidget {
   const PasswordsScreen({super.key});
 
   @override
-  ConsumerState<PasswordsScreen> createState() => _PasswordsScreenState();
-}
-
-class _PasswordsScreenState extends ConsumerState<PasswordsScreen> {
-  final _controller = TextEditingController();
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final credentials = ref.watch(filteredCredentialsProvider);
     final total = ref.watch(credentialsProvider).length;
+
+    if (credentials.isEmpty) {
+      return Scaffold(
+        backgroundColor: SpaceNotesTheme.bg,
+        body: SafeArea(child: _EmptyState(hasAny: total > 0)),
+      );
+    }
 
     return Scaffold(
       backgroundColor: SpaceNotesTheme.bg,
       body: SafeArea(
-        child: Column(
-          children: [
-            _FilterField(controller: _controller),
-            if (credentials.isEmpty)
-              Expanded(child: _EmptyState(hasAny: total > 0))
-            else
-              Expanded(
-                child: ListView.builder(
-                  itemCount: credentials.length,
-                  itemBuilder: (context, index) =>
-                      _CredentialRow(file: credentials[index]),
-                ),
-              ),
-          ],
+        child: ListView.builder(
+          padding: const EdgeInsets.only(top: 8),
+          itemCount: credentials.length,
+          itemBuilder: (context, index) =>
+              _CredentialRow(file: credentials[index]),
         ),
       ),
     );
   }
 }
 
-class _FilterField extends ConsumerWidget {
-  const _FilterField({required this.controller});
-
-  final TextEditingController controller;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-      child: TextField(
-        controller: controller,
-        autocorrect: false,
-        enableSuggestions: false,
-        style: const TextStyle(color: SpaceNotesTheme.fg, fontSize: 14),
-        decoration: InputDecoration(
-          hintText: 'Filter passwords',
-          hintStyle: const TextStyle(color: SpaceNotesTheme.dim, fontSize: 14),
-          prefixIcon: const Icon(
-            Icons.search,
-            color: SpaceNotesTheme.dim,
-            size: 18,
-          ),
-          suffixIcon: controller.text.isEmpty
-              ? null
-              : IconButton(
-                  icon: const Icon(
-                    Icons.close,
-                    color: SpaceNotesTheme.dim,
-                    size: 18,
-                  ),
-                  onPressed: () {
-                    controller.clear();
-                    ref.read(credentialFilterProvider.notifier).state = '';
-                  },
-                ),
-          filled: true,
-          fillColor: SpaceNotesTheme.card,
-          contentPadding: const EdgeInsets.symmetric(vertical: 12),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: const BorderSide(color: SpaceNotesTheme.hairlineStrong),
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: const BorderSide(color: SpaceNotesTheme.hairlineStrong),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: const BorderSide(color: SpaceNotesTheme.accent),
-          ),
-        ),
-        onChanged: (value) =>
-            ref.read(credentialFilterProvider.notifier).state = value,
-      ),
-    );
-  }
-}
-
-class _CredentialRow extends StatelessWidget {
+class _CredentialRow extends ConsumerWidget {
   const _CredentialRow({required this.file});
 
   final SpaceFile file;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final entry = CredentialEntry.fromPath(file.path);
 
     return InkWell(
-      onTap: () => context.go('/notes/note/${file.id}'),
+      onTap: () {
+        FocusManager.instance.primaryFocus?.unfocus();
+        ref.read(credentialFilterProvider.notifier).state = '';
+        context.go('/notes/note/${file.id}');
+      },
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
         child: Row(
