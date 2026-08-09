@@ -573,6 +573,8 @@ class _EditableFolderNameState extends ConsumerState<_EditableFolderName> {
       return;
     }
 
+    if (FileTypeRegistry.isProtectedPath(widget.folderPath)) return;
+
     final parentPath = widget.folderPath.contains('/')
         ? widget.folderPath.substring(0, widget.folderPath.lastIndexOf('/') + 1)
         : '';

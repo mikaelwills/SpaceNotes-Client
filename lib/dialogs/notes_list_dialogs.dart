@@ -90,6 +90,7 @@ class NotesListDialogs {
     WidgetRef ref,
     Folder folder,
   ) {
+    if (FileTypeRegistry.isProtectedPath(folder.path)) return;
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -429,6 +430,7 @@ class NotesListDialogs {
     WidgetRef ref,
     Folder folder,
   ) {
+    if (FileTypeRegistry.isProtectedPath(folder.path)) return;
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -676,6 +678,7 @@ class NotesListDialogs {
     WidgetRef ref,
     Folder folderToMove,
   ) {
+    if (FileTypeRegistry.isProtectedPath(folderToMove.path)) return;
     final folders = ref.read(foldersListProvider);
 
     () {

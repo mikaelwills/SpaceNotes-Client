@@ -485,8 +485,10 @@ class _DraggableData {
 
   String get fileName => path.contains('/') ? path.split('/').last : path;
 
-  bool get isMovable =>
-      isFolder || FileTypeRegistry.forFileName(fileName).isMovable;
+  bool get isMovable {
+    if (FileTypeRegistry.isProtectedPath(path)) return false;
+    return isFolder || FileTypeRegistry.forFileName(fileName).isMovable;
+  }
 }
 
 class _FolderTreeItem extends ConsumerStatefulWidget {
@@ -733,6 +735,7 @@ class _FolderTreeItemState extends ConsumerState<_FolderTreeItem> {
 
   void _handleFolderAction(
       BuildContext context, WidgetRef ref, Folder folder, String action) async {
+    if (FileTypeRegistry.isProtectedPath(folder.path)) return;
     final repo = ref.read(notesRepositoryProvider);
     switch (action) {
       case 'new_note':
@@ -886,6 +889,7 @@ class _FolderTreeItemState extends ConsumerState<_FolderTreeItem> {
   bool _canAcceptDrop(_DraggableData data) {
     final targetPath = widget.folder.path;
     if (!data.isMovable) return false;
+    if (FileTypeRegistry.isProtectedPath(targetPath)) return false;
     if (data.isFolder) {
       if (data.path == targetPath) return false;
       if (targetPath.startsWith('${data.path}/')) return false;

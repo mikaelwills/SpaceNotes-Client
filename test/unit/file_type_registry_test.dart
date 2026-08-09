@@ -22,6 +22,14 @@ void main() {
   test('markdown still has context actions', () {
     expect(FileTypeRegistry.forExtension('md').hasContextActions, true);
   });
+  test('password store paths are protected', () {
+    expect(FileTypeRegistry.isProtectedPath('.password-store'), true);
+    expect(FileTypeRegistry.isProtectedPath('.password-store/github.com'), true);
+    expect(
+        FileTypeRegistry.isProtectedPath('.password-store/a/b.gpg'), true);
+    expect(FileTypeRegistry.isProtectedPath('All Notes'), false);
+    expect(FileTypeRegistry.isProtectedPath('.password-store-other'), false);
+  });
   test('rename preserves extension', () {
     expect(FileTypeRegistry.forExtension('gpg').applyExtension('x'), 'x.gpg');
     expect(FileTypeRegistry.forExtension('md').applyExtension('x.md'), 'x.md');

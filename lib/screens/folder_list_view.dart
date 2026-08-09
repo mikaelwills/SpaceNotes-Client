@@ -159,11 +159,16 @@ class _FolderListViewState extends ConsumerState<FolderListView> {
         final encodedPath = Uri.encodeComponent(folder.path);
         context.go('/notes/folder/$encodedPath');
       },
-      onLongPress: () =>
-          NotesListDialogs.showFolderContextMenu(context, ref, folder),
-      onMove: () => NotesListDialogs.showMoveFolderDialog(context, ref, folder),
-      onDelete: () =>
-          NotesListDialogs.showDeleteFolderConfirmation(context, ref, folder),
+      onLongPress: FileTypeRegistry.isProtectedPath(folder.path)
+          ? null
+          : () => NotesListDialogs.showFolderContextMenu(context, ref, folder),
+      onMove: FileTypeRegistry.isProtectedPath(folder.path)
+          ? null
+          : () => NotesListDialogs.showMoveFolderDialog(context, ref, folder),
+      onDelete: FileTypeRegistry.isProtectedPath(folder.path)
+          ? null
+          : () =>
+              NotesListDialogs.showDeleteFolderConfirmation(context, ref, folder),
     );
   }
 

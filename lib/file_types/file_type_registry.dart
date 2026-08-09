@@ -25,6 +25,11 @@ class FileTypeRegistry {
     return forExtension(name.substring(dot + 1));
   }
 
+  static const credentialStoreRoot = '.password-store';
+
+  static bool isProtectedPath(String path) =>
+      path == credentialStoreRoot || path.startsWith('$credentialStoreRoot/');
+
   static List<FileTypeHandler> get creatableTypes =>
       _handlers.values.where((h) => h.isCreatable).toList();
 
