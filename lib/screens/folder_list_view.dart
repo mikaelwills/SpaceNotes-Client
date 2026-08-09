@@ -9,6 +9,7 @@ import '../widgets/folder_list_item.dart';
 import '../widgets/note_list_item.dart';
 import '../dialogs/notes_list_dialogs.dart';
 import '../widgets/keyboard_dismiss_on_scroll.dart';
+import '../file_types/file_type_registry.dart';
 
 class FolderListView extends ConsumerStatefulWidget {
   final String folderPath;
@@ -185,18 +186,14 @@ class _FolderListViewState extends ConsumerState<FolderListView> {
   }
 
   Future<void> _createQuickNote() async {
-    final now = DateTime.now();
-    final timestamp =
-        '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}-${now.hour.toString().padLeft(2, '0')}-${now.minute.toString().padLeft(2, '0')}-${now.second.toString().padLeft(2, '0')}';
-
     final String notePath;
     if (widget.folderPath.isEmpty) {
-      notePath = 'All Notes/Untitled-$timestamp.md';
+      notePath = 'All Notes/${FileTypeRegistry.defaultNewFileName()}';
     } else {
       final folderPathWithSlash = widget.folderPath.endsWith('/')
           ? widget.folderPath
           : '${widget.folderPath}/';
-      notePath = '${folderPathWithSlash}Untitled-$timestamp.md';
+      notePath = '$folderPathWithSlash${FileTypeRegistry.defaultNewFileName()}';
     }
 
     final repo = ref.read(notesRepositoryProvider);

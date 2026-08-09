@@ -27,4 +27,9 @@ class FileTypeRegistry {
 
   static List<FileTypeHandler> get creatableTypes =>
       _handlers.values.where((h) => h.isCreatable).toList();
+
+  static FileTypeHandler get defaultCreatableType => creatableTypes.first;
+
+  static String defaultNewFileName() =>
+      defaultCreatableType.newFileTemplate!.defaultName();
 }

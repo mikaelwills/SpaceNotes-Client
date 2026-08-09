@@ -11,6 +11,7 @@ import '../providers/chat_providers.dart';
 import '../dialogs/notes_list_dialogs.dart';
 import '../screens/home_screen.dart';
 import 'primitives/primitives.dart';
+import '../file_types/file_type_registry.dart';
 
 Future<Uint8List> _readFileBytes(String path) async {
   return File(path).readAsBytes();
@@ -231,11 +232,8 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
   }
 
   Future<void> _createQuickNote(String folderPath) async {
-    final now = DateTime.now();
-    final timestamp =
-        '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}-${now.hour.toString().padLeft(2, '0')}-${now.minute.toString().padLeft(2, '0')}-${now.second.toString().padLeft(2, '0')}';
     final basePath = folderPath.isEmpty ? 'All Notes' : folderPath;
-    final notePath = '$basePath/Untitled-$timestamp.md';
+    final notePath = '$basePath/${FileTypeRegistry.defaultNewFileName()}';
     final repo = ref.read(notesRepositoryProvider);
     try {
       final noteId = await repo.createNote(notePath, '');

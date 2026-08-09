@@ -730,10 +730,8 @@ class _FolderTreeItemState extends ConsumerState<_FolderTreeItem> {
     final repo = ref.read(notesRepositoryProvider);
     switch (action) {
       case 'new_note':
-        final now = DateTime.now();
-        final timestamp =
-            '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}-${now.hour.toString().padLeft(2, '0')}-${now.minute.toString().padLeft(2, '0')}';
-        final notePath = '${folder.path}/Untitled-$timestamp.md';
+        final notePath =
+            '${folder.path}/${FileTypeRegistry.defaultNewFileName()}';
         final noteId = await repo.createNote(notePath, '');
         if (noteId != null && context.mounted) {
           _openNoteInDesktop(context, noteId);
@@ -1010,8 +1008,8 @@ class _NoteTreeItem extends ConsumerWidget {
     );
   }
 
-  void _handleNoteAction(
-      BuildContext context, WidgetRef ref, SpaceFile note, String action) async {
+  void _handleNoteAction(BuildContext context, WidgetRef ref, SpaceFile note,
+      String action) async {
     final repo = ref.read(notesRepositoryProvider);
     switch (action) {
       case 'rename':
@@ -1455,10 +1453,7 @@ class _SidebarFooter extends ConsumerWidget {
 
   Future<void> _createNote(BuildContext context, WidgetRef ref) async {
     final repo = ref.read(notesRepositoryProvider);
-    final now = DateTime.now();
-    final timestamp =
-        '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}-${now.hour.toString().padLeft(2, '0')}-${now.minute.toString().padLeft(2, '0')}';
-    final notePath = 'All Notes/Untitled-$timestamp.md';
+    final notePath = 'All Notes/${FileTypeRegistry.defaultNewFileName()}';
     final noteId = await repo.createNote(notePath, '');
     if (noteId != null && context.mounted) {
       _openNoteInDesktop(context, noteId);

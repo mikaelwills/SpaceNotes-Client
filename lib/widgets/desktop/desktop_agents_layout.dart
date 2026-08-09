@@ -12,6 +12,7 @@ import '../../screens/agent_chat.dart';
 import '../../theme/spacenotes_theme.dart';
 import '../primitives/primitives.dart';
 import '../agents/agent_row_content.dart';
+import '../../file_types/file_type_registry.dart';
 
 class DesktopAgentsLayout extends ConsumerWidget {
   final String? activeAgentId;
@@ -193,10 +194,7 @@ class _Footer extends StatelessWidget {
 
   Future<void> _createNote(BuildContext context, WidgetRef ref) async {
     final repo = ref.read(notesRepositoryProvider);
-    final now = DateTime.now();
-    final timestamp =
-        '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}-${now.hour.toString().padLeft(2, '0')}-${now.minute.toString().padLeft(2, '0')}';
-    final notePath = 'All Notes/Untitled-$timestamp.md';
+    final notePath = 'All Notes/${FileTypeRegistry.defaultNewFileName()}';
     final noteId = await repo.createNote(notePath, '');
     if (noteId != null && context.mounted) {
       context.read<DesktopNotesBloc>().add(OpenNote(noteId));
