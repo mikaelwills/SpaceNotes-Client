@@ -6,6 +6,7 @@ import 'package:collection/collection.dart';
 import '../theme/spacenotes_theme.dart';
 import '../providers/notes_providers.dart';
 import 'connection_indicator.dart';
+import '../file_types/file_type_registry.dart';
 
 class MobileNavBar extends ConsumerWidget {
   const MobileNavBar({super.key});
@@ -65,7 +66,9 @@ class MobileNavBar extends ConsumerWidget {
                 final noteId = _extractNoteIdFromLocation(currentLocation);
                 final note = ref.watch(fileByIdProvider(noteId));
                 final notePath = note?.path ?? '';
-                final noteName = notePath.split('/').last.replaceAll('.md', '');
+                final fileName = notePath.split('/').last;
+                final noteName =
+                    FileTypeRegistry.forFileName(fileName).stripExtension(fileName);
                 return _EditableNoteName(
                   notePath: notePath,
                   currentName: noteName,

@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import '../file_types/file_type_registry.dart';
 
 /// API models for Obsidian REST API (path-based, not UUID-based)
 /// These are separate from SpacetimeDB generated models
@@ -152,7 +153,7 @@ class ApiNote extends Equatable {
 
   static String _extractNoteName(String path) {
     final name = path.split('/').last;
-    return name.replaceAll('.md', '');
+    return FileTypeRegistry.forFileName(name).stripExtension(name);
   }
 
   static String _extractFolderPath(String path) {

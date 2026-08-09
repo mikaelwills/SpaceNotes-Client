@@ -14,6 +14,7 @@ import '../../theme/spacenotes_theme.dart';
 import '../../version.dart';
 import '../primitives/primitives.dart';
 import 'desktop_shell.dart';
+import '../../file_types/file_type_registry.dart';
 
 final expandedFoldersProvider = StateProvider<Set<String>>((ref) => {});
 final searchFocusRequestProvider = StateProvider<int>((ref) => 0);
@@ -914,9 +915,7 @@ class _NoteTreeItem extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final displayName = note.name.endsWith('.md')
-        ? note.name.substring(0, note.name.length - 3)
-        : note.name;
+    final displayName = FileTypeRegistry.forFile(note).displayName(note);
 
     return BlocBuilder<DesktopNotesBloc, DesktopNotesState>(
       buildWhen: (prev, curr) => prev.activeNoteId != curr.activeNoteId,

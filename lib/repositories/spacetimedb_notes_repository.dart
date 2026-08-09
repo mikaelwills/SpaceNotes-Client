@@ -25,6 +25,7 @@ import '../generated/client.dart';
 import '../generated/space_file.dart';
 import 'shared_preferences_token_store.dart';
 import 'package:rxdart/rxdart.dart';
+import '../file_types/file_type_registry.dart';
 
 String _contentHash(String content) {
   final bytes = utf8.encode(content);
@@ -274,7 +275,8 @@ class SpacetimeDbNotesRepository {
 
       final id = const Uuid().v4();
 
-      final name = path.split('/').last.replaceAll('.md', '');
+      final fileName = path.split('/').last;
+      final name = FileTypeRegistry.forFileName(fileName).stripExtension(fileName);
 
       final pathParts = path.split('/');
       final folderPath = pathParts.length > 1
@@ -414,7 +416,9 @@ class SpacetimeDbNotesRepository {
       final oldNote = _client!.spaceFile.find(id);
       if (oldNote == null) return false;
 
-      final newName = newPath.split('/').last.replaceAll('.md', '');
+      final newFileName = newPath.split('/').last;
+      final newName =
+          FileTypeRegistry.forFileName(newFileName).stripExtension(newFileName);
       final pathParts = newPath.split('/');
       final newFolderPath = pathParts.length > 1
           ? '${pathParts.sublist(0, pathParts.length - 1).join('/')}/'

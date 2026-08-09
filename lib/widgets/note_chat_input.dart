@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/chat_providers.dart';
 import 'primitives/primitives.dart';
+import '../file_types/file_type_registry.dart';
 
 class NoteChatInput extends ConsumerStatefulWidget {
   final String notePath;
@@ -45,7 +46,8 @@ class _NoteChatInputState extends ConsumerState<NoteChatInput> {
 
   String get _hint {
     if (widget.notePath.isEmpty) return 'ask workflow-agent…';
-    final name = widget.notePath.split('/').last.replaceAll('.md', '');
+    final fileName = widget.notePath.split('/').last;
+    final name = FileTypeRegistry.forFileName(fileName).stripExtension(fileName);
     final trimmed = name.length > 24 ? '${name.substring(0, 24)}…' : name;
     return 'ask about $trimmed…';
   }

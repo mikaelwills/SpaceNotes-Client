@@ -6,6 +6,7 @@ import '../../blocs/desktop_notes/desktop_notes_event.dart';
 import '../../blocs/desktop_notes/desktop_notes_state.dart';
 import '../../providers/notes_providers.dart';
 import '../../theme/spacenotes_theme.dart';
+import '../../file_types/file_type_registry.dart';
 
 class NoteTabs extends StatelessWidget {
   const NoteTabs({super.key});
@@ -135,9 +136,6 @@ class _NoteTabState extends ConsumerState<_NoteTab> {
     if (note == null) return 'Loading...';
 
     final name = note.path.split('/').last;
-    if (name.endsWith('.md')) {
-      return name.substring(0, name.length - 3);
-    }
-    return name;
+    return FileTypeRegistry.forFileName(name).stripExtension(name);
   }
 }
