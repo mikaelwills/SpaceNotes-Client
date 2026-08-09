@@ -405,6 +405,7 @@ class _EditableNoteNameState extends ConsumerState<_EditableNoteName> {
     final note = notes.firstWhereOrNull((n) => n.path == widget.notePath);
 
     if (note == null) return;
+    if (!FileTypeRegistry.forFile(note).isRenameable) return;
 
     final folderPath = widget.notePath.contains('/')
         ? widget.notePath.substring(0, widget.notePath.lastIndexOf('/') + 1)

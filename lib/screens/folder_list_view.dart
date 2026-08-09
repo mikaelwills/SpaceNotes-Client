@@ -179,9 +179,12 @@ class _FolderListViewState extends ConsumerState<FolderListView> {
       },
       onLongPress: () =>
           NotesListDialogs.showNoteContextMenu(context, ref, note),
-      onMove: () => NotesListDialogs.showMoveNoteDialog(context, ref, note),
-      onDelete: () =>
-          NotesListDialogs.showDeleteNoteConfirmation(context, ref, note),
+      onMove: FileTypeRegistry.forFile(note).isMovable
+          ? () => NotesListDialogs.showMoveNoteDialog(context, ref, note)
+          : null,
+      onDelete: FileTypeRegistry.forFile(note).isDeletable
+          ? () => NotesListDialogs.showDeleteNoteConfirmation(context, ref, note)
+          : null,
     );
   }
 

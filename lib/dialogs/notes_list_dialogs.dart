@@ -38,44 +38,46 @@ class NotesListDialogs {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            ListTile(
-              leading: const Icon(
-                Icons.drive_file_move_outline,
-                color: SpaceNotesTheme.primary,
-              ),
-              title: const Text(
-                'Move to folder',
-                style: TextStyle(
-                  fontFamily: 'FiraCode',
-                  fontSize: 14,
-                  color: SpaceNotesTheme.text,
+            if (FileTypeRegistry.forFile(note).isMovable)
+              ListTile(
+                leading: const Icon(
+                  Icons.drive_file_move_outline,
+                  color: SpaceNotesTheme.primary,
                 ),
+                title: const Text(
+                  'Move to folder',
+                  style: TextStyle(
+                    fontFamily: 'FiraCode',
+                    fontSize: 14,
+                    color: SpaceNotesTheme.text,
+                  ),
+                ),
+                onTap: () {
+                  Navigator.of(dialogContext).pop();
+                  showMoveNoteDialog(context, ref, note);
+                },
               ),
-              onTap: () {
-                Navigator.of(dialogContext).pop();
-                showMoveNoteDialog(context, ref, note);
-              },
-            ),
-            ListTile(
-              leading: const Icon(
-                Icons.delete_outline,
-                color: SpaceNotesTheme.error,
-              ),
-              title: const Text(
-                'Delete note',
-                style: TextStyle(
-                  fontFamily: 'FiraCode',
-                  fontSize: 14,
+            if (FileTypeRegistry.forFile(note).isDeletable)
+              ListTile(
+                leading: const Icon(
+                  Icons.delete_outline,
                   color: SpaceNotesTheme.error,
                 ),
+                title: const Text(
+                  'Delete note',
+                  style: TextStyle(
+                    fontFamily: 'FiraCode',
+                    fontSize: 14,
+                    color: SpaceNotesTheme.error,
+                  ),
+                ),
+                onTap: () {
+                  Navigator.of(dialogContext).pop();
+                  print(
+                      '🗑️  Context Menu DELETE: No navigation path (staying on list)');
+                  showDeleteNoteConfirmation(context, ref, note);
+                },
               ),
-              onTap: () {
-                Navigator.of(dialogContext).pop();
-                print(
-                    '🗑️  Context Menu DELETE: No navigation path (staying on list)');
-                showDeleteNoteConfirmation(context, ref, note);
-              },
-            ),
           ],
         ),
       ),
@@ -355,6 +357,7 @@ class NotesListDialogs {
     SpaceFile note, {
     String? navigateToAfterDelete,
   }) {
+    if (!FileTypeRegistry.forFile(note).isDeletable) return;
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -483,6 +486,7 @@ class NotesListDialogs {
     WidgetRef ref,
     SpaceFile note,
   ) {
+    if (!FileTypeRegistry.forFile(note).isMovable) return;
     final folders = ref.read(foldersListProvider);
 
     () {
