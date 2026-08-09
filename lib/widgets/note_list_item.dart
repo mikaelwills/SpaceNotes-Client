@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import '../theme/spacenotes_theme.dart';
 import '../generated/space_file.dart';
 import 'swipe_action.dart';
+import '../file_types/file_type_registry.dart';
 
 class _LeftOnlyHorizontalDragGestureRecognizer
     extends HorizontalDragGestureRecognizer {
@@ -187,7 +188,7 @@ class _NoteListItemState extends State<NoteListItem>
                           Padding(
                             padding: const EdgeInsets.only(top: 2),
                             child: Icon(
-                              Icons.description_outlined,
+                              FileTypeRegistry.forFile(widget.note).icon,
                               color: widget.isSelected
                                   ? SpaceNotesTheme.accent
                                   : SpaceNotesTheme.dim,

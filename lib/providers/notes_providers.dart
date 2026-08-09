@@ -5,6 +5,7 @@ import '../generated/client.dart';
 import '../generated/folder.dart';
 import '../generated/space_file.dart';
 import '../services/debug_logger.dart';
+import '../file_types/file_type_registry.dart';
 
 String _getDefaultHost() {
   if (kIsWeb) {
@@ -95,9 +96,12 @@ List<String> searchTerms(String query) => query
 bool noteMatchesAllTerms(SpaceFile note, List<String> terms) {
   final name = note.name.toLowerCase();
   final path = note.path.toLowerCase();
-  final content = note.content.toLowerCase();
+  final searchesContent = FileTypeRegistry.forFile(note).hasTextRepresentation;
+  final content = searchesContent ? note.content.toLowerCase() : '';
   return terms.every((term) =>
-      name.contains(term) || path.contains(term) || content.contains(term));
+      name.contains(term) ||
+      path.contains(term) ||
+      (searchesContent && content.contains(term)));
 }
 
 List<SpaceFile> _rankNotesByNameMatch(List<SpaceFile> notes, List<String> terms) {
