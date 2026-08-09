@@ -11,6 +11,9 @@ import '../providers/connection_providers.dart';
 import '../widgets/adaptive/platform_utils.dart';
 import '../widgets/primitives/primitives.dart';
 import '../services/debug_logger.dart';
+import '../services/credential_key_store.dart';
+import 'dart:io';
+import 'package:file_picker/file_picker.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -25,12 +28,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   bool _isConnecting = false;
   int _logFileCount = 0;
+  final _keyStore = CredentialKeyStore();
+  bool _hasCredentialKey = false;
 
   @override
   void initState() {
     super.initState();
     _loadCurrentConfig();
     _loadLogFileCount();
+    _loadCredentialKeyState();
   }
 
   @override
@@ -53,6 +59,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               _buildServerSection(),
               if (PlatformUtils.isDesktopLayout(context))
                 _buildMaxOpenNotesSection(),
+              _buildPasswordManagerSection(),
               _buildDebugLogsSection(),
               const SizedBox(height: 40),
             ],
@@ -172,6 +179,96 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         ),
       ],
     );
+  }
+
+
+  Widget _buildPasswordManagerSection() {
+    return _Section(
+      label: 'password manager',
+      children: [
+        Text(
+          _hasCredentialKey
+              ? 'A private key is held on this device.'
+              : 'No private key on this device. Import one to reveal passwords.',
+          style: _proseStyle,
+        ),
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            Expanded(
+              child: SnButton(
+                label: _hasCredentialKey ? 'replace key' : 'import key',
+                onPressed: _importCredentialKey,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 18),
+              ),
+            ),
+            if (_hasCredentialKey) ...[
+              const SizedBox(width: 10),
+              Expanded(
+                child: SnButton(
+                  label: 'remove',
+                  accent: SpaceNotesTheme.offline,
+                  onPressed: _removeCredentialKey,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 18),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ],
+    );
+  }
+
+  Future<void> _importCredentialKey() async {
+    final picked = await FilePicker.platform.pickFiles(withData: true);
+    final file = picked?.files.singleOrNull;
+    if (file == null) return;
+
+    final bytes = file.bytes;
+    if (bytes == null) {
+      _showKeyMessage('Could not read that file.');
+      return;
+    }
+
+    try {
+      await _keyStore.store(bytes);
+    } catch (e) {
+      _showKeyMessage('Could not store the key: $e');
+      return;
+    } finally {
+      // The picker hands back a copy in our own temp directory. Remove it so
+      // the key exists only in the keystore. The file the user chose is
+      // theirs to delete.
+      final tempPath = file.path;
+      if (tempPath != null) {
+        try {
+          await File(tempPath).delete();
+        } catch (_) {}
+      }
+    }
+
+    await _loadCredentialKeyState();
+    _showKeyMessage('Key imported.');
+  }
+
+  Future<void> _removeCredentialKey() async {
+    await _keyStore.delete();
+    await _loadCredentialKeyState();
+    _showKeyMessage('Key removed from this device.');
+  }
+
+  Future<void> _loadCredentialKeyState() async {
+    final has = await _keyStore.hasKey();
+    if (!mounted) return;
+    setState(() => _hasCredentialKey = has);
+  }
+
+  void _showKeyMessage(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
   }
 
   Widget _buildDebugLogsSection() {

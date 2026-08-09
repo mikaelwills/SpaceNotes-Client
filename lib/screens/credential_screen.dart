@@ -1,9 +1,15 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:spacenotes_pgp/spacenotes_pgp.dart';
 import '../providers/notes_providers.dart';
+import '../services/credential_entry_parser.dart';
+import '../services/credential_key_store.dart';
 import '../theme/spacenotes_theme.dart';
 
-enum CredentialState { noKey, keyCannotRead, notEncryptedToDevice, revealed }
+enum CredentialState { noKey, keyHeld, keyCannotRead, notEncryptedToDevice, revealed }
 
 class CredentialEntry {
   const CredentialEntry({required this.site, required this.account});
@@ -31,14 +37,64 @@ class CredentialEntry {
   }
 }
 
-class CredentialScreen extends ConsumerWidget {
+class CredentialScreen extends ConsumerStatefulWidget {
   const CredentialScreen({super.key, required this.fileId});
 
   final String fileId;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final file = ref.watch(fileByIdProvider(fileId));
+  ConsumerState<CredentialScreen> createState() => _CredentialScreenState();
+}
+
+class _CredentialScreenState extends ConsumerState<CredentialScreen> {
+  final _keyStore = CredentialKeyStore();
+  DecryptedCredential? _revealed;
+  CredentialState _state = CredentialState.noKey;
+  bool _busy = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadKeyState();
+  }
+
+  Future<void> _loadKeyState() async {
+    final hasKey = await _keyStore.hasKey();
+    if (!mounted) return;
+    setState(() => _state =
+        hasKey ? CredentialState.keyHeld : CredentialState.noKey);
+  }
+
+  Future<void> _reveal(String base64Content) async {
+    setState(() => _busy = true);
+    try {
+      final privateKey = await _keyStore.read();
+      if (privateKey == null) {
+        setState(() => _state = CredentialState.noKey);
+        return;
+      }
+
+      final plaintext = await SpaceNotesPgp.decrypt(
+        ciphertext: base64Decode(base64Content),
+        privateKey: privateKey,
+      );
+
+      setState(() {
+        _revealed = DecryptedCredential.parse(utf8.decode(plaintext));
+        _state = CredentialState.revealed;
+      });
+    } on PgpDecryptException {
+      setState(() => _state = CredentialState.keyCannotRead);
+    } catch (_) {
+      setState(() => _state = CredentialState.keyCannotRead);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final file = ref.watch(fileByIdProvider(widget.fileId));
 
     if (file == null) {
       return const Scaffold(
@@ -48,7 +104,7 @@ class CredentialScreen extends ConsumerWidget {
     }
 
     final entry = CredentialEntry.fromPath(file.path);
-    const state = CredentialState.noKey;
+    final revealed = _revealed;
 
     return Scaffold(
       backgroundColor: SpaceNotesTheme.bg,
@@ -60,7 +116,15 @@ class CredentialScreen extends ConsumerWidget {
             children: [
               _Header(entry: entry),
               const SizedBox(height: 28),
-              const _StateNotice(state: state),
+              if (revealed != null)
+                _RevealedFields(credential: revealed)
+              else if (_state == CredentialState.keyHeld)
+                _RevealButton(
+                  busy: _busy,
+                  onPressed: () => _reveal(file.content),
+                )
+              else
+                _StateNotice(state: _state),
             ],
           ),
         ),
@@ -137,7 +201,7 @@ class _StateNotice extends StatelessWidget {
           'Not encrypted to this device',
           'This entry was encrypted to other recipients, so it cannot be revealed here.',
         ),
-      CredentialState.revealed => ('', ''),
+      CredentialState.keyHeld || CredentialState.revealed => ('', ''),
     };
 
     return Container(
@@ -167,6 +231,153 @@ class _StateNotice extends StatelessWidget {
               fontSize: 13,
               height: 1.4,
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RevealButton extends StatelessWidget {
+  const _RevealButton({required this.busy, required this.onPressed});
+
+  final bool busy;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      child: FilledButton.icon(
+        onPressed: busy ? null : onPressed,
+        icon: busy
+            ? const SizedBox(
+                width: 14,
+                height: 14,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            : const Icon(Icons.lock_open_outlined, size: 18),
+        label: Text(busy ? 'Decrypting…' : 'Reveal password'),
+        style: FilledButton.styleFrom(
+          backgroundColor: SpaceNotesTheme.card,
+          foregroundColor: SpaceNotesTheme.fg,
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+            side: const BorderSide(color: SpaceNotesTheme.hairlineStrong),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _RevealedFields extends StatelessWidget {
+  const _RevealedFields({required this.credential});
+
+  final DecryptedCredential credential;
+
+  @override
+  Widget build(BuildContext context) {
+    final username = credential.username;
+    final url = credential.url;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _CopyableField(
+          label: 'password',
+          value: credential.password,
+          obscure: true,
+        ),
+        if (username != null) ...[
+          const SizedBox(height: 12),
+          _CopyableField(label: 'username', value: username),
+        ],
+        if (url != null) ...[
+          const SizedBox(height: 12),
+          _CopyableField(label: 'url', value: url),
+        ],
+      ],
+    );
+  }
+}
+
+class _CopyableField extends StatefulWidget {
+  const _CopyableField({
+    required this.label,
+    required this.value,
+    this.obscure = false,
+  });
+
+  final String label;
+  final String value;
+  final bool obscure;
+
+  @override
+  State<_CopyableField> createState() => _CopyableFieldState();
+}
+
+class _CopyableFieldState extends State<_CopyableField> {
+  late bool _hidden = widget.obscure;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: SpaceNotesTheme.card,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: SpaceNotesTheme.hairlineStrong),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  widget.label,
+                  style: const TextStyle(
+                    color: SpaceNotesTheme.dim,
+                    fontSize: 11,
+                    letterSpacing: 0.4,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  _hidden ? '••••••••••••' : widget.value,
+                  style: const TextStyle(
+                    color: SpaceNotesTheme.fg,
+                    fontSize: 14,
+                    fontFamily: SpaceNotesTheme.fontMono,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (widget.obscure)
+            IconButton(
+              icon: Icon(
+                _hidden ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                size: 18,
+                color: SpaceNotesTheme.dim,
+              ),
+              onPressed: () => setState(() => _hidden = !_hidden),
+            ),
+          IconButton(
+            icon: const Icon(
+              Icons.copy_outlined,
+              size: 18,
+              color: SpaceNotesTheme.dim,
+            ),
+            onPressed: () {
+              Clipboard.setData(ClipboardData(text: widget.value));
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('${widget.label} copied')),
+              );
+            },
           ),
         ],
       ),
