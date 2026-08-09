@@ -1013,9 +1013,8 @@ class _NoteTreeItem extends ConsumerWidget {
     final repo = ref.read(notesRepositoryProvider);
     switch (action) {
       case 'rename':
-        final nameWithoutExt = note.name.endsWith('.md')
-            ? note.name.substring(0, note.name.length - 3)
-            : note.name;
+        final handler = FileTypeRegistry.forFile(note);
+        final nameWithoutExt = handler.displayName(note);
         final controller = TextEditingController(text: nameWithoutExt);
         final result = await showDialog<String>(
           context: context,
@@ -1044,7 +1043,7 @@ class _NoteTreeItem extends ConsumerWidget {
             result.isNotEmpty &&
             result != nameWithoutExt &&
             context.mounted) {
-          final newName = result.endsWith('.md') ? result : '$result.md';
+          final newName = handler.applyExtension(result);
           final folderPath = note.path.contains('/')
               ? note.path.substring(0, note.path.lastIndexOf('/'))
               : '';

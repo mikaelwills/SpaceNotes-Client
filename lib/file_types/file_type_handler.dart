@@ -45,4 +45,10 @@ abstract class FileTypeHandler {
         ? name.substring(0, name.length - suffix.length)
         : name;
   }
+
+  String applyExtension(String baseName) {
+    if (extension.isEmpty) return baseName;
+    final suffix = '.$extension';
+    return baseName.endsWith(suffix) ? baseName : '$baseName$suffix';
+  }
 }

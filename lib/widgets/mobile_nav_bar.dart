@@ -410,7 +410,8 @@ class _EditableNoteNameState extends ConsumerState<_EditableNoteName> {
         ? widget.notePath.substring(0, widget.notePath.lastIndexOf('/') + 1)
         : '';
 
-    final newPath = '$folderPath$newName.md';
+    final newPath =
+        '$folderPath${FileTypeRegistry.forFile(note).applyExtension(newName)}';
 
     if (newPath == widget.notePath) return;
 
