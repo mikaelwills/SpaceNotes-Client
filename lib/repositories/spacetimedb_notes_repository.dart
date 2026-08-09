@@ -116,6 +116,7 @@ class SpacetimeDbNotesRepository {
     if (client == null || !identical(owner, client)) return;
     if (!client.connection.state.isConnected) {
       _deferredUnsubscribes.add(querySetId);
+      client.subscriptions.forgetQuerySet(querySetId);
       return;
     }
     client.subscriptions.unsubscribe(querySetId);
