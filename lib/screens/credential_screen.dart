@@ -9,7 +9,7 @@ import '../services/credential_entry_parser.dart';
 import '../services/credential_key_store.dart';
 import '../theme/spacenotes_theme.dart';
 
-enum CredentialState { noKey, keyHeld, keyCannotRead, notEncryptedToDevice, revealed }
+enum CredentialState { noKey, keyCannotRead, notEncryptedToDevice, revealed }
 
 class CredentialEntry {
   const CredentialEntry({required this.site, required this.account});
@@ -50,27 +50,19 @@ class _CredentialScreenState extends ConsumerState<CredentialScreen> {
   final _keyStore = CredentialKeyStore();
   DecryptedCredential? _revealed;
   CredentialState _state = CredentialState.noKey;
-  bool _busy = false;
+  bool _busy = true;
+  bool _started = false;
 
-  @override
-  void initState() {
-    super.initState();
-    _loadKeyState();
-  }
-
-  Future<void> _loadKeyState() async {
-    final hasKey = await _keyStore.hasKey();
-    if (!mounted) return;
-    setState(() => _state =
-        hasKey ? CredentialState.keyHeld : CredentialState.noKey);
-  }
-
+  /// Decrypts as soon as the entry opens.
+  ///
+  /// Deliberately ONE keystore read: probing with hasKey() first would also
+  /// hit the keychain and produce a second biometric prompt for a single
+  /// intent. A null key IS the "no key held" answer.
   Future<void> _reveal(String base64Content) async {
-    setState(() => _busy = true);
     try {
       final privateKey = await _keyStore.read();
       if (privateKey == null) {
-        setState(() => _state = CredentialState.noKey);
+        if (mounted) setState(() => _state = CredentialState.noKey);
         return;
       }
 
@@ -79,14 +71,15 @@ class _CredentialScreenState extends ConsumerState<CredentialScreen> {
         privateKey: privateKey,
       );
 
+      if (!mounted) return;
       setState(() {
         _revealed = DecryptedCredential.parse(utf8.decode(plaintext));
         _state = CredentialState.revealed;
       });
     } on PgpDecryptException {
-      setState(() => _state = CredentialState.keyCannotRead);
+      if (mounted) setState(() => _state = CredentialState.keyCannotRead);
     } catch (_) {
-      setState(() => _state = CredentialState.keyCannotRead);
+      if (mounted) setState(() => _state = CredentialState.noKey);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -101,6 +94,12 @@ class _CredentialScreenState extends ConsumerState<CredentialScreen> {
         backgroundColor: SpaceNotesTheme.bg,
         body: Center(child: CircularProgressIndicator()),
       );
+    }
+
+    if (!_started) {
+      _started = true;
+      WidgetsBinding.instance
+          .addPostFrameCallback((_) => _reveal(file.content));
     }
 
     final entry = CredentialEntry.fromPath(file.path);
@@ -118,10 +117,10 @@ class _CredentialScreenState extends ConsumerState<CredentialScreen> {
               const SizedBox(height: 28),
               if (revealed != null)
                 _RevealedFields(credential: revealed)
-              else if (_state == CredentialState.keyHeld)
-                _RevealButton(
-                  busy: _busy,
-                  onPressed: () => _reveal(file.content),
+              else if (_busy)
+                const Padding(
+                  padding: EdgeInsets.only(top: 8),
+                  child: Center(child: CircularProgressIndicator()),
                 )
               else
                 _StateNotice(state: _state),
@@ -201,7 +200,7 @@ class _StateNotice extends StatelessWidget {
           'Not encrypted to this device',
           'This entry was encrypted to other recipients, so it cannot be revealed here.',
         ),
-      CredentialState.keyHeld || CredentialState.revealed => ('', ''),
+      CredentialState.revealed => ('', ''),
     };
 
     return Container(
@@ -233,40 +232,6 @@ class _StateNotice extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _RevealButton extends StatelessWidget {
-  const _RevealButton({required this.busy, required this.onPressed});
-
-  final bool busy;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: double.infinity,
-      child: FilledButton.icon(
-        onPressed: busy ? null : onPressed,
-        icon: busy
-            ? const SizedBox(
-                width: 14,
-                height: 14,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              )
-            : const Icon(Icons.lock_open_outlined, size: 18),
-        label: Text(busy ? 'Decrypting…' : 'Reveal password'),
-        style: FilledButton.styleFrom(
-          backgroundColor: SpaceNotesTheme.card,
-          foregroundColor: SpaceNotesTheme.fg,
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-            side: const BorderSide(color: SpaceNotesTheme.hairlineStrong),
-          ),
-        ),
       ),
     );
   }
