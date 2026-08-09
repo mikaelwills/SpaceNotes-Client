@@ -35,7 +35,7 @@ class _NotesHomeViewState extends ConsumerState<NotesHomeView> {
   Widget build(BuildContext context) {
     final searchQuery = ref.watch(folderSearchQueryProvider);
     final isSearching = searchQuery.trim().isNotEmpty;
-    final noteCount = ref.watch(recentNotesProvider).length;
+    final noteCount = ref.watch(recentFilesProvider).length;
     final folderCount =
         ref.watch(dynamicFolderContentsProvider('')).folders.length;
 

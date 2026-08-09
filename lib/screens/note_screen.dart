@@ -72,7 +72,7 @@ class _NoteScreenState extends ConsumerState<NoteScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final note = ref.watch(noteByIdProvider(widget.noteId));
+    final note = ref.watch(fileByIdProvider(widget.noteId));
 
     if (note != null && note.path != _currentPath) {
       _currentPath = note.path;
@@ -238,7 +238,7 @@ class _NoteScreenState extends ConsumerState<NoteScreen> {
   void _initNote() {
     _debounceTimer?.cancel();
 
-    final note = ref.read(noteByIdProvider(widget.noteId));
+    final note = ref.read(fileByIdProvider(widget.noteId));
 
     if (note != null) {
       _currentPath = note.path;

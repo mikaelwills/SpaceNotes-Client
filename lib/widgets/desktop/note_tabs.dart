@@ -131,7 +131,7 @@ class _NoteTabState extends ConsumerState<_NoteTab> {
   }
 
   String get _displayName {
-    final note = ref.watch(noteByIdProvider(widget.noteId));
+    final note = ref.watch(fileByIdProvider(widget.noteId));
     if (note == null) return 'Loading...';
 
     final name = note.path.split('/').last;

@@ -281,7 +281,7 @@ class _NoteBottomBarState extends ConsumerState<NoteBottomBar> {
 
   SpaceFile? _getCurrentNote() {
     if (widget.notePath == null) return null;
-    final notes = ref.read(notesListProvider);
+    final notes = ref.read(fileListProvider);
     return notes.firstWhereOrNull((n) => n.path == widget.notePath);
   }
 

@@ -297,7 +297,7 @@ class _FolderTreeState extends ConsumerState<_FolderTree> {
   @override
   Widget build(BuildContext context) {
     final folders = ref.watch(foldersListProvider);
-    final notes = ref.watch(notesListProvider);
+    final notes = ref.watch(fileListProvider);
     final searchQuery = ref.watch(folderSearchQueryProvider).toLowerCase();
     final isSearching = searchQuery.isNotEmpty;
     final terms = searchTerms(searchQuery);

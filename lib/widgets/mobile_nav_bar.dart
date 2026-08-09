@@ -50,7 +50,7 @@ class MobileNavBar extends ConsumerWidget {
           if (isOnNote) ...[
             Builder(builder: (context) {
               final noteId = _extractNoteIdFromLocation(currentLocation);
-              final note = ref.watch(noteByIdProvider(noteId));
+              final note = ref.watch(fileByIdProvider(noteId));
               final notePath = note?.path ?? '';
               return _NavIcon(
                 icon: Icons.arrow_back,
@@ -63,7 +63,7 @@ class MobileNavBar extends ConsumerWidget {
             Expanded(
               child: Builder(builder: (context) {
                 final noteId = _extractNoteIdFromLocation(currentLocation);
-                final note = ref.watch(noteByIdProvider(noteId));
+                final note = ref.watch(fileByIdProvider(noteId));
                 final notePath = note?.path ?? '';
                 final noteName = notePath.split('/').last.replaceAll('.md', '');
                 return _EditableNoteName(
@@ -398,7 +398,7 @@ class _EditableNoteNameState extends ConsumerState<_EditableNoteName> {
       return;
     }
 
-    final notes = ref.read(notesListProvider);
+    final notes = ref.read(fileListProvider);
     final note = notes.firstWhereOrNull((n) => n.path == widget.notePath);
 
     if (note == null) return;

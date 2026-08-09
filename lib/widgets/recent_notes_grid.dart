@@ -15,7 +15,7 @@ class RecentNotesGrid extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final notes = ref.watch(recentNotesProvider);
+    final notes = ref.watch(recentFilesProvider);
     if (notes.isEmpty) {
       return _buildEmptyState();
     }

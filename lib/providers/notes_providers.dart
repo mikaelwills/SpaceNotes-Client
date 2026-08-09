@@ -44,7 +44,7 @@ final spacetimeClientProvider = Provider<SpacetimeDbClient?>((ref) {
   return watchListenable(ref, repository.clientNotifier);
 });
 
-final notesListProvider = Provider<List<SpaceFile>>((ref) {
+final fileListProvider = Provider<List<SpaceFile>>((ref) {
   final client = ref.watch(spacetimeClientProvider);
   if (client == null) {
     debugLogger.warning('NOTES_LIST', 'client is null -> rendering 0 notes');
@@ -68,7 +68,7 @@ final foldersListProvider = Provider<List<Folder>>((ref) {
   return sorted;
 });
 
-final noteByIdProvider = Provider.family<SpaceFile?, String>((ref, id) {
+final fileByIdProvider = Provider.family<SpaceFile?, String>((ref, id) {
   final client = ref.watch(spacetimeClientProvider);
   if (client == null) return null;
   return watchListenable(ref, client.spaceFile.rowNotifier(id));
@@ -116,8 +116,8 @@ List<SpaceFile> _rankNotesByNameMatch(List<SpaceFile> notes, List<String> terms)
   return [...nameMatches, ...otherMatches];
 }
 
-final filteredNotesProvider = Provider.autoDispose<List<SpaceFile>>((ref) {
-  final notes = ref.watch(notesListProvider);
+final filteredFilesProvider = Provider.autoDispose<List<SpaceFile>>((ref) {
+  final notes = ref.watch(fileListProvider);
   final searchQuery = ref.watch(searchQueryProvider);
 
   if (searchQuery.trim().isEmpty) return notes;
@@ -149,7 +149,7 @@ final dynamicFolderContentsProvider = Provider.family
     .autoDispose<({List<Folder> folders, List<SpaceFile> notes}), String>(
         (ref, currentPath) {
   final allFolders = ref.watch(foldersListProvider);
-  final allNotes = ref.watch(notesListProvider);
+  final allNotes = ref.watch(fileListProvider);
   final searchQuery = ref.watch(folderSearchQueryProvider);
 
   final normalizedPath = currentPath.isEmpty
@@ -197,9 +197,9 @@ final dynamicFolderContentsProvider = Provider.family
   );
 });
 
-final folderNotesProvider =
+final folderFilesProvider =
     Provider.family.autoDispose<List<SpaceFile>, String>((ref, folderPath) {
-  final notes = ref.watch(notesListProvider);
+  final notes = ref.watch(fileListProvider);
   final folderPathWithSlash =
       folderPath.endsWith('/') ? folderPath : '$folderPath/';
   return notes.where((note) => note.folderPath == folderPathWithSlash).toList();
@@ -220,8 +220,8 @@ final folderSubfoldersProvider =
 });
 
 /// Recently edited notes (top 20, by modifiedTime desc).
-final recentNotesProvider = Provider<List<SpaceFile>>((ref) {
-  final notes = ref.watch(notesListProvider);
+final recentFilesProvider = Provider<List<SpaceFile>>((ref) {
+  final notes = ref.watch(fileListProvider);
   if (notes.isEmpty) return const [];
 
   final sorted = notes.toList()

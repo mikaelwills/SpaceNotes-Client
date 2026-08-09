@@ -214,7 +214,7 @@ class _DesktopTopBar extends ConsumerWidget {
   String _getBreadcrumb(String location, WidgetRef ref) {
     if (location.startsWith('/notes/note/')) {
       final noteId = location.substring('/notes/note/'.length);
-      final note = ref.watch(noteByIdProvider(noteId));
+      final note = ref.watch(fileByIdProvider(noteId));
       if (note != null) {
         return note.path;
       }
