@@ -10,7 +10,7 @@ import '../screens/settings_screen.dart';
 import '../screens/home_screen.dart';
 import '../screens/folder_list_view.dart';
 import '../screens/notes_home_view.dart';
-import '../screens/note_screen.dart';
+import '../file_types/file_type_registry.dart';
 import '../screens/chat_view.dart';
 import '../screens/agent_dashboard.dart';
 import '../screens/agent_chat.dart';
@@ -144,7 +144,7 @@ GoRouter createAppRouter(ProviderContainer container) {
                   final noteId = state.pathParameters['id']!;
                   return _buildFadeTransitionPage(
                     key: state.pageKey,
-                    child: NoteScreen(noteId: noteId),
+                    child: _FileScreen(fileId: noteId),
                   );
                 },
               ),
@@ -209,4 +209,23 @@ CustomTransitionPage<void> _buildFadeTransitionPage({
       );
     },
   );
+}
+
+class _FileScreen extends ConsumerWidget {
+  const _FileScreen({required this.fileId});
+
+  final String fileId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final file = ref.watch(fileByIdProvider(fileId));
+
+    if (file == null) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    return FileTypeRegistry.forFile(file).buildScreen(fileId);
+  }
 }
