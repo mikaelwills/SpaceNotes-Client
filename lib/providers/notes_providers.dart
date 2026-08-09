@@ -232,3 +232,27 @@ final recentFilesProvider = Provider<List<SpaceFile>>((ref) {
     ..sort((a, b) => b.modifiedTime.compareTo(a.modifiedTime));
   return sorted.take(20).toList();
 });
+
+/// Every credential in the store, sorted by site then account.
+final credentialsProvider = Provider<List<SpaceFile>>((ref) {
+  final files = ref.watch(fileListProvider);
+  final credentials = files
+      .where((f) => FileTypeRegistry.forFile(f).extension == 'gpg')
+      .toList()
+    ..sort((a, b) => a.path.toLowerCase().compareTo(b.path.toLowerCase()));
+  return credentials;
+});
+
+final credentialFilterProvider = StateProvider<String>((ref) => '');
+
+/// Credentials matching the filter, on site or account.
+final filteredCredentialsProvider = Provider<List<SpaceFile>>((ref) {
+  final credentials = ref.watch(credentialsProvider);
+  final terms = searchTerms(ref.watch(credentialFilterProvider));
+  if (terms.isEmpty) return credentials;
+
+  return credentials.where((c) {
+    final haystack = c.path.toLowerCase();
+    return terms.every(haystack.contains);
+  }).toList();
+});

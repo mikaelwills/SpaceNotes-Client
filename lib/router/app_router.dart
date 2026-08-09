@@ -10,6 +10,7 @@ import '../screens/settings_screen.dart';
 import '../screens/home_screen.dart';
 import '../screens/folder_list_view.dart';
 import '../screens/notes_home_view.dart';
+import '../screens/passwords_screen.dart';
 import '../file_types/file_type_registry.dart';
 import '../screens/chat_view.dart';
 import '../screens/agent_dashboard.dart';
@@ -147,6 +148,14 @@ GoRouter createAppRouter(ProviderContainer container) {
                     child: _FileScreen(fileId: noteId),
                   );
                 },
+              ),
+              GoRoute(
+                path: '/notes/passwords',
+                name: 'passwords',
+                pageBuilder: (context, state) => _buildFadeTransitionPage(
+                  key: state.pageKey,
+                  child: const PasswordsScreen(),
+                ),
               ),
               GoRoute(
                 path: '/notes/users',

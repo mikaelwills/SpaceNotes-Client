@@ -1411,6 +1411,7 @@ class _SidebarFooter extends ConsumerWidget {
     final location = GoRouterState.of(context).uri.toString();
     final onChat = location.startsWith('/notes/chat');
     final onAgents = location.startsWith('/notes/agents');
+    final onPasswords = location.startsWith('/notes/passwords');
     final onSettings = location == '/settings';
     final onNotes = !onChat && !onAgents && !onSettings;
 
@@ -1455,6 +1456,13 @@ class _SidebarFooter extends ConsumerWidget {
             onPressed: onAgents ? null : () => context.go('/notes/agents'),
             active: onAgents,
             tooltip: 'agents',
+          ),
+          const SizedBox(width: 4),
+          SnIconButton(
+            icon: const Icon(Icons.key_outlined),
+            onPressed: onPasswords ? null : () => context.go('/notes/passwords'),
+            active: onPasswords,
+            tooltip: 'passwords',
           ),
           const Spacer(),
           SnIconButton(
