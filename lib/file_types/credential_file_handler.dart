@@ -12,6 +12,9 @@ class CredentialFileHandler extends FileTypeHandler {
   IconData get icon => Icons.key_outlined;
 
   @override
+  bool get isMovable => false;
+
+  @override
   bool get isRenameable => false;
 
   @override

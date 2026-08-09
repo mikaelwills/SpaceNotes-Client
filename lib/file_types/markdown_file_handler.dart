@@ -12,6 +12,9 @@ class MarkdownFileHandler extends FileTypeHandler {
   IconData get icon => Icons.description_outlined;
 
   @override
+  bool get isMovable => true;
+
+  @override
   bool get isRenameable => true;
 
   @override

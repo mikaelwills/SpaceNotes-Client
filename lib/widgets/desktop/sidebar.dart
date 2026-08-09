@@ -459,6 +459,7 @@ class _FolderTreeState extends ConsumerState<_FolderTree> {
 
   bool _canAcceptAtRoot(_DraggableData data) {
     if (!data.path.contains('/')) return false;
+    if (!data.isMovable) return false;
     return true;
   }
 
@@ -483,6 +484,9 @@ class _DraggableData {
       {required this.isFolder, required this.path, required this.name});
 
   String get fileName => path.contains('/') ? path.split('/').last : path;
+
+  bool get isMovable =>
+      isFolder || FileTypeRegistry.forFileName(fileName).isMovable;
 }
 
 class _FolderTreeItem extends ConsumerStatefulWidget {
@@ -881,6 +885,7 @@ class _FolderTreeItemState extends ConsumerState<_FolderTreeItem> {
 
   bool _canAcceptDrop(_DraggableData data) {
     final targetPath = widget.folder.path;
+    if (!data.isMovable) return false;
     if (data.isFolder) {
       if (data.path == targetPath) return false;
       if (targetPath.startsWith('${data.path}/')) return false;

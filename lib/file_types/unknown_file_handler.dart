@@ -13,6 +13,9 @@ class UnknownFileHandler extends FileTypeHandler {
   IconData get icon => Icons.insert_drive_file_outlined;
 
   @override
+  bool get isMovable => true;
+
+  @override
   bool get isRenameable => false;
 
   @override

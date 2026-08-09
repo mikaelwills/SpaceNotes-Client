@@ -12,6 +12,7 @@ void main() {
   test('gpg is locked down', () {
     final h = FileTypeRegistry.forExtension('gpg');
     expect(h.isDeletable, false);
+    expect(h.isMovable, false);
     expect(h.isRenameable, false);
     expect(h.isEditable, false);
     expect(h.isCreatable, false);

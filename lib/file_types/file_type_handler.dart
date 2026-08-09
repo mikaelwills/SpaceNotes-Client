@@ -25,6 +25,8 @@ abstract class FileTypeHandler {
 
   bool get isRenameable;
 
+  bool get isMovable;
+
   bool get isEditable;
 
   bool get isDeletable;
