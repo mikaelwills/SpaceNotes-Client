@@ -5,6 +5,7 @@ import '../generated/space_file.dart';
 import '../generated/folder.dart';
 import '../theme/spacenotes_theme.dart';
 import '../providers/notes_providers.dart';
+import '../file_types/file_type_registry.dart';
 
 /// Static dialog functions for TopFolderListScreen
 class NotesListDialogs {
@@ -398,7 +399,7 @@ class NotesListDialogs {
               print(
                   '🗑️  DELETE: navigateToAfterDelete = $navigateToAfterDelete');
 
-              // Delete the note
+              if (!FileTypeRegistry.forFile(note).isDeletable) return;
               ref.read(notesRepositoryProvider).deleteNote(note.id);
 
               // Navigate to specified location after delete

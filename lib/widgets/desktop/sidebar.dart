@@ -464,7 +464,7 @@ class _FolderTreeState extends ConsumerState<_FolderTree> {
 
   void _handleDropAtRoot(_DraggableData data) async {
     final repo = ref.read(notesRepositoryProvider);
-    final newPath = data.name;
+    final newPath = data.isFolder ? data.name : data.fileName;
 
     if (data.isFolder) {
       await repo.moveFolder(data.path, newPath);
@@ -481,6 +481,8 @@ class _DraggableData {
 
   const _DraggableData(
       {required this.isFolder, required this.path, required this.name});
+
+  String get fileName => path.contains('/') ? path.split('/').last : path;
 }
 
 class _FolderTreeItem extends ConsumerStatefulWidget {
@@ -888,7 +890,9 @@ class _FolderTreeItemState extends ConsumerState<_FolderTreeItem> {
 
   void _handleDrop(_DraggableData data) async {
     final repo = ref.read(notesRepositoryProvider);
-    final newPath = '${widget.folder.path}/${data.name}';
+    final newPath = data.isFolder
+        ? '${widget.folder.path}/${data.name}'
+        : '${widget.folder.path}/${data.fileName}';
 
     if (data.isFolder) {
       await repo.moveFolder(data.path, newPath);
@@ -973,7 +977,9 @@ class _NoteTreeItem extends ConsumerWidget {
       onTap: () {
         _openNoteInDesktop(context, note.id);
       },
-      onDelete: () => _handleNoteAction(context, ref, note, 'delete'),
+      onDelete: FileTypeRegistry.forFile(note).isDeletable
+          ? () => _handleNoteAction(context, ref, note, 'delete')
+          : null,
       contextMenuItems: const [
         PopupMenuItem(
           value: 'rename',
@@ -1052,6 +1058,7 @@ class _NoteTreeItem extends ConsumerWidget {
         }
         break;
       case 'delete':
+        if (!FileTypeRegistry.forFile(note).isDeletable) return;
         context.read<DesktopNotesBloc>().add(CloseNote(note.id));
         repo.deleteNote(note.id);
         break;
