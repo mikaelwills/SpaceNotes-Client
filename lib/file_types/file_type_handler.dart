@@ -37,6 +37,8 @@ abstract class FileTypeHandler {
 
   bool get isCreatable => newFileTemplate != null;
 
+  bool get hasContextActions => isMovable || isDeletable || isRenameable;
+
   String displayName(SpaceFile file) => stripExtension(file.name);
 
   Widget buildScreen(String fileId);

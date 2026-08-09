@@ -985,34 +985,36 @@ class _NoteTreeItem extends ConsumerWidget {
       onDelete: FileTypeRegistry.forFile(note).isDeletable
           ? () => _handleNoteAction(context, ref, note, 'delete')
           : null,
-      contextMenuItems: const [
-        PopupMenuItem(
-          value: 'rename',
-          height: 44,
-          padding: EdgeInsets.symmetric(horizontal: 18),
-          child: Text('Rename',
-              style: TextStyle(
-                fontFamily: SpaceNotesTheme.fontSans,
-                fontSize: 13,
-                fontWeight: FontWeight.w400,
-                letterSpacing: -0.1,
-                color: SpaceNotesTheme.fg,
-              )),
-        ),
-        PopupMenuItem(
-          value: 'delete',
-          height: 44,
-          padding: EdgeInsets.symmetric(horizontal: 18),
-          child: Text('Delete',
-              style: TextStyle(
-                fontFamily: SpaceNotesTheme.fontSans,
-                fontSize: 13,
-                fontWeight: FontWeight.w400,
-                letterSpacing: -0.1,
-                color: SpaceNotesTheme.error,
-              )),
-        ),
-      ],
+      contextMenuItems: FileTypeRegistry.forFile(note).hasContextActions
+          ? const [
+              PopupMenuItem(
+                value: 'rename',
+                height: 44,
+                padding: EdgeInsets.symmetric(horizontal: 18),
+                child: Text('Rename',
+                    style: TextStyle(
+                      fontFamily: SpaceNotesTheme.fontSans,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w400,
+                      letterSpacing: -0.1,
+                      color: SpaceNotesTheme.fg,
+                    )),
+              ),
+              PopupMenuItem(
+                value: 'delete',
+                height: 44,
+                padding: EdgeInsets.symmetric(horizontal: 18),
+                child: Text('Delete',
+                    style: TextStyle(
+                      fontFamily: SpaceNotesTheme.fontSans,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w400,
+                      letterSpacing: -0.1,
+                      color: SpaceNotesTheme.error,
+                    )),
+              ),
+            ]
+          : const [],
       onContextMenuSelected: (action) {
         _handleNoteAction(context, ref, note, action);
       },

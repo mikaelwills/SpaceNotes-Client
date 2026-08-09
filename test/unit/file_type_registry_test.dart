@@ -13,10 +13,14 @@ void main() {
     final h = FileTypeRegistry.forExtension('gpg');
     expect(h.isDeletable, false);
     expect(h.isMovable, false);
+    expect(h.hasContextActions, false);
     expect(h.isRenameable, false);
     expect(h.isEditable, false);
     expect(h.isCreatable, false);
     expect(h.hasTextRepresentation, false);
+  });
+  test('markdown still has context actions', () {
+    expect(FileTypeRegistry.forExtension('md').hasContextActions, true);
   });
   test('rename preserves extension', () {
     expect(FileTypeRegistry.forExtension('gpg').applyExtension('x'), 'x.gpg');

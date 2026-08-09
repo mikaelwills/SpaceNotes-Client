@@ -177,8 +177,9 @@ class _FolderListViewState extends ConsumerState<FolderListView> {
         ref.read(folderSearchQueryProvider.notifier).state = '';
         context.go('/notes/note/${note.id}');
       },
-      onLongPress: () =>
-          NotesListDialogs.showNoteContextMenu(context, ref, note),
+      onLongPress: FileTypeRegistry.forFile(note).hasContextActions
+          ? () => NotesListDialogs.showNoteContextMenu(context, ref, note)
+          : null,
       onMove: FileTypeRegistry.forFile(note).isMovable
           ? () => NotesListDialogs.showMoveNoteDialog(context, ref, note)
           : null,
