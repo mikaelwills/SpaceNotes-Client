@@ -1,9 +1,14 @@
+import 'package:collection/collection.dart';
 import 'package:spacenotes_client/repositories/spacetimedb_notes_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/foundation.dart' show ValueListenable, kIsWeb;
+import 'package:spacenotes_pgp/spacenotes_pgp.dart';
 import '../generated/client.dart';
 import '../generated/folder.dart';
 import '../generated/space_file.dart';
+import '../services/credential_key_store.dart';
+import '../services/credential_name_deriver.dart';
+import '../services/credential_writer.dart';
 import '../services/debug_logger.dart';
 import '../file_types/file_type_registry.dart';
 
@@ -75,6 +80,37 @@ final fileByIdProvider = Provider.family<SpaceFile?, String>((ref, id) {
   return watchListenable(ref, client.spaceFile.rowNotifier(id));
 });
 
+final credentialStoreDotfileProvider =
+    Provider.family<String?, String>((ref, fileName) {
+  final files = ref.watch(fileListProvider);
+  final row = files.firstWhereOrNull(
+    (f) => f.path == '${CredentialNameDeriver.storeRoot}/$fileName',
+  );
+  return row?.content;
+});
+
+final credentialWriterProvider = Provider<CredentialWriter?>((ref) {
+  final gpgId = ref.watch(
+    credentialStoreDotfileProvider('.gpg-id'),
+  );
+  final publicKeys = ref.watch(
+    credentialStoreDotfileProvider('.gpg-pubkeys.asc'),
+  );
+  if (gpgId == null || publicKeys == null) return null;
+
+  final repository = ref.watch(notesRepositoryProvider);
+  final keyStore = CredentialKeyStore();
+
+  return CredentialWriter(
+    gpgId: gpgId,
+    publicKeysArmored: publicKeys,
+    encrypt: SpaceNotesPgp.encrypt,
+    decrypt: SpaceNotesPgp.decrypt,
+    readPrivateKey: keyStore.read,
+    upsert: repository.writeCredential,
+  );
+});
+
 final folderByIdProvider = Provider.family<Folder?, String>((ref, path) {
   final client = ref.watch(spacetimeClientProvider);
   if (client == null) return null;
@@ -93,31 +129,35 @@ List<String> searchTerms(String query) => query
     .where((term) => term.isNotEmpty)
     .toList();
 
-bool noteMatchesAllTerms(SpaceFile note, List<String> terms) {
-  final name = note.name.toLowerCase();
-  final path = note.path.toLowerCase();
-  final searchesContent = FileTypeRegistry.forFile(note).hasTextRepresentation;
-  final content = searchesContent ? note.content.toLowerCase() : '';
-  return terms.every((term) =>
-      name.contains(term) ||
-      path.contains(term) ||
-      (searchesContent && content.contains(term)));
+bool _haystackMatches(String haystack, List<String> terms) {
+  if (terms.isEmpty) return false;
+  final phrase = terms.join(' ');
+  return haystack.contains(phrase) ||
+      terms.any((term) => haystack.contains(term));
+}
+
+bool noteMatchesAllTerms(SpaceFile note, List<String> terms) =>
+    _haystackMatches('${note.name} ${note.path}'.toLowerCase(), terms);
+
+bool folderNameMatches(String folderName, List<String> terms) =>
+    _haystackMatches(folderName.toLowerCase(), terms);
+
+int nameMatchRank(String name, List<String> terms) {
+  final lower = name.toLowerCase();
+  final phrase = terms.join(' ');
+  if (lower == phrase) return 0;
+  if (lower.contains(phrase)) return 1;
+  if (terms.any((term) => lower.contains(term))) return 2;
+  return 3;
 }
 
 List<SpaceFile> _rankNotesByNameMatch(List<SpaceFile> notes, List<String> terms) {
-  final nameMatches = <SpaceFile>[];
-  final otherMatches = <SpaceFile>[];
-  for (final note in notes) {
-    final name = note.name.toLowerCase();
-    if (terms.every((term) => name.contains(term))) {
-      nameMatches.add(note);
-    } else {
-      otherMatches.add(note);
-    }
-  }
-  nameMatches.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
-  otherMatches.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
-  return [...nameMatches, ...otherMatches];
+  return [...notes]..sort((a, b) {
+      final byRank =
+          nameMatchRank(a.name, terms).compareTo(nameMatchRank(b.name, terms));
+      if (byRank != 0) return byRank;
+      return a.name.toLowerCase().compareTo(b.name.toLowerCase());
+    });
 }
 
 final filteredFilesProvider = Provider.autoDispose<List<SpaceFile>>((ref) {
@@ -143,10 +183,15 @@ final filteredFoldersProvider = Provider.autoDispose<List<Folder>>((ref) {
 
   final terms = searchTerms(searchQuery);
   if (terms.isEmpty) return folders;
-  return folders.where((folder) {
-    final name = folder.name.toLowerCase();
-    return terms.every((term) => name.contains(term));
-  }).toList();
+  return folders
+      .where((folder) => folderNameMatches(folder.name, terms))
+      .toList()
+    ..sort((a, b) {
+      final byRank = nameMatchRank(a.name, terms)
+          .compareTo(nameMatchRank(b.name, terms));
+      if (byRank != 0) return byRank;
+      return a.name.toLowerCase().compareTo(b.name.toLowerCase());
+    });
 });
 
 final dynamicFolderContentsProvider = Provider.family
@@ -187,10 +232,9 @@ final dynamicFolderContentsProvider = Provider.family
 
   final terms = searchTerms(searchQuery);
 
-  final filteredFolders = allFolders.where((folder) {
-    final name = folder.name.toLowerCase();
-    return terms.every((term) => name.contains(term));
-  }).toList();
+  final filteredFolders = allFolders
+      .where((folder) => folderNameMatches(folder.name, terms))
+      .toList();
 
   final filteredNotes =
       allNotes.where((note) => noteMatchesAllTerms(note, terms)).toList();

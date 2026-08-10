@@ -8,6 +8,6 @@ cd "$(dirname "$0")"
 export PATH="$HOME/go/bin:$PATH"
 export GOTOOLCHAIN=go1.25.12
 gomobile bind -target=ios,iossimulator,macos \
-  -o ../Frameworks/SpaceNotesPGP.xcframework \
+  -o ../darwin/spacenotes_pgp/Frameworks/SpaceNotesPGP.xcframework \
   -ldflags="-s -w" \
   ./pgpmobile

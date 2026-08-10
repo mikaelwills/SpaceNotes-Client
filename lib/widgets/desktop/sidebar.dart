@@ -19,6 +19,13 @@ import '../../file_types/file_type_registry.dart';
 final expandedFoldersProvider = StateProvider<Set<String>>((ref) => {});
 final searchFocusRequestProvider = StateProvider<int>((ref) => 0);
 
+int _compareByNameMatch(String a, String b, List<String> terms) {
+  if (terms.isEmpty) return a.toLowerCase().compareTo(b.toLowerCase());
+  final byRank = nameMatchRank(a, terms).compareTo(nameMatchRank(b, terms));
+  if (byRank != 0) return byRank;
+  return a.toLowerCase().compareTo(b.toLowerCase());
+}
+
 void _openNoteInDesktop(BuildContext context, String noteId) {
   context.read<DesktopNotesBloc>().add(OpenNote(noteId));
   final location = GoRouterState.of(context).uri.toString();
@@ -329,8 +336,7 @@ class _FolderTreeState extends ConsumerState<_FolderTree> {
       }
 
       for (final folder in folders) {
-        final folderName = folder.name.toLowerCase();
-        if (terms.every((term) => folderName.contains(term))) {
+        if (folderNameMatches(folder.name, terms)) {
           matchingFolderPaths.add(folder.path);
           visibleFolderPaths.add(folder.path);
           String parentPath = folder.path;
@@ -382,13 +388,13 @@ class _FolderTreeState extends ConsumerState<_FolderTree> {
       return visibleFolderPaths.contains(f.path) ||
           matchingFolderPaths.contains(f.path);
     }).toList()
-      ..sort((a, b) => a.name.compareTo(b.name));
+      ..sort((a, b) => _compareByNameMatch(a.name, b.name, terms));
     final rootNotes = notes.where((n) {
       if (n.depth != 0) return false;
       if (!isSearching) return true;
       return matchingNotePaths.contains(n.path);
     }).toList()
-      ..sort((a, b) => a.name.compareTo(b.name));
+      ..sort((a, b) => _compareByNameMatch(a.name, b.name, terms));
 
     return ScrollConfiguration(
       behavior: ScrollConfiguration.of(context).copyWith(scrollbars: false),
@@ -525,6 +531,7 @@ class _FolderTreeItemState extends ConsumerState<_FolderTreeItem> {
   Widget build(BuildContext context) {
     final expandedFolders = ref.watch(expandedFoldersProvider);
     final isSearching = widget.searchQuery.isNotEmpty;
+    final terms = searchTerms(widget.searchQuery.toLowerCase());
     final isExpanded = expandedFolders.contains(widget.folder.path);
 
     final thisFolderMatches =
@@ -550,14 +557,14 @@ class _FolderTreeItemState extends ConsumerState<_FolderTreeItem> {
       return widget.visibleFolderPaths.contains(f.path) ||
           widget.matchingFolderPaths.contains(f.path);
     }).toList()
-      ..sort((a, b) => a.name.compareTo(b.name));
+      ..sort((a, b) => _compareByNameMatch(a.name, b.name, terms));
 
     final childNotes = widget.allNotes.where((n) {
       if (n.folderPath != folderPathWithSlash) return false;
       if (!isSearching || shouldShowAllChildren) return true;
       return widget.matchingNotePaths.contains(n.path);
     }).toList()
-      ..sort((a, b) => a.name.compareTo(b.name));
+      ..sort((a, b) => _compareByNameMatch(a.name, b.name, terms));
 
     final hasChildren = childFolders.isNotEmpty || childNotes.isNotEmpty;
     final totalDescendants = widget.allNotes
