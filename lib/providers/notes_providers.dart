@@ -93,31 +93,35 @@ List<String> searchTerms(String query) => query
     .where((term) => term.isNotEmpty)
     .toList();
 
-bool noteMatchesAllTerms(SpaceFile note, List<String> terms) {
-  final name = note.name.toLowerCase();
-  final path = note.path.toLowerCase();
-  final searchesContent = FileTypeRegistry.forFile(note).hasTextRepresentation;
-  final content = searchesContent ? note.content.toLowerCase() : '';
-  return terms.every((term) =>
-      name.contains(term) ||
-      path.contains(term) ||
-      (searchesContent && content.contains(term)));
+bool _haystackMatches(String haystack, List<String> terms) {
+  if (terms.isEmpty) return false;
+  final phrase = terms.join(' ');
+  return haystack.contains(phrase) ||
+      terms.any((term) => haystack.contains(term));
+}
+
+bool noteMatchesAllTerms(SpaceFile note, List<String> terms) =>
+    _haystackMatches('${note.name} ${note.path}'.toLowerCase(), terms);
+
+bool folderNameMatches(String folderName, List<String> terms) =>
+    _haystackMatches(folderName.toLowerCase(), terms);
+
+int nameMatchRank(String name, List<String> terms) {
+  final lower = name.toLowerCase();
+  final phrase = terms.join(' ');
+  if (lower == phrase) return 0;
+  if (lower.contains(phrase)) return 1;
+  if (terms.any((term) => lower.contains(term))) return 2;
+  return 3;
 }
 
 List<SpaceFile> _rankNotesByNameMatch(List<SpaceFile> notes, List<String> terms) {
-  final nameMatches = <SpaceFile>[];
-  final otherMatches = <SpaceFile>[];
-  for (final note in notes) {
-    final name = note.name.toLowerCase();
-    if (terms.every((term) => name.contains(term))) {
-      nameMatches.add(note);
-    } else {
-      otherMatches.add(note);
-    }
-  }
-  nameMatches.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
-  otherMatches.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
-  return [...nameMatches, ...otherMatches];
+  return [...notes]..sort((a, b) {
+      final byRank =
+          nameMatchRank(a.name, terms).compareTo(nameMatchRank(b.name, terms));
+      if (byRank != 0) return byRank;
+      return a.name.toLowerCase().compareTo(b.name.toLowerCase());
+    });
 }
 
 final filteredFilesProvider = Provider.autoDispose<List<SpaceFile>>((ref) {
@@ -143,10 +147,15 @@ final filteredFoldersProvider = Provider.autoDispose<List<Folder>>((ref) {
 
   final terms = searchTerms(searchQuery);
   if (terms.isEmpty) return folders;
-  return folders.where((folder) {
-    final name = folder.name.toLowerCase();
-    return terms.every((term) => name.contains(term));
-  }).toList();
+  return folders
+      .where((folder) => folderNameMatches(folder.name, terms))
+      .toList()
+    ..sort((a, b) {
+      final byRank = nameMatchRank(a.name, terms)
+          .compareTo(nameMatchRank(b.name, terms));
+      if (byRank != 0) return byRank;
+      return a.name.toLowerCase().compareTo(b.name.toLowerCase());
+    });
 });
 
 final dynamicFolderContentsProvider = Provider.family
@@ -187,10 +196,9 @@ final dynamicFolderContentsProvider = Provider.family
 
   final terms = searchTerms(searchQuery);
 
-  final filteredFolders = allFolders.where((folder) {
-    final name = folder.name.toLowerCase();
-    return terms.every((term) => name.contains(term));
-  }).toList();
+  final filteredFolders = allFolders
+      .where((folder) => folderNameMatches(folder.name, terms))
+      .toList();
 
   final filteredNotes =
       allNotes.where((note) => noteMatchesAllTerms(note, terms)).toList();
