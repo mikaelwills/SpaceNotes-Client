@@ -1,13 +1,17 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:spacenotes_pgp/spacenotes_pgp.dart';
+import 'package:uuid/uuid.dart';
+import '../generated/space_file.dart';
 import '../providers/notes_providers.dart';
 import '../services/credential_entry_parser.dart';
 import '../services/credential_key_store.dart';
+import '../services/credential_writer.dart';
 import '../theme/spacenotes_theme.dart';
+import '../widgets/credential_field.dart';
+import '../widgets/primitives/primitives.dart';
 
 enum CredentialState { noKey, keyCannotRead, notEncryptedToDevice, revealed }
 
@@ -46,12 +50,299 @@ class CredentialScreen extends ConsumerStatefulWidget {
   ConsumerState<CredentialScreen> createState() => _CredentialScreenState();
 }
 
+class CredentialCreateScreen extends ConsumerStatefulWidget {
+  const CredentialCreateScreen({super.key});
+
+  @override
+  ConsumerState<CredentialCreateScreen> createState() =>
+      _CredentialCreateScreenState();
+}
+
+class _CredentialCreateScreenState
+    extends ConsumerState<CredentialCreateScreen> {
+  final _password = TextEditingController();
+  final _username = TextEditingController();
+  final _url = TextEditingController();
+  bool _busy = false;
+  String? _error;
+
+  @override
+  void dispose() {
+    _password.dispose();
+    _username.dispose();
+    _url.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final writer = ref.watch(credentialWriterProvider);
+
+    return Scaffold(
+      backgroundColor: SpaceNotesTheme.bg,
+      appBar: AppBar(
+        backgroundColor: SpaceNotesTheme.bg,
+        title: const Text('New credential'),
+      ),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: writer == null
+              ? const Text(
+                  'The store\'s recipient list has not synced yet, so a new '
+                  'entry cannot be encrypted.',
+                  style: TextStyle(color: SpaceNotesTheme.muted, fontSize: 13),
+                )
+              : _buildForm(writer),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildForm(CredentialWriter writer) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        CredentialField(
+          label: 'password',
+          controller: _password,
+          editing: true,
+          obscurable: true,
+          onChanged: () => setState(() {}),
+        ),
+        const SizedBox(height: 12),
+        CredentialField(
+          label: 'username',
+          controller: _username,
+          editing: true,
+          onChanged: () => setState(() {}),
+        ),
+        const SizedBox(height: 12),
+        CredentialField(
+          label: 'url',
+          controller: _url,
+          editing: true,
+          onChanged: () => setState(() {}),
+        ),
+        if (_error != null) ...[
+          const SizedBox(height: 16),
+          _ErrorText(_error!),
+        ],
+        const SizedBox(height: 20),
+        _EditActions(
+          busy: _busy,
+          submitLabel: 'create',
+          canSubmit: _complete,
+          onCancel: () => Navigator.of(context).pop(),
+          onSubmit: () => _create(writer),
+        ),
+      ],
+    );
+  }
+
+  bool get _complete =>
+      _password.text.trim().isNotEmpty &&
+      _username.text.trim().isNotEmpty &&
+      _url.text.trim().isNotEmpty;
+
+  Future<void> _create(CredentialWriter writer) async {
+    if (!_complete || _busy) return;
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      await writer.write(
+        CredentialWriteRequest(
+          id: const Uuid().v4(),
+          password: _password.text,
+          username: _username.text,
+          url: _url.text,
+        ),
+      );
+      if (mounted) Navigator.of(context).pop();
+    } on Exception catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _busy = false;
+        _error = _messageOf(e);
+      });
+    }
+  }
+}
+
 class _CredentialScreenState extends ConsumerState<CredentialScreen> {
   final _keyStore = CredentialKeyStore();
-  DecryptedCredential? _revealed;
+  final _password = TextEditingController();
+  final _username = TextEditingController();
+  final _url = TextEditingController();
   CredentialState _state = CredentialState.noKey;
   bool _busy = true;
   bool _started = false;
+  bool _editing = false;
+  bool _saving = false;
+  String? _error;
+
+  @override
+  void dispose() {
+    _password.dispose();
+    _username.dispose();
+    _url.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final file = ref.watch(fileByIdProvider(widget.fileId));
+
+    if (file == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (!_started) {
+      _started = true;
+      WidgetsBinding.instance
+          .addPostFrameCallback((_) => _reveal(file.content));
+    }
+
+    final entry = CredentialEntry.fromPath(file.path);
+
+    return SafeArea(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _Header(entry: entry),
+            const SizedBox(height: 28),
+            if (_state == CredentialState.revealed)
+              _buildFields(file)
+            else if (_busy)
+              const Padding(
+                padding: EdgeInsets.only(top: 8),
+                child: Center(child: CircularProgressIndicator()),
+              )
+            else
+              _StateNotice(state: _state),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFields(SpaceFile file) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        CredentialField(
+          label: 'password',
+          controller: _password,
+          editing: _editing,
+          obscurable: true,
+          onChanged: () => setState(() {}),
+        ),
+        const SizedBox(height: 12),
+        CredentialField(
+          label: 'username',
+          controller: _username,
+          editing: _editing,
+          onChanged: () => setState(() {}),
+        ),
+        const SizedBox(height: 12),
+        CredentialField(
+          label: 'url',
+          controller: _url,
+          editing: _editing,
+          editable: false,
+        ),
+        if (_error != null) ...[
+          const SizedBox(height: 16),
+          _ErrorText(_error!),
+        ],
+        const SizedBox(height: 20),
+        if (_editing)
+          _EditActions(
+            busy: _saving,
+            submitLabel: 'save',
+            canSubmit: _complete,
+            onCancel: _cancelEdit,
+            onSubmit: () => _save(file.id, file.path),
+          )
+        else
+          SizedBox(
+            width: double.infinity,
+            child: SnButton(
+              key: const Key('credential-edit-button'),
+              label: 'edit',
+              onPressed: () => setState(() => _editing = true),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 18),
+            ),
+          ),
+      ],
+    );
+  }
+
+  bool get _complete =>
+      _password.text.trim().isNotEmpty && _username.text.trim().isNotEmpty;
+
+  void _cancelEdit() {
+    setState(() {
+      _editing = false;
+      _error = null;
+      _seedControllers();
+    });
+  }
+
+  void _seedControllers() {
+    _password.text = _revealed?.password ?? '';
+    _username.text = _revealed?.username ?? '';
+    _url.text = _revealed?.url ?? '';
+  }
+
+  DecryptedCredential? _revealed;
+
+  Future<void> _save(String id, String currentPath) async {
+    if (!_complete || _saving) return;
+    final writer = ref.read(credentialWriterProvider);
+    if (writer == null) {
+      setState(() => _error =
+          'the store\'s recipient list has not synced yet, so nothing was written');
+      return;
+    }
+
+    setState(() {
+      _saving = true;
+      _error = null;
+    });
+
+    try {
+      await writer.write(
+        CredentialWriteRequest(
+          id: id,
+          password: _password.text,
+          username: _username.text,
+          url: _url.text,
+          existingStorePath: currentPath,
+        ),
+      );
+      if (!mounted) return;
+      setState(() {
+        _saving = false;
+        _editing = false;
+        _revealed = DecryptedCredential.parse(
+          '${_password.text}\n'
+          'username: ${_username.text}\n'
+          'url: ${_url.text}\n',
+        );
+      });
+    } on Exception catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _saving = false;
+        _error = _messageOf(e);
+      });
+    }
+  }
 
   /// Decrypts as soon as the entry opens.
   ///
@@ -74,6 +365,7 @@ class _CredentialScreenState extends ConsumerState<CredentialScreen> {
       if (!mounted) return;
       setState(() {
         _revealed = DecryptedCredential.parse(utf8.decode(plaintext));
+        _seedControllers();
         _state = CredentialState.revealed;
       });
     } on PgpDecryptException {
@@ -83,52 +375,6 @@ class _CredentialScreenState extends ConsumerState<CredentialScreen> {
     } finally {
       if (mounted) setState(() => _busy = false);
     }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final file = ref.watch(fileByIdProvider(widget.fileId));
-
-    if (file == null) {
-      return const Scaffold(
-        backgroundColor: SpaceNotesTheme.bg,
-        body: Center(child: CircularProgressIndicator()),
-      );
-    }
-
-    if (!_started) {
-      _started = true;
-      WidgetsBinding.instance
-          .addPostFrameCallback((_) => _reveal(file.content));
-    }
-
-    final entry = CredentialEntry.fromPath(file.path);
-    final revealed = _revealed;
-
-    return Scaffold(
-      backgroundColor: SpaceNotesTheme.bg,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _Header(entry: entry),
-              const SizedBox(height: 28),
-              if (revealed != null)
-                _RevealedFields(credential: revealed)
-              else if (_busy)
-                const Padding(
-                  padding: EdgeInsets.only(top: 8),
-                  child: Center(child: CircularProgressIndicator()),
-                )
-              else
-                _StateNotice(state: _state),
-            ],
-          ),
-        ),
-      ),
-    );
   }
 }
 
@@ -237,115 +483,69 @@ class _StateNotice extends StatelessWidget {
   }
 }
 
-class _RevealedFields extends StatelessWidget {
-  const _RevealedFields({required this.credential});
+class _EditActions extends StatelessWidget {
+  const _EditActions({
+    required this.busy,
+    required this.submitLabel,
+    required this.canSubmit,
+    required this.onCancel,
+    required this.onSubmit,
+  });
 
-  final DecryptedCredential credential;
+  final bool busy;
+  final String submitLabel;
+  final bool canSubmit;
+  final VoidCallback onCancel;
+  final VoidCallback onSubmit;
 
   @override
   Widget build(BuildContext context) {
-    final username = credential.username;
-    final url = credential.url;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return Row(
       children: [
-        _CopyableField(
-          label: 'password',
-          value: credential.password,
-          obscure: true,
+        Expanded(
+          child: SnButton(
+            key: const Key('credential-cancel-button'),
+            label: 'cancel',
+            onPressed: busy ? null : onCancel,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 18),
+          ),
         ),
-        if (username != null) ...[
-          const SizedBox(height: 12),
-          _CopyableField(label: 'username', value: username),
-        ],
-        if (url != null) ...[
-          const SizedBox(height: 12),
-          _CopyableField(label: 'url', value: url),
-        ],
+        const SizedBox(width: 10),
+        Expanded(
+          child: SnButton(
+            key: const Key('credential-save-button'),
+            label: busy ? 'saving…' : submitLabel,
+            variant: SnButtonVariant.filled,
+            onPressed: canSubmit && !busy ? onSubmit : null,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 18),
+          ),
+        ),
       ],
     );
   }
 }
 
-class _CopyableField extends StatefulWidget {
-  const _CopyableField({
-    required this.label,
-    required this.value,
-    this.obscure = false,
-  });
+class _ErrorText extends StatelessWidget {
+  const _ErrorText(this.message);
 
-  final String label;
-  final String value;
-  final bool obscure;
-
-  @override
-  State<_CopyableField> createState() => _CopyableFieldState();
-}
-
-class _CopyableFieldState extends State<_CopyableField> {
-  late bool _hidden = widget.obscure;
+  final String message;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(
-        color: SpaceNotesTheme.card,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: SpaceNotesTheme.hairlineStrong),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  widget.label,
-                  style: const TextStyle(
-                    color: SpaceNotesTheme.dim,
-                    fontSize: 11,
-                    letterSpacing: 0.4,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  _hidden ? '••••••••••••' : widget.value,
-                  style: const TextStyle(
-                    color: SpaceNotesTheme.fg,
-                    fontSize: 14,
-                    fontFamily: SpaceNotesTheme.fontMono,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          if (widget.obscure)
-            IconButton(
-              icon: Icon(
-                _hidden ? Icons.visibility_outlined : Icons.visibility_off_outlined,
-                size: 18,
-                color: SpaceNotesTheme.dim,
-              ),
-              onPressed: () => setState(() => _hidden = !_hidden),
-            ),
-          IconButton(
-            icon: const Icon(
-              Icons.copy_outlined,
-              size: 18,
-              color: SpaceNotesTheme.dim,
-            ),
-            onPressed: () {
-              Clipboard.setData(ClipboardData(text: widget.value));
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('${widget.label} copied')),
-              );
-            },
-          ),
-        ],
+    return Text(
+      message,
+      key: const Key('credential-refusal-message'),
+      style: const TextStyle(
+        color: SpaceNotesTheme.accent2,
+        fontSize: 13,
+        height: 1.4,
       ),
     );
   }
+}
+
+String _messageOf(Exception e) {
+  final text = e.toString();
+  final separator = text.indexOf(': ');
+  return separator > 0 ? text.substring(separator + 2) : text;
 }

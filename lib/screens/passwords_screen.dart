@@ -15,21 +15,15 @@ class PasswordsScreen extends ConsumerWidget {
     final total = ref.watch(credentialsProvider).length;
 
     if (credentials.isEmpty) {
-      return Scaffold(
-        backgroundColor: SpaceNotesTheme.bg,
-        body: SafeArea(child: _EmptyState(hasAny: total > 0)),
-      );
+      return SafeArea(child: _EmptyState(hasAny: total > 0));
     }
 
-    return Scaffold(
-      backgroundColor: SpaceNotesTheme.bg,
-      body: SafeArea(
-        child: ListView.builder(
-          padding: const EdgeInsets.only(top: 8),
-          itemCount: credentials.length,
-          itemBuilder: (context, index) =>
-              _CredentialRow(file: credentials[index]),
-        ),
+    return SafeArea(
+      child: ListView.builder(
+        padding: const EdgeInsets.only(top: 8),
+        itemCount: credentials.length,
+        itemBuilder: (context, index) =>
+            _CredentialRow(file: credentials[index]),
       ),
     );
   }

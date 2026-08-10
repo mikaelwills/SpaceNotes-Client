@@ -9,6 +9,7 @@ import 'package:image_picker/image_picker.dart';
 import '../providers/notes_providers.dart';
 import '../providers/chat_providers.dart';
 import '../dialogs/notes_list_dialogs.dart';
+import '../screens/credential_screen.dart';
 import '../screens/home_screen.dart';
 import 'primitives/primitives.dart';
 import '../file_types/file_type_registry.dart';
@@ -127,6 +128,17 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
     }
     if (_isFocused || _hasText) {
       return const [];
+    }
+    if (_getCurrentViewType() == HomeViewType.passwords) {
+      return [
+        SnDockTile(
+          icon: Icons.add,
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const CredentialCreateScreen()),
+          ),
+          semanticLabel: 'new credential',
+        ),
+      ];
     }
     return [
       SnDockTile(

@@ -40,6 +40,38 @@ String _extensionOf(String path) {
   return basename.substring(dotIndex + 1).toLowerCase();
 }
 
+class CredentialWriteRefused implements Exception {
+  const CredentialWriteRefused(this.message, {this.collidingPath});
+
+  final String message;
+  final String? collidingPath;
+
+  @override
+  String toString() => 'CredentialWriteRefused: $message';
+}
+
+String folderPathOf(String path) {
+  final parts = path.split('/');
+  if (parts.length <= 1) return '';
+  return '${parts.sublist(0, parts.length - 1).join('/')}/';
+}
+
+int folderDepthOf(String folderPath) =>
+    folderPath.split('/').where((s) => s.isNotEmpty).length;
+
+String? findCollidingPath({
+  required String path,
+  required Iterable<String> existingPaths,
+  String? ignoreExactPath,
+}) {
+  final target = path.toLowerCase();
+  for (final existing in existingPaths) {
+    if (ignoreExactPath != null && existing == ignoreExactPath) continue;
+    if (existing.toLowerCase() == target) return existing;
+  }
+  return null;
+}
+
 /// Notes repository implementation using SpacetimeDB
 class SpacetimeDbNotesRepository {
   String? _host;
@@ -255,6 +287,63 @@ class SpacetimeDbNotesRepository {
     }
   }
 
+  Future<void> writeCredential({
+    required String id,
+    required String path,
+    required String content,
+    String? replacingPath,
+  }) async {
+    await _ensureConnected();
+
+    if (_client == null) {
+      throw const CredentialWriteRefused(
+        'not connected, so the credential was not written',
+      );
+    }
+
+    final collision = findCollidingPath(
+      path: path,
+      existingPaths: _client!.spaceFile.iter().map((f) => f.path),
+      ignoreExactPath: replacingPath ?? path,
+    );
+    if (collision != null) {
+      throw CredentialWriteRefused(
+        'an entry already exists at $collision, so nothing was written',
+        collidingPath: collision,
+      );
+    }
+
+    final fileName = path.split('/').last;
+    final name = FileTypeRegistry.forFileName(fileName).stripExtension(fileName);
+
+    final folderPath = folderPathOf(path);
+    final depth = folderDepthOf(folderPath);
+
+    final existing = _client!.spaceFile.find(id);
+    final now = DateTime.now().millisecondsSinceEpoch;
+    final decodedSize = base64Decode(content).length;
+
+    try {
+      await _client!.reducers.upsertFile(
+        id: id,
+        path: path,
+        name: name,
+        content: content,
+        folderPath: folderPath,
+        depth: depth,
+        extension: _extensionOf(path),
+        size: Int64(decodedSize),
+        createdTime: Int64(existing?.createdTime.toInt() ?? now),
+        modifiedTime: Int64(now),
+      );
+    } on SpacetimeDbException catch (e) {
+      throw CredentialWriteRefused(
+        'the vault refused the write for $path, most likely because another '
+        'device already holds that name: $e',
+      );
+    }
+  }
+
   Future<String?> createNote(String path, String content) async {
     debugLogger.save(
         'Creating note: path=$path, len=${content.length}, hash=${_contentHash(content)}');
@@ -322,6 +411,8 @@ class SpacetimeDbNotesRepository {
 
       debugLogger.save('Note created: $id');
       return id;
+    } on CredentialWriteRefused {
+      rethrow;
     } catch (e, stack) {
       debugLogger.error('SAVE', 'Error creating note: $e', stack.toString());
       return null;

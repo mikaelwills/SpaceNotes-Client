@@ -20,11 +20,55 @@ public class SpaceNotesPgpPlugin: NSObject, FlutterPlugin {
   }
 
   public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
-    guard call.method == "decrypt" else {
+    switch call.method {
+    case "decrypt":
+      handleDecrypt(call, result: result)
+    case "encrypt":
+      handleEncrypt(call, result: result)
+    default:
       result(FlutterMethodNotImplemented)
+    }
+  }
+
+  private func handleEncrypt(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+    guard let args = call.arguments as? [String: Any],
+      let plaintext = (args["plaintext"] as? FlutterStandardTypedData)?.data,
+      let publicKeys = (args["publicKeys"] as? FlutterStandardTypedData)?.data,
+      let gpgId = (args["gpgId"] as? FlutterStandardTypedData)?.data
+    else {
+      result(
+        FlutterError(
+          code: "bad_arguments",
+          message: "encrypt needs plaintext, publicKeys and gpgId as byte arrays",
+          details: nil))
       return
     }
 
+    DispatchQueue.global(qos: .userInitiated).async {
+      var error: NSError?
+      let ciphertext = PgpmobileEncrypt(plaintext, publicKeys, gpgId, &error)
+
+      DispatchQueue.main.async {
+        if let error = error {
+          result(
+            FlutterError(
+              code: "encrypt_failed",
+              message: error.localizedDescription,
+              details: nil))
+          return
+        }
+        guard let ciphertext = ciphertext, !ciphertext.isEmpty else {
+          result(
+            FlutterError(
+              code: "encrypt_failed", message: "no ciphertext returned", details: nil))
+          return
+        }
+        result(FlutterStandardTypedData(bytes: ciphertext))
+      }
+    }
+  }
+
+  private func handleDecrypt(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
     guard let args = call.arguments as? [String: Any],
       let ciphertext = (args["ciphertext"] as? FlutterStandardTypedData)?.data,
       let privateKey = (args["privateKey"] as? FlutterStandardTypedData)?.data

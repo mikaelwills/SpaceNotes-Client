@@ -1,9 +1,14 @@
+import 'package:collection/collection.dart';
 import 'package:spacenotes_client/repositories/spacetimedb_notes_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/foundation.dart' show ValueListenable, kIsWeb;
+import 'package:spacenotes_pgp/spacenotes_pgp.dart';
 import '../generated/client.dart';
 import '../generated/folder.dart';
 import '../generated/space_file.dart';
+import '../services/credential_key_store.dart';
+import '../services/credential_name_deriver.dart';
+import '../services/credential_writer.dart';
 import '../services/debug_logger.dart';
 import '../file_types/file_type_registry.dart';
 
@@ -73,6 +78,37 @@ final fileByIdProvider = Provider.family<SpaceFile?, String>((ref, id) {
   final client = ref.watch(spacetimeClientProvider);
   if (client == null) return null;
   return watchListenable(ref, client.spaceFile.rowNotifier(id));
+});
+
+final credentialStoreDotfileProvider =
+    Provider.family<String?, String>((ref, fileName) {
+  final files = ref.watch(fileListProvider);
+  final row = files.firstWhereOrNull(
+    (f) => f.path == '${CredentialNameDeriver.storeRoot}/$fileName',
+  );
+  return row?.content;
+});
+
+final credentialWriterProvider = Provider<CredentialWriter?>((ref) {
+  final gpgId = ref.watch(
+    credentialStoreDotfileProvider('.gpg-id'),
+  );
+  final publicKeys = ref.watch(
+    credentialStoreDotfileProvider('.gpg-pubkeys.asc'),
+  );
+  if (gpgId == null || publicKeys == null) return null;
+
+  final repository = ref.watch(notesRepositoryProvider);
+  final keyStore = CredentialKeyStore();
+
+  return CredentialWriter(
+    gpgId: gpgId,
+    publicKeysArmored: publicKeys,
+    encrypt: SpaceNotesPgp.encrypt,
+    decrypt: SpaceNotesPgp.decrypt,
+    readPrivateKey: keyStore.read,
+    upsert: repository.writeCredential,
+  );
 });
 
 final folderByIdProvider = Provider.family<Folder?, String>((ref, path) {

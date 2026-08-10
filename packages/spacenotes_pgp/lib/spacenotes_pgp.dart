@@ -9,8 +9,41 @@ class PgpDecryptException implements Exception {
   String toString() => 'PgpDecryptException: $message';
 }
 
+class PgpEncryptException implements Exception {
+  const PgpEncryptException(this.message);
+
+  final String message;
+
+  @override
+  String toString() => 'PgpEncryptException: $message';
+}
+
 class SpaceNotesPgp {
   static const _channel = MethodChannel('spacenotes/pgp');
+
+  static Future<Uint8List> encrypt({
+    required Uint8List plaintext,
+    required Uint8List publicKeys,
+    required Uint8List gpgId,
+  }) async {
+    try {
+      final ciphertext = await _channel.invokeMethod<Uint8List>('encrypt', {
+        'plaintext': plaintext,
+        'publicKeys': publicKeys,
+        'gpgId': gpgId,
+      });
+      if (ciphertext == null || ciphertext.isEmpty) {
+        throw const PgpEncryptException('no ciphertext returned');
+      }
+      return ciphertext;
+    } on PlatformException catch (e) {
+      throw PgpEncryptException(e.message ?? e.code);
+    } on MissingPluginException {
+      throw const PgpEncryptException(
+        'encryption is not available on this platform',
+      );
+    }
+  }
 
   /// Decrypts an OpenPGP message with [privateKey].
   ///
