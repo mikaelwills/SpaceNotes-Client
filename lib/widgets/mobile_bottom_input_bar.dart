@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -33,6 +34,8 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
   bool _hasText = false;
   bool _isFocused = false;
   Uint8List? _pendingImageBytes;
+  HomeViewType? _focusedForView;
+  Timer? _searchDebounce;
 
   @override
   void initState() {
@@ -43,16 +46,12 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
 
   @override
   void dispose() {
+    _searchDebounce?.cancel();
     _textController.removeListener(_onTextChanged);
     _focusNode.removeListener(_onFocusChanged);
     _textController.dispose();
     super.dispose();
   }
-
-  HomeViewType? _focusedForView;
-
-  bool _isFocusableView(HomeViewType v) =>
-      v != HomeViewType.note && v != HomeViewType.agents;
 
   @override
   Widget build(BuildContext context) {
@@ -82,9 +81,11 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
     final searchQuery = viewType == HomeViewType.passwords
         ? ref.watch(credentialFilterProvider)
         : ref.watch(folderSearchQueryProvider);
-    if (!isChat && searchQuery.isEmpty && _textController.text.isNotEmpty) {
+    final queryClearedElsewhere =
+        !isChat && searchQuery.isEmpty && _textController.text.isNotEmpty;
+    if (queryClearedElsewhere && !_focusNode.hasFocus) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        _textController.clear();
+        if (mounted && !_focusNode.hasFocus) _textController.clear();
       });
     }
 
@@ -188,12 +189,19 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
     return Uri.decodeComponent(encoded);
   }
 
+  bool _isFocusableView(HomeViewType v) =>
+      v != HomeViewType.note && v != HomeViewType.agents;
+
   void _onSearchChanged(String query) {
-    if (_getCurrentViewType() == HomeViewType.passwords) {
-      ref.read(credentialFilterProvider.notifier).state = query;
-      return;
-    }
-    ref.read(folderSearchQueryProvider.notifier).state = query;
+    _searchDebounce?.cancel();
+    _searchDebounce = Timer(const Duration(milliseconds: 150), () {
+      if (!mounted) return;
+      if (_getCurrentViewType() == HomeViewType.passwords) {
+        ref.read(credentialFilterProvider.notifier).state = query;
+        return;
+      }
+      ref.read(folderSearchQueryProvider.notifier).state = query;
+    });
   }
 
   void _onSend() {

@@ -125,25 +125,24 @@ final currentFolderPathProvider = StateProvider<String>((ref) => '');
 
 final currentNotePathProvider = StateProvider<String?>((ref) => null);
 
-/// The mobile bottom input bar's focus node, exposed so shortcuts (Cmd+L) can
-/// focus it directly through the framework's focus system rather than a signal.
 final mobileInputFocusNodeProvider = Provider<FocusNode>((ref) {
   final node = FocusNode(debugLabel: 'mobileBottomInput');
   ref.onDispose(node.dispose);
   return node;
 });
 
-final filteredFilesProvider = Provider.autoDispose<List<SpaceFile>>((ref) {
+final noteSearchIndexProvider = Provider<List<SearchableFile>>((ref) {
   final notes = ref.watch(fileListProvider);
-  final searchQuery = ref.watch(searchQueryProvider);
+  return buildSearchIndex(notes);
+});
 
-  if (searchQuery.trim().isEmpty) return notes;
+final filteredFilesProvider = Provider.autoDispose<List<SpaceFile>>((ref) {
+  final searchQuery = ref.watch(searchQueryProvider);
+  if (searchQuery.trim().isEmpty) return ref.watch(fileListProvider);
 
   final terms = searchTerms(searchQuery);
-  if (terms.isEmpty) return notes;
-  final matches =
-      notes.where((note) => noteMatchesAllTerms(note, terms)).toList();
-  return rankNotes(matches, terms);
+  if (terms.isEmpty) return ref.watch(fileListProvider);
+  return searchAndRank(ref.watch(noteSearchIndexProvider), terms);
 });
 
 final folderSearchQueryProvider = StateProvider<String>((ref) => '');
@@ -204,12 +203,9 @@ final dynamicFolderContentsProvider = Provider.family
       .where((folder) => folderNameMatches(folder.name, terms))
       .toList();
 
-  final filteredNotes =
-      allNotes.where((note) => noteMatchesAllTerms(note, terms)).toList();
-
   return (
     folders: filteredFolders,
-    notes: rankNotes(filteredNotes, terms)
+    notes: searchAndRank(ref.watch(noteSearchIndexProvider), terms),
   );
 });
 
