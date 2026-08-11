@@ -4,6 +4,24 @@ import 'dart:typed_data';
 
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
+/// The macOS plugin's Swift side reads `useDataProtectionKeyChain` while
+/// `MacOsOptions.toMap` emits `usesDataProtectionKeychain`; the casing mismatch
+/// means the Dart value never reaches native and the default (true) always
+/// wins. Emitting both spellings makes the value take effect.
+class _FixedMacOsOptions extends MacOsOptions {
+  _FixedMacOsOptions({
+    super.accessibility,
+    super.accessControlFlags,
+    super.groupId,
+  });
+
+  @override
+  Map<String, String> toMap() => {
+        ...super.toMap(),
+        'useDataProtectionKeyChain': '$usesDataProtectionKeychain',
+      };
+}
+
 /// Holds this device's OpenPGP private subkey in the platform keystore.
 ///
 /// The key is released only after a local biometric check. It never leaves the
@@ -42,9 +60,10 @@ class CredentialKeyStore {
         accessControlFlags: _accessControl,
       );
 
-  MacOsOptions get _macOptions => MacOsOptions(
+  MacOsOptions get _macOptions => _FixedMacOsOptions(
         accessibility: _accessibility,
         accessControlFlags: _accessControl,
+        groupId: 'com.spacenotes.client',
       );
 
   Future<bool> hasKey() async => _storage.containsKey(

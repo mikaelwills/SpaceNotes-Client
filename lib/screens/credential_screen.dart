@@ -9,6 +9,7 @@ import '../providers/notes_providers.dart';
 import '../services/credential_entry_parser.dart';
 import '../services/credential_key_store.dart';
 import '../services/credential_writer.dart';
+import '../services/password_generator.dart';
 import '../theme/spacenotes_theme.dart';
 import '../widgets/credential_field.dart';
 import '../widgets/primitives/primitives.dart';
@@ -67,6 +68,12 @@ class _CredentialCreateScreenState
   String? _error;
 
   @override
+  void initState() {
+    super.initState();
+    _password.text = PasswordGenerator.generate();
+  }
+
+  @override
   void dispose() {
     _password.dispose();
     _username.dispose();
@@ -103,12 +110,31 @@ class _CredentialCreateScreenState
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        CredentialField(
-          label: 'password',
-          controller: _password,
-          editing: true,
-          obscurable: true,
-          onChanged: () => setState(() {}),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: CredentialField(
+                label: 'password',
+                controller: _password,
+                editing: true,
+                obscurable: true,
+                onChanged: () => setState(() {}),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Padding(
+              padding: const EdgeInsets.only(top: 22),
+              child: IconButton(
+                icon: const Icon(Icons.refresh, size: 20),
+                color: SpaceNotesTheme.muted,
+                tooltip: 'Generate a new password',
+                onPressed: () => setState(
+                  () => _password.text = PasswordGenerator.generate(),
+                ),
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: 12),
         CredentialField(
