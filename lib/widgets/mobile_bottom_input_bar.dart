@@ -100,7 +100,8 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
         padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
         onChanged: isChat ? null : _onSearchChanged,
         onSend: _onSend,
-        showSend: isChat || _isFocused || _hasText,
+        showSend: viewType != HomeViewType.passwords &&
+            (isChat || _isFocused || _hasText),
         leading: [
           if (isAgentChat)
             SnDockTile(
@@ -140,9 +141,6 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
         ),
       ];
     }
-    if (_isFocused || _hasText) {
-      return const [];
-    }
     if (_getCurrentViewType() == HomeViewType.passwords) {
       return [
         SnDockTile(
@@ -153,6 +151,9 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
           semanticLabel: 'new credential',
         ),
       ];
+    }
+    if (_isFocused || _hasText) {
+      return const [];
     }
     return [
       SnDockTile(
