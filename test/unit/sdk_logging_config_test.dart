@@ -32,8 +32,9 @@ void main() {
       expect(SdkLogger.level, SdkLogLevel.debug);
     });
 
-    test('drops per-frame WS_RX and RX_MSG noise but keeps other debug lines',
-        () {
+    test(
+        'keeps WS_RX with the hex head stripped, drops RX_MSG noise, keeps '
+        'other debug lines', () {
       final printed = <String>[];
       final original = debugPrint;
       debugPrint = (String? message, {int? wrapWidth}) {
@@ -46,7 +47,12 @@ void main() {
       SdkLogger.d('RX_MSG: SubscribeApplied');
       SdkLogger.d('Applying 3 tables for query set 1');
 
-      expect(printed.any((l) => l.contains('WS_RX')), isFalse);
+      expect(
+        printed.any((l) => l.contains('WS_RX: 412 bytes') && !l.contains('head=')),
+        isTrue,
+        reason: 'per-frame WS_RX timing is the evidence for inbound-silence '
+            'diagnosis; only the hex head is noise',
+      );
       expect(printed.any((l) => l.contains('RX_MSG')), isFalse);
       expect(
         printed.any((l) => l.contains('Applying 3 tables for query set 1')),

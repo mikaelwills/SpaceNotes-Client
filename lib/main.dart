@@ -54,7 +54,6 @@ void main() async {
 }
 
 const _sdkLogNoisePrefixes = [
-  'WS_RX',
   'RX_MSG',
   'syncPendingMutations: no pending mutations',
   'syncPendingMutations: finished',
@@ -76,6 +75,10 @@ bool _isSdkLogNoise(String msg) {
 void configureSdkLogging() {
   SdkLogger.onLog = (level, msg) {
     if (level == 'D' && _isSdkLogNoise(msg)) return;
+    if (msg.startsWith('WS_RX')) {
+      debugLogger.log(level, 'SDK', msg.split(', head=').first);
+      return;
+    }
     debugLogger.log(level, 'SDK', msg);
   };
   SdkLogger.level = SdkLogLevel.debug;
