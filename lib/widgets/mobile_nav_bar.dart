@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:collection/collection.dart';
+import 'adaptive/nav_cycle.dart';
 import '../theme/spacenotes_theme.dart';
 import '../providers/notes_providers.dart';
 import 'connection_indicator.dart';
@@ -118,27 +119,21 @@ class MobileNavBar extends ConsumerWidget {
     return '';
   }
 
-  static const _mainScreens = [
-    ('/notes', Icons.notes_outlined),
-    ('/notes/chat', Icons.chat_bubble_outline),
-    ('/notes/agents', Icons.terminal_outlined),
-    ('/notes/passwords', Icons.key_outlined),
-    // ('/notes/users', Icons.people_outline),
-  ];
+  static const _navIcons = <String, IconData>{
+    '/notes': Icons.notes_outlined,
+    '/notes/chat': Icons.chat_bubble_outline,
+    '/notes/agents': Icons.terminal_outlined,
+    '/notes/passwords': Icons.key_outlined,
+  };
 
-  String _currentScreen(String location) {
-    if (location.startsWith('/notes/chat')) return '/notes/chat';
-    if (location.startsWith('/notes/agents')) return '/notes/agents';
-    if (location.startsWith('/notes/passwords')) return '/notes/passwords';
-    // if (location == '/notes/users') return '/notes/users';
-    return '/notes';
-  }
+  String _currentScreen(String location) => currentNavScreen(location);
 
   List<Widget> _buildNavIcons(
       BuildContext context, String location, bool isOnSettings) {
     final current = isOnSettings ? null : _currentScreen(location);
     final icons = <Widget>[];
-    for (final (route, icon) in _mainScreens) {
+    for (final route in navScreens) {
+      final icon = _navIcons[route]!;
       final isActive = route == current;
       final isAtRoot = isActive && location == route;
       icons.add(

@@ -2,6 +2,7 @@ import 'package:collection/collection.dart';
 import 'package:spacenotes_client/repositories/spacetimedb_notes_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/foundation.dart' show ValueListenable, kIsWeb;
+import 'package:flutter/widgets.dart' show FocusNode;
 import 'package:spacenotes_pgp/spacenotes_pgp.dart';
 import '../generated/client.dart';
 import '../generated/folder.dart';
@@ -123,6 +124,14 @@ final searchQueryProvider = StateProvider<String>((ref) => '');
 final currentFolderPathProvider = StateProvider<String>((ref) => '');
 
 final currentNotePathProvider = StateProvider<String?>((ref) => null);
+
+/// The mobile bottom input bar's focus node, exposed so shortcuts (Cmd+L) can
+/// focus it directly through the framework's focus system rather than a signal.
+final mobileInputFocusNodeProvider = Provider<FocusNode>((ref) {
+  final node = FocusNode(debugLabel: 'mobileBottomInput');
+  ref.onDispose(node.dispose);
+  return node;
+});
 
 final filteredFilesProvider = Provider.autoDispose<List<SpaceFile>>((ref) {
   final notes = ref.watch(fileListProvider);

@@ -28,7 +28,7 @@ class MobileBottomInputBar extends ConsumerStatefulWidget {
 
 class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
   final TextEditingController _textController = TextEditingController();
-  final FocusNode _focusNode = FocusNode();
+  late final FocusNode _focusNode = ref.read(mobileInputFocusNodeProvider);
   final ImagePicker _imagePicker = ImagePicker();
   bool _hasText = false;
   bool _isFocused = false;
@@ -46,13 +46,26 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
     _textController.removeListener(_onTextChanged);
     _focusNode.removeListener(_onFocusChanged);
     _textController.dispose();
-    _focusNode.dispose();
     super.dispose();
   }
+
+  HomeViewType? _focusedForView;
+
+  bool _isFocusableView(HomeViewType v) =>
+      v != HomeViewType.note && v != HomeViewType.agents;
 
   @override
   Widget build(BuildContext context) {
     final viewType = _getCurrentViewType();
+
+    if (_isFocusableView(viewType) && _focusedForView != viewType) {
+      _focusedForView = viewType;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _focusNode.requestFocus();
+      });
+    } else if (!_isFocusableView(viewType)) {
+      _focusedForView = null;
+    }
 
     if (viewType == HomeViewType.note || viewType == HomeViewType.agents) {
       return const SizedBox.shrink();

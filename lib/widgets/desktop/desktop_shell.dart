@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../providers/notes_providers.dart';
 import '../../theme/spacenotes_theme.dart';
+import '../adaptive/nav_cycle.dart';
 import '../note_chat_panel.dart';
 import '../sync_state_indicator.dart';
 import 'desktop_note_view.dart';
@@ -36,7 +38,30 @@ class _DesktopShellState extends ConsumerState<DesktopShell> {
   bool _isResizing = false;
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _focusSearch();
+    });
+  }
+
+  void _focusSearch() {
+    ref.read(searchFocusRequestProvider.notifier).state++;
+  }
+
+  @override
   Widget build(BuildContext context) {
+    return CallbackShortcuts(
+      bindings: {
+        const SingleActivator(LogicalKeyboardKey.keyL, meta: true): _focusSearch,
+        const SingleActivator(LogicalKeyboardKey.tab, shift: true): () =>
+            cycleNav(context),
+      },
+      child: Focus(autofocus: true, child: _buildBody(context)),
+    );
+  }
+
+  Widget _buildBody(BuildContext context) {
     final location = GoRouterState.of(context).uri.toString();
     if (location.startsWith('/notes/agents')) {
       String? activeAgentId;
