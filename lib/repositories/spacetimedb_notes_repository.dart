@@ -1072,6 +1072,7 @@ class SpacetimeDbNotesRepository {
       database: _database!,
       authStorage: storage,
       offlineStorage: _offlineStorage,
+      retainRowsOnUnsubscribe: true,
       ssl: false,
       config: _connectionConfig,
     );

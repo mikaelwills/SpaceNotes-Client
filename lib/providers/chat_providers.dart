@@ -249,6 +249,7 @@ class _ChatIndex {
   bool _rebuildScheduled = false;
   bool _disposed = false;
   int? _lastMsgCount;
+  int _lastExplainedEvictions = 0;
 
   _ChatIndex(this.client) {
     debugLogger.chat(
@@ -325,15 +326,31 @@ class _ChatIndex {
 
     stopwatch.stop();
     final msgCount = client.message.rows.value.length;
+    final explainedEvictions = client.message.unsubscribeEvictionCount +
+        client.message.reconcileEvictionCount +
+        client.message.sweepEvictionCount;
     if (_lastMsgCount != null && msgCount < _lastMsgCount!) {
-      debugLogger.chatError(
-        'CACHE SHRANK: message rows lost',
-        '$_lastMsgCount -> $msgCount (${_lastMsgCount! - msgCount} row(s)) — '
-            'messages are append-only, so a drop means local rows were evicted '
-            'or an optimistic row was rolled back over a committed one',
-      );
+      final dropped = _lastMsgCount! - msgCount;
+      final explainedDelta = explainedEvictions - _lastExplainedEvictions;
+      if (explainedDelta >= dropped) {
+        debugLogger.chat(
+          'cache shrank (explained)',
+          '$_lastMsgCount -> $msgCount ($dropped row(s)) — fully covered by '
+              'SDK evictions (unsubscribe/reconcile/sweep delta '
+              '$explainedDelta)',
+        );
+      } else {
+        debugLogger.chatError(
+          'CACHE SHRANK: message rows lost',
+          '$_lastMsgCount -> $msgCount ($dropped row(s), only $explainedDelta '
+              'explained by SDK evictions) — messages are append-only, so an '
+              'unexplained drop means local rows were lost or an optimistic '
+              'row was rolled back over a committed one',
+        );
+      }
     }
     _lastMsgCount = msgCount;
+    _lastExplainedEvictions = explainedEvictions;
     debugLogger.chat(
       'ChatIndex rebuild',
       'msgs=$msgCount '

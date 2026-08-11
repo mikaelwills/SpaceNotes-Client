@@ -144,6 +144,7 @@ class SpacetimeDbClient {
     AuthTokenStore? authStorage,
     OfflineStorage? offlineStorage,
     OfflineQueuePolicy queuePolicy = const OfflineQueuePolicy(),
+    bool retainRowsOnUnsubscribe = false,
     bool ssl = false,
     ConnectionConfig config = const ConnectionConfig(),
   }) async {
@@ -157,7 +158,9 @@ class SpacetimeDbClient {
       config: config,
     );
     final subscriptionManager = SubscriptionManager(connection,
-        offlineStorage: offlineStorage, queuePolicy: queuePolicy);
+        offlineStorage: offlineStorage,
+        queuePolicy: queuePolicy,
+        retainRowsOnUnsubscribe: retainRowsOnUnsubscribe);
 
     subscriptionManager.cache
         .registerDecoder<Message>('message', MessageDecoder());
