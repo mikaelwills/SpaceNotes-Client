@@ -95,6 +95,41 @@ bool noteMatchesAllTerms(SpaceFile note, List<String> terms) =>
 List<SpaceFile> rankNotes(List<SpaceFile> notes, List<String> terms) =>
     searchAndRank(buildSearchIndex(notes), terms);
 
+int credentialRank(String path, List<String> terms) {
+  final lower = path.toLowerCase();
+  const storePrefix = '.password-store/';
+  final rel = lower.startsWith(storePrefix)
+      ? lower.substring(storePrefix.length)
+      : lower;
+  final slash = rel.lastIndexOf('/');
+  final site = slash >= 0 ? rel.substring(0, slash) : rel;
+  final account = slash >= 0 ? rel.substring(slash + 1) : '';
+
+  var siteHits = 0;
+  for (final term in terms) {
+    final inSite = site.contains(term);
+    final inAccount = account.contains(term);
+    if (!inSite && !inAccount) return rankNoMatch;
+    if (inSite) siteHits++;
+  }
+  return terms.length - siteHits;
+}
+
+List<SpaceFile> searchAndRankCredentials(
+    List<SpaceFile> credentials, List<String> terms) {
+  if (terms.isEmpty) return credentials;
+  final scored = <(int, SpaceFile)>[];
+  for (final c in credentials) {
+    final rank = credentialRank(c.path, terms);
+    if (rank < rankNoMatch) scored.add((rank, c));
+  }
+  scored.sort((a, b) {
+    if (a.$1 != b.$1) return a.$1.compareTo(b.$1);
+    return a.$2.path.toLowerCase().compareTo(b.$2.path.toLowerCase());
+  });
+  return [for (final s in scored) s.$2];
+}
+
 List<Folder> rankFolders(List<Folder> folders, List<String> terms) {
   return [...folders]..sort((a, b) {
       final byRank =

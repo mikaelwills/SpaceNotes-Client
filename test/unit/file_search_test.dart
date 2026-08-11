@@ -50,6 +50,40 @@ void main() {
     });
   });
 
+  group('credential ranking', () {
+    SpaceFile cred(String path) => _note(name: path.split('/').last, path: path);
+
+    test('site match ranks above account-only match', () {
+      final results = searchAndRankCredentials([
+        cred('.password-store/account.blizzard.com/rokitout@gmail.com.gpg'),
+        cred('.password-store/mail.google.com/mikael@deadeye.eu.gpg'),
+        cred('.password-store/account.beatport.com/rokitout@gmail.com.gpg'),
+      ], searchTerms('google'));
+
+      expect(results.first.path, contains('mail.google.com'));
+      expect(results.length, 1);
+    });
+
+    test('searching a username surfaces every site using it', () {
+      final results = searchAndRankCredentials([
+        cred('.password-store/account.blizzard.com/rokitout@gmail.com.gpg'),
+        cred('.password-store/account.beatport.com/rokitout@gmail.com.gpg'),
+        cred('.password-store/account.jagex.com/other@gmail.com.gpg'),
+      ], searchTerms('rokitout@gmail.com'));
+
+      expect(results.length, 2);
+    });
+
+    test('site+account match beats site-only', () {
+      final results = searchAndRankCredentials([
+        cred('.password-store/accounts.google.com/someone@else.com.gpg'),
+        cred('.password-store/accounts.google.com/rokitout@gmail.com.gpg'),
+      ], searchTerms('google rokitout'));
+
+      expect(results.first.path, contains('rokitout@gmail.com'));
+    });
+  });
+
   group('searchAndRank', () {
     test('orders by rank then name, dropping non-matches', () {
       final index = buildSearchIndex([

@@ -259,7 +259,5 @@ final filteredCredentialsProvider = Provider<List<SpaceFile>>((ref) {
   final terms = searchTerms(ref.watch(credentialFilterProvider));
   if (terms.isEmpty) return credentials;
 
-  return credentials
-      .where((c) => matchesAllTerms(c.path, terms))
-      .toList();
+  return searchAndRankCredentials(credentials, terms);
 });
