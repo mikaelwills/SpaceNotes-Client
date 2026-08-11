@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -15,15 +16,41 @@ import '../../version.dart';
 import '../primitives/primitives.dart';
 import 'desktop_shell.dart';
 import '../../file_types/file_type_registry.dart';
+import '../../search/file_search.dart';
 
 final expandedFoldersProvider = StateProvider<Set<String>>((ref) => {});
 final searchFocusRequestProvider = StateProvider<int>((ref) => 0);
 
-int _compareByNameMatch(String a, String b, List<String> terms) {
-  if (terms.isEmpty) return a.toLowerCase().compareTo(b.toLowerCase());
-  final byRank = nameMatchRank(a, terms).compareTo(nameMatchRank(b, terms));
+int _compareFoldersByRank(Folder a, Folder b, Map<String, int> ranks) {
+  final ra = ranks[a.path] ?? rankNoMatch;
+  final rb = ranks[b.path] ?? rankNoMatch;
+  if (ra != rb) return ra.compareTo(rb);
+  return a.name.toLowerCase().compareTo(b.name.toLowerCase());
+}
+
+int _compareFilesByRank(SpaceFile a, SpaceFile b, List<String> terms) {
+  final byRank = noteSearchRank(a, terms).compareTo(noteSearchRank(b, terms));
   if (byRank != 0) return byRank;
-  return a.toLowerCase().compareTo(b.toLowerCase());
+  return a.name.toLowerCase().compareTo(b.name.toLowerCase());
+}
+
+List<Object> _interleaveByRank(
+  List<Folder> folders,
+  List<SpaceFile> files,
+  Map<String, int> ranks,
+  List<String> terms,
+  bool isSearching,
+) {
+  if (!isSearching) return [...folders, ...files];
+  final entries = <(int, String, Object)>[
+    for (final f in folders)
+      (ranks[f.path] ?? rankNoMatch, f.name.toLowerCase(), f),
+    for (final n in files) (noteSearchRank(n, terms), n.name.toLowerCase(), n),
+  ]..sort((a, b) {
+      if (a.$1 != b.$1) return a.$1.compareTo(b.$1);
+      return a.$2.compareTo(b.$2);
+    });
+  return [for (final e in entries) e.$3];
 }
 
 void _openNoteInDesktop(BuildContext context, String noteId) {
@@ -51,6 +78,8 @@ class Sidebar extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          if (!kIsWeb && defaultTargetPlatform == TargetPlatform.macOS)
+            const SizedBox(height: 26),
           _SidebarHeader(isCollapsed: isCollapsed),
           if (!isCollapsed) ...[
             Expanded(child: _FolderTree()),
@@ -314,11 +343,26 @@ class _FolderTreeState extends ConsumerState<_FolderTree> {
     Set<String> foldersToExpand = {};
     Set<String> matchingNotePaths = {};
     Set<String> matchingFolderPaths = {};
+    final folderRanks = <String, int>{};
+
+    void foldRank(String startPath, int rank) {
+      var p = startPath;
+      while (p.isNotEmpty) {
+        if (p.endsWith('/')) p = p.substring(0, p.length - 1);
+        if (p.isNotEmpty) {
+          final existing = folderRanks[p];
+          if (existing == null || rank < existing) folderRanks[p] = rank;
+        }
+        final lastSlash = p.lastIndexOf('/');
+        p = lastSlash > 0 ? p.substring(0, lastSlash) : '';
+      }
+    }
 
     if (isSearching) {
       for (final note in notes) {
         if (noteMatchesAllTerms(note, terms)) {
           matchingNotePaths.add(note.path);
+          foldRank(note.folderPath, noteSearchRank(note, terms));
           String parentPath = note.folderPath;
           while (parentPath.isNotEmpty) {
             if (parentPath.endsWith('/')) {
@@ -338,6 +382,7 @@ class _FolderTreeState extends ConsumerState<_FolderTree> {
       for (final folder in folders) {
         if (folderNameMatches(folder.name, terms)) {
           matchingFolderPaths.add(folder.path);
+          foldRank(folder.path, nameMatchRank(folder.name, terms));
           visibleFolderPaths.add(folder.path);
           String parentPath = folder.path;
           while (parentPath.contains('/')) {
@@ -388,13 +433,13 @@ class _FolderTreeState extends ConsumerState<_FolderTree> {
       return visibleFolderPaths.contains(f.path) ||
           matchingFolderPaths.contains(f.path);
     }).toList()
-      ..sort((a, b) => _compareByNameMatch(a.name, b.name, terms));
+      ..sort((a, b) => _compareFoldersByRank(a, b, folderRanks));
     final rootNotes = notes.where((n) {
       if (n.depth != 0) return false;
       if (!isSearching) return true;
       return matchingNotePaths.contains(n.path);
     }).toList()
-      ..sort((a, b) => _compareByNameMatch(a.name, b.name, terms));
+      ..sort((a, b) => _compareFilesByRank(a, b, terms));
 
     return ScrollConfiguration(
       behavior: ScrollConfiguration.of(context).copyWith(scrollbars: false),
@@ -403,22 +448,28 @@ class _FolderTreeState extends ConsumerState<_FolderTree> {
           ListView(
             padding: const EdgeInsets.symmetric(horizontal: 4),
             children: [
-              ...rootFolders.map((folder) => _FolderTreeItem(
-                    folder: folder,
-                    allFolders: folders,
-                    allNotes: notes,
-                    indentLevel: 0,
-                    searchQuery: searchQuery,
-                    visibleFolderPaths: visibleFolderPaths,
-                    matchingNotePaths: matchingNotePaths,
-                    matchingFolderPaths: matchingFolderPaths,
-                  )),
-              ...rootNotes.map((note) => _NoteTreeItem(
-                    note: note,
-                    allFolders: folders,
-                    indentLevel: 0,
-                    isMatch: matchingNotePaths.contains(note.path),
-                  )),
+              ..._interleaveByRank(
+                      rootFolders, rootNotes, folderRanks, terms, isSearching)
+                  .map((item) => switch (item) {
+                        Folder folder => _FolderTreeItem(
+                            folder: folder,
+                            allFolders: folders,
+                            allNotes: notes,
+                            indentLevel: 0,
+                            searchQuery: searchQuery,
+                            visibleFolderPaths: visibleFolderPaths,
+                            matchingNotePaths: matchingNotePaths,
+                            matchingFolderPaths: matchingFolderPaths,
+                            folderRanks: folderRanks,
+                          ),
+                        SpaceFile file => _NoteTreeItem(
+                            note: file,
+                            allFolders: folders,
+                            indentLevel: 0,
+                            isMatch: matchingNotePaths.contains(file.path),
+                          ),
+                        _ => const SizedBox.shrink(),
+                      }),
             ],
           ),
           Positioned(
@@ -507,6 +558,7 @@ class _FolderTreeItem extends ConsumerStatefulWidget {
   final Set<String> matchingNotePaths;
   final Set<String> matchingFolderPaths;
   final bool showAllChildren;
+  final Map<String, int> folderRanks;
 
   const _FolderTreeItem({
     required this.folder,
@@ -518,6 +570,7 @@ class _FolderTreeItem extends ConsumerStatefulWidget {
     this.matchingNotePaths = const {},
     this.matchingFolderPaths = const {},
     this.showAllChildren = false,
+    this.folderRanks = const {},
   });
 
   @override
@@ -557,14 +610,14 @@ class _FolderTreeItemState extends ConsumerState<_FolderTreeItem> {
       return widget.visibleFolderPaths.contains(f.path) ||
           widget.matchingFolderPaths.contains(f.path);
     }).toList()
-      ..sort((a, b) => _compareByNameMatch(a.name, b.name, terms));
+      ..sort((a, b) => _compareFoldersByRank(a, b, widget.folderRanks));
 
     final childNotes = widget.allNotes.where((n) {
       if (n.folderPath != folderPathWithSlash) return false;
       if (!isSearching || shouldShowAllChildren) return true;
       return widget.matchingNotePaths.contains(n.path);
     }).toList()
-      ..sort((a, b) => _compareByNameMatch(a.name, b.name, terms));
+      ..sort((a, b) => _compareFilesByRank(a, b, terms));
 
     final hasChildren = childFolders.isNotEmpty || childNotes.isNotEmpty;
     final totalDescendants = widget.allNotes
@@ -633,23 +686,29 @@ class _FolderTreeItemState extends ConsumerState<_FolderTreeItem> {
           },
         ),
         if (isExpanded) ...[
-          ...childFolders.map((f) => _FolderTreeItem(
-                folder: f,
-                allFolders: widget.allFolders,
-                allNotes: widget.allNotes,
-                indentLevel: widget.indentLevel + 1,
-                searchQuery: widget.searchQuery,
-                visibleFolderPaths: widget.visibleFolderPaths,
-                matchingNotePaths: widget.matchingNotePaths,
-                matchingFolderPaths: widget.matchingFolderPaths,
-                showAllChildren: shouldShowAllChildren,
-              )),
-          ...childNotes.map((n) => _NoteTreeItem(
-                note: n,
-                allFolders: widget.allFolders,
-                indentLevel: widget.indentLevel + 1,
-                isMatch: widget.matchingNotePaths.contains(n.path),
-              )),
+          ..._interleaveByRank(childFolders, childNotes, widget.folderRanks,
+                  terms, isSearching)
+              .map((item) => switch (item) {
+                    Folder folder => _FolderTreeItem(
+                        folder: folder,
+                        allFolders: widget.allFolders,
+                        allNotes: widget.allNotes,
+                        indentLevel: widget.indentLevel + 1,
+                        searchQuery: widget.searchQuery,
+                        visibleFolderPaths: widget.visibleFolderPaths,
+                        matchingNotePaths: widget.matchingNotePaths,
+                        matchingFolderPaths: widget.matchingFolderPaths,
+                        showAllChildren: shouldShowAllChildren,
+                        folderRanks: widget.folderRanks,
+                      ),
+                    SpaceFile file => _NoteTreeItem(
+                        note: file,
+                        allFolders: widget.allFolders,
+                        indentLevel: widget.indentLevel + 1,
+                        isMatch: widget.matchingNotePaths.contains(file.path),
+                      ),
+                    _ => const SizedBox.shrink(),
+                  }),
         ],
       ],
     );

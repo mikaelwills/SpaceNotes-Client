@@ -11,6 +11,7 @@ import '../services/credential_name_deriver.dart';
 import '../services/credential_writer.dart';
 import '../services/debug_logger.dart';
 import '../file_types/file_type_registry.dart';
+import '../search/file_search.dart';
 
 String _getDefaultHost() {
   if (kIsWeb) {
@@ -123,43 +124,6 @@ final currentFolderPathProvider = StateProvider<String>((ref) => '');
 
 final currentNotePathProvider = StateProvider<String?>((ref) => null);
 
-List<String> searchTerms(String query) => query
-    .toLowerCase()
-    .split(RegExp(r'\s+'))
-    .where((term) => term.isNotEmpty)
-    .toList();
-
-bool _haystackMatches(String haystack, List<String> terms) {
-  if (terms.isEmpty) return false;
-  final phrase = terms.join(' ');
-  return haystack.contains(phrase) ||
-      terms.any((term) => haystack.contains(term));
-}
-
-bool noteMatchesAllTerms(SpaceFile note, List<String> terms) =>
-    _haystackMatches('${note.name} ${note.path}'.toLowerCase(), terms);
-
-bool folderNameMatches(String folderName, List<String> terms) =>
-    _haystackMatches(folderName.toLowerCase(), terms);
-
-int nameMatchRank(String name, List<String> terms) {
-  final lower = name.toLowerCase();
-  final phrase = terms.join(' ');
-  if (lower == phrase) return 0;
-  if (lower.contains(phrase)) return 1;
-  if (terms.any((term) => lower.contains(term))) return 2;
-  return 3;
-}
-
-List<SpaceFile> _rankNotesByNameMatch(List<SpaceFile> notes, List<String> terms) {
-  return [...notes]..sort((a, b) {
-      final byRank =
-          nameMatchRank(a.name, terms).compareTo(nameMatchRank(b.name, terms));
-      if (byRank != 0) return byRank;
-      return a.name.toLowerCase().compareTo(b.name.toLowerCase());
-    });
-}
-
 final filteredFilesProvider = Provider.autoDispose<List<SpaceFile>>((ref) {
   final notes = ref.watch(fileListProvider);
   final searchQuery = ref.watch(searchQueryProvider);
@@ -170,7 +134,7 @@ final filteredFilesProvider = Provider.autoDispose<List<SpaceFile>>((ref) {
   if (terms.isEmpty) return notes;
   final matches =
       notes.where((note) => noteMatchesAllTerms(note, terms)).toList();
-  return _rankNotesByNameMatch(matches, terms);
+  return rankNotes(matches, terms);
 });
 
 final folderSearchQueryProvider = StateProvider<String>((ref) => '');
@@ -183,15 +147,10 @@ final filteredFoldersProvider = Provider.autoDispose<List<Folder>>((ref) {
 
   final terms = searchTerms(searchQuery);
   if (terms.isEmpty) return folders;
-  return folders
-      .where((folder) => folderNameMatches(folder.name, terms))
-      .toList()
-    ..sort((a, b) {
-      final byRank = nameMatchRank(a.name, terms)
-          .compareTo(nameMatchRank(b.name, terms));
-      if (byRank != 0) return byRank;
-      return a.name.toLowerCase().compareTo(b.name.toLowerCase());
-    });
+  return rankFolders(
+    folders.where((folder) => folderNameMatches(folder.name, terms)).toList(),
+    terms,
+  );
 });
 
 final dynamicFolderContentsProvider = Provider.family
@@ -241,7 +200,7 @@ final dynamicFolderContentsProvider = Provider.family
 
   return (
     folders: filteredFolders,
-    notes: _rankNotesByNameMatch(filteredNotes, terms)
+    notes: rankNotes(filteredNotes, terms)
   );
 });
 
@@ -295,8 +254,7 @@ final filteredCredentialsProvider = Provider<List<SpaceFile>>((ref) {
   final terms = searchTerms(ref.watch(credentialFilterProvider));
   if (terms.isEmpty) return credentials;
 
-  return credentials.where((c) {
-    final haystack = c.path.toLowerCase();
-    return terms.every(haystack.contains);
-  }).toList();
+  return credentials
+      .where((c) => matchesAllTerms(c.path, terms))
+      .toList();
 });
