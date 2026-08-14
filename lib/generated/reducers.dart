@@ -52,6 +52,23 @@ class Reducers {
         optimisticChanges: optimisticChanges, dropIfOffline: dropIfOffline);
   }
 
+  /// Calls the `arm_sweep_schedule` reducer.
+  ///
+  /// Returns a [TransactionResult] on success. Throws
+  /// [SpacetimeDbReducerException] if the reducer returns `Failed` or
+  /// `InternalError`. The returned status is one of `Committed`,
+  /// `Pending` (queued to offline storage), or `Dropped` (skipped via
+  /// `dropIfOffline: true` while offline).
+  Future<TransactionResult> armSweepSchedule({
+    List<OptimisticChange>? optimisticChanges,
+    bool dropIfOffline = false,
+  }) async {
+    final encoder = BsatnEncoder();
+    return await _reducerCaller.call(
+        armSweepScheduleDef.name, encoder.toBytes(),
+        optimisticChanges: optimisticChanges, dropIfOffline: dropIfOffline);
+  }
+
   /// Calls the `clear_all` reducer.
   ///
   /// Returns a [TransactionResult] on success. Throws
@@ -713,23 +730,6 @@ class Reducers {
         optimisticChanges: optimisticChanges, dropIfOffline: dropIfOffline);
   }
 
-  /// Calls the `sweep_old_messages` reducer.
-  ///
-  /// Returns a [TransactionResult] on success. Throws
-  /// [SpacetimeDbReducerException] if the reducer returns `Failed` or
-  /// `InternalError`. The returned status is one of `Committed`,
-  /// `Pending` (queued to offline storage), or `Dropped` (skipped via
-  /// `dropIfOffline: true` while offline).
-  Future<TransactionResult> sweepOldMessages({
-    List<OptimisticChange>? optimisticChanges,
-    bool dropIfOffline = false,
-  }) async {
-    final encoder = BsatnEncoder();
-    return await _reducerCaller.call(
-        sweepOldMessagesDef.name, encoder.toBytes(),
-        optimisticChanges: optimisticChanges, dropIfOffline: dropIfOffline);
-  }
-
   /// Calls the `update_file_content` reducer.
   ///
   /// Returns a [TransactionResult] on success. Throws
@@ -852,6 +852,17 @@ class Reducers {
       final args = event.reducerArgs;
       if (args is! AppendToFileArgs) return;
       callback(ctx, args.path, args.content);
+    });
+  }
+
+  StreamSubscription<void> onArmSweepSchedule(
+      void Function(EventContext ctx) callback) {
+    return _reducerEmitter.on(armSweepScheduleDef).listen((EventContext ctx) {
+      final event = ctx.event;
+      if (event is! ReducerEvent) return;
+      final args = event.reducerArgs;
+      if (args is! ArmSweepScheduleArgs) return;
+      callback(ctx);
     });
   }
 
@@ -1239,17 +1250,6 @@ class Reducers {
       final args = event.reducerArgs;
       if (args is! SetDisplayNameArgs) return;
       callback(ctx, args.name);
-    });
-  }
-
-  StreamSubscription<void> onSweepOldMessages(
-      void Function(EventContext ctx) callback) {
-    return _reducerEmitter.on(sweepOldMessagesDef).listen((EventContext ctx) {
-      final event = ctx.event;
-      if (event is! ReducerEvent) return;
-      final args = event.reducerArgs;
-      if (args is! SweepOldMessagesArgs) return;
-      callback(ctx);
     });
   }
 

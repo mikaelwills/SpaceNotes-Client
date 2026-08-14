@@ -4,6 +4,7 @@ import 'package:spacetimedb_sdk/codegen.dart';
 
 class ConnectedUser {
   ConnectedUser({
+    required this.connectionId,
     required this.identity,
     required this.connectedAt,
     required this.name,
@@ -11,11 +12,14 @@ class ConnectedUser {
 
   factory ConnectedUser.fromJson(Map<String, dynamic> json) {
     return ConnectedUser(
+      connectionId: json['connectionId'] ?? '',
       identity: Identity.fromJson(json['identity'] ?? ''),
       connectedAt: Int64(json['connectedAt'] ?? 0),
       name: json['name'] ?? '',
     );
   }
+
+  final String connectionId;
 
   final Identity identity;
 
@@ -24,6 +28,7 @@ class ConnectedUser {
   final String name;
 
   void encodeBsatn(BsatnEncoder encoder) {
+    encoder.writeString(connectionId);
     encoder.writeIdentity(identity);
     encoder.writeU64(connectedAt);
     encoder.writeString(name);
@@ -31,6 +36,7 @@ class ConnectedUser {
 
   static ConnectedUser decodeBsatn(BsatnDecoder decoder) {
     return ConnectedUser(
+      connectionId: decoder.readString(),
       identity: decoder.readIdentity(),
       connectedAt: decoder.readU64(),
       name: decoder.readString(),
@@ -39,6 +45,7 @@ class ConnectedUser {
 
   Map<String, dynamic> toJson() {
     return {
+      'connectionId': connectionId,
       'identity': identity.toJson(),
       'connectedAt': connectedAt.toInt(),
       'name': name,
@@ -49,6 +56,7 @@ class ConnectedUser {
   bool operator ==(Object other) {
     return identical(this, other) ||
         other is ConnectedUser &&
+            connectionId == other.connectionId &&
             identity == other.identity &&
             connectedAt == other.connectedAt &&
             name == other.name;
@@ -56,20 +64,22 @@ class ConnectedUser {
 
   @override
   int get hashCode {
-    return Object.hashAll([identity, connectedAt, name]);
+    return Object.hashAll([connectionId, identity, connectedAt, name]);
   }
 
   @override
   String toString() {
-    return 'ConnectedUser(identity: $identity, connectedAt: $connectedAt, name: $name)';
+    return 'ConnectedUser(connectionId: $connectionId, identity: $identity, connectedAt: $connectedAt, name: $name)';
   }
 
   ConnectedUser copyWith({
+    String? connectionId,
     Identity? identity,
     Int64? connectedAt,
     String? name,
   }) {
     return ConnectedUser(
+      connectionId: connectionId ?? this.connectionId,
       identity: identity ?? this.identity,
       connectedAt: connectedAt ?? this.connectedAt,
       name: name ?? this.name,
@@ -84,8 +94,8 @@ class ConnectedUserDecoder extends RowDecoder<ConnectedUser> {
   }
 
   @override
-  Identity? getPrimaryKey(ConnectedUser row) {
-    return row.identity;
+  String? getPrimaryKey(ConnectedUser row) {
+    return row.connectionId;
   }
 
   @override

@@ -12,9 +12,16 @@ final connectedUsersProvider = Provider.autoDispose<List<ConnectedUser>>((ref) {
   if (client == null) return const [];
   final rows = watchListenable(ref, client.connectedUser.rows);
   final myIdentity = client.identity;
-  return rows
-      .where((u) => myIdentity == null || u.identity != myIdentity)
-      .toList();
+  final byIdentity = <String, ConnectedUser>{};
+  for (final u in rows) {
+    if (myIdentity != null && u.identity == myIdentity) continue;
+    final key = u.identity.toString();
+    final existing = byIdentity[key];
+    if (existing == null || u.connectedAt < existing.connectedAt) {
+      byIdentity[key] = u;
+    }
+  }
+  return byIdentity.values.toList();
 });
 
 final myConnectedUserProvider = Provider.autoDispose<ConnectedUser?>((ref) {

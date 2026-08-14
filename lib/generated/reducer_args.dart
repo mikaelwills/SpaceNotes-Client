@@ -45,6 +45,20 @@ class AppendToFileArgsDecoder implements ReducerArgDecoder<AppendToFileArgs> {
   }
 }
 
+class ArmSweepScheduleArgs {
+  ArmSweepScheduleArgs();
+}
+
+class ArmSweepScheduleArgsDecoder
+    implements ReducerArgDecoder<ArmSweepScheduleArgs> {
+  const ArmSweepScheduleArgsDecoder();
+
+  @override
+  ArmSweepScheduleArgs decode(BsatnDecoder decoder) {
+    return ArmSweepScheduleArgs();
+  }
+}
+
 class ClearAllArgs {
   ClearAllArgs();
 }
@@ -899,20 +913,6 @@ class SetDisplayNameArgsDecoder
   }
 }
 
-class SweepOldMessagesArgs {
-  SweepOldMessagesArgs();
-}
-
-class SweepOldMessagesArgsDecoder
-    implements ReducerArgDecoder<SweepOldMessagesArgs> {
-  const SweepOldMessagesArgsDecoder();
-
-  @override
-  SweepOldMessagesArgs decode(BsatnDecoder decoder) {
-    return SweepOldMessagesArgs();
-  }
-}
-
 class UpdateFileContentArgs {
   UpdateFileContentArgs({
     required this.id,
@@ -1074,6 +1074,8 @@ const acceptCallDef =
     ReducerDef<AcceptCallArgs>('accept_call', AcceptCallArgsDecoder());
 const appendToFileDef =
     ReducerDef<AppendToFileArgs>('append_to_file', AppendToFileArgsDecoder());
+const armSweepScheduleDef = ReducerDef<ArmSweepScheduleArgs>(
+    'arm_sweep_schedule', ArmSweepScheduleArgsDecoder());
 const clearAllDef =
     ReducerDef<ClearAllArgs>('clear_all', ClearAllArgsDecoder());
 const clearAllAgentsDef = ReducerDef<ClearAllAgentsArgs>(
@@ -1135,8 +1137,6 @@ const sendVideoFrameDef = ReducerDef<SendVideoFrameArgs>(
     'send_video_frame', SendVideoFrameArgsDecoder());
 const setDisplayNameDef = ReducerDef<SetDisplayNameArgs>(
     'set_display_name', SetDisplayNameArgsDecoder());
-const sweepOldMessagesDef = ReducerDef<SweepOldMessagesArgs>(
-    'sweep_old_messages', SweepOldMessagesArgsDecoder());
 const updateFileContentDef = ReducerDef<UpdateFileContentArgs>(
     'update_file_content', UpdateFileContentArgsDecoder());
 const updateFilePathDef = ReducerDef<UpdateFilePathArgs>(
