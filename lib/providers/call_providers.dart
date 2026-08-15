@@ -10,7 +10,7 @@ import '../services/debug_logger.dart';
 import 'notes_providers.dart';
 
 final activeCallSessionProvider = Provider<CallSession?>((ref) {
-  final client = ref.watch(spacetimeClientProvider);
+  final client = ref.watch(chatClientProvider);
   if (client == null) return null;
 
   final rows = watchListenable(ref, client.callSession.rows);
@@ -34,7 +34,7 @@ final activeCallSessionProvider = Provider<CallSession?>((ref) {
 });
 
 final incomingCallProvider = Provider<CallSession?>((ref) {
-  final client = ref.watch(spacetimeClientProvider);
+  final client = ref.watch(chatClientProvider);
   if (client == null) return null;
 
   final rows = watchListenable(ref, client.callSession.rows);
@@ -68,7 +68,7 @@ class ReceivedVideoFrame {
 
 final remoteVideoFrameProvider =
     StreamProvider.autoDispose<ReceivedVideoFrame?>((ref) {
-  final client = ref.watch(spacetimeClientProvider);
+  final client = ref.watch(chatClientProvider);
   if (client == null) return Stream.value(null);
 
   final controller = StreamController<ReceivedVideoFrame?>();
@@ -114,7 +114,7 @@ final remoteVideoFrameProvider =
 });
 
 final remoteAudioFrameProvider = StreamProvider.autoDispose<Uint8List?>((ref) {
-  final client = ref.watch(spacetimeClientProvider);
+  final client = ref.watch(chatClientProvider);
   if (client == null) return Stream.value(null);
 
   final controller = StreamController<Uint8List?>();
@@ -141,7 +141,7 @@ final remoteAudioFrameProvider = StreamProvider.autoDispose<Uint8List?>((ref) {
 });
 
 final myIdentityProvider = Provider<Identity?>((ref) {
-  final client = ref.watch(spacetimeClientProvider);
+  final client = ref.watch(chatClientProvider);
   return client?.identity;
 });
 

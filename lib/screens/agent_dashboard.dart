@@ -99,7 +99,7 @@ class AgentDashboard extends ConsumerWidget {
       ),
     );
     if (confirmed != true) return;
-    final client = ref.read(spacetimeClientProvider);
+    final client = ref.read(chatClientProvider);
     if (client == null) return;
     await client.reducers.clearAllAgents();
   }
@@ -371,7 +371,7 @@ class _AgentRowState extends ConsumerState<_AgentRow>
 
   Future<void> _deleteAgent() async {
     HapticFeedback.mediumImpact();
-    final client = ref.read(spacetimeClientProvider);
+    final client = ref.read(chatClientProvider);
     if (client == null) return;
     await client.reducers.deleteAgent(agentId: widget.agent.id);
   }

@@ -10,7 +10,7 @@ class ConnectionIndicator extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final client = ref.watch(spacetimeClientProvider);
+    final client = ref.watch(chatClientProvider);
 
     if (client == null) {
       return _buildDisconnectedIndicator();

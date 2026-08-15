@@ -97,7 +97,7 @@ class _IncomingCallBody extends ConsumerWidget {
                   onTap: () {
                     final callService = ref.read(callServiceProvider);
                     final repo = ref.read(notesRepositoryProvider);
-                    callService.setClient(repo.client);
+                    callService.setClient(repo.chatClient);
                     callService.endCall(session.callId);
                   },
                 ),
@@ -110,7 +110,7 @@ class _IncomingCallBody extends ConsumerWidget {
                     onAccepted?.call();
                     final callService = ref.read(callServiceProvider);
                     final repo = ref.read(notesRepositoryProvider);
-                    callService.setClient(repo.client);
+                    callService.setClient(repo.chatClient);
                     callService.acceptCall(session.callId);
                     context.goNamed('call', pathParameters: {
                       'sessionId': session.callId.toString()

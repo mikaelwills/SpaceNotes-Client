@@ -83,7 +83,7 @@ class IncomingCallBanner extends ConsumerWidget {
               onTap: () {
                 final callService = ref.read(callServiceProvider);
                 final repo = ref.read(notesRepositoryProvider);
-                callService.setClient(repo.client);
+                callService.setClient(repo.chatClient);
                 callService.endCall(session.callId);
               },
               child: Container(
@@ -102,7 +102,7 @@ class IncomingCallBanner extends ConsumerWidget {
               onTap: () {
                 final callService = ref.read(callServiceProvider);
                 final repo = ref.read(notesRepositoryProvider);
-                callService.setClient(repo.client);
+                callService.setClient(repo.chatClient);
                 callService.acceptCall(session.callId);
                 context.goNamed('call', pathParameters: {
                   'sessionId': session.callId.toString()

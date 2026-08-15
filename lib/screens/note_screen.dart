@@ -270,7 +270,7 @@ class _NoteScreenState extends ConsumerState<NoteScreen> {
   }
 
   void _attachToCurrentClient() {
-    final client = _repo.client;
+    final client = _repo.notesClient;
     if (identical(client, _listenedClient)) return;
 
     _detachSubscriptions();

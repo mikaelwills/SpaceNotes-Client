@@ -216,8 +216,9 @@ void main() {
 
     expect(
       body,
-      contains('_deferredUnsubscribes.add(querySetId)'),
-      reason: 'the wire Unsubscribe must still be deferred to flush time',
+      contains('_chatLane.deferredUnsubscribes.add(querySetId)'),
+      reason: 'the wire Unsubscribe must still be deferred to flush time, '
+          'now on the chat lane that owns the per-agent query sets',
     );
     expect(
       body,
@@ -226,7 +227,7 @@ void main() {
     );
     expect(
       RegExp(
-        r'_deferredUnsubscribes\.add\(querySetId\);\s*return;',
+        r'_chatLane\.deferredUnsubscribes\.add\(querySetId\);\s*return;',
       ).hasMatch(body),
       isFalse,
       reason:

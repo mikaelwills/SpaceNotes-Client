@@ -46,14 +46,22 @@ T watchListenable<T>(Ref ref, ValueListenable<T> listenable) {
   return listenable.value;
 }
 
-/// Current SpacetimeDB client (null before connect, null after reset)
-final spacetimeClientProvider = Provider<SpacetimeDbClient?>((ref) {
+/// The notes-domain client — files and folders (null before connect, null
+/// after reset). Its socket carries the large `space_file` snapshot.
+final notesClientProvider = Provider<SpacetimeDbClient?>((ref) {
   final repository = ref.watch(notesRepositoryProvider);
-  return watchListenable(ref, repository.clientNotifier);
+  return watchListenable(ref, repository.notesClientNotifier);
+});
+
+/// The chat-domain client — agents, messages, calls and presence. Deliberately
+/// a separate socket so chat hydration never queues behind the notes snapshot.
+final chatClientProvider = Provider<SpacetimeDbClient?>((ref) {
+  final repository = ref.watch(notesRepositoryProvider);
+  return watchListenable(ref, repository.chatClientNotifier);
 });
 
 final fileListProvider = Provider<List<SpaceFile>>((ref) {
-  final client = ref.watch(spacetimeClientProvider);
+  final client = ref.watch(notesClientProvider);
   if (client == null) {
     debugLogger.warning('NOTES_LIST', 'client is null -> rendering 0 notes');
     return const [];
@@ -68,7 +76,7 @@ final fileListProvider = Provider<List<SpaceFile>>((ref) {
 });
 
 final foldersListProvider = Provider<List<Folder>>((ref) {
-  final client = ref.watch(spacetimeClientProvider);
+  final client = ref.watch(notesClientProvider);
   if (client == null) return const [];
   final rows = watchListenable(ref, client.folder.rows);
   final sorted = rows.toList()
@@ -77,7 +85,7 @@ final foldersListProvider = Provider<List<Folder>>((ref) {
 });
 
 final fileByIdProvider = Provider.family<SpaceFile?, String>((ref, id) {
-  final client = ref.watch(spacetimeClientProvider);
+  final client = ref.watch(notesClientProvider);
   if (client == null) return null;
   return watchListenable(ref, client.spaceFile.rowNotifier(id));
 });
@@ -114,7 +122,7 @@ final credentialWriterProvider = Provider<CredentialWriter?>((ref) {
 });
 
 final folderByIdProvider = Provider.family<Folder?, String>((ref, path) {
-  final client = ref.watch(spacetimeClientProvider);
+  final client = ref.watch(notesClientProvider);
   if (client == null) return null;
   return watchListenable(ref, client.folder.rowNotifier(path));
 });

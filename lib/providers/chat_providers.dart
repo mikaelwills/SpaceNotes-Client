@@ -67,7 +67,7 @@ int _hostRank(String host) {
 }
 
 final agentsProvider = Provider<List<Agent>>((ref) {
-  final client = ref.watch(spacetimeClientProvider);
+  final client = ref.watch(chatClientProvider);
   if (client == null) return const [];
   final rows = watchListenable(ref, client.agent.rows);
   final recent = ref.watch(recentAgentsProvider);
@@ -91,28 +91,28 @@ final filteredAgentsProvider = Provider<List<Agent>>((ref) {
 });
 
 final agentByIdProvider = Provider.family<Agent?, String>((ref, id) {
-  final client = ref.watch(spacetimeClientProvider);
+  final client = ref.watch(chatClientProvider);
   if (client == null) return null;
   return watchListenable(ref, client.agent.rowNotifier(id));
 });
 
 final agentActivityProvider =
     Provider.family<AgentActivity?, String>((ref, agentId) {
-  final client = ref.watch(spacetimeClientProvider);
+  final client = ref.watch(chatClientProvider);
   if (client == null) return null;
   return watchListenable(ref, client.agentActivity.rowNotifier(agentId));
 });
 
 final permissionByIdProvider =
     Provider.family<PermissionRequest?, String>((ref, id) {
-  final client = ref.watch(spacetimeClientProvider);
+  final client = ref.watch(chatClientProvider);
   if (client == null) return null;
   return watchListenable(ref, client.permissionRequest.rowNotifier(id));
 });
 
 final questionByIdProvider =
     Provider.family<QuestionRequest?, String>((ref, id) {
-  final client = ref.watch(spacetimeClientProvider);
+  final client = ref.watch(chatClientProvider);
   if (client == null) return null;
   return watchListenable(ref, client.questionRequest.rowNotifier(id));
 });
@@ -160,7 +160,7 @@ final agentHydratedProvider =
 });
 
 final _chatIndexProvider = Provider<_ChatIndex?>((ref) {
-  final client = ref.watch(spacetimeClientProvider);
+  final client = ref.watch(chatClientProvider);
   if (client == null) {
     debugLogger.chat('ChatIndex provider', 'client=null -> returning null');
     return null;
@@ -506,8 +506,8 @@ final chatSendStatusProvider =
     StateNotifierProvider<ChatSendStatusNotifier, Map<String, ChatSendEntry>>(
         (ref) {
   final notifier = ChatSendStatusNotifier();
-  notifier.attachClient(ref.read(spacetimeClientProvider));
-  ref.listen<SpacetimeDbClient?>(spacetimeClientProvider, (prev, next) {
+  notifier.attachClient(ref.read(chatClientProvider));
+  ref.listen<SpacetimeDbClient?>(chatClientProvider, (prev, next) {
     debugLogger.chat('chatSendStatus', 'client changed -> reattach result sub');
     notifier.attachClient(next);
   });
@@ -527,7 +527,7 @@ Future<void> sendChatMessage(
   required String agentId,
   required String text,
 }) async {
-  final client = ref.read(spacetimeClientProvider);
+  final client = ref.read(chatClientProvider);
   if (client == null) {
     debugLogger.chatError('sendChatMessage aborted', 'client=null');
     return;
@@ -588,7 +588,7 @@ Future<void> sendChatImage(
   required String caption,
   required Uint8List pngBytes,
 }) async {
-  final client = ref.read(spacetimeClientProvider);
+  final client = ref.read(chatClientProvider);
   if (client == null) {
     debugLogger.chatError('sendChatImage aborted', 'client=null');
     return;
@@ -628,7 +628,7 @@ Future<void> respondToPermission(
   required String requestId,
   required bool allow,
 }) async {
-  final client = ref.read(spacetimeClientProvider);
+  final client = ref.read(chatClientProvider);
   if (client == null) return;
   await client.reducers.resolvePermission(
     id: requestId,
@@ -644,7 +644,7 @@ Future<void> respondToQuestion(
   required String requestId,
   required List<String> labels,
 }) async {
-  final client = ref.read(spacetimeClientProvider);
+  final client = ref.read(chatClientProvider);
   if (client == null) return;
   await client.reducers.respondToQuestion(
     id: requestId,

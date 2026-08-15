@@ -25,7 +25,7 @@ Widget _textItem(BuildContext context, String item) => Text(item);
 
 ProviderContainer _container(SpacetimeDbClient client) {
   final container = ProviderContainer(
-    overrides: [spacetimeClientProvider.overrideWithValue(client)],
+    overrides: [chatClientProvider.overrideWithValue(client)],
   );
   addTearDown(container.dispose);
   return container;

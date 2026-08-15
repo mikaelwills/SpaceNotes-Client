@@ -2,7 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'notes_providers.dart';
 
 final spacetimeConnectedProvider = Provider<bool>((ref) {
-  final client = ref.watch(spacetimeClientProvider);
+  final client = ref.watch(chatClientProvider);
   return client != null;
 });
 
@@ -11,7 +11,7 @@ final spacetimeConnectedProvider = Provider<bool>((ref) {
 /// exists) this reflects the real transport state, so it goes false in a
 /// tunnel / offline.
 final spacetimeConnectionLiveProvider = StreamProvider<bool>((ref) {
-  final client = ref.watch(spacetimeClientProvider);
+  final client = ref.watch(chatClientProvider);
   if (client == null) return Stream.value(false);
   return client.connection.onStateChanged
       .map((s) => s.isConnected)

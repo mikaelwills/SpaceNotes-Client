@@ -8,7 +8,7 @@ import '../providers/notes_providers.dart';
 import '../theme/spacenotes_theme.dart';
 
 final connectedUsersProvider = Provider.autoDispose<List<ConnectedUser>>((ref) {
-  final client = ref.watch(spacetimeClientProvider);
+  final client = ref.watch(chatClientProvider);
   if (client == null) return const [];
   final rows = watchListenable(ref, client.connectedUser.rows);
   final myIdentity = client.identity;
@@ -25,7 +25,7 @@ final connectedUsersProvider = Provider.autoDispose<List<ConnectedUser>>((ref) {
 });
 
 final myConnectedUserProvider = Provider.autoDispose<ConnectedUser?>((ref) {
-  final client = ref.watch(spacetimeClientProvider);
+  final client = ref.watch(chatClientProvider);
   if (client == null) return null;
   final rows = watchListenable(ref, client.connectedUser.rows);
   final myIdentity = client.identity;
@@ -133,7 +133,7 @@ class OnlineUsersScreen extends ConsumerWidget {
         final name = nameController.text.trim();
         Navigator.of(dialogContext).pop();
         final repo = ref.read(notesRepositoryProvider);
-        repo.client?.reducers.setDisplayName(name: name);
+        repo.chatClient?.reducers.setDisplayName(name: name);
       }
     }
 
@@ -219,12 +219,12 @@ class OnlineUsersScreen extends ConsumerWidget {
   void _startCall(BuildContext context, WidgetRef ref, Identity callee) {
     final callService = ref.read(callServiceProvider);
     final repo = ref.read(notesRepositoryProvider);
-    callService.setClient(repo.client);
+    callService.setClient(repo.chatClient);
     callService.requestCall(callee);
 
     final navigator = GoRouter.of(context);
     Future.delayed(const Duration(milliseconds: 500), () {
-      final client = repo.client;
+      final client = repo.chatClient;
       if (client == null) return;
       final sessions = client.callSession.iter().where((s) {
         return s.caller == client.identity && s.callee == callee;

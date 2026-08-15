@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io' show Directory, Platform;
 import 'package:collection/collection.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:crypto/crypto.dart';
@@ -72,47 +73,96 @@ String? findCollidingPath({
   return null;
 }
 
+/// Per-connection state for one lane (one [SpacetimeDbClient], one socket).
+///
+/// Everything here is state that a single client owns and that a second client
+/// must not share: the client itself, its offline cache, its hydration span,
+/// its query-set bookkeeping and its own rung on the reconnect ladder. Shared
+/// configuration (host, database, auth store) stays on the repository.
+class _ClientLane {
+  _ClientLane({
+    required this.name,
+    required this.storageSuffix,
+    required this.initialSubscriptions,
+  });
+
+  final String name;
+  final String storageSuffix;
+  final List<String> initialSubscriptions;
+
+  SpacetimeDbClient? client;
+  OfflineStorage? offlineStorage;
+  bool nonTableListenersRegistered = false;
+  LogSpan? hydrationSpan;
+  int connectAttempts = 0;
+  bool retryScheduled = false;
+  int retryAttempt = 0;
+
+  final ValueNotifier<SpacetimeDbClient?> clientNotifier =
+      ValueNotifier<SpacetimeDbClient?>(null);
+  final Map<int, SpacetimeDbClient> querySetOwners = {};
+  final Set<int> deferredUnsubscribes = {};
+  final List<StreamSubscription> subscriptions = [];
+
+  String tag(String message) => '[$name] $message';
+}
+
 /// Notes repository implementation using SpacetimeDB
 class SpacetimeDbNotesRepository {
   String? _host;
   String? _database;
   stdb.AuthTokenStore? _authStorage;
-  OfflineStorage? _offlineStorage;
   bool _hasEverConnected = false;
   bool _initialConnectAttempted = false;
-  int _connectAttempts = 0;
-  SpacetimeDbClient? _client;
   Future<void>? _connectingFuture;
-  bool _retryScheduled = false;
-  int _retryAttempt = 0;
+  Future<void>? _staleTokenRecovery;
   int _authErrorAttempts = 0;
-  bool _nonTableListenersRegistered = false;
-  LogSpan? _hydrationSpan;
   bool _generalNotesFolderEnsured = false;
   StreamSubscription<List<ConnectivityResult>>? _connectivitySub;
   bool _lastConnectivityOnline = true;
 
-  final ValueNotifier<SpacetimeDbClient?> clientNotifier =
-      ValueNotifier<SpacetimeDbClient?>(null);
+  final _ClientLane _notesLane = _ClientLane(
+    name: 'notes',
+    storageSuffix: '_notes',
+    initialSubscriptions: _notesInitialSubscriptions,
+  );
+
+  final _ClientLane _chatLane = _ClientLane(
+    name: 'chat',
+    storageSuffix: '_chat',
+    initialSubscriptions: _chatInitialSubscriptions,
+  );
+
+  late final List<_ClientLane> _lanes = [_notesLane, _chatLane];
+
+  ValueNotifier<SpacetimeDbClient?> get clientNotifier =>
+      _notesLane.clientNotifier;
+
+  ValueNotifier<SpacetimeDbClient?> get notesClientNotifier =>
+      _notesLane.clientNotifier;
+
+  ValueNotifier<SpacetimeDbClient?> get chatClientNotifier =>
+      _chatLane.clientNotifier;
 
   final _syncStateSubject =
       BehaviorSubject<SyncState>.seeded(const SyncState());
 
-  final List<StreamSubscription> _subscriptions = [];
+  static const _notesInitialSubscriptions = [
+    'SELECT * FROM space_file',
+    'SELECT * FROM folder',
+  ];
 
   // Cold-start set: light/global tables only. The four per-agent chat tables
   // (message, tool_event, permission_request, question_request) are subscribed
   // dynamically, scoped `WHERE agent_id = <id>`, while an agent screen is
   // open — see subscribeAgent/unsubscribeAgent.
-  static const _initialSubscriptions = [
-    'SELECT * FROM space_file',
-    'SELECT * FROM folder',
+  static const _chatInitialSubscriptions = [
+    'SELECT * FROM agent',
+    'SELECT * FROM agent_activity',
     'SELECT * FROM call_session',
     'SELECT * FROM connected_user',
     'SELECT * FROM video_frame',
     'SELECT * FROM audio_frame',
-    'SELECT * FROM agent',
-    'SELECT * FROM agent_activity',
   ];
 
   static const _perAgentChatTables = [
@@ -122,43 +172,40 @@ class SpacetimeDbNotesRepository {
     'question_request',
   ];
 
-  final Map<int, SpacetimeDbClient> _querySetOwners = {};
-  final Set<int> _deferredUnsubscribes = {};
-
   /// Subscribe the four per-agent chat tables scoped to one agent. Returns
   /// the SDK querySetId to pass back to [unsubscribeAgent]. Awaits
   /// SubscribeApplied so the agent's rows are in the cache on resolve.
   Future<int?> subscribeAgent(String agentId) async {
-    final client = _client;
+    final client = _chatLane.client;
     if (client == null) {
-      debugLogger.warning('SUB', 'subscribeAgent: client null');
+      debugLogger.warning('SUB', _chatLane.tag('subscribeAgent: client null'));
       return null;
     }
     final queries = _perAgentChatTables
         .map((t) => "SELECT * FROM $t WHERE agent_id = '$agentId'")
         .toList();
     final qsId = await client.subscriptions.subscribe(queries);
-    _querySetOwners[qsId] = client;
+    _chatLane.querySetOwners[qsId] = client;
     return qsId;
   }
 
   void unsubscribeAgent(int querySetId) {
-    final owner = _querySetOwners.remove(querySetId);
-    final client = _client;
+    final owner = _chatLane.querySetOwners.remove(querySetId);
+    final client = _chatLane.client;
     if (client == null || !identical(owner, client)) return;
     if (!client.connection.state.isConnected) {
-      _deferredUnsubscribes.add(querySetId);
+      _chatLane.deferredUnsubscribes.add(querySetId);
       client.subscriptions.forgetQuerySet(querySetId);
       return;
     }
     client.subscriptions.unsubscribe(querySetId);
   }
 
-  void _flushDeferredUnsubscribes() {
-    final client = _client;
-    if (client == null || _deferredUnsubscribes.isEmpty) return;
-    final ids = _deferredUnsubscribes.toList();
-    _deferredUnsubscribes.clear();
+  void _flushDeferredUnsubscribes(_ClientLane lane) {
+    final client = lane.client;
+    if (client == null || lane.deferredUnsubscribes.isEmpty) return;
+    final ids = lane.deferredUnsubscribes.toList();
+    lane.deferredUnsubscribes.clear();
     for (final id in ids) {
       client.subscriptions.unsubscribe(id);
     }
@@ -170,9 +217,9 @@ class SpacetimeDbNotesRepository {
   /// [subscribeAgent] — no dependency on IN-clause support. Awaits
   /// SubscribeApplied. Returns the querySetId, or null if there are no ids.
   Future<int?> subscribeAgents(List<String> agentIds) async {
-    final client = _client;
+    final client = _chatLane.client;
     if (client == null) {
-      debugLogger.warning('SUB', 'subscribeAgents: client null');
+      debugLogger.warning('SUB', _chatLane.tag('subscribeAgents: client null'));
       return null;
     }
     if (agentIds.isEmpty) return null;
@@ -181,10 +228,10 @@ class SpacetimeDbNotesRepository {
         for (final t in _perAgentChatTables)
           "SELECT * FROM $t WHERE agent_id = '$id'",
     ];
-    debugLogger.connection(
-        'subscribeAgents: warming ${agentIds.length} agents (${queries.length} queries)');
+    debugLogger.connection(_chatLane.tag(
+        'subscribeAgents: warming ${agentIds.length} agents (${queries.length} queries)'));
     final qsId = await client.subscriptions.subscribe(queries);
-    _querySetOwners[qsId] = client;
+    _chatLane.querySetOwners[qsId] = client;
     return qsId;
   }
 
@@ -232,13 +279,13 @@ class SpacetimeDbNotesRepository {
   SyncState get currentSyncState => _syncStateSubject.value;
 
   /// Check if offline storage is enabled
-  bool get hasOfflineStorage => _client?.hasOfflineStorage ?? false;
+  bool get hasOfflineStorage => _notesLane.client?.hasOfflineStorage ?? false;
 
   /// Dismiss the retained sync failures shown in the UI. Clears the
   /// `failedCount` / `recentFailures` carried on [SyncState] without
   /// touching the pending queue.
   void clearSyncErrors() {
-    _client?.clearSyncErrors();
+    _notesLane.client?.clearSyncErrors();
   }
 
   Future<bool> isConfigured() async {
@@ -251,7 +298,7 @@ class SpacetimeDbNotesRepository {
   /// Database is always 'spacenotes'.
   /// Call [connectAndGetInitialData] after configuring to establish connection.
   Future<void> configure({required String host}) async {
-    if (_client != null) {
+    if (_notesLane.client != null) {
       resetConnection();
     }
 
@@ -264,20 +311,20 @@ class SpacetimeDbNotesRepository {
   }
 
   Future<bool> checkConnection() async {
-    if (_client == null) {
+    if (_notesLane.client == null) {
       return false;
     }
 
-    return _client!.connection.state.isConnected;
+    return _notesLane.client!.connection.state.isConnected;
   }
 
   Future<SpaceFile?> getNote(String id) async {
     try {
       await _ensureConnected();
 
-      if (_client == null) return null;
+      if (_notesLane.client == null) return null;
 
-      final noteTable = _client!.spaceFile;
+      final noteTable = _notesLane.client!.spaceFile;
       final note = noteTable.find(id);
 
       return note;
@@ -295,7 +342,7 @@ class SpacetimeDbNotesRepository {
   }) async {
     await _ensureConnected();
 
-    if (_client == null) {
+    if (_notesLane.client == null) {
       throw const CredentialWriteRefused(
         'not connected, so the credential was not written',
       );
@@ -303,7 +350,7 @@ class SpacetimeDbNotesRepository {
 
     final collision = findCollidingPath(
       path: path,
-      existingPaths: _client!.spaceFile.iter().map((f) => f.path),
+      existingPaths: _notesLane.client!.spaceFile.iter().map((f) => f.path),
       ignoreExactPath: replacingPath ?? path,
     );
     if (collision != null) {
@@ -319,12 +366,12 @@ class SpacetimeDbNotesRepository {
     final folderPath = folderPathOf(path);
     final depth = folderDepthOf(folderPath);
 
-    final existing = _client!.spaceFile.find(id);
+    final existing = _notesLane.client!.spaceFile.find(id);
     final now = DateTime.now().millisecondsSinceEpoch;
     final decodedSize = base64Decode(content).length;
 
     try {
-      await _client!.reducers.upsertFile(
+      await _notesLane.client!.reducers.upsertFile(
         id: id,
         path: path,
         name: name,
@@ -350,13 +397,13 @@ class SpacetimeDbNotesRepository {
     try {
       await _ensureConnected();
 
-      if (_client == null) {
+      if (_notesLane.client == null) {
         debugLogger.error('SAVE', 'Client is null, cannot create note');
         return null;
       }
 
       final existingNote =
-          _client!.spaceFile.iter().firstWhereOrNull((n) => n.path == path);
+          _notesLane.client!.spaceFile.iter().firstWhereOrNull((n) => n.path == path);
       if (existingNote != null) {
         debugLogger
             .save('Note already exists at path: $path, returning existing ID');
@@ -395,7 +442,7 @@ class SpacetimeDbNotesRepository {
         dbUpdatedAt: Int64(0),
       );
 
-      await _client!.reducers.createFile(
+      await _notesLane.client!.reducers.createFile(
         id: id,
         path: path,
         name: name,
@@ -423,9 +470,9 @@ class SpacetimeDbNotesRepository {
     try {
       await _ensureConnected();
 
-      if (_client == null) return false;
+      if (_notesLane.client == null) return false;
 
-      final oldNote = _client!.spaceFile.find(id);
+      final oldNote = _notesLane.client!.spaceFile.find(id);
       if (oldNote == null) return false;
 
       debugLogger.save(
@@ -447,7 +494,7 @@ class SpacetimeDbNotesRepository {
         dbUpdatedAt: oldNote.dbUpdatedAt,
       );
 
-      await _client!.reducers.updateFileContent(
+      await _notesLane.client!.reducers.updateFileContent(
         id: id,
         content: content,
         size: Int64(content.length),
@@ -470,12 +517,12 @@ class SpacetimeDbNotesRepository {
     try {
       await _ensureConnected();
 
-      if (_client == null) {
+      if (_notesLane.client == null) {
         debugLogger.error('SAVE', 'Client is null, cannot delete note');
         return false;
       }
 
-      final oldNote = _client!.spaceFile.find(id);
+      final oldNote = _notesLane.client!.spaceFile.find(id);
       if (oldNote == null) {
         debugLogger.error('SAVE', 'Note not found in cache: $id');
         return false;
@@ -483,7 +530,7 @@ class SpacetimeDbNotesRepository {
 
       final optimisticPayload = oldNote.toJson();
 
-      await _client!.reducers.deleteFile(
+      await _notesLane.client!.reducers.deleteFile(
         id: id,
         optimisticChanges: [OptimisticChange.delete('space_file', optimisticPayload)],
       );
@@ -501,11 +548,11 @@ class SpacetimeDbNotesRepository {
     try {
       await _ensureConnected();
 
-      if (_client == null) {
+      if (_notesLane.client == null) {
         return false;
       }
 
-      final oldNote = _client!.spaceFile.find(id);
+      final oldNote = _notesLane.client!.spaceFile.find(id);
       if (oldNote == null) return false;
 
       final newFileName = newPath.split('/').last;
@@ -535,7 +582,7 @@ class SpacetimeDbNotesRepository {
         dbUpdatedAt: oldNote.dbUpdatedAt,
       );
 
-      await _client!.reducers.renameFile(
+      await _notesLane.client!.reducers.renameFile(
         id: id,
         newPath: newPath,
         optimisticChanges: [
@@ -554,23 +601,23 @@ class SpacetimeDbNotesRepository {
     if (_generalNotesFolderEnsured) return;
 
     try {
-      if (_client == null) return;
+      if (_notesLane.client == null) return;
 
       const generalNotesPath = 'All Notes';
 
-      final folderTable = _client!.folder;
+      final folderTable = _notesLane.client!.folder;
       final exists = folderTable.iter().any((f) => f.path == generalNotesPath);
 
       if (!exists) {
         debugLogger.info('FOLDER', 'Creating All Notes folder');
-        await _client!.reducers.upsertFolder(
+        await _notesLane.client!.reducers.upsertFolder(
           path: generalNotesPath,
           name: 'All Notes',
           depth: 0,
         );
       }
 
-      final noteTable = _client!.spaceFile;
+      final noteTable = _notesLane.client!.spaceFile;
       final rootNotes = noteTable
           .iter()
           .where((note) => note.folderPath.isEmpty || note.depth == 0)
@@ -581,7 +628,7 @@ class SpacetimeDbNotesRepository {
             'Migrating ${rootNotes.length} root-level notes to All Notes');
         for (final note in rootNotes) {
           final newPath = 'All Notes/${note.path}';
-          await _client!.reducers.moveFile(
+          await _notesLane.client!.reducers.moveFile(
             oldPath: note.path,
             newPath: newPath,
           );
@@ -611,7 +658,7 @@ class SpacetimeDbNotesRepository {
     try {
       await _ensureConnected();
 
-      if (_client == null) {
+      if (_notesLane.client == null) {
         debugLogger.error('FOLDER', 'Client is null, cannot create folder');
         return false;
       }
@@ -622,7 +669,7 @@ class SpacetimeDbNotesRepository {
       final name = normalizedPath.split('/').last;
       final depth = normalizedPath.split('/').length - 1;
 
-      await _client!.reducers.upsertFolder(
+      await _notesLane.client!.reducers.upsertFolder(
         path: normalizedPath,
         name: name,
         depth: depth,
@@ -643,7 +690,7 @@ class SpacetimeDbNotesRepository {
     try {
       await _ensureConnected();
 
-      if (_client == null) {
+      if (_notesLane.client == null) {
         debugLogger.error('FOLDER', 'Client is null, cannot delete folder');
         return false;
       }
@@ -651,7 +698,7 @@ class SpacetimeDbNotesRepository {
       final normalizedPath =
           path.endsWith('/') ? path.substring(0, path.length - 1) : path;
 
-      await _client!.reducers.deleteFolder(path: normalizedPath);
+      await _notesLane.client!.reducers.deleteFolder(path: normalizedPath);
 
       debugLogger.info('FOLDER', 'Deleted folder: $normalizedPath');
       return true;
@@ -668,7 +715,7 @@ class SpacetimeDbNotesRepository {
     try {
       await _ensureConnected();
 
-      if (_client == null) {
+      if (_notesLane.client == null) {
         debugLogger.error('FOLDER', 'Client is null, cannot move folder');
         return false;
       }
@@ -680,7 +727,7 @@ class SpacetimeDbNotesRepository {
           ? newPath.substring(0, newPath.length - 1)
           : newPath;
 
-      await _client!.reducers.moveFolder(
+      await _notesLane.client!.reducers.moveFolder(
         oldPath: normalizedOldPath,
         newPath: normalizedNewPath,
       );
@@ -700,12 +747,12 @@ class SpacetimeDbNotesRepository {
     try {
       await _ensureConnected();
 
-      if (_client == null) {
+      if (_notesLane.client == null) {
         debugLogger.error('SAVE', 'Client is null, cannot move note');
         return false;
       }
 
-      await _client!.reducers.moveFile(
+      await _notesLane.client!.reducers.moveFile(
         oldPath: oldPath,
         newPath: newPath,
       );
@@ -722,9 +769,9 @@ class SpacetimeDbNotesRepository {
     try {
       await _ensureConnected();
 
-      if (_client == null) return [];
+      if (_notesLane.client == null) return [];
 
-      final noteTable = _client!.spaceFile;
+      final noteTable = _notesLane.client!.spaceFile;
       final notes = noteTable.iter().toList();
 
       final queryLower = query.toLowerCase();
@@ -761,30 +808,43 @@ class SpacetimeDbNotesRepository {
     bool resetAttempts = false,
     bool force = false,
   }) async {
-    debugLogger.connection('tryReconnect() called');
-    if (resetAttempts) _retryAttempt = 0;
-    if (_client == null) {
-      debugLogger.connection('tryReconnect: _client is null, returning');
+    await Future.wait([
+      for (final lane in _lanes)
+        _tryReconnectLane(lane, resetAttempts: resetAttempts, force: force),
+    ]);
+  }
+
+  Future<void> _tryReconnectLane(
+    _ClientLane lane, {
+    bool resetAttempts = false,
+    bool force = false,
+  }) async {
+    debugLogger.connection(lane.tag('tryReconnect() called'));
+    if (resetAttempts) lane.retryAttempt = 0;
+    final client = lane.client;
+    if (client == null) {
+      debugLogger.connection(lane.tag('tryReconnect: client is null, returning'));
       return;
     }
 
-    final state = _client!.connection.state;
-    debugLogger.connection('tryReconnect: state=${state.displayName}');
+    final state = client.connection.state;
+    debugLogger.connection(lane.tag('tryReconnect: state=${state.displayName}'));
 
     if (force && state is stdb.Reconnecting) {
       debugLogger.connection(
-        'tryReconnect: force clearing stale Reconnecting state',
+        lane.tag('tryReconnect: force clearing stale Reconnecting state'),
       );
-      _retryScheduled = false;
-      await _client!.disconnect();
+      lane.retryScheduled = false;
+      await client.disconnect();
     } else if (state.isConnecting) {
-      debugLogger.connection('tryReconnect: already connecting, returning');
+      debugLogger
+          .connection(lane.tag('tryReconnect: already connecting, returning'));
       return;
     }
 
-    if (_retryScheduled) {
-      debugLogger
-          .connection('tryReconnect: retry already scheduled, returning');
+    if (lane.retryScheduled) {
+      debugLogger.connection(
+          lane.tag('tryReconnect: retry already scheduled, returning'));
       return;
     }
 
@@ -793,71 +853,62 @@ class SpacetimeDbNotesRepository {
       // socket's read-half while backgrounded. Force a round-trip probe;
       // if the server doesn't answer within the timeout, fall through to
       // reconnect.
-      debugLogger.connection('tryReconnect: running checkHealth (timeout=2s)');
+      debugLogger.connection(
+          lane.tag('tryReconnect: running checkHealth (timeout=2s)'));
       bool healthy;
       try {
-        healthy = await _client!.subscriptions
+        healthy = await client.subscriptions
             .checkHealth(timeout: const Duration(seconds: 2));
       } catch (e, st) {
         debugLogger.error(
           'CONN',
-          'tryReconnect: checkHealth threw',
+          lane.tag('tryReconnect: checkHealth threw'),
           '$e\n$st',
         );
         healthy = false;
       }
-      debugLogger.connection('tryReconnect: checkHealth=$healthy');
+      debugLogger.connection(lane.tag('tryReconnect: checkHealth=$healthy'));
       if (healthy) {
-        debugLogger.connection('checkHealth ok, skipping reconnect');
-        _retryAttempt = 0;
+        debugLogger.connection(lane.tag('checkHealth ok, skipping reconnect'));
+        lane.retryAttempt = 0;
         return;
       }
       debugLogger.warning(
         'CONN',
-        'checkHealth failed, connection is silently dead - reconnecting',
+        lane.tag('checkHealth failed, connection is silently dead - reconnecting'),
       );
     }
 
-    debugLogger.connection('Attempting to reconnect...');
-    final reconnectSpan = debugLogger.span('CONN', 'reconnect');
+    debugLogger.connection(lane.tag('Attempting to reconnect...'));
+    final reconnectSpan = debugLogger.span('CONN', lane.tag('reconnect'));
     try {
-      await _client!.connection.reconnect();
-      reconnectSpan
-          .end('state=${_client!.connection.state.displayName}');
+      await client.connection.reconnect();
+      reconnectSpan.end('state=${client.connection.state.displayName}');
       debugLogger.connection(
-        'tryReconnect: reconnect() completed, state=${_client!.connection.state.displayName}',
+        lane.tag(
+            'tryReconnect: reconnect() completed, state=${client.connection.state.displayName}'),
       );
-      if (_client!.connection.state.isConnected) {
-        _retryAttempt = 0;
+      if (client.connection.state.isConnected) {
+        lane.retryAttempt = 0;
       } else {
-        _scheduleRetry('reconnect completed but still disconnected');
+        _scheduleRetry(lane, 'reconnect completed but still disconnected');
       }
     } on SpacetimeDbAuthException {
       reconnectSpan.end('auth expired');
-      debugLogger.warning(
-          'AUTH', 'Auth expired during reconnect, clearing token');
-      final storage = _authStorage ?? SharedPreferencesTokenStore();
-      await storage.clearToken();
-      try {
-        await _client!.connection.reconnect();
-        debugLogger.connection('Reconnected with fresh identity');
-        _retryAttempt = 0;
-      } catch (_) {
-        debugLogger.warning('AUTH',
-            'In-place auth recovery failed - full rebuild for fresh identity');
-        await _handleAuthError();
-      }
+      debugLogger.warning('AUTH',
+          lane.tag('Auth expired during reconnect - escalating to repo level'));
+      await _handleAuthError();
     } on SpacetimeDbException catch (e) {
       reconnectSpan.end('failed: $e');
-      _scheduleRetry(e.toString());
+      _scheduleRetry(lane, e.toString());
     } catch (e, st) {
       reconnectSpan.end('failed: $e');
       debugLogger.error(
         'CONN',
-        'tryReconnect: reconnect() threw unexpected exception',
+        lane.tag('tryReconnect: reconnect() threw unexpected exception'),
         '$e\n$st',
       );
-      _scheduleRetry(e.toString());
+      _scheduleRetry(lane, e.toString());
     }
   }
 
@@ -867,19 +918,33 @@ class SpacetimeDbNotesRepository {
   /// resume path then has to wait out. Disconnecting proactively means resume
   /// always starts from a clean `Disconnected`. Pending offline mutations live
   /// in persisted offline storage and are untouched by [disconnect].
-  void pauseSpanClocks() => _hydrationSpan?.pause();
+  void pauseSpanClocks() {
+    for (final lane in _lanes) {
+      lane.hydrationSpan?.pause();
+    }
+  }
 
-  void resumeSpanClocks() => _hydrationSpan?.resume();
+  void resumeSpanClocks() {
+    for (final lane in _lanes) {
+      lane.hydrationSpan?.resume();
+    }
+  }
 
   Future<void> handleAppPaused() async {
-    if (_client == null) return;
-    if (_client!.connection.state is stdb.Disconnected) return;
-    debugLogger.connection('App paused - disconnecting to avoid stale state');
-    _retryScheduled = false;
+    await Future.wait([for (final lane in _lanes) _handleAppPausedLane(lane)]);
+  }
+
+  Future<void> _handleAppPausedLane(_ClientLane lane) async {
+    final client = lane.client;
+    if (client == null) return;
+    if (client.connection.state is stdb.Disconnected) return;
+    debugLogger.connection(
+        lane.tag('App paused - disconnecting to avoid stale state'));
+    lane.retryScheduled = false;
     try {
-      await _client!.disconnect();
+      await client.disconnect();
     } on SpacetimeDbException catch (e) {
-      debugLogger.error('CONN', 'Error disconnecting on pause: $e');
+      debugLogger.error('CONN', lane.tag('Error disconnecting on pause: $e'));
     }
   }
 
@@ -905,32 +970,46 @@ class SpacetimeDbNotesRepository {
     _hasEverConnected = false;
     _initialConnectAttempted = false;
 
-    for (final sub in _subscriptions) {
-      sub.cancel();
-    }
-    _subscriptions.clear();
-    _querySetOwners.clear();
-    _deferredUnsubscribes.clear();
-    _hydrationSpan?.end('aborted: connection reset');
-    _hydrationSpan = null;
-
-    if (_client != null) {
-      try {
-        _client!.disconnect();
-      } on SpacetimeDbException catch (e) {
-        debugLogger.error('CONN', 'Error disconnecting client: $e');
-      }
-      _client = null;
-      clientNotifier.value = null;
+    for (final lane in _lanes) {
+      _resetLane(lane);
     }
 
     _connectingFuture = null;
     _generalNotesFolderEnsured = false;
-    _nonTableListenersRegistered = false;
   }
 
-  /// Get the current client (for connection state monitoring)
-  SpacetimeDbClient? get client => _client;
+  /// Reset one lane. Deliberately does NOT null [_ClientLane.offlineStorage] —
+  /// the cache must survive a reconnect so a rebuilt client still hydrates
+  /// from disk before its first frame.
+  void _resetLane(_ClientLane lane) {
+    for (final sub in lane.subscriptions) {
+      sub.cancel();
+    }
+    lane.subscriptions.clear();
+    lane.querySetOwners.clear();
+    lane.deferredUnsubscribes.clear();
+    lane.hydrationSpan?.end('aborted: connection reset');
+    lane.hydrationSpan = null;
+
+    final client = lane.client;
+    if (client != null) {
+      try {
+        client.disconnect();
+      } on SpacetimeDbException catch (e) {
+        debugLogger.error('CONN', lane.tag('Error disconnecting client: $e'));
+      }
+      lane.client = null;
+      lane.clientNotifier.value = null;
+    }
+
+    lane.nonTableListenersRegistered = false;
+  }
+
+  /// The notes-domain client — files and folders.
+  SpacetimeDbClient? get notesClient => _notesLane.client;
+
+  /// The chat-domain client — agents, messages, calls and presence.
+  SpacetimeDbClient? get chatClient => _chatLane.client;
 
   /// Get current configuration
   String? get host => _host;
@@ -941,10 +1020,12 @@ class SpacetimeDbNotesRepository {
   Future<void> dispose() async {
     debugLogger.info('REPO', 'Disposing repository');
     resetConnection();
-    clientNotifier.dispose();
     _syncStateSubject.close();
-    await _offlineStorage?.dispose();
-    _offlineStorage = null;
+    for (final lane in _lanes) {
+      lane.clientNotifier.dispose();
+      await lane.offlineStorage?.dispose();
+      lane.offlineStorage = null;
+    }
   }
 
   /// Watch OS-level network connectivity. When the device transitions from
@@ -968,8 +1049,8 @@ class SpacetimeDbNotesRepository {
   }
 
   Future<void> _ensureConnected() async {
-    if (_client != null) {
-      final state = _client!.connection.state;
+    if (_notesLane.client != null) {
+      final state = _notesLane.client!.connection.state;
       debugLogger.connection(
           '_ensureConnected: client exists, state=${state.displayName}');
 
@@ -991,24 +1072,27 @@ class SpacetimeDbNotesRepository {
 
       if (state is stdb.Disconnected) {
         debugLogger.connection(
-            '_ensureConnected Disconnected: hasOfflineStorage=${_client!.hasOfflineStorage}');
+            '_ensureConnected Disconnected: hasOfflineStorage=${_notesLane.client!.hasOfflineStorage}');
         if (!_hasEverConnected && !_initialConnectAttempted) {
           _initialConnectAttempted = true;
           debugLogger.connection(
               'cache-hydrated client has never connected - connecting now');
-          try {
-            await _connectClient(_client!);
-          } catch (e, st) {
-            debugLogger.error(
-              'CONN',
-              'initial connect of cache-hydrated client failed - SDK retried '
-                  'and gave up; FatalError re-arms recovery',
-              '$e\n$st',
-            );
-          }
+          await Future.wait([
+            for (final lane in _lanes)
+              if (lane.client != null)
+                _connectClient(lane, lane.client!).catchError((e, st) {
+                  debugLogger.error(
+                    'CONN',
+                    lane.tag(
+                        'initial connect of cache-hydrated client failed - SDK '
+                        'retried and gave up; FatalError re-arms recovery'),
+                    '$e\n$st',
+                  );
+                }),
+          ]);
           return;
         }
-        if (_client!.hasOfflineStorage) {
+        if (_notesLane.client!.hasOfflineStorage) {
           debugLogger.connection('Offline mode: using existing client');
           return;
         }
@@ -1038,7 +1122,64 @@ class SpacetimeDbNotesRepository {
     }
   }
 
-  Future<OfflineStorage?> _createOfflineStorage() async {
+  /// Build the offline cache for one lane. The [suffix] is load-bearing: the
+  /// retention `__tags__<table>` sidecars are named by table alone, so the
+  /// basePath is the only thing keeping the two lanes' caches apart. Sharing a
+  /// path would also mean two independent LockManagers over the same files.
+  static const _laneCacheSuffixes = ['_notes', '_chat'];
+
+  @visibleForTesting
+  Future<void> migrateOfflineCachesForTest(String appDirPath) async {
+    await _adoptPreLaneCache(appDirPath);
+    await _sweepOrphanedCaches(appDirPath);
+  }
+
+  /// Adopts the pre-lane single-client cache as the notes lane's cache, so the
+  /// first launch after the split still paints from disk instead of refetching
+  /// the whole snapshot. Only runs when the old directory exists and the new
+  /// one does not.
+  Future<void> _adoptPreLaneCache(String appDirPath) async {
+    try {
+      final legacy = Directory('$appDirPath/spacenotes_offline');
+      if (!await legacy.exists()) return;
+      final adopted = '$appDirPath/spacenotes_offline_notes';
+      if (await Directory(adopted).exists()) {
+        await legacy.delete(recursive: true);
+        debugLogger.info(
+            'STORAGE', 'Removed superseded pre-lane offline cache');
+        return;
+      }
+      await legacy.rename(adopted);
+      debugLogger.info('STORAGE', 'Adopted pre-lane offline cache', adopted);
+    } catch (e) {
+      debugLogger.warning(
+          'STORAGE', 'Could not adopt pre-lane cache', e.toString());
+    }
+  }
+
+  /// Removes `spacenotes_offline*` directories no live lane claims, so a
+  /// renamed or retired lane cannot strand its cache on disk forever.
+  Future<void> _sweepOrphanedCaches(String appDirPath) async {
+    try {
+      final live = _laneCacheSuffixes
+          .map((suffix) => 'spacenotes_offline$suffix')
+          .toSet();
+      await for (final entry in Directory(appDirPath).list()) {
+        if (entry is! Directory) continue;
+        final name = entry.path.split(Platform.pathSeparator).last;
+        if (!name.startsWith('spacenotes_offline')) continue;
+        if (name == 'spacenotes_offline') continue;
+        if (live.contains(name)) continue;
+        await entry.delete(recursive: true);
+        debugLogger.info('STORAGE', 'Removed orphaned offline cache', name);
+      }
+    } catch (e) {
+      debugLogger.warning(
+          'STORAGE', 'Orphaned cache sweep failed', e.toString());
+    }
+  }
+
+  Future<OfflineStorage?> _createOfflineStorage(String suffix) async {
     if (kIsWeb) {
       debugLogger.info(
           'STORAGE', 'Web platform - using InMemoryOfflineStorage');
@@ -1047,7 +1188,9 @@ class SpacetimeDbNotesRepository {
 
     try {
       final appDir = await getApplicationSupportDirectory();
-      final storagePath = '${appDir.path}/spacenotes_offline';
+      final storagePath = '${appDir.path}/spacenotes_offline$suffix';
+      await _adoptPreLaneCache(appDir.path);
+      await _sweepOrphanedCaches(appDir.path);
       debugLogger.info(
           'STORAGE', 'Native platform - using JsonFileStorage', storagePath);
       final storage = JsonFileStorage(basePath: storagePath);
@@ -1061,120 +1204,199 @@ class SpacetimeDbNotesRepository {
   }
 
   Future<SpacetimeDbClient> _createClient(
+    _ClientLane lane,
     stdb.AuthTokenStore storage,
   ) async {
     debugLogger.connection(
-      'client create: starting',
-      'offlineStorage=${_offlineStorage != null}',
+      lane.tag('client create: starting'),
+      'offlineStorage=${lane.offlineStorage != null}',
     );
     final client = await SpacetimeDbClient.create(
       host: _host!,
       database: _database!,
       authStorage: storage,
-      offlineStorage: _offlineStorage,
+      offlineStorage: lane.offlineStorage,
       retainRowsOnUnsubscribe: true,
       ssl: false,
       config: _connectionConfig,
     );
 
-    _client = client;
-    clientNotifier.value = client;
+    lane.client = client;
+    lane.clientNotifier.value = client;
     debugLogger.connection(
-      'client create: visible to UI',
+      lane.tag('client create: visible to UI'),
       'spaceFile=${client.spaceFile.rows.value.length} '
       'folder=${client.folder.rows.value.length} '
       'message=${client.message.rows.value.length}',
     );
-    _registerNonTableListeners();
+    _registerNonTableListenersFor(lane);
 
     return client;
   }
 
-  Future<void> _connectClient(SpacetimeDbClient client) async {
-    _connectAttempts++;
+  Future<void> _connectClient(_ClientLane lane, SpacetimeDbClient client) async {
+    lane.connectAttempts++;
     try {
       await client.connect(
-        initialSubscriptions: _initialSubscriptions,
+        initialSubscriptions: lane.initialSubscriptions,
         subscriptionTimeout: const Duration(seconds: 5),
       );
     } on SpacetimeDbAuthException {
-      await _clearStaleTokenAndReconnect(client);
+      await _recoverFromStaleToken(lane);
     }
     _hasEverConnected = true;
   }
 
-  Future<void> _clearStaleTokenAndReconnect(SpacetimeDbClient client) async {
-    debugLogger.warning(
-      'AUTH',
-      'Auth failure (401) on connect - clearing stale token and retrying '
-          'with a fresh identity',
-    );
+  /// Both lanes present the same bearer token and so resolve to the same
+  /// server identity. Clearing it is therefore a repository-level act: a lane
+  /// that reconnected alone on a cleared token would be minted a fresh
+  /// anonymous identity, leaving one device holding two identities.
+  Future<void> _clearSharedToken() async {
     final storage = _authStorage ?? SharedPreferencesTokenStore();
     await storage.clearToken();
-    client.connection.clearToken();
-    _connectAttempts++;
+  }
+
+  /// Recover from a 401 on connect: the stored token belongs to a database
+  /// that no longer exists (a wipe/republish), so it must be dropped and a
+  /// fresh identity acquired.
+  ///
+  /// This is repository-level and idempotent across concurrent lanes on
+  /// purpose. Both lanes dial together and present the same token, so a stale
+  /// token fails on BOTH sockets at once. If each lane cleared the shared token
+  /// and re-dialled alone, each would be minted its OWN anonymous identity and
+  /// the device would hold two — which the server's per-connection presence fix
+  /// does not cover, since it assumes one token yields one identity across both
+  /// sockets. So the first lane here clears once and re-dials every lane
+  /// together; a lane arriving while that is in flight awaits it instead of
+  /// starting a second recovery.
+  Future<void> _recoverFromStaleToken(_ClientLane lane) async {
+    final inFlight = _staleTokenRecovery;
+    if (inFlight != null) {
+      debugLogger.connection(lane.tag(
+          'Auth failure (401) on connect - joining in-flight shared-token '
+          'recovery so both lanes land on ONE identity'));
+      await inFlight;
+      return;
+    }
+
+    final recovery = _runStaleTokenRecovery(lane);
+    _staleTokenRecovery = recovery;
+    try {
+      await recovery;
+    } finally {
+      _staleTokenRecovery = null;
+    }
+  }
+
+  Future<void> _runStaleTokenRecovery(_ClientLane trigger) async {
+    debugLogger.warning(
+      'AUTH',
+      trigger.tag('Auth failure (401) on connect - clearing stale token once '
+          'and re-dialling BOTH lanes onto a single fresh identity'),
+    );
+    await _clearSharedToken();
+    for (final lane in _lanes) {
+      lane.client?.connection.clearToken();
+    }
+
+    await Future.wait([
+      for (final lane in _lanes)
+        if (lane.client != null) _redialAfterTokenClear(lane, lane.client!),
+    ]);
+  }
+
+  Future<void> _redialAfterTokenClear(
+    _ClientLane lane,
+    SpacetimeDbClient client,
+  ) async {
+    if (client.connection.state.isConnected) return;
+    lane.connectAttempts++;
     await client.connect(
-      initialSubscriptions: _initialSubscriptions,
+      initialSubscriptions: lane.initialSubscriptions,
       subscriptionTimeout: const Duration(seconds: 5),
     );
-    debugLogger.connection('Reconnected with fresh anonymous identity');
+    debugLogger
+        .connection(lane.tag('Reconnected with fresh anonymous identity'));
   }
 
   Future<SpacetimeDbClient> _createAndConnectClient(
+    _ClientLane lane,
     stdb.AuthTokenStore storage,
   ) async {
-    final client = await _createClient(storage);
-    await _connectClient(client);
+    final client = await _createClient(lane, storage);
+    await _connectClient(lane, client);
     return client;
   }
 
   Future<void> initializeOfflineFirst() async {
-    if (_client != null) return;
+    if (_notesLane.client != null) return;
     if (!await isConfigured()) {
       debugLogger
           .connection('initializeOfflineFirst: not configured, skipping');
       return;
     }
-    try {
-      final storage = _authStorage ?? SharedPreferencesTokenStore();
-      _offlineStorage ??= await _createOfflineStorage();
-      await _createClient(storage);
-    } catch (e, st) {
-      debugLogger.error('CONN', 'initializeOfflineFirst failed', '$e\n$st');
+    final storage = _authStorage ?? SharedPreferencesTokenStore();
+    for (final lane in _lanes) {
+      try {
+        lane.offlineStorage ??= await _createOfflineStorage(lane.storageSuffix);
+        await _createClient(lane, storage);
+      } catch (e, st) {
+        debugLogger.error(
+            'CONN', lane.tag('initializeOfflineFirst failed'), '$e\n$st');
+      }
     }
   }
 
+  /// Injects [storage] as the notes lane's cache. The chat lane gets its own
+  /// in-memory instance rather than sharing this one, mirroring production,
+  /// where the two lanes never share a cache.
   @visibleForTesting
   void debugSetOfflineStorage(OfflineStorage storage) {
-    _offlineStorage = storage;
+    _notesLane.offlineStorage = storage;
+    _chatLane.offlineStorage = InMemoryOfflineStorage();
   }
 
   @visibleForTesting
-  int get debugConnectAttempts => _connectAttempts;
+  int get debugConnectAttempts => _notesLane.connectAttempts;
 
   @visibleForTesting
-  bool get debugRetryScheduled => _retryScheduled;
+  bool get debugRetryScheduled => _notesLane.retryScheduled;
 
   Future<void> _connect() async {
+    debugLogger.connection(
+        'Connecting to SpacetimeDB', 'host=$_host, db=$_database');
+
+    final storage = _authStorage ?? SharedPreferencesTokenStore();
+
+    await Future.wait([
+      for (final lane in _lanes) _connectLane(lane, storage),
+    ]);
+
+    if (_notesLane.client?.connection.state.isConnected ?? false) {
+      await ensureGeneralNotesFolder();
+    }
+  }
+
+  Future<bool> _connectLane(
+    _ClientLane lane,
+    stdb.AuthTokenStore storage,
+  ) async {
+    const maxRetries = 3;
+    const retryDelay = Duration(seconds: 2);
+
     try {
-      debugLogger.connection(
-          'Connecting to SpacetimeDB', 'host=$_host, db=$_database');
-
-      final storage = _authStorage ?? SharedPreferencesTokenStore();
-
-      _offlineStorage ??= await _createOfflineStorage();
-
-      const maxRetries = 3;
-      const retryDelay = Duration(seconds: 2);
+      lane.offlineStorage ??= await _createOfflineStorage(lane.storageSuffix);
 
       for (var attempt = 1; attempt <= maxRetries; attempt++) {
         try {
-          await _createAndConnectClient(storage);
+          await _createAndConnectClient(lane, storage);
           break;
         } catch (e) {
           if (attempt < maxRetries) {
-            debugLogger.warning('CONN',
-                'Attempt $attempt failed: $e, retrying in ${retryDelay.inSeconds}s');
+            debugLogger.warning(
+                'CONN',
+                lane.tag(
+                    'Attempt $attempt failed: $e, retrying in ${retryDelay.inSeconds}s'));
             await Future.delayed(retryDelay);
           } else {
             rethrow;
@@ -1182,26 +1404,26 @@ class SpacetimeDbNotesRepository {
         }
       }
 
-      final isConnected = _client!.connection.state.isConnected;
+      final isConnected = lane.client?.connection.state.isConnected ?? false;
       if (isConnected) {
-        debugLogger.connection('Successfully connected to SpacetimeDB');
-      } else {
         debugLogger
-            .connection('Operating in offline mode (cached data available)');
+            .connection(lane.tag('Successfully connected to SpacetimeDB'));
+      } else {
+        debugLogger.connection(
+            lane.tag('Operating in offline mode (cached data available)'));
       }
 
-      _registerNonTableListeners();
-
-      if (isConnected) {
-        await ensureGeneralNotesFolder();
-      }
+      _registerNonTableListenersFor(lane);
+      return isConnected;
     } on SpacetimeDbException catch (e) {
       debugLogger.error(
-          'CONN', 'Error connecting to SpacetimeDB', e.toString());
-      if (_client != null) {
-        debugLogger.warning('CONN',
-            'Initial connect failed offline - SDK retried and gave up; client stays usable offline');
-        return;
+          'CONN', lane.tag('Error connecting to SpacetimeDB'), e.toString());
+      if (lane.client != null) {
+        debugLogger.warning(
+            'CONN',
+            lane.tag('Initial connect failed offline - SDK retried and gave '
+                'up; client stays usable offline'));
+        return false;
       }
       rethrow;
     }
@@ -1210,71 +1432,75 @@ class SpacetimeDbNotesRepository {
   /// Listeners that are not watchable via the per-table ValueNotifier API.
   /// Table row/event watching happens directly in providers via `client.note.rows`
   /// and `client.note.lastBatch`.
-  void _registerNonTableListeners() {
-    if (_client == null) return;
-    if (_nonTableListenersRegistered) return;
-    _nonTableListenersRegistered = true;
+  void _registerNonTableListenersFor(_ClientLane lane) {
+    final client = lane.client;
+    if (client == null) return;
+    if (lane.nonTableListenersRegistered) return;
+    lane.nonTableListenersRegistered = true;
 
-    final ready = _client!.subscriptions.subscriptionsReady;
+    final ready = client.subscriptions.subscriptionsReady;
     void onReady() {
-      debugLogger.connection('subscriptionsReady -> ${ready.value}');
+      debugLogger
+          .connection(lane.tag('subscriptionsReady -> ${ready.value}'));
       if (ready.value) {
-        _hydrationSpan?.end('subscriptionsReady');
-        _hydrationSpan = null;
-        _flushDeferredUnsubscribes();
+        lane.hydrationSpan?.end('subscriptionsReady');
+        lane.hydrationSpan = null;
+        _flushDeferredUnsubscribes(lane);
       }
     }
 
     ready.addListener(onReady);
     onReady();
 
-    if (_client!.hasOfflineStorage) {
-      final syncStateSub = _client!.onSyncStateChanged.listen((state) {
+    if (client.hasOfflineStorage && identical(lane, _notesLane)) {
+      final syncStateSub = client.onSyncStateChanged.listen((state) {
         debugLogger.debug(
           'SYNC_SDK',
-          'SDK sync state changed: isSyncing=${state.isSyncing}, pending=${state.pendingCount}, hasError=${state.hasError}',
+          lane.tag(
+              'SDK sync state changed: isSyncing=${state.isSyncing}, pending=${state.pendingCount}, hasError=${state.hasError}'),
         );
         _syncStateSubject.add(state);
       });
-      _subscriptions.add(syncStateSub);
-      final initialState = _client!.syncState;
-      _syncStateSubject.add(initialState);
+      lane.subscriptions.add(syncStateSub);
+      _syncStateSubject.add(client.syncState);
     }
 
-    final connectionStateSub =
-        _client!.connection.onStateChanged.listen((state) {
-      debugLogger.connection('state -> ${state.displayName}');
+    final connectionStateSub = client.connection.onStateChanged.listen((state) {
+      debugLogger.connection(lane.tag('state -> ${state.displayName}'));
       if (state is stdb.Connected) {
-        _hydrationSpan?.end('superseded by new Connected');
-        _hydrationSpan = debugLogger.span('CONN', 'resume-hydration');
+        lane.hydrationSpan?.end('superseded by new Connected');
+        lane.hydrationSpan =
+            debugLogger.span('CONN', lane.tag('resume-hydration'));
         _authErrorAttempts = 0;
         return;
       }
-      if (_hydrationSpan != null) {
-        _hydrationSpan!.end('aborted: ${state.displayName}');
-        _hydrationSpan = null;
+      if (lane.hydrationSpan != null) {
+        lane.hydrationSpan!.end('aborted: ${state.displayName}');
+        lane.hydrationSpan = null;
       }
       if (state is stdb.AuthError) {
         _handleAuthErrorGated();
         return;
       }
       if (state is stdb.FatalError) {
-        debugLogger.warning('CONN',
-            'Fatal error - re-arming repo retry to recover when server returns');
-        _scheduleRetry('fatal error - re-arming');
+        debugLogger.warning(
+            'CONN',
+            lane.tag(
+                'Fatal error - re-arming repo retry to recover when server returns'));
+        _scheduleRetry(lane, 'fatal error - re-arming');
       }
     });
-    _subscriptions.add(connectionStateSub);
+    lane.subscriptions.add(connectionStateSub);
 
     final subscribeAppliedSub =
-        _client!.subscriptions.onSubscribeApplied.listen((applied) {
-      _hydrationSpan?.lap(
+        client.subscriptions.onSubscribeApplied.listen((applied) {
+      lane.hydrationSpan?.lap(
         'SubscribeApplied querySetId=${applied.querySetId} tables=${applied.rows.tables.length}',
       );
     });
-    _subscriptions.add(subscribeAppliedSub);
+    lane.subscriptions.add(subscribeAppliedSub);
 
-    debugLogger.sync('Non-table listeners registered');
+    debugLogger.sync(lane.tag('Non-table listeners registered'));
   }
 
   Future<void> _handleAuthErrorGated() async {
@@ -1293,8 +1519,7 @@ class SpacetimeDbNotesRepository {
   }
 
   Future<void> _handleAuthError() async {
-    final storage = _authStorage ?? SharedPreferencesTokenStore();
-    await storage.clearToken();
+    await _clearSharedToken();
     resetConnection();
     await connectAndGetInitialData();
   }
@@ -1307,27 +1532,31 @@ class SpacetimeDbNotesRepository {
   static const _retryInterval = Duration(seconds: 5);
   static const _maxRetryAttempts = 500;
 
-  void _scheduleRetry(String reason) {
-    if (_retryScheduled) return;
-    if (_retryAttempt >= _maxRetryAttempts) {
-      debugLogger.warning('CONN',
-          'Reconnect cap ($_maxRetryAttempts) reached - stopping retry loop until next resume/connectivity event');
+  void _scheduleRetry(_ClientLane lane, String reason) {
+    if (lane.retryScheduled) return;
+    if (lane.retryAttempt >= _maxRetryAttempts) {
+      debugLogger.warning(
+          'CONN',
+          lane.tag(
+              'Reconnect cap ($_maxRetryAttempts) reached - stopping retry loop until next resume/connectivity event'));
       return;
     }
-    _retryAttempt += 1;
-    _retryScheduled = true;
+    lane.retryAttempt += 1;
+    lane.retryScheduled = true;
     debugLogger.warning(
       'CONN',
-      'Reconnection failed: $reason, retrying in ${_retryInterval.inSeconds}s (attempt $_retryAttempt/$_maxRetryAttempts)',
+      lane.tag(
+          'Reconnection failed: $reason, retrying in ${_retryInterval.inSeconds}s (attempt ${lane.retryAttempt}/$_maxRetryAttempts)'),
     );
     Future.delayed(_retryInterval, () {
-      _retryScheduled = false;
-      if (_client == null) return;
-      if (_client!.connection.state.isConnected) {
-        _retryAttempt = 0;
+      lane.retryScheduled = false;
+      final client = lane.client;
+      if (client == null) return;
+      if (client.connection.state.isConnected) {
+        lane.retryAttempt = 0;
         return;
       }
-      tryReconnect();
+      _tryReconnectLane(lane);
     });
   }
 }

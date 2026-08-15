@@ -141,14 +141,14 @@ class _CallScreenState extends ConsumerState<CallScreen> {
 
     final callService = ref.read(callServiceProvider);
     final repo = ref.read(notesRepositoryProvider);
-    callService.setClient(repo.client);
+    callService.setClient(repo.chatClient);
     await callService.startCapture(widget.sessionId,
         fps: 25, width: 2560, height: 1440);
     if (mounted) setState(() {});
   }
 
   void _endCall(CallSession session) {
-    _callService?.setClient(ref.read(notesRepositoryProvider).client);
+    _callService?.setClient(ref.read(notesRepositoryProvider).chatClient);
     _callService?.endCall(session.callId);
   }
 }
@@ -340,7 +340,7 @@ class _RingingOverlay extends ConsumerWidget {
                     onTap: () {
                       final callService = ref.read(callServiceProvider);
                       final repo = ref.read(notesRepositoryProvider);
-                      callService.setClient(repo.client);
+                      callService.setClient(repo.chatClient);
                       callService.acceptCall(session.callId);
                     },
                   ),
@@ -351,7 +351,7 @@ class _RingingOverlay extends ConsumerWidget {
                     onTap: () {
                       final callService = ref.read(callServiceProvider);
                       final repo = ref.read(notesRepositoryProvider);
-                      callService.setClient(repo.client);
+                      callService.setClient(repo.chatClient);
                       callService.endCall(session.callId);
                     },
                   ),
@@ -364,7 +364,7 @@ class _RingingOverlay extends ConsumerWidget {
                 onTap: () {
                   final callService = ref.read(callServiceProvider);
                   final repo = ref.read(notesRepositoryProvider);
-                  callService.setClient(repo.client);
+                  callService.setClient(repo.chatClient);
                   callService.endCall(session.callId);
                 },
               ),
