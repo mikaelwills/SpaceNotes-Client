@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:spacetimedb_sdk/spacetimedb_sdk.dart' as stdb;
 import '../theme/spacenotes_theme.dart';
+import '../providers/connection_providers.dart';
 import '../providers/notes_providers.dart';
 
 class ConnectionIndicator extends ConsumerWidget {
@@ -10,7 +11,7 @@ class ConnectionIndicator extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final client = ref.watch(chatClientProvider);
+    final client = ref.watch(activeLaneClientProvider);
 
     if (client == null) {
       return _buildDisconnectedIndicator();

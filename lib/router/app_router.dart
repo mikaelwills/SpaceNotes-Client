@@ -17,6 +17,7 @@ import '../screens/agent_dashboard.dart';
 import '../screens/agent_chat.dart';
 import '../widgets/adaptive/adaptive_app_shell.dart';
 import '../providers/call_providers.dart';
+import '../providers/connection_providers.dart';
 import '../providers/notes_providers.dart';
 import '../services/debug_logger.dart';
 
@@ -40,6 +41,13 @@ GoRouter createAppRouter(ProviderContainer container) {
     initialLocation: '/notes',
     observers: [routeObserver],
     redirect: (context, state) {
+      final lane = connectionLaneForLocation(state.matchedLocation);
+      final laneController =
+          container.read(activeConnectionLaneProvider.notifier);
+      if (laneController.state != lane) {
+        laneController.state = lane;
+      }
+
       final repo = container.read(notesRepositoryProvider);
       final host = repo.host;
       final isDefault = host == null ||
