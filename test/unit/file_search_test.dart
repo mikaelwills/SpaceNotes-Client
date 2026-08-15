@@ -27,8 +27,10 @@ void main() {
 
       final terms = searchTerms('good flutter architecture');
       expect(indexedRank(SearchableFile(exact), terms), rankExactName);
-      expect(indexedRank(SearchableFile(phrase), terms), rankNameWordPhrase);
-      expect(indexedRank(SearchableFile(terms3), terms), rankNameAllWords);
+      expect(
+          indexedRank(SearchableFile(phrase), terms), rankNameStandalonePhrase);
+      expect(
+          indexedRank(SearchableFile(terms3), terms), rankNameStandaloneWords);
       expect(indexedRank(SearchableFile(contentOnly), terms), rankContentOnly);
     });
 
@@ -49,6 +51,39 @@ void main() {
         ).first.name,
         'MCU chronological',
       );
+    });
+
+    test('a standalone term outranks the same term inside a hyphenated slug',
+        () {
+      final terms = searchTerms('mcu');
+      final standalone = _note(name: 'MCU Watch Order (movies)');
+      final inSlug =
+          _note(name: '2026-07-12-1-grab-into-dotfiles-mcu-download');
+      final buried = _note(name: 'bulk-rerender-drumcuts-beat-snapped');
+
+      final standaloneRank = indexedRank(SearchableFile(standalone), terms);
+      final slugRank = indexedRank(SearchableFile(inSlug), terms);
+      final buriedRank = indexedRank(SearchableFile(buried), terms);
+
+      expect(standaloneRank, lessThan(slugRank));
+      expect(slugRank, lessThan(buriedRank));
+    });
+
+    test('his real MCU search puts the MCU-titled note first', () {
+      final notes = [
+        _note(name: '2026-06-25-1-notes-assistant-finance-career-mcu'),
+        _note(name: '2026-07-12-1-grab-into-dotfiles-mcu-download'),
+        _note(name: '2026-08-08-1-cloudflare-os-calf-recovery-mcu'),
+        _note(name: 'MCU Watch Order (movies)'),
+        _note(name: '2026-05-04 - Drumcut bulk + Renders page'),
+        _note(name: 'bulk-rerender-drumcuts-beat-snapped'),
+        _note(name: 'kick-remaining-slave-tensor-drumcuts'),
+      ];
+
+      final ordered =
+          searchAndRank(buildSearchIndex(notes), searchTerms('mcu'));
+
+      expect(ordered.first.name, 'MCU Watch Order (movies)');
     });
 
     test('a term bounded by punctuation still counts as a whole word', () {

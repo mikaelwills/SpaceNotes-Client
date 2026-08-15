@@ -3,30 +3,46 @@ import '../generated/folder.dart';
 import '../generated/space_file.dart';
 
 const int rankExactName = 0;
-const int rankNameWordPhrase = 1;
-const int rankNamePhrase = 2;
-const int rankNameAllWords = 3;
-const int rankNameAllTerms = 4;
-const int rankNameAndPath = 5;
-const int rankContentOnly = 6;
-const int rankNoMatch = 7;
+const int rankNameStandalonePhrase = 1;
+const int rankNameStandaloneWords = 2;
+const int rankNameWordPhrase = 3;
+const int rankNameAllWords = 4;
+const int rankNamePhrase = 5;
+const int rankNameAllTerms = 6;
+const int rankNameAndPath = 7;
+const int rankContentOnly = 8;
+const int rankNoMatch = 9;
 
-/// True when [term] appears in [text] delimited by something other than a
-/// letter or digit, so "mcu" matches "mcu chronological" and "notes-mcu.md"
+/// True when [term] stands alone in [text] — whitespace on both sides, so
+/// "mcu" matches "MCU Watch Order" but not "dotfiles-mcu-download".
+bool containsStandaloneWord(String text, String term) =>
+    _containsDelimited(text, term, _isSpace);
+
+/// True when [term] appears in [text] delimited by anything that is not a
+/// letter or digit, so "mcu" matches "dotfiles-mcu-download" and "notes.mcu.md"
 /// but not the m-c-u buried inside "drumcut".
-bool containsWord(String text, String term) {
+bool containsWord(String text, String term) =>
+    _containsDelimited(text, term, (c) => !_isWordChar(c));
+
+bool _containsDelimited(
+  String text,
+  String term,
+  bool Function(int) isBoundary,
+) {
   if (term.isEmpty) return false;
   var from = 0;
   while (true) {
     final at = text.indexOf(term, from);
     if (at < 0) return false;
-    final beforeOk = at == 0 || !_isWordChar(text.codeUnitAt(at - 1));
+    final beforeOk = at == 0 || isBoundary(text.codeUnitAt(at - 1));
     final end = at + term.length;
-    final afterOk = end == text.length || !_isWordChar(text.codeUnitAt(end));
+    final afterOk = end == text.length || isBoundary(text.codeUnitAt(end));
     if (beforeOk && afterOk) return true;
     from = at + 1;
   }
 }
+
+bool _isSpace(int c) => c == 32 || c == 9 || c == 10 || c == 13;
 
 bool _isWordChar(int c) =>
     (c >= 48 && c <= 57) || (c >= 97 && c <= 122) || (c >= 65 && c <= 90);
@@ -72,9 +88,15 @@ int nameMatchRank(String name, List<String> terms) {
 int _nameRankLower(String lowerName, List<String> terms) {
   final phrase = terms.join(' ');
   if (lowerName == phrase) return rankExactName;
+  if (containsStandaloneWord(lowerName, phrase)) {
+    return rankNameStandalonePhrase;
+  }
+  if (terms.every((t) => containsStandaloneWord(lowerName, t))) {
+    return rankNameStandaloneWords;
+  }
   if (containsWord(lowerName, phrase)) return rankNameWordPhrase;
-  if (lowerName.contains(phrase)) return rankNamePhrase;
   if (terms.every((t) => containsWord(lowerName, t))) return rankNameAllWords;
+  if (lowerName.contains(phrase)) return rankNamePhrase;
   if (terms.every(lowerName.contains)) return rankNameAllTerms;
   return rankNoMatch;
 }
