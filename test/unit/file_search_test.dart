@@ -27,9 +27,42 @@ void main() {
 
       final terms = searchTerms('good flutter architecture');
       expect(indexedRank(SearchableFile(exact), terms), rankExactName);
-      expect(indexedRank(SearchableFile(phrase), terms), rankNamePhrase);
-      expect(indexedRank(SearchableFile(terms3), terms), rankNameAllTerms);
+      expect(indexedRank(SearchableFile(phrase), terms), rankNameWordPhrase);
+      expect(indexedRank(SearchableFile(terms3), terms), rankNameAllWords);
       expect(indexedRank(SearchableFile(contentOnly), terms), rankContentOnly);
+    });
+
+    test('a whole-word match outranks the same letters inside another word',
+        () {
+      final wholeWord = _note(name: 'MCU chronological');
+      final buried = _note(name: 'bulk-rerender-drumcuts-beat-snapped');
+      final terms = searchTerms('mcu');
+
+      final wholeWordRank = indexedRank(SearchableFile(wholeWord), terms);
+      final buriedRank = indexedRank(SearchableFile(buried), terms);
+
+      expect(wholeWordRank, lessThan(buriedRank));
+      expect(
+        searchAndRank(
+          buildSearchIndex([buried, wholeWord]),
+          terms,
+        ).first.name,
+        'MCU chronological',
+      );
+    });
+
+    test('a term bounded by punctuation still counts as a whole word', () {
+      final terms = searchTerms('mcu');
+      for (final name in [
+        'MCU chronological',
+        '2026-07-12-1-grab-into-dotfiles-mcu-download',
+        'notes.mcu.md',
+        'mcu',
+      ]) {
+        expect(indexedRank(SearchableFile(_note(name: name)), terms),
+            lessThan(rankNamePhrase + 1),
+            reason: name);
+      }
     });
 
     test('non-match ranks below everything', () {

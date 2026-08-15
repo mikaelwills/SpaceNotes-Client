@@ -3,11 +3,33 @@ import '../generated/folder.dart';
 import '../generated/space_file.dart';
 
 const int rankExactName = 0;
-const int rankNamePhrase = 1;
-const int rankNameAllTerms = 2;
-const int rankNameAndPath = 3;
-const int rankContentOnly = 4;
-const int rankNoMatch = 5;
+const int rankNameWordPhrase = 1;
+const int rankNamePhrase = 2;
+const int rankNameAllWords = 3;
+const int rankNameAllTerms = 4;
+const int rankNameAndPath = 5;
+const int rankContentOnly = 6;
+const int rankNoMatch = 7;
+
+/// True when [term] appears in [text] delimited by something other than a
+/// letter or digit, so "mcu" matches "mcu chronological" and "notes-mcu.md"
+/// but not the m-c-u buried inside "drumcut".
+bool containsWord(String text, String term) {
+  if (term.isEmpty) return false;
+  var from = 0;
+  while (true) {
+    final at = text.indexOf(term, from);
+    if (at < 0) return false;
+    final beforeOk = at == 0 || !_isWordChar(text.codeUnitAt(at - 1));
+    final end = at + term.length;
+    final afterOk = end == text.length || !_isWordChar(text.codeUnitAt(end));
+    if (beforeOk && afterOk) return true;
+    from = at + 1;
+  }
+}
+
+bool _isWordChar(int c) =>
+    (c >= 48 && c <= 57) || (c >= 97 && c <= 122) || (c >= 65 && c <= 90);
 
 class SearchableFile {
   SearchableFile(this.file)
@@ -50,7 +72,9 @@ int nameMatchRank(String name, List<String> terms) {
 int _nameRankLower(String lowerName, List<String> terms) {
   final phrase = terms.join(' ');
   if (lowerName == phrase) return rankExactName;
+  if (containsWord(lowerName, phrase)) return rankNameWordPhrase;
   if (lowerName.contains(phrase)) return rankNamePhrase;
+  if (terms.every((t) => containsWord(lowerName, t))) return rankNameAllWords;
   if (terms.every(lowerName.contains)) return rankNameAllTerms;
   return rankNoMatch;
 }
