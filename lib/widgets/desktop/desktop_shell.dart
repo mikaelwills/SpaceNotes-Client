@@ -63,10 +63,10 @@ class _DesktopShellState extends ConsumerState<DesktopShell> {
 
   Widget _buildBody(BuildContext context) {
     final location = GoRouterState.of(context).uri.toString();
-    if (location.startsWith('/notes/agents')) {
+    if (location.startsWith('/agents') && !location.startsWith('/agents/chat')) {
       String? activeAgentId;
-      if (location.startsWith('/notes/agents/')) {
-        final encoded = location.substring('/notes/agents/'.length);
+      if (location.startsWith('/agents/')) {
+        final encoded = location.substring('/agents/'.length);
         activeAgentId = Uri.decodeComponent(encoded);
       }
       return Scaffold(
@@ -136,10 +136,10 @@ class _DesktopContentArea extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final location = GoRouterState.of(context).uri.toString();
-    final isChat = location.startsWith('/notes/chat');
+    final isChat = location.startsWith('/agents/chat');
     final isSettings = location.startsWith('/settings');
     final isConnect = location.startsWith('/connect');
-    final isAgents = location.startsWith('/notes/agents');
+    final isAgents = location.startsWith('/agents') && !isChat;
     final isNotesView =
         !isChat && !isSettings && !isConnect && !isAgents;
 
@@ -253,10 +253,10 @@ class _DesktopTopBar extends ConsumerWidget {
     if (location == '/notes' || location == '/notes/') {
       return 'all notes';
     }
-    if (location == '/notes/chat') {
+    if (location == '/agents/chat') {
       return 'chat';
     }
-    if (location.startsWith('/notes/agents')) {
+    if (location.startsWith('/agents')) {
       return 'agents';
     }
     if (location == '/settings') {

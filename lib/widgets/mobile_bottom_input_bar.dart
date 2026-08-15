@@ -175,18 +175,19 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
 
   HomeViewType _getCurrentViewType() {
     final l = GoRouterState.of(context).uri.toString();
-    if (l.startsWith('/notes/chat')) return HomeViewType.chat;
+    if (l.startsWith('/agents/chat')) return HomeViewType.chat;
     if (l.startsWith('/notes/note/')) return HomeViewType.note;
     if (l.startsWith('/notes/passwords')) return HomeViewType.passwords;
-    if (l == '/notes/agents') return HomeViewType.agents;
-    if (l.startsWith('/notes/agents/')) return HomeViewType.agentChat;
+    if (l == '/agents') return HomeViewType.agents;
+    if (l.startsWith('/agents/')) return HomeViewType.agentChat;
     return HomeViewType.folders;
   }
 
   String? _getCurrentAgentId() {
     final l = GoRouterState.of(context).uri.toString();
-    if (!l.startsWith('/notes/agents/')) return null;
-    final encoded = l.substring('/notes/agents/'.length);
+    if (l.startsWith('/agents/chat')) return null;
+    if (!l.startsWith('/agents/')) return null;
+    final encoded = l.substring('/agents/'.length);
     return Uri.decodeComponent(encoded);
   }
 
@@ -231,7 +232,7 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
     } else {
       sendChatMessage(ref, agentId: targetAgent, text: message);
     }
-    context.go('/notes/chat');
+    context.go('/agents/chat');
 
     _textController.clear();
     ref.read(folderSearchQueryProvider.notifier).state = '';

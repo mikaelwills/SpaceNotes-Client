@@ -56,7 +56,7 @@ List<Object> _interleaveByRank(
 void _openNoteInDesktop(BuildContext context, String noteId) {
   context.read<DesktopNotesBloc>().add(OpenNote(noteId));
   final location = GoRouterState.of(context).uri.toString();
-  if (location == '/notes/chat' || location == '/settings') {
+  if (location == '/agents/chat' || location == '/settings') {
     context.go('/notes');
   }
 }
@@ -1399,12 +1399,12 @@ class _CollapsedSidebar extends ConsumerWidget {
           _CollapsedIconButton(
             icon: Icons.chat_bubble_outline,
             tooltip: 'Chat',
-            onTap: () => context.go('/notes/chat'),
+            onTap: () => context.go('/agents/chat'),
           ),
           _CollapsedIconButton(
             icon: Icons.terminal_outlined,
             tooltip: 'Agents',
-            onTap: () => context.go('/notes/agents'),
+            onTap: () => context.go('/agents'),
           ),
           _CollapsedIconButton(
             icon: Icons.search,
@@ -1475,8 +1475,8 @@ class _SidebarFooter extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final location = GoRouterState.of(context).uri.toString();
-    final onChat = location.startsWith('/notes/chat');
-    final onAgents = location.startsWith('/notes/agents');
+    final onChat = location.startsWith('/agents/chat');
+    final onAgents = location.startsWith('/agents') && !onChat;
     final onPasswords = location.startsWith('/notes/passwords');
     final onSettings = location == '/settings';
     final onNotes = !onChat && !onAgents && !onSettings;
@@ -1512,14 +1512,14 @@ class _SidebarFooter extends ConsumerWidget {
           const SizedBox(width: 4),
           SnIconButton(
             icon: const Icon(Icons.chat_bubble_outline),
-            onPressed: onChat ? null : () => context.go('/notes/chat'),
+            onPressed: onChat ? null : () => context.go('/agents/chat'),
             active: onChat,
             tooltip: 'chat',
           ),
           const SizedBox(width: 4),
           SnIconButton(
             icon: const Icon(Icons.terminal_outlined),
-            onPressed: onAgents ? null : () => context.go('/notes/agents'),
+            onPressed: onAgents ? null : () => context.go('/agents'),
             active: onAgents,
             tooltip: 'agents',
           ),

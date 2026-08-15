@@ -121,8 +121,8 @@ class MobileNavBar extends ConsumerWidget {
 
   static const _navIcons = <String, IconData>{
     '/notes': Icons.notes_outlined,
-    '/notes/chat': Icons.chat_bubble_outline,
-    '/notes/agents': Icons.terminal_outlined,
+    '/agents/chat': Icons.chat_bubble_outline,
+    '/agents': Icons.terminal_outlined,
     '/notes/passwords': Icons.key_outlined,
   };
 

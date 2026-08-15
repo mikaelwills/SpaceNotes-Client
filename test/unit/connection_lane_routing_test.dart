@@ -16,14 +16,14 @@ void main() {
     }
   });
 
-  test('agent, contact and call screens report the chat lane', () {
+  test('agent and calling screens report the chat lane', () {
     for (final location in [
-      '/notes/agents',
-      '/notes/agents/workflow-agent@robert',
-      '/notes/chat',
-      '/notes/users',
-      '/call/42',
-      '/incoming-call',
+      '/agents',
+      '/agents/chat',
+      '/agents/workflow-agent@robert',
+      '/calling',
+      '/calling/incoming',
+      '/calling/42',
     ]) {
       expect(connectionLaneForLocation(location), ConnectionLane.chat,
           reason: location);
@@ -31,8 +31,8 @@ void main() {
   });
 
   test('a prefix match does not leak across sibling routes', () {
-    expect(connectionLaneForLocation('/notes/agentsomething'),
-        ConnectionLane.notes);
-    expect(connectionLaneForLocation('/notes/chatter'), ConnectionLane.notes);
+    expect(connectionLaneForLocation('/agentsomething'), ConnectionLane.notes);
+    expect(connectionLaneForLocation('/callingcard'), ConnectionLane.notes);
+    expect(connectionLaneForLocation('/notes/agents'), ConnectionLane.notes);
   });
 }

@@ -31,7 +31,7 @@ GoRouter createAppRouter(ProviderContainer container) {
     if (session != null && !navigatedToIncoming) {
       navigatedToIncoming = true;
       debugLogger.info('INCOMING_CALL', 'Navigating to incoming call screen');
-      _router?.go('/incoming-call');
+      _router?.go('/calling/incoming');
     } else if (session == null) {
       navigatedToIncoming = false;
     }
@@ -64,7 +64,7 @@ GoRouter createAppRouter(ProviderContainer container) {
     },
     routes: [
       GoRoute(
-        path: '/incoming-call',
+        path: '/calling/incoming',
         name: 'incoming-call',
         pageBuilder: (context, state) => _buildFadeTransitionPage(
           key: state.pageKey,
@@ -72,7 +72,7 @@ GoRouter createAppRouter(ProviderContainer container) {
         ),
       ),
       GoRoute(
-        path: '/call/:sessionId',
+        path: '/calling/:sessionId',
         name: 'call',
         pageBuilder: (context, state) {
           final sessionId =
@@ -119,7 +119,7 @@ GoRouter createAppRouter(ProviderContainer container) {
                 ),
               ),
               GoRoute(
-                path: '/notes/chat',
+                path: '/agents/chat',
                 name: 'chat',
                 pageBuilder: (context, state) => _buildFadeTransitionPage(
                   key: state.pageKey,
@@ -166,7 +166,7 @@ GoRouter createAppRouter(ProviderContainer container) {
                 ),
               ),
               GoRoute(
-                path: '/notes/users',
+                path: '/calling',
                 name: 'online-users',
                 pageBuilder: (context, state) => _buildFadeTransitionPage(
                   key: state.pageKey,
@@ -174,7 +174,7 @@ GoRouter createAppRouter(ProviderContainer container) {
                 ),
               ),
               GoRoute(
-                path: '/notes/agents',
+                path: '/agents',
                 name: 'agents',
                 pageBuilder: (context, state) => _buildFadeTransitionPage(
                   key: state.pageKey,
@@ -182,7 +182,7 @@ GoRouter createAppRouter(ProviderContainer container) {
                 ),
               ),
               GoRoute(
-                path: '/notes/agents/:agentId',
+                path: '/agents/:agentId',
                 name: 'agent-chat',
                 pageBuilder: (context, state) {
                   final agentId =

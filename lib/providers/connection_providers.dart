@@ -12,15 +12,9 @@ final activeConnectionLaneProvider =
     StateProvider<ConnectionLane>((ref) => ConnectionLane.notes);
 
 ConnectionLane connectionLaneForLocation(String location) {
-  const chatPrefixes = [
-    '/notes/agents',
-    '/notes/chat',
-    '/notes/users',
-    '/call',
-    '/incoming-call',
-  ];
-  for (final prefix in chatPrefixes) {
-    if (location == prefix || location.startsWith('$prefix/')) {
+  const chatRoots = ['/agents', '/calling'];
+  for (final root in chatRoots) {
+    if (location == root || location.startsWith('$root/')) {
       return ConnectionLane.chat;
     }
   }

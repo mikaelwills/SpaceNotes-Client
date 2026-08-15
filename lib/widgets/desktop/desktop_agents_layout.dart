@@ -171,7 +171,7 @@ class _Footer extends StatelessWidget {
           const SizedBox(width: 4),
           SnIconButton(
             icon: const Icon(Icons.chat_bubble_outline),
-            onPressed: () => context.go('/notes/chat'),
+            onPressed: () => context.go('/agents/chat'),
             tooltip: 'chat',
           ),
           const SizedBox(width: 4),
@@ -292,7 +292,7 @@ class _AgentRow extends ConsumerWidget {
           : Colors.transparent,
       child: InkWell(
         onTap: () =>
-            context.go('/notes/agents/${Uri.encodeComponent(agent.id)}'),
+            context.go('/agents/${Uri.encodeComponent(agent.id)}'),
         child: AgentRowContent(
           index: index,
           agent: agent,

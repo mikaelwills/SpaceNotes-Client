@@ -5,14 +5,14 @@ import 'package:go_router/go_router.dart';
 /// mobile nav bar's Shift+Tab handler and the desktop shell's.
 const navScreens = <String>[
   '/notes',
-  '/notes/chat',
-  '/notes/agents',
+  '/agents/chat',
+  '/agents',
   '/notes/passwords',
 ];
 
 String currentNavScreen(String location) {
-  if (location.startsWith('/notes/chat')) return '/notes/chat';
-  if (location.startsWith('/notes/agents')) return '/notes/agents';
+  if (location.startsWith('/agents/chat')) return '/agents/chat';
+  if (location.startsWith('/agents')) return '/agents';
   if (location.startsWith('/notes/passwords')) return '/notes/passwords';
   return '/notes';
 }
