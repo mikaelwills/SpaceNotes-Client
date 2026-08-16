@@ -78,6 +78,9 @@ void configureSdkLogging() {
   SdkLogger.onLog = (level, msg) {
     if (level == 'D' && _isSdkLogNoise(msg)) return;
     if (msg.startsWith('WS_RX')) {
+      final bytes =
+          int.tryParse(RegExp(r'WS_RX: (\d+)').firstMatch(msg)?.group(1) ?? '');
+      if (bytes == null || bytes < 100000) return;
       debugLogger.log(level, 'SDK', msg.split(', head=').first);
       return;
     }
