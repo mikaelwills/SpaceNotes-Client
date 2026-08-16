@@ -233,141 +233,94 @@ class QuillNoteEditorState extends State<QuillNoteEditor> {
             _DividerEmbedBuilder(),
           ],
           unknownEmbedBuilder: _UnknownEmbedBuilder(),
-          customStyles: DefaultStyles(
-            paragraph: const DefaultTextBlockStyle(
-              TextStyle(
-                fontFamily: 'FiraCode',
-                fontSize: 14,
-                color: SpaceNotesTheme.text,
-                height: 1.6,
-              ),
-              HorizontalSpacing(0, 0),
-              VerticalSpacing(0, 8),
-              VerticalSpacing(0, 0),
-              null,
-            ),
-            h1: const DefaultTextBlockStyle(
-              TextStyle(
-                fontFamily: 'FiraCode',
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-                color: SpaceNotesTheme.text,
-                height: 1.4,
-              ),
-              HorizontalSpacing(0, 0),
-              VerticalSpacing(16, 8),
-              VerticalSpacing(0, 0),
-              null,
-            ),
-            h2: const DefaultTextBlockStyle(
-              TextStyle(
-                fontFamily: 'FiraCode',
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-                color: SpaceNotesTheme.text,
-                height: 1.4,
-              ),
-              HorizontalSpacing(0, 0),
-              VerticalSpacing(12, 6),
-              VerticalSpacing(0, 0),
-              null,
-            ),
-            h3: const DefaultTextBlockStyle(
-              TextStyle(
-                fontFamily: 'FiraCode',
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: SpaceNotesTheme.text,
-                height: 1.4,
-              ),
-              HorizontalSpacing(0, 0),
-              VerticalSpacing(8, 4),
-              VerticalSpacing(0, 0),
-              null,
-            ),
-            code: DefaultTextBlockStyle(
-              const TextStyle(
-                fontFamily: 'FiraCode',
-                fontSize: 13,
+          customStyles: _buildStyles(context),
+        ),
+      ),
+    );
+  }
+
+  DefaultStyles _buildStyles(BuildContext context) {
+    final base = DefaultStyles.getInstance(context);
+
+    DefaultTextBlockStyle themed(
+      DefaultTextBlockStyle source, {
+      Color? color,
+      FontStyle? fontStyle,
+      BoxDecoration? decoration,
+    }) {
+      return DefaultTextBlockStyle(
+        source.style.copyWith(
+          fontFamily: 'FiraCode',
+          color: color ?? SpaceNotesTheme.text,
+          fontStyle: fontStyle,
+        ),
+        source.horizontalSpacing,
+        source.verticalSpacing,
+        source.lineSpacing,
+        decoration ?? source.decoration,
+      );
+    }
+
+    final sourceLists = base.lists!;
+
+    return base.merge(
+      DefaultStyles(
+        paragraph: themed(base.paragraph!),
+        h1: themed(base.h1!),
+        h2: themed(base.h2!),
+        h3: themed(base.h3!),
+        h4: themed(base.h4!),
+        h5: themed(base.h5!),
+        h6: themed(base.h6!),
+        code: themed(
+          base.code!,
+          color: SpaceNotesTheme.primary,
+          decoration: BoxDecoration(
+            color: SpaceNotesTheme.inputSurface,
+            borderRadius: BorderRadius.circular(4),
+          ),
+        ),
+        quote: themed(
+          base.quote!,
+          color: SpaceNotesTheme.text.withValues(alpha: 0.8),
+          fontStyle: FontStyle.italic,
+          decoration: const BoxDecoration(
+            border: Border(
+              left: BorderSide(
                 color: SpaceNotesTheme.primary,
-                backgroundColor: SpaceNotesTheme.inputSurface,
+                width: 3,
               ),
-              const HorizontalSpacing(0, 0),
-              const VerticalSpacing(8, 8),
-              const VerticalSpacing(0, 0),
-              BoxDecoration(
-                color: SpaceNotesTheme.inputSurface,
-                borderRadius: BorderRadius.circular(4),
-              ),
-            ),
-            quote: DefaultTextBlockStyle(
-              TextStyle(
-                fontFamily: 'FiraCode',
-                fontSize: 14,
-                color: SpaceNotesTheme.text.withValues(alpha: 0.8),
-                fontStyle: FontStyle.italic,
-              ),
-              const HorizontalSpacing(0, 0),
-              const VerticalSpacing(8, 8),
-              const VerticalSpacing(0, 0),
-              BoxDecoration(
-                border: Border(
-                  left: BorderSide(
-                    color: SpaceNotesTheme.primary.withValues(alpha: 0.5),
-                    width: 3,
-                  ),
-                ),
-              ),
-            ),
-            leading: const DefaultTextBlockStyle(
-              TextStyle(
-                fontFamily: 'FiraCode',
-                fontSize: 14,
-                color: SpaceNotesTheme.text,
-                height: 1.6,
-              ),
-              HorizontalSpacing(0, 0),
-              VerticalSpacing(0, 0),
-              VerticalSpacing(0, 0),
-              null,
-            ),
-            lists: const DefaultListBlockStyle(
-              TextStyle(
-                fontFamily: 'FiraCode',
-                fontSize: 14,
-                color: SpaceNotesTheme.text,
-                height: 1.6,
-              ),
-              HorizontalSpacing(0, 0),
-              VerticalSpacing(0, 4),
-              VerticalSpacing(0, 0),
-              null,
-              null,
-            ),
-            inlineCode: InlineCodeStyle(
-              style: const TextStyle(
-                fontFamily: 'FiraCode',
-                fontSize: 13,
-                color: SpaceNotesTheme.primary,
-                backgroundColor: SpaceNotesTheme.inputSurface,
-              ),
-            ),
-            link: const TextStyle(
-              color: SpaceNotesTheme.primary,
-              decoration: TextDecoration.underline,
-            ),
-            placeHolder: const DefaultTextBlockStyle(
-              TextStyle(
-                fontFamily: 'FiraCode',
-                fontSize: 14,
-                color: SpaceNotesTheme.textSecondary,
-              ),
-              HorizontalSpacing(0, 0),
-              VerticalSpacing(0, 0),
-              VerticalSpacing(0, 0),
-              null,
             ),
           ),
+        ),
+        leading: themed(base.leading!),
+        lists: DefaultListBlockStyle(
+          sourceLists.style.copyWith(
+            fontFamily: 'FiraCode',
+            color: SpaceNotesTheme.text,
+          ),
+          sourceLists.horizontalSpacing,
+          sourceLists.verticalSpacing,
+          sourceLists.lineSpacing,
+          sourceLists.decoration,
+          sourceLists.checkboxUIBuilder,
+          indentWidthBuilder: sourceLists.indentWidthBuilder,
+          numberPointWidthBuilder: sourceLists.numberPointWidthBuilder,
+        ),
+        placeHolder: themed(
+          base.placeHolder!,
+          color: SpaceNotesTheme.textSecondary,
+        ),
+        inlineCode: InlineCodeStyle(
+          style: base.inlineCode!.style.copyWith(
+            fontFamily: 'FiraCode',
+            color: SpaceNotesTheme.primary,
+            backgroundColor: SpaceNotesTheme.inputSurface,
+          ),
+        ),
+        link: const TextStyle(
+          color: SpaceNotesTheme.primary,
+          decoration: TextDecoration.underline,
         ),
       ),
     );

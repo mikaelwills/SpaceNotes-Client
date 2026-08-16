@@ -1,4 +1,6 @@
 import 'package:dart_quill_delta/dart_quill_delta.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:markdown/markdown.dart' as md;
 import 'package:markdown_quill/markdown_quill.dart';
@@ -117,4 +119,37 @@ void main() {
       expect(countListLines(convert(src), 'ordered'), 2);
     });
   });
+
+  group('list marker alignment', () {
+    testWidgets('marker shares top and height with its text line', (t) async {
+      await t.pumpWidget(const MaterialApp(
+        home: Scaffold(
+          body: SizedBox(
+            width: 320,
+            child: QuillNoteEditor(
+              initialContent: '1. one\n2. two\n',
+              onContentChanged: _noop,
+              showToolbar: false,
+            ),
+          ),
+        ),
+      ));
+      await t.pumpAndSettle();
+
+      final marker = find.text('1.').evaluate().first.renderObject! as RenderBox;
+      RenderBox? lineText;
+      void walk(RenderObject o) {
+        if (o is RenderParagraph && o.text.toPlainText() == 'one') lineText = o;
+        o.visitChildren(walk);
+      }
+      walk(t.binding.rootElement!.renderObject!);
+
+      expect(lineText, isNotNull);
+      expect(marker.localToGlobal(Offset.zero).dy,
+          lineText!.localToGlobal(Offset.zero).dy);
+      expect(marker.size.height, lineText!.size.height);
+    });
+  });
 }
+
+void _noop(String _) {}
