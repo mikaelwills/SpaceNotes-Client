@@ -12,6 +12,7 @@ class SpaceNotesTheme {
   static const Color accent = Color(0xFF7DD3FC);
   static const Color accent2 = Color(0xFFC4A4F7);
   static const Color offline = Color(0xFFE8766E);
+  static const Color online = Color(0xFF8FD9A8);
 
   static const Color background = bg;
   static const Color surface = card;

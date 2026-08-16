@@ -158,6 +158,7 @@ class SpacetimeDbNotesRepository {
   // open — see subscribeAgent/unsubscribeAgent.
   static const _chatInitialSubscriptions = [
     'SELECT * FROM agent',
+    'SELECT * FROM channel_config',
     'SELECT * FROM agent_activity',
     'SELECT * FROM call_session',
     'SELECT * FROM connected_user',

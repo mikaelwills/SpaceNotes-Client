@@ -13,6 +13,7 @@ import '../generated/agent.dart';
 import '../generated/agent_activity.dart';
 import '../generated/tool_event.dart';
 import '../services/debug_logger.dart';
+import 'connection_providers.dart';
 import 'notes_providers.dart';
 import 'recent_agents_provider.dart';
 
@@ -88,6 +89,16 @@ final filteredAgentsProvider = Provider<List<Agent>>((ref) {
   final query = ref.watch(agentFilterProvider).trim().toLowerCase();
   if (query.isEmpty) return agents;
   return agents.where((s) => s.id.toLowerCase().contains(query)).toList();
+});
+
+final a2aEnabledProvider = Provider<bool?>((ref) {
+  final client = ref.watch(chatClientProvider);
+  if (client == null) return null;
+  final connected =
+      ref.watch(spacetimeConnectionLiveProvider).value ?? false;
+  if (!connected) return null;
+  final config = watchListenable(ref, client.channelConfig.rowNotifier(0));
+  return config?.a2aEnabled ?? true;
 });
 
 final agentByIdProvider = Provider.family<Agent?, String>((ref, id) {

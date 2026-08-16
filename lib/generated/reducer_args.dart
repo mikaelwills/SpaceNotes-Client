@@ -894,6 +894,24 @@ class SendVideoFrameArgsDecoder
   }
 }
 
+class SetA2aEnabledArgs {
+  SetA2aEnabledArgs({required this.enabled});
+
+  final bool enabled;
+}
+
+class SetA2aEnabledArgsDecoder implements ReducerArgDecoder<SetA2aEnabledArgs> {
+  const SetA2aEnabledArgsDecoder();
+
+  @override
+  SetA2aEnabledArgs decode(BsatnDecoder decoder) {
+    final enabled = decoder.readBool();
+    return SetA2aEnabledArgs(
+      enabled: enabled,
+    );
+  }
+}
+
 class SetDisplayNameArgs {
   SetDisplayNameArgs({required this.name});
 
@@ -1135,6 +1153,8 @@ const sendAudioFrameDef = ReducerDef<SendAudioFrameArgs>(
     'send_audio_frame', SendAudioFrameArgsDecoder());
 const sendVideoFrameDef = ReducerDef<SendVideoFrameArgs>(
     'send_video_frame', SendVideoFrameArgsDecoder());
+const setA2aEnabledDef = ReducerDef<SetA2aEnabledArgs>(
+    'set_a2a_enabled', SetA2aEnabledArgsDecoder());
 const setDisplayNameDef = ReducerDef<SetDisplayNameArgs>(
     'set_display_name', SetDisplayNameArgsDecoder());
 const updateFileContentDef = ReducerDef<UpdateFileContentArgs>(

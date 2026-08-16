@@ -712,6 +712,24 @@ class Reducers {
         optimisticChanges: optimisticChanges, dropIfOffline: dropIfOffline);
   }
 
+  /// Calls the `set_a2a_enabled` reducer.
+  ///
+  /// Returns a [TransactionResult] on success. Throws
+  /// [SpacetimeDbReducerException] if the reducer returns `Failed` or
+  /// `InternalError`. The returned status is one of `Committed`,
+  /// `Pending` (queued to offline storage), or `Dropped` (skipped via
+  /// `dropIfOffline: true` while offline).
+  Future<TransactionResult> setA2aEnabled({
+    required bool enabled,
+    List<OptimisticChange>? optimisticChanges,
+    bool dropIfOffline = false,
+  }) async {
+    final encoder = BsatnEncoder();
+    encoder.writeBool(enabled);
+    return await _reducerCaller.call(setA2aEnabledDef.name, encoder.toBytes(),
+        optimisticChanges: optimisticChanges, dropIfOffline: dropIfOffline);
+  }
+
   /// Calls the `set_display_name` reducer.
   ///
   /// Returns a [TransactionResult] on success. Throws
@@ -1239,6 +1257,17 @@ class Reducers {
       if (args is! SendVideoFrameArgs) return;
       callback(
           ctx, args.callId, args.seq, args.codec, args.isKeyframe, args.data);
+    });
+  }
+
+  StreamSubscription<void> onSetA2aEnabled(
+      void Function(EventContext ctx, bool enabled) callback) {
+    return _reducerEmitter.on(setA2aEnabledDef).listen((EventContext ctx) {
+      final event = ctx.event;
+      if (event is! ReducerEvent) return;
+      final args = event.reducerArgs;
+      if (args is! SetA2aEnabledArgs) return;
+      callback(ctx, args.enabled);
     });
   }
 

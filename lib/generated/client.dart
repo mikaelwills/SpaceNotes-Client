@@ -5,21 +5,22 @@ import 'dart:async';
 import 'package:spacetimedb_sdk/codegen.dart';
 import 'reducers.dart';
 import 'reducer_args.dart';
-import 'tool_event.dart';
-import 'connected_user.dart';
-import 'folder.dart';
 import 'agent.dart';
-import 'video_frame.dart';
+import 'channel_config.dart';
+import 'agent_activity.dart';
+import 'folder.dart';
+import 'message.dart';
 import 'call_session.dart';
 import 'message_image.dart';
 import 'permission_request.dart';
-import 'audio_frame.dart';
-import 'user_profile.dart';
-import 'space_file.dart';
-import 'agent_activity.dart';
-import 'message.dart';
-import 'question_request.dart';
 import 'sweep_schedule.dart';
+import 'video_frame.dart';
+import 'user_profile.dart';
+import 'tool_event.dart';
+import 'question_request.dart';
+import 'connected_user.dart';
+import 'space_file.dart';
+import 'audio_frame.dart';
 
 class SpacetimeDbClient {
   SpacetimeDbClient._({
@@ -78,25 +79,26 @@ class SpacetimeDbClient {
     subscriptions.clearSyncErrors();
   }
 
-  TableCache<ToolEvent> get toolEvent {
-    return subscriptions.cache.getTableByTypedName<ToolEvent>('tool_event');
+  TableCache<Agent> get agent {
+    return subscriptions.cache.getTableByTypedName<Agent>('agent');
   }
 
-  TableCache<ConnectedUser> get connectedUser {
+  TableCache<ChannelConfig> get channelConfig {
     return subscriptions.cache
-        .getTableByTypedName<ConnectedUser>('connected_user');
+        .getTableByTypedName<ChannelConfig>('channel_config');
+  }
+
+  TableCache<AgentActivity> get agentActivity {
+    return subscriptions.cache
+        .getTableByTypedName<AgentActivity>('agent_activity');
   }
 
   TableCache<Folder> get folder {
     return subscriptions.cache.getTableByTypedName<Folder>('folder');
   }
 
-  TableCache<Agent> get agent {
-    return subscriptions.cache.getTableByTypedName<Agent>('agent');
-  }
-
-  TableCache<VideoFrame> get videoFrame {
-    return subscriptions.cache.getTableByTypedName<VideoFrame>('video_frame');
+  TableCache<Message> get message {
+    return subscriptions.cache.getTableByTypedName<Message>('message');
   }
 
   TableCache<CallSession> get callSession {
@@ -113,25 +115,21 @@ class SpacetimeDbClient {
         .getTableByTypedName<PermissionRequest>('permission_request');
   }
 
-  TableCache<AudioFrame> get audioFrame {
-    return subscriptions.cache.getTableByTypedName<AudioFrame>('audio_frame');
+  TableCache<SweepSchedule> get sweepSchedule {
+    return subscriptions.cache
+        .getTableByTypedName<SweepSchedule>('sweep_schedule');
+  }
+
+  TableCache<VideoFrame> get videoFrame {
+    return subscriptions.cache.getTableByTypedName<VideoFrame>('video_frame');
   }
 
   TableCache<UserProfile> get userProfile {
     return subscriptions.cache.getTableByTypedName<UserProfile>('user_profile');
   }
 
-  TableCache<SpaceFile> get spaceFile {
-    return subscriptions.cache.getTableByTypedName<SpaceFile>('space_file');
-  }
-
-  TableCache<AgentActivity> get agentActivity {
-    return subscriptions.cache
-        .getTableByTypedName<AgentActivity>('agent_activity');
-  }
-
-  TableCache<Message> get message {
-    return subscriptions.cache.getTableByTypedName<Message>('message');
+  TableCache<ToolEvent> get toolEvent {
+    return subscriptions.cache.getTableByTypedName<ToolEvent>('tool_event');
   }
 
   TableCache<QuestionRequest> get questionRequest {
@@ -139,9 +137,17 @@ class SpacetimeDbClient {
         .getTableByTypedName<QuestionRequest>('question_request');
   }
 
-  TableCache<SweepSchedule> get sweepSchedule {
+  TableCache<ConnectedUser> get connectedUser {
     return subscriptions.cache
-        .getTableByTypedName<SweepSchedule>('sweep_schedule');
+        .getTableByTypedName<ConnectedUser>('connected_user');
+  }
+
+  TableCache<SpaceFile> get spaceFile {
+    return subscriptions.cache.getTableByTypedName<SpaceFile>('space_file');
+  }
+
+  TableCache<AudioFrame> get audioFrame {
+    return subscriptions.cache.getTableByTypedName<AudioFrame>('audio_frame');
   }
 
   static Future<SpacetimeDbClient> create({
@@ -168,37 +174,39 @@ class SpacetimeDbClient {
         queuePolicy: queuePolicy,
         retainRowsOnUnsubscribe: retainRowsOnUnsubscribe);
 
-    subscriptionManager.cache
-        .registerDecoder<ToolEvent>('tool_event', ToolEventDecoder());
-    subscriptionManager.cache.registerDecoder<ConnectedUser>(
-        'connected_user', ConnectedUserDecoder());
+    subscriptionManager.cache.registerDecoder<Agent>('agent', AgentDecoder());
+    subscriptionManager.cache.registerDecoder<ChannelConfig>(
+        'channel_config', ChannelConfigDecoder());
+    subscriptionManager.cache.registerDecoder<AgentActivity>(
+        'agent_activity', AgentActivityDecoder());
     subscriptionManager.cache
         .registerDecoder<Folder>('folder', FolderDecoder());
-    subscriptionManager.cache.registerDecoder<Agent>('agent', AgentDecoder());
-    subscriptionManager.cache.registerDecoder<VideoFrame>(
-        'video_frame', VideoFrameDecoder(),
-        isEvent: true);
+    subscriptionManager.cache
+        .registerDecoder<Message>('message', MessageDecoder());
     subscriptionManager.cache
         .registerDecoder<CallSession>('call_session', CallSessionDecoder());
     subscriptionManager.cache
         .registerDecoder<MessageImage>('message_image', MessageImageDecoder());
     subscriptionManager.cache.registerDecoder<PermissionRequest>(
         'permission_request', PermissionRequestDecoder());
-    subscriptionManager.cache.registerDecoder<AudioFrame>(
-        'audio_frame', AudioFrameDecoder(),
+    subscriptionManager.cache.registerDecoder<SweepSchedule>(
+        'sweep_schedule', SweepScheduleDecoder());
+    subscriptionManager.cache.registerDecoder<VideoFrame>(
+        'video_frame', VideoFrameDecoder(),
         isEvent: true);
     subscriptionManager.cache
         .registerDecoder<UserProfile>('user_profile', UserProfileDecoder());
     subscriptionManager.cache
-        .registerDecoder<SpaceFile>('space_file', SpaceFileDecoder());
-    subscriptionManager.cache.registerDecoder<AgentActivity>(
-        'agent_activity', AgentActivityDecoder());
-    subscriptionManager.cache
-        .registerDecoder<Message>('message', MessageDecoder());
+        .registerDecoder<ToolEvent>('tool_event', ToolEventDecoder());
     subscriptionManager.cache.registerDecoder<QuestionRequest>(
         'question_request', QuestionRequestDecoder());
-    subscriptionManager.cache.registerDecoder<SweepSchedule>(
-        'sweep_schedule', SweepScheduleDecoder());
+    subscriptionManager.cache.registerDecoder<ConnectedUser>(
+        'connected_user', ConnectedUserDecoder());
+    subscriptionManager.cache
+        .registerDecoder<SpaceFile>('space_file', SpaceFileDecoder());
+    subscriptionManager.cache.registerDecoder<AudioFrame>(
+        'audio_frame', AudioFrameDecoder(),
+        isEvent: true);
 
     subscriptionManager.reducerRegistry.register(acceptCallDef);
     subscriptionManager.reducerRegistry.register(appendToFileDef);
@@ -233,6 +241,7 @@ class SpacetimeDbClient {
     subscriptionManager.reducerRegistry.register(respondToQuestionDef);
     subscriptionManager.reducerRegistry.register(sendAudioFrameDef);
     subscriptionManager.reducerRegistry.register(sendVideoFrameDef);
+    subscriptionManager.reducerRegistry.register(setA2aEnabledDef);
     subscriptionManager.reducerRegistry.register(setDisplayNameDef);
     subscriptionManager.reducerRegistry.register(updateFileContentDef);
     subscriptionManager.reducerRegistry.register(updateFilePathDef);

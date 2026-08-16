@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/chat_providers.dart';
+import '../providers/notes_providers.dart';
 import '../theme/spacenotes_theme.dart';
 import 'primitives/primitives.dart';
 
@@ -67,6 +68,8 @@ class ConnectionStatusRow extends ConsumerWidget {
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
+          const _A2aToggle(),
+          const SizedBox(width: 12),
           _StateDot(color: accent, pulsing: isActive),
           const SizedBox(width: 8),
           SnUiText(
@@ -91,6 +94,37 @@ String _fmtTokens(int n) {
     return '${k.toStringAsFixed(k >= 100 ? 0 : 1)}k';
   }
   return '$n';
+}
+
+class _A2aToggle extends ConsumerWidget {
+  const _A2aToggle();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final enabled = ref.watch(a2aEnabledProvider);
+    final color = switch (enabled) {
+      null => SpaceNotesTheme.dim,
+      true => SpaceNotesTheme.online,
+      false => SpaceNotesTheme.offline,
+    };
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: enabled == null
+          ? null
+          : () {
+              final client = ref.read(chatClientProvider);
+              client?.reducers.setA2aEnabled(enabled: !enabled);
+            },
+      child: Padding(
+        padding: const EdgeInsets.all(6),
+        child: Container(
+          width: 5,
+          height: 5,
+          color: color,
+        ),
+      ),
+    );
+  }
 }
 
 class _StateDot extends StatefulWidget {
