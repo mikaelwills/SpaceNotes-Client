@@ -49,7 +49,9 @@ class TerminalMessage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (message.role == 'user') return _buildUserMessage(context);
+    if (message.role == 'user' && !_isAgentPeer) {
+      return _buildUserMessage(context);
+    }
     return _buildAssistantMessage(context);
   }
 
@@ -137,7 +139,7 @@ class TerminalMessage extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               Text(
-                message.source.toUpperCase(),
+                _sourceLabel,
                 style: TextStyle(
                   fontFamily: SpaceNotesTheme.fontMono,
                   fontSize: 10,
@@ -182,7 +184,15 @@ class TerminalMessage extends StatelessWidget {
     return '$h:$m';
   }
 
+  bool get _isAgentPeer => message.source.startsWith('agent:');
+
+  String get _sourceLabel {
+    if (_isAgentPeer) return message.source.substring(6).toUpperCase();
+    return message.source.toUpperCase();
+  }
+
   Color get _sourceColor {
+    if (_isAgentPeer) return SpaceNotesTheme.accent2;
     switch (message.source) {
       case 'error':
         return SpaceNotesTheme.error;
