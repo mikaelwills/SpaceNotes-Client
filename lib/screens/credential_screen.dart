@@ -110,31 +110,14 @@ class _CredentialCreateScreenState
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: CredentialField(
-                label: 'password',
-                controller: _password,
-                editing: true,
-                obscurable: true,
-                onChanged: () => setState(() {}),
-              ),
-            ),
-            const SizedBox(width: 8),
-            Padding(
-              padding: const EdgeInsets.only(top: 22),
-              child: IconButton(
-                icon: const Icon(Icons.refresh, size: 20),
-                color: SpaceNotesTheme.muted,
-                tooltip: 'Generate a new password',
-                onPressed: () => setState(
-                  () => _password.text = PasswordGenerator.generate(),
-                ),
-              ),
-            ),
-          ],
+        CredentialField(
+          label: 'password',
+          controller: _password,
+          editing: true,
+          obscurable: true,
+          onChanged: () => setState(() {}),
+          onRegenerate: () =>
+              setState(() => _password.text = PasswordGenerator.generate()),
         ),
         const SizedBox(height: 12),
         CredentialField(
@@ -266,6 +249,8 @@ class _CredentialScreenState extends ConsumerState<CredentialScreen> {
           editing: _editing,
           obscurable: true,
           onChanged: () => setState(() {}),
+          onRegenerate: () =>
+              setState(() => _password.text = PasswordGenerator.generate()),
         ),
         const SizedBox(height: 12),
         CredentialField(

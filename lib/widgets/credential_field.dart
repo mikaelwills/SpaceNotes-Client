@@ -12,6 +12,7 @@ class CredentialField extends StatefulWidget {
     this.obscurable = false,
     this.height = 48,
     this.onChanged,
+    this.onRegenerate,
   });
 
   final String label;
@@ -21,6 +22,7 @@ class CredentialField extends StatefulWidget {
   final bool obscurable;
   final double height;
   final VoidCallback? onChanged;
+  final VoidCallback? onRegenerate;
 
   @override
   State<CredentialField> createState() => _CredentialFieldState();
@@ -89,6 +91,11 @@ class _CredentialFieldState extends State<CredentialField> {
                     ? Icons.visibility_outlined
                     : Icons.visibility_off_outlined,
                 onPressed: () => setState(() => _hidden = !_hidden),
+              ),
+            if (widget.editing && widget.onRegenerate != null)
+              _action(
+                icon: Icons.refresh,
+                onPressed: widget.onRegenerate!,
               ),
             if (!widget.editing)
               _action(
