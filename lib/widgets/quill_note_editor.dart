@@ -319,6 +319,18 @@ class QuillNoteEditorState extends State<QuillNoteEditor> {
                 ),
               ),
             ),
+            leading: const DefaultTextBlockStyle(
+              TextStyle(
+                fontFamily: 'FiraCode',
+                fontSize: 14,
+                color: SpaceNotesTheme.text,
+                height: 1.6,
+              ),
+              HorizontalSpacing(0, 0),
+              VerticalSpacing(0, 0),
+              VerticalSpacing(0, 0),
+              null,
+            ),
             lists: const DefaultListBlockStyle(
               TextStyle(
                 fontFamily: 'FiraCode',
