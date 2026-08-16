@@ -12,6 +12,7 @@ import 'package:spacetimedb_sdk/protocol.dart' show SdkLogger, SdkLogLevel;
 
 import 'theme/spacenotes_theme.dart';
 import 'services/debug_logger.dart';
+import 'services/exit_recorder.dart';
 import 'blocs/config/config_cubit.dart';
 import 'blocs/desktop_notes/desktop_notes_bloc.dart';
 import 'router/app_router.dart';
@@ -22,6 +23,7 @@ void main() async {
 
   await debugLogger.ensureInitialized();
   debugLogger.info('APP', 'SpaceNotes starting');
+  await exitRecorder.init();
 
   configureSdkLogging();
 
@@ -124,6 +126,7 @@ class _SpaceNotesAppState extends State<SpaceNotesApp>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     debugLogger.info('APP', 'Lifecycle: ${state.name}');
+    exitRecorder.record(state.name);
     final repo = widget.container.read(notesRepositoryProvider);
     if (state == AppLifecycleState.resumed) {
       _pauseTimer?.cancel();
