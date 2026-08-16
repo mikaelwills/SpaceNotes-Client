@@ -241,59 +241,87 @@ class QuillNoteEditorState extends State<QuillNoteEditor> {
 
   DefaultStyles _buildStyles(BuildContext context) {
     final base = DefaultStyles.getInstance(context);
-
-    DefaultTextBlockStyle themed(
-      DefaultTextBlockStyle source, {
-      required double fontSize,
-      Color? color,
-      FontWeight? fontWeight,
-      FontStyle? fontStyle,
-      Color? backgroundColor,
-      BoxDecoration? decoration,
-    }) {
-      return DefaultTextBlockStyle(
-        source.style.copyWith(
-          fontFamily: 'FiraCode',
-          fontSize: fontSize,
-          color: color ?? SpaceNotesTheme.text,
-          fontWeight: fontWeight,
-          fontStyle: fontStyle,
-          backgroundColor: backgroundColor,
-        ),
-        source.horizontalSpacing,
-        source.verticalSpacing,
-        source.lineSpacing,
-        decoration ?? source.decoration,
-      );
-    }
-
     final sourceLists = base.lists!;
 
     return base.merge(
       DefaultStyles(
-        paragraph: themed(base.paragraph!, fontSize: 14),
-        h1: themed(base.h1!, fontSize: 28, fontWeight: FontWeight.bold),
-        h2: themed(base.h2!, fontSize: 22, fontWeight: FontWeight.bold),
-        h3: themed(base.h3!, fontSize: 18, fontWeight: FontWeight.bold),
-        h4: themed(base.h4!, fontSize: 16, fontWeight: FontWeight.bold),
-        h5: themed(base.h5!, fontSize: 15, fontWeight: FontWeight.bold),
-        h6: themed(base.h6!, fontSize: 14, fontWeight: FontWeight.bold),
-        code: themed(
-          base.code!,
-          fontSize: 13,
-          color: SpaceNotesTheme.primary,
-          backgroundColor: SpaceNotesTheme.inputSurface,
-          decoration: BoxDecoration(
+        paragraph: const DefaultTextBlockStyle(
+          TextStyle(
+            fontFamily: 'FiraCode',
+            fontSize: 14,
+            color: SpaceNotesTheme.text,
+            height: 1.6,
+          ),
+          HorizontalSpacing(0, 0),
+          VerticalSpacing(0, 8),
+          VerticalSpacing(0, 0),
+          null,
+        ),
+        h1: const DefaultTextBlockStyle(
+          TextStyle(
+            fontFamily: 'FiraCode',
+            fontSize: 28,
+            fontWeight: FontWeight.bold,
+            color: SpaceNotesTheme.text,
+            height: 1.4,
+          ),
+          HorizontalSpacing(0, 0),
+          VerticalSpacing(16, 8),
+          VerticalSpacing(0, 0),
+          null,
+        ),
+        h2: const DefaultTextBlockStyle(
+          TextStyle(
+            fontFamily: 'FiraCode',
+            fontSize: 22,
+            fontWeight: FontWeight.bold,
+            color: SpaceNotesTheme.text,
+            height: 1.4,
+          ),
+          HorizontalSpacing(0, 0),
+          VerticalSpacing(12, 6),
+          VerticalSpacing(0, 0),
+          null,
+        ),
+        h3: const DefaultTextBlockStyle(
+          TextStyle(
+            fontFamily: 'FiraCode',
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: SpaceNotesTheme.text,
+            height: 1.4,
+          ),
+          HorizontalSpacing(0, 0),
+          VerticalSpacing(8, 4),
+          VerticalSpacing(0, 0),
+          null,
+        ),
+        code: DefaultTextBlockStyle(
+          const TextStyle(
+            fontFamily: 'FiraCode',
+            fontSize: 13,
+            color: SpaceNotesTheme.primary,
+            backgroundColor: SpaceNotesTheme.inputSurface,
+          ),
+          const HorizontalSpacing(0, 0),
+          const VerticalSpacing(8, 8),
+          const VerticalSpacing(0, 0),
+          BoxDecoration(
             color: SpaceNotesTheme.inputSurface,
             borderRadius: BorderRadius.circular(4),
           ),
         ),
-        quote: themed(
-          base.quote!,
-          fontSize: 14,
-          color: SpaceNotesTheme.text.withValues(alpha: 0.8),
-          fontStyle: FontStyle.italic,
-          decoration: BoxDecoration(
+        quote: DefaultTextBlockStyle(
+          TextStyle(
+            fontFamily: 'FiraCode',
+            fontSize: 14,
+            color: SpaceNotesTheme.text.withValues(alpha: 0.8),
+            fontStyle: FontStyle.italic,
+          ),
+          const HorizontalSpacing(0, 0),
+          const VerticalSpacing(8, 8),
+          const VerticalSpacing(0, 0),
+          BoxDecoration(
             border: Border(
               left: BorderSide(
                 color: SpaceNotesTheme.primary.withValues(alpha: 0.5),
@@ -302,28 +330,33 @@ class QuillNoteEditorState extends State<QuillNoteEditor> {
             ),
           ),
         ),
-        leading: themed(base.leading!, fontSize: 14),
-        lists: DefaultListBlockStyle(
-          sourceLists.style.copyWith(
+        leading: const DefaultTextBlockStyle(
+          TextStyle(
             fontFamily: 'FiraCode',
             fontSize: 14,
             color: SpaceNotesTheme.text,
           ),
-          sourceLists.horizontalSpacing,
-          sourceLists.verticalSpacing,
-          sourceLists.lineSpacing,
-          sourceLists.decoration,
+          HorizontalSpacing(0, 0),
+          VerticalSpacing(0, 0),
+          VerticalSpacing(0, 0),
+          null,
+        ),
+        lists: DefaultListBlockStyle(
+          const TextStyle(
+            fontFamily: 'FiraCode',
+            fontSize: 14,
+            color: SpaceNotesTheme.text,
+          ),
+          const HorizontalSpacing(0, 0),
+          const VerticalSpacing(0, 4),
+          const VerticalSpacing(0, 0),
+          null,
           sourceLists.checkboxUIBuilder,
           indentWidthBuilder: sourceLists.indentWidthBuilder,
           numberPointWidthBuilder: sourceLists.numberPointWidthBuilder,
         ),
-        placeHolder: themed(
-          base.placeHolder!,
-          fontSize: 14,
-          color: SpaceNotesTheme.textSecondary,
-        ),
         inlineCode: InlineCodeStyle(
-          style: base.inlineCode!.style.copyWith(
+          style: const TextStyle(
             fontFamily: 'FiraCode',
             fontSize: 13,
             color: SpaceNotesTheme.primary,
@@ -333,6 +366,17 @@ class QuillNoteEditorState extends State<QuillNoteEditor> {
         link: const TextStyle(
           color: SpaceNotesTheme.primary,
           decoration: TextDecoration.underline,
+        ),
+        placeHolder: const DefaultTextBlockStyle(
+          TextStyle(
+            fontFamily: 'FiraCode',
+            fontSize: 14,
+            color: SpaceNotesTheme.textSecondary,
+          ),
+          HorizontalSpacing(0, 0),
+          VerticalSpacing(0, 0),
+          VerticalSpacing(0, 0),
+          null,
         ),
       ),
     );
