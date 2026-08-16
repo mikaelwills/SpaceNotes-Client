@@ -115,15 +115,24 @@ class _A2aToggle extends ConsumerWidget {
               final client = ref.read(chatClientProvider);
               client?.reducers.setA2aEnabled(enabled: !enabled);
             },
-      child: SizedBox(
-        width: 36,
-        height: 24,
-        child: Center(
-          child: Container(
-            width: 5,
-            height: 5,
-            color: color,
-          ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 5,
+              height: 5,
+              color: color,
+            ),
+            const SizedBox(width: 8),
+            SnUiText(
+              'a2a',
+              color: color,
+              fontSize: 10,
+              letterSpacing: 1.5,
+            ),
+          ],
         ),
       ),
     );
