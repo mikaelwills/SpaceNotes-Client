@@ -912,6 +912,36 @@ class SetA2aEnabledArgsDecoder implements ReducerArgDecoder<SetA2aEnabledArgs> {
   }
 }
 
+class SetA2aLimitsArgs {
+  SetA2aLimitsArgs({
+    required this.cooldownSecs,
+    required this.hourlyLimit,
+    required this.maxHops,
+  });
+
+  final int cooldownSecs;
+
+  final int hourlyLimit;
+
+  final int maxHops;
+}
+
+class SetA2aLimitsArgsDecoder implements ReducerArgDecoder<SetA2aLimitsArgs> {
+  const SetA2aLimitsArgsDecoder();
+
+  @override
+  SetA2aLimitsArgs decode(BsatnDecoder decoder) {
+    final cooldownSecs = decoder.readU32();
+    final hourlyLimit = decoder.readU32();
+    final maxHops = decoder.readU32();
+    return SetA2aLimitsArgs(
+      cooldownSecs: cooldownSecs,
+      hourlyLimit: hourlyLimit,
+      maxHops: maxHops,
+    );
+  }
+}
+
 class SetDisplayNameArgs {
   SetDisplayNameArgs({required this.name});
 
@@ -1155,6 +1185,8 @@ const sendVideoFrameDef = ReducerDef<SendVideoFrameArgs>(
     'send_video_frame', SendVideoFrameArgsDecoder());
 const setA2aEnabledDef = ReducerDef<SetA2aEnabledArgs>(
     'set_a2a_enabled', SetA2aEnabledArgsDecoder());
+const setA2aLimitsDef =
+    ReducerDef<SetA2aLimitsArgs>('set_a2a_limits', SetA2aLimitsArgsDecoder());
 const setDisplayNameDef = ReducerDef<SetDisplayNameArgs>(
     'set_display_name', SetDisplayNameArgsDecoder());
 const updateFileContentDef = ReducerDef<UpdateFileContentArgs>(

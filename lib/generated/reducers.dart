@@ -730,6 +730,28 @@ class Reducers {
         optimisticChanges: optimisticChanges, dropIfOffline: dropIfOffline);
   }
 
+  /// Calls the `set_a2a_limits` reducer.
+  ///
+  /// Returns a [TransactionResult] on success. Throws
+  /// [SpacetimeDbReducerException] if the reducer returns `Failed` or
+  /// `InternalError`. The returned status is one of `Committed`,
+  /// `Pending` (queued to offline storage), or `Dropped` (skipped via
+  /// `dropIfOffline: true` while offline).
+  Future<TransactionResult> setA2aLimits({
+    required int cooldownSecs,
+    required int hourlyLimit,
+    required int maxHops,
+    List<OptimisticChange>? optimisticChanges,
+    bool dropIfOffline = false,
+  }) async {
+    final encoder = BsatnEncoder();
+    encoder.writeU32(cooldownSecs);
+    encoder.writeU32(hourlyLimit);
+    encoder.writeU32(maxHops);
+    return await _reducerCaller.call(setA2aLimitsDef.name, encoder.toBytes(),
+        optimisticChanges: optimisticChanges, dropIfOffline: dropIfOffline);
+  }
+
   /// Calls the `set_display_name` reducer.
   ///
   /// Returns a [TransactionResult] on success. Throws
@@ -1268,6 +1290,19 @@ class Reducers {
       final args = event.reducerArgs;
       if (args is! SetA2aEnabledArgs) return;
       callback(ctx, args.enabled);
+    });
+  }
+
+  StreamSubscription<void> onSetA2aLimits(
+      void Function(
+              EventContext ctx, int cooldownSecs, int hourlyLimit, int maxHops)
+          callback) {
+    return _reducerEmitter.on(setA2aLimitsDef).listen((EventContext ctx) {
+      final event = ctx.event;
+      if (event is! ReducerEvent) return;
+      final args = event.reducerArgs;
+      if (args is! SetA2aLimitsArgs) return;
+      callback(ctx, args.cooldownSecs, args.hourlyLimit, args.maxHops);
     });
   }
 
