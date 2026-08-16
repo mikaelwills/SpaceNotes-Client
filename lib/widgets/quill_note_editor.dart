@@ -20,6 +20,52 @@ class _KeepEmptyLineBlockSyntax extends md.BlockSyntax {
   }
 }
 
+final _listItemStart = RegExp(r'^([ \t]*)(?:[-*+]|\d+[.)])\s+');
+final _fenceLine = RegExp(r'^[ \t]*(?:```|~~~)');
+final _blankLine = RegExp(r'^[ \t]*$');
+
+String joinWrappedListItems(String markdown) {
+  if (markdown.isEmpty) return markdown;
+
+  final lines = markdown.split('\n');
+  final out = <String>[];
+  var inItem = false;
+  var inFence = false;
+
+  for (final line in lines) {
+    final body = line.endsWith('\r') ? line.substring(0, line.length - 1) : line;
+
+    if (_fenceLine.hasMatch(body)) {
+      inFence = !inFence;
+      out.add(line);
+      continue;
+    }
+
+    if (inFence || _blankLine.hasMatch(body)) {
+      if (!inFence) inItem = false;
+      out.add(line);
+      continue;
+    }
+
+    if (_listItemStart.hasMatch(body)) {
+      inItem = true;
+      out.add(line);
+      continue;
+    }
+
+    final indent = body.length - body.trimLeft().length;
+    if (inItem && indent > 0 && indent < 4) {
+      out[out.length - 1] = '${out.last.trimRight()} ${body.trim()}';
+      continue;
+    }
+
+    inItem = false;
+    out.add(line);
+  }
+
+  return out.join('\n');
+}
+
 class QuillNoteEditor extends StatefulWidget {
   final String initialContent;
   final ValueChanged<String> onContentChanged;
@@ -420,7 +466,8 @@ class QuillNoteEditorState extends State<QuillNoteEditor> {
         ? _scrollController.offset
         : 0.0;
 
-    _controller.document = Document.fromDelta(_mdToDelta.convert(markdown));
+    _controller.document =
+        Document.fromDelta(_mdToDelta.convert(joinWrappedListItems(markdown)));
     _attachDocumentListener();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -453,7 +500,7 @@ class QuillNoteEditorState extends State<QuillNoteEditor> {
       return QuillController.basic();
     }
     try {
-      final delta = _mdToDelta.convert(markdown);
+      final delta = _mdToDelta.convert(joinWrappedListItems(markdown));
       return QuillController(
         document: Document.fromDelta(delta),
         selection: const TextSelection.collapsed(offset: 0),
@@ -479,7 +526,7 @@ class QuillNoteEditorState extends State<QuillNoteEditor> {
         final rawText = _rawController.text;
         _isUpdatingFromParent = true;
         try {
-          final delta = _mdToDelta.convert(rawText);
+          final delta = _mdToDelta.convert(joinWrappedListItems(rawText));
           _controller.document = Document.fromDelta(delta);
           _attachDocumentListener();
         } catch (e) {
