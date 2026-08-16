@@ -244,15 +244,21 @@ class QuillNoteEditorState extends State<QuillNoteEditor> {
 
     DefaultTextBlockStyle themed(
       DefaultTextBlockStyle source, {
+      required double fontSize,
       Color? color,
+      FontWeight? fontWeight,
       FontStyle? fontStyle,
+      Color? backgroundColor,
       BoxDecoration? decoration,
     }) {
       return DefaultTextBlockStyle(
         source.style.copyWith(
           fontFamily: 'FiraCode',
+          fontSize: fontSize,
           color: color ?? SpaceNotesTheme.text,
+          fontWeight: fontWeight,
           fontStyle: fontStyle,
+          backgroundColor: backgroundColor,
         ),
         source.horizontalSpacing,
         source.verticalSpacing,
@@ -265,16 +271,18 @@ class QuillNoteEditorState extends State<QuillNoteEditor> {
 
     return base.merge(
       DefaultStyles(
-        paragraph: themed(base.paragraph!),
-        h1: themed(base.h1!),
-        h2: themed(base.h2!),
-        h3: themed(base.h3!),
-        h4: themed(base.h4!),
-        h5: themed(base.h5!),
-        h6: themed(base.h6!),
+        paragraph: themed(base.paragraph!, fontSize: 14),
+        h1: themed(base.h1!, fontSize: 28, fontWeight: FontWeight.bold),
+        h2: themed(base.h2!, fontSize: 22, fontWeight: FontWeight.bold),
+        h3: themed(base.h3!, fontSize: 18, fontWeight: FontWeight.bold),
+        h4: themed(base.h4!, fontSize: 16, fontWeight: FontWeight.bold),
+        h5: themed(base.h5!, fontSize: 15, fontWeight: FontWeight.bold),
+        h6: themed(base.h6!, fontSize: 14, fontWeight: FontWeight.bold),
         code: themed(
           base.code!,
+          fontSize: 13,
           color: SpaceNotesTheme.primary,
+          backgroundColor: SpaceNotesTheme.inputSurface,
           decoration: BoxDecoration(
             color: SpaceNotesTheme.inputSurface,
             borderRadius: BorderRadius.circular(4),
@@ -282,21 +290,23 @@ class QuillNoteEditorState extends State<QuillNoteEditor> {
         ),
         quote: themed(
           base.quote!,
+          fontSize: 14,
           color: SpaceNotesTheme.text.withValues(alpha: 0.8),
           fontStyle: FontStyle.italic,
-          decoration: const BoxDecoration(
+          decoration: BoxDecoration(
             border: Border(
               left: BorderSide(
-                color: SpaceNotesTheme.primary,
+                color: SpaceNotesTheme.primary.withValues(alpha: 0.5),
                 width: 3,
               ),
             ),
           ),
         ),
-        leading: themed(base.leading!),
+        leading: themed(base.leading!, fontSize: 14),
         lists: DefaultListBlockStyle(
           sourceLists.style.copyWith(
             fontFamily: 'FiraCode',
+            fontSize: 14,
             color: SpaceNotesTheme.text,
           ),
           sourceLists.horizontalSpacing,
@@ -309,11 +319,13 @@ class QuillNoteEditorState extends State<QuillNoteEditor> {
         ),
         placeHolder: themed(
           base.placeHolder!,
+          fontSize: 14,
           color: SpaceNotesTheme.textSecondary,
         ),
         inlineCode: InlineCodeStyle(
           style: base.inlineCode!.style.copyWith(
             fontFamily: 'FiraCode',
+            fontSize: 13,
             color: SpaceNotesTheme.primary,
             backgroundColor: SpaceNotesTheme.inputSurface,
           ),
