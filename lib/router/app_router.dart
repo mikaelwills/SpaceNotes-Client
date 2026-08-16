@@ -45,7 +45,7 @@ GoRouter createAppRouter(ProviderContainer container) {
       final laneController =
           container.read(activeConnectionLaneProvider.notifier);
       if (laneController.state != lane) {
-        laneController.state = lane;
+        Future(() => laneController.state = lane);
       }
 
       final repo = container.read(notesRepositoryProvider);
