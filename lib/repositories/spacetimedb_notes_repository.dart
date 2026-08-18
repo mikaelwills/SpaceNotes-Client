@@ -1240,7 +1240,7 @@ class SpacetimeDbNotesRepository {
     try {
       await client.connect(
         initialSubscriptions: lane.initialSubscriptions,
-        subscriptionTimeout: const Duration(seconds: 5),
+        subscriptionTimeout: const Duration(seconds: 15),
       );
     } on SpacetimeDbAuthException {
       await _recoverFromStaleToken(lane);
@@ -1314,7 +1314,7 @@ class SpacetimeDbNotesRepository {
     lane.connectAttempts++;
     await client.connect(
       initialSubscriptions: lane.initialSubscriptions,
-      subscriptionTimeout: const Duration(seconds: 5),
+      subscriptionTimeout: const Duration(seconds: 15),
     );
     debugLogger
         .connection(lane.tag('Reconnected with fresh anonymous identity'));
