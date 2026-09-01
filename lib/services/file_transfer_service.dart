@@ -106,10 +106,15 @@ class FileTransferService {
   Future<void> downloadFile(
     String remotePath,
     String localPath, {
+    int expectedSize = 0,
     void Function(int received, int total)? onProgress,
   }) async {
     final localFile = File(localPath);
-    final startByte = await localFile.exists() ? await localFile.length() : 0;
+    final existingLength = await localFile.exists() ? await localFile.length() : 0;
+    final startByte =
+        (existingLength > 0 && expectedSize > 0 && existingLength < expectedSize)
+            ? existingLength
+            : 0;
     final url = _remoteUrl(remotePath);
     debugLogger.info(
       'DOWNLOAD',

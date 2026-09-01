@@ -12,8 +12,18 @@ import '../widgets/adaptive/platform_utils.dart';
 import '../widgets/primitives/primitives.dart';
 import '../services/debug_logger.dart';
 import '../services/credential_key_store.dart';
+import '../services/local_download_store.dart';
 import 'dart:io';
 import 'package:file_picker/file_picker.dart';
+
+String formatBytes(int bytes) {
+  if (bytes < 1024) return '$bytes B';
+  if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
+  if (bytes < 1024 * 1024 * 1024) {
+    return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+  }
+  return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(2)} GB';
+}
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -30,6 +40,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   int _logFileCount = 0;
   final _keyStore = CredentialKeyStore();
   bool _hasCredentialKey = false;
+  final _downloadStore = LocalDownloadStore();
+  int _downloadedBytes = 0;
+  int _downloadedCount = 0;
 
   @override
   void initState() {
@@ -37,6 +50,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     _loadCurrentConfig();
     _loadLogFileCount();
     _loadCredentialKeyState();
+    _loadDownloadStats();
   }
 
   @override
@@ -61,6 +75,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 _buildMaxOpenNotesSection(),
               _buildPasswordManagerSection(),
               _buildDebugLogsSection(),
+              _buildDownloadedFilesSection(),
               const SizedBox(height: 40),
             ],
           ),
@@ -271,6 +286,35 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         .showSnackBar(SnackBar(content: Text(message)));
   }
 
+  Widget _buildDownloadedFilesSection() {
+    return _Section(
+      label: 'downloaded files',
+      children: [
+        _StorageStat(bytes: _downloadedBytes, count: _downloadedCount),
+        const SizedBox(height: 16),
+        SnButton(
+          label: 'offload all',
+          accent: SpaceNotesTheme.offline,
+          onPressed: _downloadedCount == 0
+              ? null
+              : () async {
+                  await _downloadStore.offloadAll();
+                  await _loadDownloadStats();
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Downloaded files offloaded'),
+                        duration: Duration(seconds: 1),
+                      ),
+                    );
+                  }
+                },
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 18),
+        ),
+      ],
+    );
+  }
+
   Widget _buildDebugLogsSection() {
     return _Section(
       label: 'debug logs · $_logFileCount',
@@ -339,6 +383,17 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final files = await debugLogger.getLogFiles();
     if (mounted) {
       setState(() => _logFileCount = files.length);
+    }
+  }
+
+  Future<void> _loadDownloadStats() async {
+    final bytes = await _downloadStore.totalSize();
+    final count = await _downloadStore.downloadedCount();
+    if (mounted) {
+      setState(() {
+        _downloadedBytes = bytes;
+        _downloadedCount = count;
+      });
     }
   }
 
@@ -558,6 +613,68 @@ class _PortChip extends StatelessWidget {
             color: SpaceNotesTheme.muted,
             letterSpacing: 0.5,
           ),
+        ),
+      ],
+    );
+  }
+}
+
+class _StorageStat extends StatelessWidget {
+  final int bytes;
+  final int count;
+
+  const _StorageStat({required this.bytes, required this.count});
+
+  static const int _scaleMaxBytes = 200 * 1024 * 1024;
+
+  @override
+  Widget build(BuildContext context) {
+    final fraction = (bytes / _scaleMaxBytes).clamp(0.0, 1.0);
+    const segments = 24;
+    final filled = (fraction * segments).round().clamp(0, segments);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.baseline,
+          textBaseline: TextBaseline.alphabetic,
+          children: [
+            Text(
+              formatBytes(bytes),
+              style: const TextStyle(
+                fontFamily: SpaceNotesTheme.fontMono,
+                fontSize: 26,
+                color: SpaceNotesTheme.fg,
+                fontWeight: FontWeight.w600,
+                letterSpacing: -0.5,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              '$count ${count == 1 ? 'file' : 'files'}',
+              style: const TextStyle(
+                fontFamily: SpaceNotesTheme.fontMono,
+                fontSize: 12,
+                color: SpaceNotesTheme.muted,
+                letterSpacing: 0.2,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: List.generate(segments, (i) {
+            return Expanded(
+              child: Container(
+                margin: EdgeInsets.only(right: i == segments - 1 ? 0 : 2),
+                height: 4,
+                color: i < filled
+                    ? SpaceNotesTheme.accent
+                    : SpaceNotesTheme.hairline,
+              ),
+            );
+          }),
         ),
       ],
     );

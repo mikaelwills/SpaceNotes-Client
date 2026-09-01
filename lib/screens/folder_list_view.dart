@@ -6,17 +6,19 @@ import '../providers/notes_providers.dart';
 import '../generated/folder.dart';
 import '../generated/space_file.dart';
 import '../widgets/folder_list_item.dart';
-import '../widgets/note_list_item.dart';
 import '../dialogs/notes_list_dialogs.dart';
 import '../widgets/keyboard_dismiss_on_scroll.dart';
+import '../widgets/staggered_file_grid.dart';
 import '../file_types/file_type_registry.dart';
 
 class FolderListView extends ConsumerStatefulWidget {
   final String folderPath;
+  final bool tallFolderRows;
 
   const FolderListView({
     super.key,
     this.folderPath = '',
+    this.tallFolderRows = false,
   });
 
   @override
@@ -60,20 +62,36 @@ class _FolderListViewState extends ConsumerState<FolderListView> {
       return _buildEmptyState();
     }
 
-    final totalItems = folders.length + notes.length;
-
     return KeyboardDismissOnScroll(
-      child: ListView.builder(
-        padding: const EdgeInsets.fromLTRB(0, 0, 0, 120),
-        itemCount: totalItems,
-        itemBuilder: (context, index) {
-          if (index < folders.length) {
-            return _buildFolderItem(folders[index]);
-          } else {
-            final noteIndex = index - folders.length;
-            return _buildNoteItem(notes[noteIndex], noteIndex + 1);
-          }
-        },
+      child: CustomScrollView(
+        slivers: [
+          if (folders.isNotEmpty)
+            SliverList.builder(
+              itemCount: folders.length,
+              itemBuilder: (context, index) => _buildFolderItem(folders[index]),
+            ),
+          if (notes.isNotEmpty)
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(12, 14, 12, 120),
+              sliver: SliverToBoxAdapter(
+                child: StaggeredFileGrid(
+                  files: notes,
+                  onTap: (file) {
+                    FocusManager.instance.primaryFocus?.unfocus();
+                    ref.read(folderSearchQueryProvider.notifier).state = '';
+                    context.go('/notes/note/${file.id}');
+                  },
+                  onLongPress: (file) {
+                    if (FileTypeRegistry.forFile(file).hasContextActions) {
+                      NotesListDialogs.showNoteContextMenu(context, ref, file);
+                    }
+                  },
+                ),
+              ),
+            )
+          else
+            const SliverPadding(padding: EdgeInsets.only(bottom: 120)),
+        ],
       ),
     );
   }
@@ -153,6 +171,7 @@ class _FolderListViewState extends ConsumerState<FolderListView> {
     return FolderListItem(
       key: ValueKey(folder.path),
       folder: folder,
+      tall: widget.tallFolderRows,
       onTap: () {
         FocusManager.instance.primaryFocus?.unfocus();
         ref.read(folderSearchQueryProvider.notifier).state = '';
@@ -169,28 +188,6 @@ class _FolderListViewState extends ConsumerState<FolderListView> {
           ? null
           : () =>
               NotesListDialogs.showDeleteFolderConfirmation(context, ref, folder),
-    );
-  }
-
-  Widget _buildNoteItem(SpaceFile note, int index) {
-    return NoteListItem(
-      key: ValueKey(note.id),
-      note: note,
-      index: index,
-      onTap: () {
-        FocusManager.instance.primaryFocus?.unfocus();
-        ref.read(folderSearchQueryProvider.notifier).state = '';
-        context.go('/notes/note/${note.id}');
-      },
-      onLongPress: FileTypeRegistry.forFile(note).hasContextActions
-          ? () => NotesListDialogs.showNoteContextMenu(context, ref, note)
-          : null,
-      onMove: FileTypeRegistry.forFile(note).isMovable
-          ? () => NotesListDialogs.showMoveNoteDialog(context, ref, note)
-          : null,
-      onDelete: FileTypeRegistry.forFile(note).isDeletable
-          ? () => NotesListDialogs.showDeleteNoteConfirmation(context, ref, note)
-          : null,
     );
   }
 

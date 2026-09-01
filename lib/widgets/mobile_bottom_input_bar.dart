@@ -11,6 +11,7 @@ import 'package:file_picker/file_picker.dart';
 import '../providers/notes_providers.dart';
 import '../providers/chat_providers.dart';
 import '../providers/file_transfer_providers.dart';
+import '../providers/upload_progress_providers.dart';
 import '../dialogs/notes_list_dialogs.dart';
 import '../screens/credential_screen.dart';
 import '../screens/home_screen.dart';
@@ -18,6 +19,7 @@ import 'primitives/primitives.dart';
 import 'folder_picker_field.dart';
 import '../file_types/file_type_registry.dart';
 import '../services/debug_logger.dart';
+import 'adaptive/platform_utils.dart';
 
 Future<Uint8List> _readFileBytes(String path) async {
   return File(path).readAsBytes();
@@ -61,7 +63,9 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
   Widget build(BuildContext context) {
     final viewType = _getCurrentViewType();
 
-    if (_isFocusableView(viewType) && _focusedForView != viewType) {
+    if (PlatformUtils.isDesktopPlatform &&
+        _isFocusableView(viewType) &&
+        _focusedForView != viewType) {
       _focusedForView = viewType;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _focusNode.requestFocus();
@@ -170,12 +174,12 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
         semanticLabel: 'new folder',
       ),
       SnDockTile(
-        icon: Icons.upload_file_outlined,
+        icon: Icons.cloud_upload_outlined,
         onTap: () => _uploadFiles(folderPath),
         semanticLabel: 'upload files',
       ),
       SnDockTile(
-        icon: Icons.note_add_outlined,
+        icon: Icons.post_add_outlined,
         onTap: () => _createQuickNote(folderPath),
         semanticLabel: 'new note',
       ),
@@ -287,14 +291,18 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
 
   Future<void> _uploadFiles(String folderPath) async {
     final prePopulated = folderPath.isEmpty ? 'All Notes' : folderPath;
-    final targetFolder =
-        await pickFolder(context, ref, currentFolder: prePopulated);
-    if (targetFolder == null || !mounted) return;
+    final target =
+        await pickUploadTarget(context, ref, currentFolder: prePopulated);
+    if (target == null || !mounted) return;
 
     final repo = ref.read(notesRepositoryProvider);
-    await repo.createFolder(targetFolder);
+    await repo.createFolder(target.folder);
+    final targetFolder = target.folder;
 
-    final result = await FilePicker.platform.pickFiles(allowMultiple: true);
+    final result = await FilePicker.platform.pickFiles(
+      allowMultiple: true,
+      type: target.source,
+    );
     if (result == null || result.files.isEmpty) {
       debugLogger.info('UPLOAD', 'File picker cancelled or empty selection');
       return;
@@ -306,15 +314,36 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
     );
 
     final service = ref.read(fileTransferServiceProvider);
-    for (final picked in result.files) {
-      final path = picked.path;
-      if (path == null) continue;
+    final batch = ref.read(uploadBatchProvider.notifier);
+    final uploadable = result.files.where((f) => f.path != null).toList();
+    final jobIds = {
+      for (final picked in uploadable)
+        picked: '${DateTime.now().microsecondsSinceEpoch}_${picked.name}',
+    };
+    batch.startBatch([
+      for (final picked in uploadable) (id: jobIds[picked]!, fileName: picked.name)
+    ]);
+
+    for (final picked in uploadable) {
+      final path = picked.path!;
+      final jobId = jobIds[picked]!;
       try {
-        await service.uploadFile(targetFolder, File(path));
+        await service.uploadFile(
+          targetFolder,
+          File(path),
+          onProgress: (sent, total) {
+            if (total > 0) {
+              batch.progress(jobId, sent / total, sentBytes: sent, totalBytes: total);
+            }
+          },
+        );
+        batch.complete(jobId);
       } catch (e) {
         debugLogger.error('UPLOAD', 'Error uploading ${picked.name}', e.toString());
+        batch.fail(jobId, e.toString());
       }
     }
+    batch.finishBatch();
   }
 
   Future<void> _createQuickNote(String folderPath) async {

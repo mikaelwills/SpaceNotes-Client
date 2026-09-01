@@ -1491,7 +1491,7 @@ class _SidebarFooter extends ConsumerWidget {
       child: Row(
         children: [
           SnIconButton(
-            icon: const Icon(Icons.note_add_outlined),
+            icon: const Icon(Icons.post_add_outlined),
             onPressed: () => _createNote(context, ref),
             tooltip: 'new note',
           ),
@@ -1503,7 +1503,7 @@ class _SidebarFooter extends ConsumerWidget {
           ),
           const SizedBox(width: 4),
           SnIconButton(
-            icon: const Icon(Icons.upload_file_outlined),
+            icon: const Icon(Icons.cloud_upload_outlined),
             onPressed: () => _uploadFiles(context, ref),
             tooltip: 'upload files',
           ),
@@ -1563,14 +1563,18 @@ class _SidebarFooter extends ConsumerWidget {
   }
 
   Future<void> _uploadFiles(BuildContext context, WidgetRef ref) async {
-    final targetFolder =
-        await pickFolder(context, ref, currentFolder: 'All Notes');
-    if (targetFolder == null || !context.mounted) return;
+    final target =
+        await pickUploadTarget(context, ref, currentFolder: 'All Notes');
+    if (target == null || !context.mounted) return;
 
     final repo = ref.read(notesRepositoryProvider);
-    await repo.createFolder(targetFolder);
+    await repo.createFolder(target.folder);
+    final targetFolder = target.folder;
 
-    final result = await FilePicker.platform.pickFiles(allowMultiple: true);
+    final result = await FilePicker.platform.pickFiles(
+      allowMultiple: true,
+      type: target.source,
+    );
     if (result == null || result.files.isEmpty) {
       debugLogger.info('UPLOAD', 'File picker cancelled or empty selection');
       return;

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:share_plus/share_plus.dart';
 import '../providers/notes_providers.dart';
 import '../providers/file_transfer_providers.dart';
 import '../services/local_download_store.dart';
@@ -32,19 +33,20 @@ class _UnsupportedFileScreenState
     final store = ref.read(localDownloadStoreProvider);
     final service = ref.read(fileTransferServiceProvider);
     final localPath = await store.localPathFor(remotePath);
+    final file = ref.read(fileByIdProvider(widget.fileId));
+    final expectedSize = file?.size.toInt() ?? 0;
 
     try {
       await service.downloadFile(
         remotePath,
         localPath,
+        expectedSize: expectedSize,
         onProgress: (received, total) {
           if (total > 0 && mounted) {
             setState(() => _progress = received / total);
           }
         },
       );
-      final file = ref.read(fileByIdProvider(widget.fileId));
-      final expectedSize = file?.size.toInt() ?? 0;
       final verified =
           await store.markCompleteIfVerified(remotePath, localPath, expectedSize);
       debugLogger.info(
@@ -118,9 +120,26 @@ class _UnsupportedFileScreenState
               else
                 downloadState.when(
                   data: (state) => switch (state) {
-                    DownloadState.complete => const _StatusPill(
-                        icon: Icons.check_circle_outline,
-                        label: 'Downloaded',
+                    DownloadState.complete => Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const _StatusPill(
+                            icon: Icons.check_circle_outline,
+                            label: 'Downloaded',
+                          ),
+                          const SizedBox(height: 12),
+                          OutlinedButton.icon(
+                            onPressed: () async {
+                              final localPath =
+                                  await ref.read(localDownloadStoreProvider).localPathFor(remotePath);
+                              await SharePlus.instance.share(
+                                ShareParams(files: [XFile(localPath)]),
+                              );
+                            },
+                            icon: const Icon(Icons.ios_share, size: 16),
+                            label: const Text('Share'),
+                          ),
+                        ],
                       ),
                     DownloadState.partial => OutlinedButton.icon(
                         onPressed: () => _download(remotePath),

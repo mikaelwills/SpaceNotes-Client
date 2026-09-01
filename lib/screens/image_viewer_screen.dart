@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:share_plus/share_plus.dart';
 import '../providers/notes_providers.dart';
 import '../providers/file_transfer_providers.dart';
 import '../services/local_download_store.dart';
@@ -56,6 +57,7 @@ class _ImageViewerScreenState extends ConsumerState<ImageViewerScreen> {
       await service.downloadFile(
         remotePath,
         localPath,
+        expectedSize: expectedSize,
         onProgress: (received, total) {
           if (total > 0 && mounted) setState(() => _progress = received / total);
         },
@@ -103,6 +105,16 @@ class _ImageViewerScreenState extends ConsumerState<ImageViewerScreen> {
       appBar: AppBar(
         backgroundColor: SpaceNotesTheme.bg,
         title: Text(file.name, style: const TextStyle(color: SpaceNotesTheme.fg, fontSize: 15)),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.ios_share, color: SpaceNotesTheme.fg),
+            onPressed: _localPath == null
+                ? null
+                : () => SharePlus.instance.share(
+                      ShareParams(files: [XFile(_localPath!)]),
+                    ),
+          ),
+        ],
       ),
       body: SafeArea(
         child: Center(

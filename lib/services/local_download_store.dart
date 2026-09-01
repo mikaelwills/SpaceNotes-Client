@@ -119,4 +119,42 @@ class LocalDownloadStore {
     }
     await db.delete('downloads', where: 'path = ?', whereArgs: [remotePath]);
   }
+
+  /// Total bytes currently held on this device, complete downloads only.
+  Future<int> totalSize() async {
+    final db = await _database();
+    final rows = await db.query(
+      'downloads',
+      where: 'state = ?',
+      whereArgs: [DownloadState.complete.name],
+    );
+    var total = 0;
+    for (final row in rows) {
+      total += row['size'] as int;
+    }
+    return total;
+  }
+
+  Future<int> downloadedCount() async {
+    final db = await _database();
+    final rows = await db.query(
+      'downloads',
+      where: 'state = ?',
+      whereArgs: [DownloadState.complete.name],
+    );
+    return rows.length;
+  }
+
+  /// Deletes every local file this store knows about — the STDB row and
+  /// vault file are untouched, this only frees on-device storage. Tapping a
+  /// file afterward re-downloads it, same as if it had never been fetched.
+  Future<void> offloadAll() async {
+    final db = await _database();
+    final rows = await db.query('downloads');
+    for (final row in rows) {
+      final file = File(row['local_path'] as String);
+      if (await file.exists()) await file.delete();
+    }
+    await db.delete('downloads');
+  }
 }

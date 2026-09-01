@@ -27,6 +27,7 @@ class FolderListItem extends StatefulWidget {
   final VoidCallback? onDelete;
   final VoidCallback? onMove;
   final bool isSelected;
+  final bool tall;
 
   const FolderListItem({
     super.key,
@@ -36,6 +37,7 @@ class FolderListItem extends StatefulWidget {
     this.onDelete,
     this.onMove,
     this.isSelected = false,
+    this.tall = false,
   });
 
   @override
@@ -151,7 +153,9 @@ class _FolderListItemState extends State<FolderListItem>
                       SpaceNotesTheme.accent.withValues(alpha: 0.05),
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 200),
-                    padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
+                    padding: widget.tall
+                        ? const EdgeInsets.fromLTRB(16, 22, 16, 22)
+                        : const EdgeInsets.fromLTRB(14, 14, 14, 14),
                     decoration: BoxDecoration(
                       border: Border(
                         bottom: BorderSide(
@@ -169,9 +173,9 @@ class _FolderListItemState extends State<FolderListItem>
                           color: widget.isSelected
                               ? SpaceNotesTheme.accent
                               : SpaceNotesTheme.accent.withValues(alpha: 0.75),
-                          size: 15,
+                          size: widget.tall ? 22 : 15,
                         ),
-                        const SizedBox(width: 10),
+                        SizedBox(width: widget.tall ? 14 : 10),
                         Expanded(
                           child: Text(
                             widget.folder.name.contains('/')
@@ -179,7 +183,7 @@ class _FolderListItemState extends State<FolderListItem>
                                 : widget.folder.name,
                             style: TextStyle(
                               fontFamily: SpaceNotesTheme.fontSans,
-                              fontSize: 15,
+                              fontSize: widget.tall ? 18 : 15,
                               color: widget.isSelected
                                   ? SpaceNotesTheme.accent
                                   : SpaceNotesTheme.fg,
@@ -194,7 +198,7 @@ class _FolderListItemState extends State<FolderListItem>
                           color: widget.isSelected
                               ? SpaceNotesTheme.accent
                               : SpaceNotesTheme.dim,
-                          size: 16,
+                          size: widget.tall ? 20 : 16,
                         ),
                       ],
                     ),

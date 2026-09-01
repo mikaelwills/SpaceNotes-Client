@@ -1,9 +1,12 @@
 import '../generated/space_file.dart';
+import 'audio_file_handler.dart';
 import 'credential_file_handler.dart';
 import 'file_type_handler.dart';
 import 'image_file_handler.dart';
 import 'markdown_file_handler.dart';
+import 'pdf_file_handler.dart';
 import 'unknown_file_handler.dart';
+import 'video_file_handler.dart';
 
 class FileTypeRegistry {
   const FileTypeRegistry._();
@@ -17,6 +20,17 @@ class FileTypeRegistry {
     'gif': ImageFileHandler('gif'),
     'webp': ImageFileHandler('webp'),
     'heic': ImageFileHandler('heic'),
+    'mp3': AudioFileHandler('mp3'),
+    'wav': AudioFileHandler('wav'),
+    'm4a': AudioFileHandler('m4a'),
+    'aac': AudioFileHandler('aac'),
+    'flac': AudioFileHandler('flac'),
+    'ogg': AudioFileHandler('ogg'),
+    'mp4': VideoFileHandler('mp4'),
+    'mov': VideoFileHandler('mov'),
+    'm4v': VideoFileHandler('m4v'),
+    'webm': VideoFileHandler('webm'),
+    'pdf': PdfFileHandler(),
   };
 
   static const _fallback = UnknownFileHandler();

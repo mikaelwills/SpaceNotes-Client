@@ -46,7 +46,7 @@ class _NotesHomeViewState extends ConsumerState<NotesHomeView> {
             dragStartBehavior: DragStartBehavior.start,
             children: const [
               RecentNotesGrid(),
-              FolderListView(folderPath: ''),
+              FolderListView(folderPath: '', tallFolderRows: true),
             ],
           );
 
