@@ -1,8 +1,10 @@
+import 'dart:io';
 import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:file_picker/file_picker.dart';
 
 import '../../blocs/desktop_notes/desktop_notes_bloc.dart';
 import '../../blocs/desktop_notes/desktop_notes_event.dart';
@@ -11,6 +13,9 @@ import '../../generated/folder.dart';
 import '../../generated/space_file.dart';
 import '../../providers/notes_providers.dart';
 import '../../providers/connection_providers.dart';
+import '../../providers/file_transfer_providers.dart';
+import '../folder_picker_field.dart';
+import '../../services/debug_logger.dart';
 import '../../theme/spacenotes_theme.dart';
 import '../../version.dart';
 import '../primitives/primitives.dart';
@@ -1496,6 +1501,12 @@ class _SidebarFooter extends ConsumerWidget {
             onPressed: () => _createFolder(context, ref),
             tooltip: 'new folder',
           ),
+          const SizedBox(width: 4),
+          SnIconButton(
+            icon: const Icon(Icons.upload_file_outlined),
+            onPressed: () => _uploadFiles(context, ref),
+            tooltip: 'upload files',
+          ),
           const SizedBox(width: 14),
           Container(
             width: 1,
@@ -1548,6 +1559,37 @@ class _SidebarFooter extends ConsumerWidget {
     final noteId = await repo.createNote(notePath, '');
     if (noteId != null && context.mounted) {
       _openNoteInDesktop(context, noteId);
+    }
+  }
+
+  Future<void> _uploadFiles(BuildContext context, WidgetRef ref) async {
+    final targetFolder =
+        await pickFolder(context, ref, currentFolder: 'All Notes');
+    if (targetFolder == null || !context.mounted) return;
+
+    final repo = ref.read(notesRepositoryProvider);
+    await repo.createFolder(targetFolder);
+
+    final result = await FilePicker.platform.pickFiles(allowMultiple: true);
+    if (result == null || result.files.isEmpty) {
+      debugLogger.info('UPLOAD', 'File picker cancelled or empty selection');
+      return;
+    }
+    debugLogger.info(
+      'UPLOAD',
+      'Files selected',
+      'count=${result.files.length} folder=$targetFolder',
+    );
+
+    final service = ref.read(fileTransferServiceProvider);
+    for (final picked in result.files) {
+      final path = picked.path;
+      if (path == null) continue;
+      try {
+        await service.uploadFile(targetFolder, File(path));
+      } catch (e) {
+        debugLogger.error('UPLOAD', 'Error uploading ${picked.name}', e.toString());
+      }
     }
   }
 

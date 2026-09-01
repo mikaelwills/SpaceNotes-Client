@@ -1,6 +1,7 @@
 import '../generated/space_file.dart';
 import 'credential_file_handler.dart';
 import 'file_type_handler.dart';
+import 'image_file_handler.dart';
 import 'markdown_file_handler.dart';
 import 'unknown_file_handler.dart';
 
@@ -10,6 +11,12 @@ class FileTypeRegistry {
   static const _handlers = <String, FileTypeHandler>{
     'md': MarkdownFileHandler(),
     'gpg': CredentialFileHandler(),
+    'jpg': ImageFileHandler('jpg'),
+    'jpeg': ImageFileHandler('jpeg'),
+    'png': ImageFileHandler('png'),
+    'gif': ImageFileHandler('gif'),
+    'webp': ImageFileHandler('webp'),
+    'heic': ImageFileHandler('heic'),
   };
 
   static const _fallback = UnknownFileHandler();

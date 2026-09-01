@@ -1,8 +1,11 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../theme/spacenotes_theme.dart';
 import '../generated/space_file.dart';
+import '../providers/file_transfer_providers.dart';
+import '../services/local_download_store.dart';
 import 'swipe_action.dart';
 import '../file_types/file_type_registry.dart';
 
@@ -21,7 +24,7 @@ class _LeftOnlyHorizontalDragGestureRecognizer
   }
 }
 
-class NoteListItem extends StatefulWidget {
+class NoteListItem extends ConsumerStatefulWidget {
   final SpaceFile note;
   final int? index;
   final VoidCallback onTap;
@@ -42,10 +45,10 @@ class NoteListItem extends StatefulWidget {
   });
 
   @override
-  State<NoteListItem> createState() => _NoteListItemState();
+  ConsumerState<NoteListItem> createState() => _NoteListItemState();
 }
 
-class _NoteListItemState extends State<NoteListItem>
+class _NoteListItemState extends ConsumerState<NoteListItem>
     with SingleTickerProviderStateMixin {
   bool _isHovered = false;
   double _swipeOffset = 0;
@@ -234,6 +237,13 @@ class _NoteListItemState extends State<NoteListItem>
                             ),
                           ),
                           const SizedBox(width: 10),
+                          if (_isBinary) ...[
+                            Padding(
+                              padding: const EdgeInsets.only(top: 2),
+                              child: _downloadIndicator(),
+                            ),
+                            const SizedBox(width: 8),
+                          ],
                           Padding(
                             padding: const EdgeInsets.only(top: 2),
                             child: Text(
@@ -295,6 +305,36 @@ class _NoteListItemState extends State<NoteListItem>
       return SpaceNotesTheme.accent.withValues(alpha: 0.06);
     }
     return SpaceNotesTheme.bg;
+  }
+
+  bool get _isBinary =>
+      !FileTypeRegistry.forFile(widget.note).hasTextRepresentation;
+
+  String get _remotePath => widget.note.path;
+
+  Widget _downloadIndicator() {
+    final state = ref.watch(downloadStateProvider(_remotePath));
+    return state.when(
+      data: (s) => switch (s) {
+        DownloadState.complete => const Icon(
+            Icons.check_circle_outline,
+            size: 13,
+            color: SpaceNotesTheme.dim,
+          ),
+        DownloadState.partial => const Icon(
+            Icons.download_outlined,
+            size: 13,
+            color: SpaceNotesTheme.muted,
+          ),
+        DownloadState.notDownloaded => const Icon(
+            Icons.cloud_outlined,
+            size: 13,
+            color: SpaceNotesTheme.dim,
+          ),
+      },
+      loading: () => const SizedBox.shrink(),
+      error: (_, __) => const SizedBox.shrink(),
+    );
   }
 
   String get _previewText {

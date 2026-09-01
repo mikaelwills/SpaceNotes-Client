@@ -1,0 +1,163 @@
+import 'dart:io';
+import 'package:dio/dio.dart';
+import '../repositories/spacetimedb_notes_repository.dart';
+import 'debug_logger.dart';
+
+class FileTransferService {
+  FileTransferService(this._repository);
+
+  final SpacetimeDbNotesRepository _repository;
+  final Dio _dio = Dio();
+
+  String get _filesBaseUrl {
+    final host = _repository.host;
+    if (host == null || host.isEmpty) {
+      throw StateError('Not configured: no host set');
+    }
+    final bareHost = host.split(':').first;
+    return 'http://$bareHost:5051/files';
+  }
+
+  /// Percent-encodes each path segment individually, preserving the `/`
+  /// separators — `Uri.encodeComponent` on the whole string would encode
+  /// the slashes too.
+  String _remoteUrl(String remotePath) {
+    final encoded = remotePath.split('/').map(Uri.encodeComponent).join('/');
+    return '$_filesBaseUrl/$encoded';
+  }
+
+  Future<String> resolveUploadName(String folderPath, String fileName) async {
+    final existing = await listNames(folderPath);
+    if (!existing.contains(fileName)) return fileName;
+
+    final dot = fileName.lastIndexOf('.');
+    final base = dot > 0 ? fileName.substring(0, dot) : fileName;
+    final ext = dot > 0 ? fileName.substring(dot) : '';
+
+    var attempt = 1;
+    String candidate;
+    do {
+      candidate = '$base-$attempt$ext';
+      attempt++;
+    } while (existing.contains(candidate));
+    return candidate;
+  }
+
+  Future<Set<String>> listNames(String folderPath) async {
+    final client = _repository.notesClient;
+    if (client == null) return {};
+    final prefix = folderPath.isEmpty ? '' : '$folderPath/';
+    return client.spaceFile.rows.value
+        .where((f) => f.folderPath == prefix)
+        .map((f) => f.path.split('/').last)
+        .toSet();
+  }
+
+  Future<void> uploadFile(
+    String folderPath,
+    File file, {
+    void Function(int sent, int total)? onProgress,
+  }) async {
+    final originalName = file.uri.pathSegments.last;
+    final size = await file.length();
+    debugLogger.info(
+      'UPLOAD',
+      'Starting upload',
+      'file=$originalName folder=$folderPath size=$size',
+    );
+
+    try {
+      final targetName = await resolveUploadName(folderPath, originalName);
+      final remotePath =
+          folderPath.isEmpty ? targetName : '$folderPath/$targetName';
+      if (targetName != originalName) {
+        debugLogger.info(
+          'UPLOAD',
+          'Name collision, renamed',
+          '$originalName -> $targetName',
+        );
+      }
+
+      final url = _remoteUrl(remotePath);
+      debugLogger.info('UPLOAD', 'PUT request', 'url=$url');
+      final response = await _dio.put(
+        url,
+        data: file.openRead(),
+        options: Options(
+          headers: {Headers.contentLengthHeader: size},
+        ),
+        onSendProgress: onProgress,
+      );
+
+      debugLogger.info('UPLOAD', 'Upload complete', 'path=$remotePath status=${response.statusCode}');
+    } on DioException catch (e) {
+      debugLogger.error(
+        'UPLOAD',
+        'Upload failed: $originalName',
+        'status=${e.response?.statusCode} type=${e.type} message=${e.message}',
+      );
+      rethrow;
+    } catch (e) {
+      debugLogger.error('UPLOAD', 'Upload failed (non-Dio): $originalName', e.toString());
+      rethrow;
+    }
+  }
+
+  Future<void> downloadFile(
+    String remotePath,
+    String localPath, {
+    void Function(int received, int total)? onProgress,
+  }) async {
+    final localFile = File(localPath);
+    final startByte = await localFile.exists() ? await localFile.length() : 0;
+    final url = _remoteUrl(remotePath);
+    debugLogger.info(
+      'DOWNLOAD',
+      'Starting download',
+      'path=$remotePath url=$url resumeFrom=$startByte',
+    );
+
+    try {
+      final response = await _dio.get<ResponseBody>(
+        url,
+        options: Options(
+          headers: startByte > 0 ? {'Range': 'bytes=$startByte-'} : null,
+          responseType: ResponseType.stream,
+        ),
+      );
+      debugLogger.info(
+        'DOWNLOAD',
+        'Response headers received',
+        'status=${response.statusCode} contentLength=${response.headers.value(Headers.contentLengthHeader)}',
+      );
+
+      final sink = localFile.openWrite(
+        mode: startByte > 0 ? FileMode.append : FileMode.write,
+      );
+      var received = startByte;
+      final total = int.tryParse(
+            response.headers.value(Headers.contentLengthHeader) ?? '',
+          ) ??
+          0;
+
+      await for (final chunk in response.data!.stream) {
+        sink.add(chunk);
+        received += chunk.length;
+        onProgress?.call(received, startByte + total);
+      }
+      await sink.close();
+
+      debugLogger.info('DOWNLOAD', 'Download complete', 'path=$remotePath bytes=$received');
+    } on DioException catch (e) {
+      debugLogger.error(
+        'DOWNLOAD',
+        'Download failed: $remotePath',
+        'url=$url status=${e.response?.statusCode} type=${e.type} message=${e.message}',
+      );
+      rethrow;
+    } catch (e) {
+      debugLogger.error('DOWNLOAD', 'Download failed (non-Dio): $remotePath', 'url=$url error=$e');
+      rethrow;
+    }
+  }
+}

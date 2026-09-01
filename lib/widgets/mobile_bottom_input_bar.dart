@@ -7,13 +7,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image/image.dart' as image_lib;
 import 'package:image_picker/image_picker.dart';
+import 'package:file_picker/file_picker.dart';
 import '../providers/notes_providers.dart';
 import '../providers/chat_providers.dart';
+import '../providers/file_transfer_providers.dart';
 import '../dialogs/notes_list_dialogs.dart';
 import '../screens/credential_screen.dart';
 import '../screens/home_screen.dart';
 import 'primitives/primitives.dart';
+import 'folder_picker_field.dart';
 import '../file_types/file_type_registry.dart';
+import '../services/debug_logger.dart';
 
 Future<Uint8List> _readFileBytes(String path) async {
   return File(path).readAsBytes();
@@ -166,6 +170,11 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
         semanticLabel: 'new folder',
       ),
       SnDockTile(
+        icon: Icons.upload_file_outlined,
+        onTap: () => _uploadFiles(folderPath),
+        semanticLabel: 'upload files',
+      ),
+      SnDockTile(
         icon: Icons.note_add_outlined,
         onTap: () => _createQuickNote(folderPath),
         semanticLabel: 'new note',
@@ -274,6 +283,38 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
     }
 
     return Uint8List.fromList(image_lib.encodePng(resized));
+  }
+
+  Future<void> _uploadFiles(String folderPath) async {
+    final prePopulated = folderPath.isEmpty ? 'All Notes' : folderPath;
+    final targetFolder =
+        await pickFolder(context, ref, currentFolder: prePopulated);
+    if (targetFolder == null || !mounted) return;
+
+    final repo = ref.read(notesRepositoryProvider);
+    await repo.createFolder(targetFolder);
+
+    final result = await FilePicker.platform.pickFiles(allowMultiple: true);
+    if (result == null || result.files.isEmpty) {
+      debugLogger.info('UPLOAD', 'File picker cancelled or empty selection');
+      return;
+    }
+    debugLogger.info(
+      'UPLOAD',
+      'Files selected',
+      'count=${result.files.length} folder=$targetFolder',
+    );
+
+    final service = ref.read(fileTransferServiceProvider);
+    for (final picked in result.files) {
+      final path = picked.path;
+      if (path == null) continue;
+      try {
+        await service.uploadFile(targetFolder, File(path));
+      } catch (e) {
+        debugLogger.error('UPLOAD', 'Error uploading ${picked.name}', e.toString());
+      }
+    }
   }
 
   Future<void> _createQuickNote(String folderPath) async {
