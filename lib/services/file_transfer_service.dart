@@ -17,23 +17,6 @@ class FileTransferService {
   final SpacetimeDbNotesRepository _repository;
   final Dio _dio = Dio();
 
-  String get _filesBaseUrl {
-    final host = _repository.host;
-    if (host == null || host.isEmpty) {
-      throw StateError('Not configured: no host set');
-    }
-    final bareHost = host.split(':').first;
-    return 'http://$bareHost:5051/files';
-  }
-
-  /// Percent-encodes each path segment individually, preserving the `/`
-  /// separators — `Uri.encodeComponent` on the whole string would encode
-  /// the slashes too.
-  String _remoteUrl(String remotePath) {
-    final encoded = remotePath.split('/').map(Uri.encodeComponent).join('/');
-    return '$_filesBaseUrl/$encoded';
-  }
-
   Future<bool> nameExists(String folderPath, String fileName) async {
     final existing = await listNames(folderPath);
     return existing.contains(fileName);
@@ -157,5 +140,22 @@ class FileTransferService {
       debugLogger.error('DOWNLOAD', 'Download failed (non-Dio): $remotePath', 'url=$url error=$e');
       rethrow;
     }
+  }
+
+  String get _filesBaseUrl {
+    final host = _repository.host;
+    if (host == null || host.isEmpty) {
+      throw StateError('Not configured: no host set');
+    }
+    final bareHost = host.split(':').first;
+    return 'http://$bareHost:5051/files';
+  }
+
+  /// Percent-encodes each path segment individually, preserving the `/`
+  /// separators — `Uri.encodeComponent` on the whole string would encode
+  /// the slashes too.
+  String _remoteUrl(String remotePath) {
+    final encoded = remotePath.split('/').map(Uri.encodeComponent).join('/');
+    return '$_filesBaseUrl/$encoded';
   }
 }

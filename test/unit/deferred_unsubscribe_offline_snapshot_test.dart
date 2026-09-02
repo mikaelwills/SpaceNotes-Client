@@ -166,7 +166,10 @@ class _JsonStringDecoder extends RowDecoder<String> {
   Map<String, dynamic>? toJson(String row) => {'id': row};
 
   @override
-  String? fromJson(Map<String, dynamic> json) => json['id'] as String?;
+  String? fromJson(Map<String, dynamic> json) {
+    final id = json['id'];
+    return id is String ? id : null;
+  }
 }
 
 class _AgentSubscriptionHarness {
@@ -197,6 +200,10 @@ class _AgentSubscriptionHarness {
     subscriptions.unsubscribe(querySetId);
   }
 
+  void dispose() {
+    subscriptions.subscriptionsReady.removeListener(_onReady);
+  }
+
   void _onReady() {
     if (!subscriptions.subscriptionsReady.value) return;
     if (deferredUnsubscribes.isEmpty) return;
@@ -205,10 +212,6 @@ class _AgentSubscriptionHarness {
     for (final id in ids) {
       subscriptions.unsubscribe(id);
     }
-  }
-
-  void dispose() {
-    subscriptions.subscriptionsReady.removeListener(_onReady);
   }
 }
 
@@ -264,7 +267,8 @@ void main() {
   }
 
   List<String> snapshotIds(List<Map<String, dynamic>>? rows) =>
-      (rows ?? const []).map((r) => r['id'] as String).toList()..sort();
+      (rows ?? const []).map((r) => r['id']).whereType<String>().toList()
+        ..sort();
 
   test('the deferred unsubscribe must not empty the offline message snapshot',
       () async {

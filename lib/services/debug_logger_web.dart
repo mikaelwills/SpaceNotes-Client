@@ -27,12 +27,6 @@ class PlatformLogStorage {
     _pruneOldSessions();
   }
 
-  void _pruneOldSessions() {
-    while (_sessions.length > _maxLogFiles) {
-      _sessions.removeAt(0);
-    }
-  }
-
   void writeLine(String line) {
     _currentSession?.lines.add(line);
     _charCount += line.length + 1;
@@ -86,6 +80,12 @@ class PlatformLogStorage {
   }
 
   bool get isAvailable => true;
+
+  void _pruneOldSessions() {
+    while (_sessions.length > _maxLogFiles) {
+      _sessions.removeAt(0);
+    }
+  }
 
   String _formatTimestamp(DateTime dt) {
     return '${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')}_'

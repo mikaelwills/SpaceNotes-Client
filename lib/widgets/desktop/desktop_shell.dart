@@ -45,10 +45,6 @@ class _DesktopShellState extends ConsumerState<DesktopShell> {
     });
   }
 
-  void _focusSearch() {
-    ref.read(searchFocusRequestProvider.notifier).state++;
-  }
-
   @override
   Widget build(BuildContext context) {
     return CallbackShortcuts(
@@ -125,6 +121,10 @@ class _DesktopShellState extends ConsumerState<DesktopShell> {
         ],
       ),
     );
+  }
+
+  void _focusSearch() {
+    ref.read(searchFocusRequestProvider.notifier).state++;
   }
 }
 

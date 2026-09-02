@@ -17,69 +17,25 @@ class UnsupportedFileScreen extends ConsumerStatefulWidget {
       _UnsupportedFileScreenState();
 }
 
-class _UnsupportedFileScreenState
-    extends ConsumerState<UnsupportedFileScreen> {
+class _UnsupportedFileScreenState extends ConsumerState<UnsupportedFileScreen> {
   bool _downloading = false;
   double _progress = 0;
   String? _error;
-
-  Future<void> _download(String remotePath) async {
-    setState(() {
-      _downloading = true;
-      _progress = 0;
-      _error = null;
-    });
-
-    final store = ref.read(localDownloadStoreProvider);
-    final service = ref.read(fileTransferServiceProvider);
-    final localPath = await store.localPathFor(remotePath);
-    final file = ref.read(fileByIdProvider(widget.fileId));
-    final expectedSize = file?.size.toInt() ?? 0;
-
-    try {
-      await service.downloadFile(
-        remotePath,
-        localPath,
-        expectedSize: expectedSize,
-        onProgress: (received, total) {
-          if (total > 0 && mounted) {
-            setState(() => _progress = received / total);
-          }
-        },
-      );
-      final verified =
-          await store.markCompleteIfVerified(remotePath, localPath, expectedSize);
-      debugLogger.info(
-        'DOWNLOAD',
-        verified ? 'Verified and marked complete' : 'Verification failed',
-        'path=$remotePath expectedSize=$expectedSize',
-      );
-    } catch (e) {
-      debugLogger.error('DOWNLOAD', 'Download UI error: $remotePath', e.toString());
-      if (mounted) setState(() => _error = 'Download failed: $e');
-    } finally {
-      if (mounted) setState(() => _downloading = false);
-      ref.invalidate(downloadStateProvider(remotePath));
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
     final file = ref.watch(fileByIdProvider(widget.fileId));
 
     if (file == null) {
-      return const Scaffold(
-        backgroundColor: SpaceNotesTheme.bg,
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Center(child: CircularProgressIndicator());
     }
 
     final remotePath = file.path;
     final downloadState = ref.watch(downloadStateProvider(remotePath));
 
-    return Scaffold(
-      backgroundColor: SpaceNotesTheme.bg,
-      body: SafeArea(
+    return ColoredBox(
+      color: SpaceNotesTheme.bg,
+      child: SafeArea(
         child: Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -130,8 +86,9 @@ class _UnsupportedFileScreenState
                           const SizedBox(height: 12),
                           OutlinedButton.icon(
                             onPressed: () async {
-                              final localPath =
-                                  await ref.read(localDownloadStoreProvider).localPathFor(remotePath);
+                              final localPath = await ref
+                                  .read(localDownloadStoreProvider)
+                                  .localPathFor(remotePath);
                               await SharePlus.instance.share(
                                 ShareParams(files: [XFile(localPath)]),
                               );
@@ -173,6 +130,47 @@ class _UnsupportedFileScreenState
         ),
       ),
     );
+  }
+
+  Future<void> _download(String remotePath) async {
+    setState(() {
+      _downloading = true;
+      _progress = 0;
+      _error = null;
+    });
+
+    final store = ref.read(localDownloadStoreProvider);
+    final service = ref.read(fileTransferServiceProvider);
+    final localPath = await store.localPathFor(remotePath);
+    final file = ref.read(fileByIdProvider(widget.fileId));
+    final expectedSize = file?.size.toInt() ?? 0;
+
+    try {
+      await service.downloadFile(
+        remotePath,
+        localPath,
+        expectedSize: expectedSize,
+        onProgress: (received, total) {
+          if (total > 0 && mounted) {
+            setState(() => _progress = received / total);
+          }
+        },
+      );
+      final verified = await store.markCompleteIfVerified(
+          remotePath, localPath, expectedSize);
+      debugLogger.info(
+        'DOWNLOAD',
+        verified ? 'Verified and marked complete' : 'Verification failed',
+        'path=$remotePath expectedSize=$expectedSize',
+      );
+    } catch (e) {
+      debugLogger.error(
+          'DOWNLOAD', 'Download UI error: $remotePath', e.toString());
+      if (mounted) setState(() => _error = 'Download failed: $e');
+    } finally {
+      if (mounted) setState(() => _downloading = false);
+      ref.invalidate(downloadStateProvider(remotePath));
+    }
   }
 }
 

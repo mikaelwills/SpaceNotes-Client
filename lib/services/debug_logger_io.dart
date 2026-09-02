@@ -56,26 +56,6 @@ class PlatformLogStorage {
     _rotateIfNeeded();
   }
 
-  void _drainPending() {
-    if (_pendingLines.isEmpty) return;
-    for (final line in _pendingLines) {
-      _sink?.writeln(line);
-    }
-    _pendingLines.clear();
-    _rotateIfNeeded();
-  }
-
-  Future<void> _guardedFlush() async {
-    if (_sink == null) return;
-    _flushInProgress = true;
-    try {
-      await _sink!.flush();
-    } finally {
-      _flushInProgress = false;
-      _drainPending();
-    }
-  }
-
   Future<void> flush() async {
     await _guardedFlush();
   }
@@ -116,32 +96,6 @@ class PlatformLogStorage {
           LogFileData(path: file.path, timestamp: timestamp, content: content));
     }
     return results;
-  }
-
-  Future<void> _pruneOldLogFiles() async {
-    if (_logDir == null || !await _logDir!.exists()) return;
-
-    final files = await _logDir!
-        .list()
-        .where((e) =>
-            e is File && e.path.contains('debug_') && e.path.endsWith('.log'))
-        .cast<File>()
-        .toList();
-
-    if (files.length <= _maxLogFiles) return;
-
-    files.sort((a, b) => a.path.compareTo(b.path));
-
-    final currentPath = _currentLogFile?.path;
-    final deletable = files.where((f) => f.path != currentPath).toList();
-    final keepCount = currentPath == null ? _maxLogFiles : _maxLogFiles - 1;
-    if (deletable.length <= keepCount) return;
-
-    for (final file in deletable.take(deletable.length - keepCount)) {
-      try {
-        await file.delete();
-      } catch (_) {}
-    }
   }
 
   Future<String?> getCurrentLogContent() async {
@@ -197,6 +151,52 @@ class PlatformLogStorage {
   }
 
   bool get isAvailable => true;
+
+  void _drainPending() {
+    if (_pendingLines.isEmpty) return;
+    for (final line in _pendingLines) {
+      _sink?.writeln(line);
+    }
+    _pendingLines.clear();
+    _rotateIfNeeded();
+  }
+
+  Future<void> _guardedFlush() async {
+    if (_sink == null) return;
+    _flushInProgress = true;
+    try {
+      await _sink!.flush();
+    } finally {
+      _flushInProgress = false;
+      _drainPending();
+    }
+  }
+
+  Future<void> _pruneOldLogFiles() async {
+    if (_logDir == null || !await _logDir!.exists()) return;
+
+    final files = await _logDir!
+        .list()
+        .where((e) =>
+            e is File && e.path.contains('debug_') && e.path.endsWith('.log'))
+        .cast<File>()
+        .toList();
+
+    if (files.length <= _maxLogFiles) return;
+
+    files.sort((a, b) => a.path.compareTo(b.path));
+
+    final currentPath = _currentLogFile?.path;
+    final deletable = files.where((f) => f.path != currentPath).toList();
+    final keepCount = currentPath == null ? _maxLogFiles : _maxLogFiles - 1;
+    if (deletable.length <= keepCount) return;
+
+    for (final file in deletable.take(deletable.length - keepCount)) {
+      try {
+        await file.delete();
+      } catch (_) {}
+    }
+  }
 
   String _formatTimestamp(DateTime dt) {
     return '${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')}_'

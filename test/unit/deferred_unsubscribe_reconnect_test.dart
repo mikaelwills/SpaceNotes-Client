@@ -190,6 +190,10 @@ class _AgentSubscriptionHarness {
     subscriptions.unsubscribe(querySetId);
   }
 
+  void dispose() {
+    subscriptions.subscriptionsReady.removeListener(_onReady);
+  }
+
   void _onReady() {
     if (!subscriptions.subscriptionsReady.value) return;
     if (deferredUnsubscribes.isEmpty) return;
@@ -198,10 +202,6 @@ class _AgentSubscriptionHarness {
     for (final id in ids) {
       subscriptions.unsubscribe(id);
     }
-  }
-
-  void dispose() {
-    subscriptions.subscriptionsReady.removeListener(_onReady);
   }
 }
 

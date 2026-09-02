@@ -15,14 +15,26 @@ class PlatformExitRecorder {
     record('launched');
   }
 
+  void record(String state) {
+    try {
+      _file?.writeAsStringSync(
+        jsonEncode({'state': state, 'ts': DateTime.now().toIso8601String()}),
+        flush: true,
+      );
+    } on Exception {
+      return;
+    }
+  }
+
   String _attributePreviousExit() {
     if (_file == null || !_file!.existsSync()) {
       return 'no sentinel - first launch';
     }
     try {
-      final m = jsonDecode(_file!.readAsStringSync()) as Map<String, dynamic>;
-      final state = m['state'];
-      final ts = m['ts'];
+      final decoded = jsonDecode(_file!.readAsStringSync());
+      if (decoded is! Map) return 'sentinel unreadable: not a json object';
+      final state = decoded['state'];
+      final ts = decoded['ts'];
       switch (state) {
         case 'detached':
           return 'USER KILL - terminate callback (detached) received, last seen $ts';
@@ -34,17 +46,6 @@ class PlatformExitRecorder {
       }
     } on Exception catch (e) {
       return 'sentinel unreadable: $e';
-    }
-  }
-
-  void record(String state) {
-    try {
-      _file?.writeAsStringSync(
-        jsonEncode({'state': state, 'ts': DateTime.now().toIso8601String()}),
-        flush: true,
-      );
-    } on Exception {
-      return;
     }
   }
 }

@@ -166,7 +166,10 @@ class _JsonStringDecoder extends RowDecoder<String> {
   Map<String, dynamic>? toJson(String row) => {'id': row};
 
   @override
-  String? fromJson(Map<String, dynamic> json) => json['id'] as String?;
+  String? fromJson(Map<String, dynamic> json) {
+    final id = json['id'];
+    return id is String ? id : null;
+  }
 }
 
 SubscriptionManager _manager(_FakeConnection connection) {

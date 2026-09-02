@@ -202,16 +202,6 @@ class SpacetimeDbNotesRepository {
     client.subscriptions.unsubscribe(querySetId);
   }
 
-  void _flushDeferredUnsubscribes(_ClientLane lane) {
-    final client = lane.client;
-    if (client == null || lane.deferredUnsubscribes.isEmpty) return;
-    final ids = lane.deferredUnsubscribes.toList();
-    lane.deferredUnsubscribes.clear();
-    for (final id in ids) {
-      client.subscriptions.unsubscribe(id);
-    }
-  }
-
   /// Subscribe the four chat tables for several agents in ONE query set,
   /// so they stay warm in the offline cache (used for the recently-touched
   /// agents at connect). Uses the same proven `= id` scoped query shape as
@@ -815,6 +805,131 @@ class SpacetimeDbNotesRepository {
     ]);
   }
 
+  /// Tear the connection down when the app is backgrounded. iOS/Android freeze
+  /// the isolate on pause, so any in-flight reconnect timer stops mid-flight
+  /// and the socket dies silently — leaving a zombie `Reconnecting` that the
+  /// resume path then has to wait out. Disconnecting proactively means resume
+  /// always starts from a clean `Disconnected`. Pending offline mutations live
+  /// in persisted offline storage and are untouched by [disconnect].
+  void pauseSpanClocks() {
+    for (final lane in _lanes) {
+      lane.hydrationSpan?.pause();
+    }
+  }
+
+  void resumeSpanClocks() {
+    for (final lane in _lanes) {
+      lane.hydrationSpan?.resume();
+    }
+  }
+
+  Future<void> handleAppPaused() async {
+    await Future.wait([for (final lane in _lanes) _handleAppPausedLane(lane)]);
+  }
+
+  /// Update configuration when connecting to a new instance
+  void updateConfiguration({
+    required String host,
+    String? database,
+    stdb.AuthTokenStore? authStorage,
+  }) {
+    debugLogger.info('REPO', 'updateConfiguration: host=$host, db=$database');
+
+    _host = host;
+    _database = database;
+    _authStorage = authStorage;
+
+    resetConnection();
+  }
+
+  /// Reset the repository connection (used when switching instances)
+  void resetConnection() {
+    debugLogger.connection('Resetting connection');
+
+    _hasEverConnected = false;
+    _initialConnectAttempted = false;
+
+    for (final lane in _lanes) {
+      _resetLane(lane);
+    }
+
+    _connectingFuture = null;
+    _generalNotesFolderEnsured = false;
+  }
+
+  /// The notes-domain client — files and folders.
+  SpacetimeDbClient? get notesClient => _notesLane.client;
+
+  /// The chat-domain client — agents, messages, calls and presence.
+  SpacetimeDbClient? get chatClient => _chatLane.client;
+
+  /// Get current configuration
+  String? get host => _host;
+  String? get database => _database;
+  stdb.AuthTokenStore? get authStorage => _authStorage;
+
+  /// Dispose resources
+  Future<void> dispose() async {
+    debugLogger.info('REPO', 'Disposing repository');
+    resetConnection();
+    _syncStateSubject.close();
+    for (final lane in _lanes) {
+      lane.clientNotifier.dispose();
+      await lane.offlineStorage?.dispose();
+      lane.offlineStorage = null;
+    }
+  }
+
+  @visibleForTesting
+  Future<void> migrateOfflineCachesForTest(String appDirPath) async {
+    await _adoptPreLaneCache(appDirPath);
+    await _sweepOrphanedCaches(appDirPath);
+  }
+
+  Future<void> initializeOfflineFirst() async {
+    if (_notesLane.client != null) return;
+    if (!await isConfigured()) {
+      debugLogger
+          .connection('initializeOfflineFirst: not configured, skipping');
+      return;
+    }
+    final storage = _authStorage ?? SharedPreferencesTokenStore();
+    for (final lane in _lanes) {
+      try {
+        lane.offlineStorage ??= await _createOfflineStorage(lane.storageSuffix);
+        await _createClient(lane, storage);
+      } catch (e, st) {
+        debugLogger.error(
+            'CONN', lane.tag('initializeOfflineFirst failed'), '$e\n$st');
+      }
+    }
+  }
+
+  /// Injects [storage] as the notes lane's cache. The chat lane gets its own
+  /// in-memory instance rather than sharing this one, mirroring production,
+  /// where the two lanes never share a cache.
+  @visibleForTesting
+  void debugSetOfflineStorage(OfflineStorage storage) {
+    _notesLane.offlineStorage = storage;
+    _chatLane.offlineStorage = InMemoryOfflineStorage();
+  }
+
+  @visibleForTesting
+  int get debugConnectAttempts => _notesLane.connectAttempts;
+
+  @visibleForTesting
+  bool get debugRetryScheduled => _notesLane.retryScheduled;
+
+  void _flushDeferredUnsubscribes(_ClientLane lane) {
+    final client = lane.client;
+    if (client == null || lane.deferredUnsubscribes.isEmpty) return;
+    final ids = lane.deferredUnsubscribes.toList();
+    lane.deferredUnsubscribes.clear();
+    for (final id in ids) {
+      client.subscriptions.unsubscribe(id);
+    }
+  }
+
   Future<void> _tryReconnectLane(
     _ClientLane lane, {
     bool resetAttempts = false,
@@ -913,28 +1028,6 @@ class SpacetimeDbNotesRepository {
     }
   }
 
-  /// Tear the connection down when the app is backgrounded. iOS/Android freeze
-  /// the isolate on pause, so any in-flight reconnect timer stops mid-flight
-  /// and the socket dies silently — leaving a zombie `Reconnecting` that the
-  /// resume path then has to wait out. Disconnecting proactively means resume
-  /// always starts from a clean `Disconnected`. Pending offline mutations live
-  /// in persisted offline storage and are untouched by [disconnect].
-  void pauseSpanClocks() {
-    for (final lane in _lanes) {
-      lane.hydrationSpan?.pause();
-    }
-  }
-
-  void resumeSpanClocks() {
-    for (final lane in _lanes) {
-      lane.hydrationSpan?.resume();
-    }
-  }
-
-  Future<void> handleAppPaused() async {
-    await Future.wait([for (final lane in _lanes) _handleAppPausedLane(lane)]);
-  }
-
   Future<void> _handleAppPausedLane(_ClientLane lane) async {
     final client = lane.client;
     if (client == null) return;
@@ -947,36 +1040,6 @@ class SpacetimeDbNotesRepository {
     } on SpacetimeDbException catch (e) {
       debugLogger.error('CONN', lane.tag('Error disconnecting on pause: $e'));
     }
-  }
-
-  /// Update configuration when connecting to a new instance
-  void updateConfiguration({
-    required String host,
-    String? database,
-    stdb.AuthTokenStore? authStorage,
-  }) {
-    debugLogger.info('REPO', 'updateConfiguration: host=$host, db=$database');
-
-    _host = host;
-    _database = database;
-    _authStorage = authStorage;
-
-    resetConnection();
-  }
-
-  /// Reset the repository connection (used when switching instances)
-  void resetConnection() {
-    debugLogger.connection('Resetting connection');
-
-    _hasEverConnected = false;
-    _initialConnectAttempted = false;
-
-    for (final lane in _lanes) {
-      _resetLane(lane);
-    }
-
-    _connectingFuture = null;
-    _generalNotesFolderEnsured = false;
   }
 
   /// Reset one lane. Deliberately does NOT null [_ClientLane.offlineStorage] —
@@ -1004,29 +1067,6 @@ class SpacetimeDbNotesRepository {
     }
 
     lane.nonTableListenersRegistered = false;
-  }
-
-  /// The notes-domain client — files and folders.
-  SpacetimeDbClient? get notesClient => _notesLane.client;
-
-  /// The chat-domain client — agents, messages, calls and presence.
-  SpacetimeDbClient? get chatClient => _chatLane.client;
-
-  /// Get current configuration
-  String? get host => _host;
-  String? get database => _database;
-  stdb.AuthTokenStore? get authStorage => _authStorage;
-
-  /// Dispose resources
-  Future<void> dispose() async {
-    debugLogger.info('REPO', 'Disposing repository');
-    resetConnection();
-    _syncStateSubject.close();
-    for (final lane in _lanes) {
-      lane.clientNotifier.dispose();
-      await lane.offlineStorage?.dispose();
-      lane.offlineStorage = null;
-    }
   }
 
   /// Watch OS-level network connectivity. When the device transitions from
@@ -1128,12 +1168,6 @@ class SpacetimeDbNotesRepository {
   /// basePath is the only thing keeping the two lanes' caches apart. Sharing a
   /// path would also mean two independent LockManagers over the same files.
   static const _laneCacheSuffixes = ['_notes', '_chat'];
-
-  @visibleForTesting
-  Future<void> migrateOfflineCachesForTest(String appDirPath) async {
-    await _adoptPreLaneCache(appDirPath);
-    await _sweepOrphanedCaches(appDirPath);
-  }
 
   /// Adopts the pre-lane single-client cache as the notes lane's cache, so the
   /// first launch after the split still paints from disk instead of refetching
@@ -1328,40 +1362,6 @@ class SpacetimeDbNotesRepository {
     await _connectClient(lane, client);
     return client;
   }
-
-  Future<void> initializeOfflineFirst() async {
-    if (_notesLane.client != null) return;
-    if (!await isConfigured()) {
-      debugLogger
-          .connection('initializeOfflineFirst: not configured, skipping');
-      return;
-    }
-    final storage = _authStorage ?? SharedPreferencesTokenStore();
-    for (final lane in _lanes) {
-      try {
-        lane.offlineStorage ??= await _createOfflineStorage(lane.storageSuffix);
-        await _createClient(lane, storage);
-      } catch (e, st) {
-        debugLogger.error(
-            'CONN', lane.tag('initializeOfflineFirst failed'), '$e\n$st');
-      }
-    }
-  }
-
-  /// Injects [storage] as the notes lane's cache. The chat lane gets its own
-  /// in-memory instance rather than sharing this one, mirroring production,
-  /// where the two lanes never share a cache.
-  @visibleForTesting
-  void debugSetOfflineStorage(OfflineStorage storage) {
-    _notesLane.offlineStorage = storage;
-    _chatLane.offlineStorage = InMemoryOfflineStorage();
-  }
-
-  @visibleForTesting
-  int get debugConnectAttempts => _notesLane.connectAttempts;
-
-  @visibleForTesting
-  bool get debugRetryScheduled => _notesLane.retryScheduled;
 
   Future<void> _connect() async {
     debugLogger.connection(

@@ -239,6 +239,104 @@ class QuillNoteEditorState extends State<QuillNoteEditor> {
     );
   }
 
+  Widget buildCollapsibleToolbar() {
+    return SizedBox(
+      height: 44,
+      child: Row(
+        children: [
+          IconButton(
+            onPressed: () =>
+                setState(() => _toolbarExpanded = !_toolbarExpanded),
+            icon: AnimatedRotation(
+              turns: _toolbarExpanded ? 0.5 : 0,
+              duration: const Duration(milliseconds: 200),
+              child: const Icon(
+                Icons.chevron_right,
+                color: SpaceNotesTheme.text,
+                size: 24,
+              ),
+            ),
+            tooltip: _toolbarExpanded ? 'Hide toolbar' : 'Show toolbar',
+          ),
+          Expanded(
+            child: ClipRect(
+              child: AnimatedSlide(
+                offset: Offset(_toolbarExpanded ? 0 : -1, 0),
+                duration: const Duration(milliseconds: 200),
+                curve: Curves.easeInOut,
+                child: AnimatedOpacity(
+                  opacity: _toolbarExpanded ? 1 : 0,
+                  duration: const Duration(milliseconds: 200),
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: QuillSimpleToolbar(
+                      controller: _controller,
+                      config: QuillSimpleToolbarConfig(
+                        showBoldButton: true,
+                        showItalicButton: true,
+                        showUnderLineButton: false,
+                        showStrikeThrough: true,
+                        showInlineCode: true,
+                        showCodeBlock: true,
+                        showListNumbers: true,
+                        showListBullets: true,
+                        showListCheck: true,
+                        showQuote: true,
+                        showLink: true,
+                        showHeaderStyle: true,
+                        showDividers: true,
+                        showFontFamily: false,
+                        showFontSize: false,
+                        showBackgroundColorButton: false,
+                        showColorButton: false,
+                        showClearFormat: false,
+                        showAlignmentButtons: false,
+                        showLeftAlignment: false,
+                        showCenterAlignment: false,
+                        showRightAlignment: false,
+                        showJustifyAlignment: false,
+                        showSearchButton: false,
+                        showSubscript: false,
+                        showSuperscript: false,
+                        showSmallButton: false,
+                        showIndent: false,
+                        showDirection: false,
+                        showUndo: false,
+                        showRedo: false,
+                        // ignore: experimental_member_use
+                        showClipboardCopy: false,
+                        // ignore: experimental_member_use
+                        showClipboardCut: false,
+                        // ignore: experimental_member_use
+                        showClipboardPaste: false,
+                        color: Colors.transparent,
+                        sectionDividerColor: SpaceNotesTheme.textSecondary
+                            .withValues(alpha: 0.2),
+                        customButtons: [
+                          QuillToolbarCustomButtonOptions(
+                            icon: Icon(
+                              _isRawMode ? Icons.visibility : Icons.code,
+                              size: 18,
+                              color: SpaceNotesTheme.text,
+                            ),
+                            tooltip: _isRawMode
+                                ? 'Show Preview'
+                                : 'Show Raw Markdown',
+                            onPressed: _toggleRawMode,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   DefaultStyles _buildStyles(BuildContext context) {
     final base = DefaultStyles.getInstance(context);
     final sourceLists = base.lists!;
@@ -378,104 +476,6 @@ class QuillNoteEditorState extends State<QuillNoteEditor> {
           VerticalSpacing(0, 0),
           null,
         ),
-      ),
-    );
-  }
-
-  Widget buildCollapsibleToolbar() {
-    return SizedBox(
-      height: 44,
-      child: Row(
-        children: [
-          IconButton(
-            onPressed: () =>
-                setState(() => _toolbarExpanded = !_toolbarExpanded),
-            icon: AnimatedRotation(
-              turns: _toolbarExpanded ? 0.5 : 0,
-              duration: const Duration(milliseconds: 200),
-              child: const Icon(
-                Icons.chevron_right,
-                color: SpaceNotesTheme.text,
-                size: 24,
-              ),
-            ),
-            tooltip: _toolbarExpanded ? 'Hide toolbar' : 'Show toolbar',
-          ),
-          Expanded(
-            child: ClipRect(
-              child: AnimatedSlide(
-                offset: Offset(_toolbarExpanded ? 0 : -1, 0),
-                duration: const Duration(milliseconds: 200),
-                curve: Curves.easeInOut,
-                child: AnimatedOpacity(
-                  opacity: _toolbarExpanded ? 1 : 0,
-                  duration: const Duration(milliseconds: 200),
-                  child: SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: QuillSimpleToolbar(
-                      controller: _controller,
-                      config: QuillSimpleToolbarConfig(
-                        showBoldButton: true,
-                        showItalicButton: true,
-                        showUnderLineButton: false,
-                        showStrikeThrough: true,
-                        showInlineCode: true,
-                        showCodeBlock: true,
-                        showListNumbers: true,
-                        showListBullets: true,
-                        showListCheck: true,
-                        showQuote: true,
-                        showLink: true,
-                        showHeaderStyle: true,
-                        showDividers: true,
-                        showFontFamily: false,
-                        showFontSize: false,
-                        showBackgroundColorButton: false,
-                        showColorButton: false,
-                        showClearFormat: false,
-                        showAlignmentButtons: false,
-                        showLeftAlignment: false,
-                        showCenterAlignment: false,
-                        showRightAlignment: false,
-                        showJustifyAlignment: false,
-                        showSearchButton: false,
-                        showSubscript: false,
-                        showSuperscript: false,
-                        showSmallButton: false,
-                        showIndent: false,
-                        showDirection: false,
-                        showUndo: false,
-                        showRedo: false,
-                        // ignore: experimental_member_use
-                        showClipboardCopy: false,
-                        // ignore: experimental_member_use
-                        showClipboardCut: false,
-                        // ignore: experimental_member_use
-                        showClipboardPaste: false,
-                        color: Colors.transparent,
-                        sectionDividerColor: SpaceNotesTheme.textSecondary
-                            .withValues(alpha: 0.2),
-                        customButtons: [
-                          QuillToolbarCustomButtonOptions(
-                            icon: Icon(
-                              _isRawMode ? Icons.visibility : Icons.code,
-                              size: 18,
-                              color: SpaceNotesTheme.text,
-                            ),
-                            tooltip: _isRawMode
-                                ? 'Show Preview'
-                                : 'Show Raw Markdown',
-                            onPressed: _toggleRawMode,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }

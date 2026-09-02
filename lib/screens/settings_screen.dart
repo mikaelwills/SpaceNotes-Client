@@ -236,56 +236,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
-  Future<void> _importCredentialKey() async {
-    final picked = await FilePicker.platform.pickFiles(withData: true);
-    final file = picked?.files.singleOrNull;
-    if (file == null) return;
-
-    final bytes = file.bytes;
-    if (bytes == null) {
-      _showKeyMessage('Could not read that file.');
-      return;
-    }
-
-    try {
-      await _keyStore.store(bytes);
-    } catch (e) {
-      _showKeyMessage('Could not store the key: $e');
-      return;
-    } finally {
-      // The picker hands back a copy in our own temp directory. Remove it so
-      // the key exists only in the keystore. The file the user chose is
-      // theirs to delete.
-      final tempPath = file.path;
-      if (tempPath != null) {
-        try {
-          await File(tempPath).delete();
-        } catch (_) {}
-      }
-    }
-
-    await _loadCredentialKeyState();
-    _showKeyMessage('Key imported.');
-  }
-
-  Future<void> _removeCredentialKey() async {
-    await _keyStore.delete();
-    await _loadCredentialKeyState();
-    _showKeyMessage('Key removed from this device.');
-  }
-
-  Future<void> _loadCredentialKeyState() async {
-    final has = await _keyStore.hasKey();
-    if (!mounted) return;
-    setState(() => _hasCredentialKey = has);
-  }
-
-  void _showKeyMessage(String message) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(message)));
-  }
-
   Widget _buildDownloadedFilesSection() {
     return _Section(
       label: 'downloaded files',
@@ -378,6 +328,56 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     color: SpaceNotesTheme.muted,
     height: 1.55,
   );
+
+  Future<void> _importCredentialKey() async {
+    final picked = await FilePicker.platform.pickFiles(withData: true);
+    final file = picked?.files.singleOrNull;
+    if (file == null) return;
+
+    final bytes = file.bytes;
+    if (bytes == null) {
+      _showKeyMessage('Could not read that file.');
+      return;
+    }
+
+    try {
+      await _keyStore.store(bytes);
+    } catch (e) {
+      _showKeyMessage('Could not store the key: $e');
+      return;
+    } finally {
+      // The picker hands back a copy in our own temp directory. Remove it so
+      // the key exists only in the keystore. The file the user chose is
+      // theirs to delete.
+      final tempPath = file.path;
+      if (tempPath != null) {
+        try {
+          await File(tempPath).delete();
+        } catch (_) {}
+      }
+    }
+
+    await _loadCredentialKeyState();
+    _showKeyMessage('Key imported.');
+  }
+
+  Future<void> _removeCredentialKey() async {
+    await _keyStore.delete();
+    await _loadCredentialKeyState();
+    _showKeyMessage('Key removed from this device.');
+  }
+
+  Future<void> _loadCredentialKeyState() async {
+    final has = await _keyStore.hasKey();
+    if (!mounted) return;
+    setState(() => _hasCredentialKey = has);
+  }
+
+  void _showKeyMessage(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
+  }
 
   Future<void> _loadLogFileCount() async {
     final files = await debugLogger.getLogFiles();

@@ -238,9 +238,7 @@ class _FileScreen extends ConsumerWidget {
     final file = ref.watch(fileByIdProvider(fileId));
 
     if (file == null) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Center(child: CircularProgressIndicator());
     }
 
     return FileTypeRegistry.forFile(file).buildScreen(fileId);

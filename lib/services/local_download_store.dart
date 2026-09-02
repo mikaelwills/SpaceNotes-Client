@@ -9,28 +9,6 @@ enum DownloadState { notDownloaded, partial, complete }
 class LocalDownloadStore {
   Database? _db;
 
-  Future<Database> _database() async {
-    if (_db != null) return _db!;
-    final dir = await getApplicationSupportDirectory();
-    final dbPath = p.join(dir.path, 'spacenotes_downloads.db');
-    _db = await openDatabase(
-      dbPath,
-      version: 1,
-      onCreate: (db, version) async {
-        await db.execute('''
-          CREATE TABLE downloads (
-            path TEXT PRIMARY KEY,
-            local_path TEXT NOT NULL,
-            size INTEGER NOT NULL,
-            hash TEXT,
-            state TEXT NOT NULL
-          )
-        ''');
-      },
-    );
-    return _db!;
-  }
-
   Future<DownloadState> stateFor(String remotePath) async {
     final db = await _database();
     final rows = await db.query(
@@ -42,14 +20,17 @@ class LocalDownloadStore {
     if (rows.isEmpty) return DownloadState.notDownloaded;
 
     final row = rows.first;
-    final localPath = row['local_path'] as String;
+    final localPath = row['local_path'];
+    if (localPath is! String) return DownloadState.notDownloaded;
     final file = File(localPath);
     if (!await file.exists()) {
       await db.delete('downloads', where: 'path = ?', whereArgs: [remotePath]);
       return DownloadState.notDownloaded;
     }
 
-    return DownloadState.values.byName(row['state'] as String);
+    final state = row['state'];
+    if (state is! String) return DownloadState.notDownloaded;
+    return DownloadState.values.byName(state);
   }
 
   Future<String> localPathFor(String remotePath) async {
@@ -114,8 +95,11 @@ class LocalDownloadStore {
       limit: 1,
     );
     if (rows.isNotEmpty) {
-      final file = File(rows.first['local_path'] as String);
-      if (await file.exists()) await file.delete();
+      final localPath = rows.first['local_path'];
+      if (localPath is String) {
+        final file = File(localPath);
+        if (await file.exists()) await file.delete();
+      }
     }
     await db.delete('downloads', where: 'path = ?', whereArgs: [remotePath]);
   }
@@ -130,7 +114,8 @@ class LocalDownloadStore {
     );
     var total = 0;
     for (final row in rows) {
-      total += row['size'] as int;
+      final size = row['size'];
+      if (size is int) total += size;
     }
     return total;
   }
@@ -152,9 +137,33 @@ class LocalDownloadStore {
     final db = await _database();
     final rows = await db.query('downloads');
     for (final row in rows) {
-      final file = File(row['local_path'] as String);
+      final localPath = row['local_path'];
+      if (localPath is! String) continue;
+      final file = File(localPath);
       if (await file.exists()) await file.delete();
     }
     await db.delete('downloads');
+  }
+
+  Future<Database> _database() async {
+    if (_db != null) return _db!;
+    final dir = await getApplicationSupportDirectory();
+    final dbPath = p.join(dir.path, 'spacenotes_downloads.db');
+    _db = await openDatabase(
+      dbPath,
+      version: 1,
+      onCreate: (db, version) async {
+        await db.execute('''
+          CREATE TABLE downloads (
+            path TEXT PRIMARY KEY,
+            local_path TEXT NOT NULL,
+            size INTEGER NOT NULL,
+            hash TEXT,
+            state TEXT NOT NULL
+          )
+        ''');
+      },
+    );
+    return _db!;
   }
 }

@@ -29,30 +29,6 @@ class _AgentChatScreenState extends ConsumerState<AgentChatScreen> {
     debugLogger.chat('agent screen open', 'agent=${widget.agentId}');
   }
 
-  void _traceFirstPaint({
-    required int itemCount,
-    required bool showingSpinner,
-  }) {
-    if (showingSpinner && !_loggedSpinner) {
-      _loggedSpinner = true;
-      debugLogger.chatError(
-        'agent screen SPINNER',
-        'agent=${widget.agentId} +${_sinceOpen.elapsedMilliseconds}ms — '
-            'timeline empty while connected and not yet hydrated, so the '
-            'offline cache did not populate this agent before first paint',
-      );
-    }
-    if (itemCount > 0 && !_loggedFirstItems) {
-      _loggedFirstItems = true;
-      debugLogger.chat(
-        'agent screen first items',
-        'agent=${widget.agentId} items=$itemCount '
-            '+${_sinceOpen.elapsedMilliseconds}ms '
-            'sawSpinner=$_loggedSpinner',
-      );
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final agentId = widget.agentId;
@@ -94,5 +70,29 @@ class _AgentChatScreenState extends ConsumerState<AgentChatScreen> {
         ),
       ],
     );
+  }
+
+  void _traceFirstPaint({
+    required int itemCount,
+    required bool showingSpinner,
+  }) {
+    if (showingSpinner && !_loggedSpinner) {
+      _loggedSpinner = true;
+      debugLogger.chatError(
+        'agent screen SPINNER',
+        'agent=${widget.agentId} +${_sinceOpen.elapsedMilliseconds}ms — '
+            'timeline empty while connected and not yet hydrated, so the '
+            'offline cache did not populate this agent before first paint',
+      );
+    }
+    if (itemCount > 0 && !_loggedFirstItems) {
+      _loggedFirstItems = true;
+      debugLogger.chat(
+        'agent screen first items',
+        'agent=${widget.agentId} items=$itemCount '
+            '+${_sinceOpen.elapsedMilliseconds}ms '
+            'sawSpinner=$_loggedSpinner',
+      );
+    }
   }
 }

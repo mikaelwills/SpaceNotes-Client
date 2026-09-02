@@ -276,16 +276,6 @@ class _ChatIndex {
   _AgentBucket bucketFor(String agentId) =>
       _buckets.putIfAbsent(agentId, _AgentBucket.new);
 
-  void _requestRebuild() {
-    if (_rebuildScheduled) return;
-    _rebuildScheduled = true;
-    scheduleMicrotask(() {
-      _rebuildScheduled = false;
-      if (_disposed) return;
-      _rebuild();
-    });
-  }
-
   void dispose() {
     _disposed = true;
     client.message.rows.removeListener(_scheduleRebuild);
@@ -296,6 +286,16 @@ class _ChatIndex {
       b.dispose();
     }
     _buckets.clear();
+  }
+
+  void _requestRebuild() {
+    if (_rebuildScheduled) return;
+    _rebuildScheduled = true;
+    scheduleMicrotask(() {
+      _rebuildScheduled = false;
+      if (_disposed) return;
+      _rebuild();
+    });
   }
 
   void _rebuild() {

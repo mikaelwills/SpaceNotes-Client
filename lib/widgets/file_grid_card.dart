@@ -29,8 +29,6 @@ class FileGridCard extends ConsumerWidget {
   final VoidCallback onTap;
   final VoidCallback? onLongPress;
 
-  bool get _isImage => FileTypeRegistry.forFile(file).icon == Icons.image_outlined;
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return GestureDetector(
@@ -54,6 +52,8 @@ class FileGridCard extends ConsumerWidget {
       ),
     );
   }
+
+  bool get _isImage => FileTypeRegistry.forFile(file).icon == Icons.image_outlined;
 }
 
 class _ImageCardBody extends ConsumerWidget {

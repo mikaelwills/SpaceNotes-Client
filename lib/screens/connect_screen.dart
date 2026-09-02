@@ -30,108 +30,110 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: SpaceNotesTheme.bg,
-      body: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 420),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const SnMicroLabel('mcp · connect'),
-                const SizedBox(height: 14),
-                RichText(
-                  text: const TextSpan(
+    return ColoredBox(
+      color: SpaceNotesTheme.bg,
+      child: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 420),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const SnMicroLabel('mcp · connect'),
+                  const SizedBox(height: 14),
+                  RichText(
+                    text: const TextSpan(
+                      style: TextStyle(
+                        fontFamily: SpaceNotesTheme.fontSans,
+                        fontSize: 32,
+                        fontWeight: FontWeight.w500,
+                        color: SpaceNotesTheme.fg,
+                        letterSpacing: -0.8,
+                        height: 1.0,
+                      ),
+                      children: [
+                        TextSpan(text: 'Connect'),
+                        TextSpan(
+                          text: '.',
+                          style: TextStyle(color: SpaceNotesTheme.accent),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  const Text(
+                    'Enter the server IP running SpaceNotes.',
                     style: TextStyle(
                       fontFamily: SpaceNotesTheme.fontSans,
-                      fontSize: 32,
-                      fontWeight: FontWeight.w500,
-                      color: SpaceNotesTheme.fg,
-                      letterSpacing: -0.8,
-                      height: 1.0,
-                    ),
-                    children: [
-                      TextSpan(text: 'Connect'),
-                      TextSpan(
-                        text: '.',
-                        style: TextStyle(color: SpaceNotesTheme.accent),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 10),
-                const Text(
-                  'Enter the server IP running SpaceNotes.',
-                  style: TextStyle(
-                    fontFamily: SpaceNotesTheme.fontSans,
-                    fontSize: 14,
-                    color: SpaceNotesTheme.muted,
-                    height: 1.55,
-                  ),
-                ),
-                const SizedBox(height: 28),
-                SnField(
-                  controller: _ipController,
-                  focusNode: _focusNode,
-                  hint: 'ip address',
-                  onSubmitted: (_) => _connect(),
-                ),
-                if (_errorMessage != null) ...[
-                  const SizedBox(height: 14),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 10),
-                    decoration: BoxDecoration(
-                      border: Border.all(
-                        color: SpaceNotesTheme.offline.withValues(alpha: 0.4),
-                        width: 1,
-                      ),
-                    ),
-                    child: Text(
-                      _errorMessage!,
-                      style: const TextStyle(
-                        fontFamily: SpaceNotesTheme.fontMono,
-                        fontSize: 11,
-                        color: SpaceNotesTheme.offline,
-                        letterSpacing: 0.3,
-                        height: 1.4,
-                      ),
+                      fontSize: 14,
+                      color: SpaceNotesTheme.muted,
+                      height: 1.55,
                     ),
                   ),
-                ],
-                const SizedBox(height: 18),
-                _isConnecting
-                    ? _spinnerTile()
-                    : GestureDetector(
-                        onTap: _connect,
-                        behavior: HitTestBehavior.opaque,
-                        child: Container(
-                          height: 44,
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                            border: Border.all(
-                              color: SpaceNotesTheme.hairlineStrong,
-                              width: 1,
+                  const SizedBox(height: 28),
+                  SnField(
+                    controller: _ipController,
+                    focusNode: _focusNode,
+                    hint: 'ip address',
+                    onSubmitted: (_) => _connect(),
+                  ),
+                  if (_errorMessage != null) ...[
+                    const SizedBox(height: 14),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 10),
+                      decoration: BoxDecoration(
+                        border: Border.all(
+                          color: SpaceNotesTheme.offline.withValues(alpha: 0.4),
+                          width: 1,
+                        ),
+                      ),
+                      child: Text(
+                        _errorMessage!,
+                        style: const TextStyle(
+                          fontFamily: SpaceNotesTheme.fontMono,
+                          fontSize: 11,
+                          color: SpaceNotesTheme.offline,
+                          letterSpacing: 0.3,
+                          height: 1.4,
+                        ),
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 18),
+                  _isConnecting
+                      ? _spinnerTile()
+                      : GestureDetector(
+                          onTap: _connect,
+                          behavior: HitTestBehavior.opaque,
+                          child: Container(
+                            height: 44,
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                              border: Border.all(
+                                color: SpaceNotesTheme.hairlineStrong,
+                                width: 1,
+                              ),
+                              borderRadius: BorderRadius.circular(
+                                  SpaceNotesTheme.radiusXs),
                             ),
-                            borderRadius:
-                                BorderRadius.circular(SpaceNotesTheme.radiusXs),
-                          ),
-                          child: const Text(
-                            'CONNECT',
-                            style: TextStyle(
-                              fontFamily: SpaceNotesTheme.fontMono,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                              letterSpacing: 1,
-                              color: SpaceNotesTheme.fg,
+                            child: const Text(
+                              'CONNECT',
+                              style: TextStyle(
+                                fontFamily: SpaceNotesTheme.fontMono,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                letterSpacing: 1,
+                                color: SpaceNotesTheme.fg,
+                              ),
                             ),
                           ),
                         ),
-                      ),
-              ],
+                ],
+              ),
             ),
           ),
         ),

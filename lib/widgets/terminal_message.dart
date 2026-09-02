@@ -460,21 +460,6 @@ class _QuestionRowState extends ConsumerState<QuestionRow> {
 
   final Set<String> _selected = {};
 
-  List<String> get _options {
-    try {
-      final decoded = jsonDecode(widget.request.options);
-      if (decoded is List) {
-        return decoded.whereType<String>().toList();
-      }
-    } catch (_) {}
-    return const [];
-  }
-
-  void _submit(List<String> labels) {
-    if (labels.isEmpty) return;
-    respondToQuestion(ref, requestId: widget.request.id, labels: labels);
-  }
-
   @override
   Widget build(BuildContext context) {
     final multi = widget.request.multiSelect;
@@ -587,6 +572,21 @@ class _QuestionRowState extends ConsumerState<QuestionRow> {
         ),
       ),
     );
+  }
+
+  List<String> get _options {
+    try {
+      final decoded = jsonDecode(widget.request.options);
+      if (decoded is List) {
+        return decoded.whereType<String>().toList();
+      }
+    } catch (_) {}
+    return const [];
+  }
+
+  void _submit(List<String> labels) {
+    if (labels.isEmpty) return;
+    respondToQuestion(ref, requestId: widget.request.id, labels: labels);
   }
 }
 

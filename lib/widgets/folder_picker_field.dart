@@ -69,23 +69,6 @@ class _UploadTargetDialogState extends ConsumerState<_UploadTargetDialog> {
     super.dispose();
   }
 
-  void _finishPicker(FileType source) {
-    if (_query.trim().isEmpty) return;
-    Navigator.of(context).pop(UploadTarget(
-      folder: _query.trim(),
-      kind: UploadSourceKind.picker,
-      source: source,
-    ));
-  }
-
-  void _finishFolder() {
-    if (_query.trim().isEmpty) return;
-    Navigator.of(context).pop(UploadTarget(
-      folder: _query.trim(),
-      kind: UploadSourceKind.folder,
-    ));
-  }
-
   @override
   Widget build(BuildContext context) {
     final folders = ref.watch(foldersListProvider);
@@ -159,6 +142,23 @@ class _UploadTargetDialogState extends ConsumerState<_UploadTargetDialog> {
         ],
       ),
     );
+  }
+
+  void _finishPicker(FileType source) {
+    if (_query.trim().isEmpty) return;
+    Navigator.of(context).pop(UploadTarget(
+      folder: _query.trim(),
+      kind: UploadSourceKind.picker,
+      source: source,
+    ));
+  }
+
+  void _finishFolder() {
+    if (_query.trim().isEmpty) return;
+    Navigator.of(context).pop(UploadTarget(
+      folder: _query.trim(),
+      kind: UploadSourceKind.folder,
+    ));
   }
 }
 

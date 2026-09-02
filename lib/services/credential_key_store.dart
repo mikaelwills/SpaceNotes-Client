@@ -35,36 +35,10 @@ class CredentialKeyStore {
 
   final FlutterSecureStorage _storage;
 
-  /// Access control must be set explicitly. With an empty flag list the plugin
-  /// falls back to a plain keychain item and there is NO biometric gate.
-  ///
-  /// `biometryCurrentSet` invalidates the key when biometric enrolment changes,
-  /// so an attacker who knows the passcode cannot enrol their own finger and
-  /// read it. On macOS `devicePasscode` is OR'd in because not every Mac has
-  /// Touch ID.
-  static List<AccessControlFlag> get _accessControl => Platform.isMacOS
-      ? const [
-          AccessControlFlag.biometryCurrentSet,
-          AccessControlFlag.or,
-          AccessControlFlag.devicePasscode,
-        ]
-      : const [AccessControlFlag.biometryCurrentSet];
-
   /// `passcode` is the only accessibility class excluded from backups, which
   /// is what keeps the key from riding an iCloud restore onto another device.
   /// Turning off the device passcode deletes every item stored under it.
   static const _accessibility = KeychainAccessibility.passcode;
-
-  IOSOptions get _iosOptions => IOSOptions(
-        accessibility: _accessibility,
-        accessControlFlags: _accessControl,
-      );
-
-  MacOsOptions get _macOptions => _FixedMacOsOptions(
-        accessibility: _accessibility,
-        accessControlFlags: _accessControl,
-        groupId: 'com.spacenotes.client',
-      );
 
   Future<bool> hasKey() async => _storage.containsKey(
         key: _keyName,
@@ -100,5 +74,31 @@ class CredentialKeyStore {
         key: _keyName,
         iOptions: _iosOptions,
         mOptions: _macOptions,
+      );
+
+  /// Access control must be set explicitly. With an empty flag list the plugin
+  /// falls back to a plain keychain item and there is NO biometric gate.
+  ///
+  /// `biometryCurrentSet` invalidates the key when biometric enrolment changes,
+  /// so an attacker who knows the passcode cannot enrol their own finger and
+  /// read it. On macOS `devicePasscode` is OR'd in because not every Mac has
+  /// Touch ID.
+  static List<AccessControlFlag> get _accessControl => Platform.isMacOS
+      ? const [
+          AccessControlFlag.biometryCurrentSet,
+          AccessControlFlag.or,
+          AccessControlFlag.devicePasscode,
+        ]
+      : const [AccessControlFlag.biometryCurrentSet];
+
+  IOSOptions get _iosOptions => IOSOptions(
+        accessibility: _accessibility,
+        accessControlFlags: _accessControl,
+      );
+
+  MacOsOptions get _macOptions => _FixedMacOsOptions(
+        accessibility: _accessibility,
+        accessControlFlags: _accessControl,
+        groupId: 'com.spacenotes.client',
       );
 }
