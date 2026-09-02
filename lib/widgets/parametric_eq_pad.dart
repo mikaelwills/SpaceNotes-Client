@@ -63,8 +63,8 @@ class ParametricEqPad extends StatelessWidget {
           final size = Size(constraints.maxWidth, constraints.maxHeight);
           return GestureDetector(
             behavior: HitTestBehavior.opaque,
-            onPanStart: (details) => _handleDrag(details.localPosition, size),
-            onPanUpdate: (details) => _handleDrag(details.localPosition, size),
+            onPanStart: (details) => _handlePanStart(details.localPosition, size),
+            onPanUpdate: (details) => _handlePanUpdate(details.delta, size),
             onDoubleTapDown: (details) =>
                 _handleDoubleTap(details.localPosition, size),
             child: Container(
@@ -124,14 +124,30 @@ class ParametricEqPad extends StatelessWidget {
     );
   }
 
-  void _handleDrag(Offset localPosition, Size size) {
+  void _handlePanStart(Offset localPosition, Size size) {
     if (size.width <= 0 || size.height <= 0) return;
+    if (notch != null) return;
     final clamped = Offset(
       localPosition.dx.clamp(0.0, size.width),
       localPosition.dy.clamp(0.0, size.height),
     );
     final frequency = ParametricEqPad.frequencyForX(clamped.dx, size.width);
     final gain = ParametricEqPad.gainForY(clamped.dy, size.height);
+    onNotchChanged(EqNotch(frequencyHz: frequency, gainDb: gain));
+  }
+
+  void _handlePanUpdate(Offset delta, Size size) {
+    if (size.width <= 0 || size.height <= 0) return;
+    final currentNotch = notch;
+    if (currentNotch == null) return;
+
+    final currentX = ParametricEqPad.xForFrequency(currentNotch.frequencyHz, size.width);
+    final currentY = ParametricEqPad.yForGain(currentNotch.gainDb, size.height);
+    final movedX = (currentX + delta.dx).clamp(0.0, size.width);
+    final movedY = (currentY + delta.dy).clamp(0.0, size.height);
+
+    final frequency = ParametricEqPad.frequencyForX(movedX, size.width);
+    final gain = ParametricEqPad.gainForY(movedY, size.height);
     onNotchChanged(EqNotch(frequencyHz: frequency, gainDb: gain));
   }
 
