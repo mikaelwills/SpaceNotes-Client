@@ -167,7 +167,7 @@ class _EqCurvePainter extends CustomPainter {
     } else {
       final notchX = ParametricEqPad.xForFrequency(notch!.frequencyHz, size.width);
       final notchY = ParametricEqPad.yForGain(notch!.gainDb, size.height);
-      const spread = 22.0;
+      const spread = 10.0;
 
       for (double x = 0; x <= size.width; x += 2) {
         final distance = (x - notchX).abs();

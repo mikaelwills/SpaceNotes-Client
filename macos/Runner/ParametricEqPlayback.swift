@@ -11,7 +11,7 @@ final class ParametricEqPlayback {
     init() {
         eq.bands[0].filterType = .parametric
         eq.bands[0].bypass = true
-        eq.bands[0].bandwidth = 0.3
+        eq.bands[0].bandwidth = 0.1
 
         engine.attach(playerNode)
         engine.attach(eq)
