@@ -3,6 +3,14 @@ import 'package:dio/dio.dart';
 import '../repositories/spacetimedb_notes_repository.dart';
 import 'debug_logger.dart';
 
+class FileAlreadyExistsException implements Exception {
+  FileAlreadyExistsException(this.fileName);
+  final String fileName;
+
+  @override
+  String toString() => 'FileAlreadyExistsException: $fileName already exists';
+}
+
 class FileTransferService {
   FileTransferService(this._repository);
 
@@ -26,21 +34,9 @@ class FileTransferService {
     return '$_filesBaseUrl/$encoded';
   }
 
-  Future<String> resolveUploadName(String folderPath, String fileName) async {
+  Future<bool> nameExists(String folderPath, String fileName) async {
     final existing = await listNames(folderPath);
-    if (!existing.contains(fileName)) return fileName;
-
-    final dot = fileName.lastIndexOf('.');
-    final base = dot > 0 ? fileName.substring(0, dot) : fileName;
-    final ext = dot > 0 ? fileName.substring(dot) : '';
-
-    var attempt = 1;
-    String candidate;
-    do {
-      candidate = '$base-$attempt$ext';
-      attempt++;
-    } while (existing.contains(candidate));
-    return candidate;
+    return existing.contains(fileName);
   }
 
   Future<Set<String>> listNames(String folderPath) async {
@@ -66,18 +62,15 @@ class FileTransferService {
       'file=$originalName folder=$folderPath size=$size',
     );
 
-    try {
-      final targetName = await resolveUploadName(folderPath, originalName);
-      final remotePath =
-          folderPath.isEmpty ? targetName : '$folderPath/$targetName';
-      if (targetName != originalName) {
-        debugLogger.info(
-          'UPLOAD',
-          'Name collision, renamed',
-          '$originalName -> $targetName',
-        );
-      }
+    if (await nameExists(folderPath, originalName)) {
+      debugLogger.info('UPLOAD', 'Skipped, already exists', originalName);
+      throw FileAlreadyExistsException(originalName);
+    }
 
+    final remotePath =
+        folderPath.isEmpty ? originalName : '$folderPath/$originalName';
+
+    try {
       final url = _remoteUrl(remotePath);
       debugLogger.info('UPLOAD', 'PUT request', 'url=$url');
       final response = await _dio.put(

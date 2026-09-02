@@ -14,8 +14,11 @@ import '../../generated/space_file.dart';
 import '../../providers/notes_providers.dart';
 import '../../providers/connection_providers.dart';
 import '../../providers/file_transfer_providers.dart';
+import '../../providers/upload_progress_providers.dart';
 import '../folder_picker_field.dart';
 import '../../services/debug_logger.dart';
+import '../../services/file_transfer_service.dart';
+import '../upload_progress_bar.dart';
 import '../../theme/spacenotes_theme.dart';
 import '../../version.dart';
 import '../primitives/primitives.dart';
@@ -89,6 +92,7 @@ class Sidebar extends ConsumerWidget {
           if (!isCollapsed) ...[
             Expanded(child: _FolderTree()),
             const _SidebarSearch(),
+            const UploadProgressBar(),
             const _SidebarFooter(),
           ] else
             Expanded(child: _CollapsedSidebar()),
@@ -997,7 +1001,8 @@ class _NoteTreeItem extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final displayName = FileTypeRegistry.forFile(note).displayName(note);
+    final handler = FileTypeRegistry.forFile(note);
+    final displayName = handler.displayName(note);
 
     return BlocBuilder<DesktopNotesBloc, DesktopNotesState>(
       buildWhen: (prev, curr) => prev.activeNoteId != curr.activeNoteId,
@@ -1023,8 +1028,7 @@ class _NoteTreeItem extends ConsumerWidget {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.description_outlined,
-                      size: 14, color: SpaceNotesTheme.primary),
+                  Icon(handler.icon, size: 14, color: SpaceNotesTheme.primary),
                   const SizedBox(width: 6),
                   Text(
                     displayName,
@@ -1054,6 +1058,7 @@ class _NoteTreeItem extends ConsumerWidget {
       isExpanded: false,
       isFolder: false,
       isOpen: isOpen,
+      icon: FileTypeRegistry.forFile(note).icon,
       onTap: () {
         _openNoteInDesktop(context, note.id);
       },
@@ -1157,6 +1162,7 @@ class _TreeItemRow extends StatefulWidget {
   final bool isDragOver;
   final bool isOpen;
   final int? count;
+  final IconData? icon;
   final VoidCallback onTap;
   final VoidCallback? onAddNote;
   final VoidCallback? onDelete;
@@ -1173,6 +1179,7 @@ class _TreeItemRow extends StatefulWidget {
     this.isDragOver = false,
     this.isOpen = false,
     this.count,
+    this.icon,
     this.onAddNote,
     this.onDelete,
     this.contextMenuItems,
@@ -1246,7 +1253,7 @@ class _TreeItemRowState extends State<_TreeItemRow> {
                           Icon(
                             widget.isFolder
                                 ? Icons.folder_outlined
-                                : Icons.description_outlined,
+                                : (widget.icon ?? Icons.description_outlined),
                             size: 14,
                             color: widget.isFolder
                                 ? SpaceNotesTheme.accent
@@ -1563,17 +1570,27 @@ class _SidebarFooter extends ConsumerWidget {
   }
 
   Future<void> _uploadFiles(BuildContext context, WidgetRef ref) async {
-    final target =
-        await pickUploadTarget(context, ref, currentFolder: 'All Notes');
+    final target = await pickUploadTarget(
+      context,
+      ref,
+      currentFolder: 'All Notes',
+      showFolderOption: true,
+    );
     if (target == null || !context.mounted) return;
 
     final repo = ref.read(notesRepositoryProvider);
     await repo.createFolder(target.folder);
+    if (!context.mounted) return;
     final targetFolder = target.folder;
+
+    if (target.kind == UploadSourceKind.folder) {
+      await _uploadFolder(context, ref, targetFolder);
+      return;
+    }
 
     final result = await FilePicker.platform.pickFiles(
       allowMultiple: true,
-      type: target.source,
+      type: target.source!,
     );
     if (result == null || result.files.isEmpty) {
       debugLogger.info('UPLOAD', 'File picker cancelled or empty selection');
@@ -1585,16 +1602,240 @@ class _SidebarFooter extends ConsumerWidget {
       'count=${result.files.length} folder=$targetFolder',
     );
 
+    if (!context.mounted) return;
     final service = ref.read(fileTransferServiceProvider);
-    for (final picked in result.files) {
-      final path = picked.path;
-      if (path == null) continue;
+    final batch = ref.read(uploadBatchProvider.notifier);
+    final uploadable = result.files.where((f) => f.path != null).toList();
+
+    if (uploadable.length == 1) {
+      await _uploadSingleWithCollisionDialog(
+        context,
+        service,
+        batch,
+        targetFolder,
+        uploadable.first,
+      );
+      return;
+    }
+
+    final jobIds = {
+      for (final picked in uploadable)
+        picked: '${DateTime.now().microsecondsSinceEpoch}_${picked.name}',
+    };
+    batch.startBatch([
+      for (final picked in uploadable) (id: jobIds[picked]!, fileName: picked.name)
+    ]);
+
+    final skipped = <String>[];
+    for (final picked in uploadable) {
+      final path = picked.path!;
+      final jobId = jobIds[picked]!;
       try {
-        await service.uploadFile(targetFolder, File(path));
+        await service.uploadFile(
+          targetFolder,
+          File(path),
+          onProgress: (sent, total) {
+            if (total > 0) {
+              batch.progress(jobId, sent / total, sentBytes: sent, totalBytes: total);
+            }
+          },
+        );
+        batch.complete(jobId);
+      } on FileAlreadyExistsException {
+        skipped.add(picked.name);
+        batch.fail(jobId, 'already exists');
       } catch (e) {
         debugLogger.error('UPLOAD', 'Error uploading ${picked.name}', e.toString());
+        batch.fail(jobId, e.toString());
       }
     }
+    batch.finishBatch();
+    if (skipped.isNotEmpty && context.mounted) {
+      _showSkippedDialog(context, skipped);
+    }
+  }
+
+  Future<void> _uploadSingleWithCollisionDialog(
+    BuildContext context,
+    FileTransferService service,
+    UploadBatchNotifier batch,
+    String targetFolder,
+    PlatformFile picked,
+  ) async {
+    final path = picked.path!;
+    final jobId = '${DateTime.now().microsecondsSinceEpoch}_${picked.name}';
+
+    batch.startBatch([(id: jobId, fileName: picked.name)]);
+    try {
+      await service.uploadFile(
+        targetFolder,
+        File(path),
+        onProgress: (sent, total) {
+          if (total > 0) {
+            batch.progress(jobId, sent / total, sentBytes: sent, totalBytes: total);
+          }
+        },
+      );
+      batch.complete(jobId);
+      batch.finishBatch();
+    } on FileAlreadyExistsException {
+      batch.finishBatch();
+      if (!context.mounted) return;
+      await _showAlreadyExistsDialog(context, picked.name, targetFolder);
+    } catch (e) {
+      debugLogger.error('UPLOAD', 'Error uploading ${picked.name}', e.toString());
+      batch.fail(jobId, e.toString());
+      batch.finishBatch();
+    }
+  }
+
+  Future<void> _showAlreadyExistsDialog(
+    BuildContext context,
+    String fileName,
+    String folderName,
+  ) {
+    return showDialog<void>(
+      context: context,
+      builder: (ctx) => SnDialog(
+        title: 'File already exists',
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              fileName,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontFamily: SpaceNotesTheme.fontSans,
+                fontSize: 15,
+                color: SpaceNotesTheme.fg,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'already exists in $folderName',
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontFamily: SpaceNotesTheme.fontSans,
+                fontSize: 13,
+                color: SpaceNotesTheme.muted,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          SnDialogAction(
+            label: 'OK',
+            variant: SnButtonVariant.outline,
+            onPressed: () => Navigator.pop(ctx),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Picks a local directory and uploads every file under it, recreating
+  /// its subfolder structure under [targetFolder] in the vault.
+  Future<void> _uploadFolder(
+    BuildContext context,
+    WidgetRef ref,
+    String targetFolder,
+  ) async {
+    final dirPath = await FilePicker.platform.getDirectoryPath();
+    if (dirPath == null || !context.mounted) {
+      debugLogger.info('UPLOAD', 'Folder picker cancelled');
+      return;
+    }
+
+    final rootDir = Directory(dirPath);
+    final rootName = rootDir.uri.pathSegments.where((s) => s.isNotEmpty).last;
+    final entries = rootDir
+        .listSync(recursive: true)
+        .whereType<File>()
+        .toList();
+    debugLogger.info(
+      'UPLOAD',
+      'Folder selected',
+      'root=$rootName files=${entries.length} target=$targetFolder',
+    );
+
+    final repo = ref.read(notesRepositoryProvider);
+    final service = ref.read(fileTransferServiceProvider);
+    final batch = ref.read(uploadBatchProvider.notifier);
+    final createdFolders = <String>{};
+    final skipped = <String>[];
+
+    final jobIds = {
+      for (final file in entries)
+        file: '${DateTime.now().microsecondsSinceEpoch}_${file.uri.pathSegments.last}',
+    };
+    batch.startBatch([
+      for (final file in entries)
+        (id: jobIds[file]!, fileName: file.uri.pathSegments.last)
+    ]);
+
+    for (final file in entries) {
+      final relative = file.path.substring(rootDir.path.length + 1);
+      final relativeDir = relative.contains('/')
+          ? relative.substring(0, relative.lastIndexOf('/'))
+          : '';
+      final vaultFolder = relativeDir.isEmpty
+          ? '$targetFolder/$rootName'
+          : '$targetFolder/$rootName/$relativeDir';
+
+      if (createdFolders.add(vaultFolder)) {
+        await repo.createFolder(vaultFolder);
+      }
+
+      final jobId = jobIds[file]!;
+      try {
+        await service.uploadFile(
+          vaultFolder,
+          file,
+          onProgress: (sent, total) {
+            if (total > 0) {
+              batch.progress(jobId, sent / total, sentBytes: sent, totalBytes: total);
+            }
+          },
+        );
+        batch.complete(jobId);
+      } on FileAlreadyExistsException {
+        skipped.add('$vaultFolder/${file.uri.pathSegments.last}');
+        batch.fail(jobId, 'already exists');
+      } catch (e) {
+        debugLogger.error('UPLOAD', 'Error uploading ${file.path}', e.toString());
+        batch.fail(jobId, e.toString());
+      }
+    }
+    batch.finishBatch();
+
+    if (skipped.isNotEmpty && context.mounted) {
+      _showSkippedDialog(context, skipped);
+    }
+  }
+
+  void _showSkippedDialog(BuildContext context, List<String> skipped) {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => SnDialog(
+        title: 'Some files already existed',
+        content: Text(
+          '${skipped.length} file(s) were skipped because they already exist:\n\n${skipped.join('\n')}',
+          style: const TextStyle(
+            fontFamily: SpaceNotesTheme.fontSans,
+            fontSize: 13,
+            color: SpaceNotesTheme.fg,
+          ),
+        ),
+        actions: [
+          SnDialogAction(
+            label: 'OK',
+            variant: SnButtonVariant.outline,
+            onPressed: () => Navigator.pop(ctx),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _createFolder(BuildContext context, WidgetRef ref) async {

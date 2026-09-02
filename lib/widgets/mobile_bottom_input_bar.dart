@@ -19,6 +19,8 @@ import 'primitives/primitives.dart';
 import 'folder_picker_field.dart';
 import '../file_types/file_type_registry.dart';
 import '../services/debug_logger.dart';
+import '../services/file_transfer_service.dart';
+import '../theme/spacenotes_theme.dart';
 import 'adaptive/platform_utils.dart';
 
 Future<Uint8List> _readFileBytes(String path) async {
@@ -301,7 +303,7 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
 
     final result = await FilePicker.platform.pickFiles(
       allowMultiple: true,
-      type: target.source,
+      type: target.source!,
     );
     if (result == null || result.files.isEmpty) {
       debugLogger.info('UPLOAD', 'File picker cancelled or empty selection');
@@ -316,6 +318,17 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
     final service = ref.read(fileTransferServiceProvider);
     final batch = ref.read(uploadBatchProvider.notifier);
     final uploadable = result.files.where((f) => f.path != null).toList();
+
+    if (uploadable.length == 1) {
+      await _uploadSingleWithCollisionDialog(
+        service,
+        batch,
+        targetFolder,
+        uploadable.first,
+      );
+      return;
+    }
+
     final jobIds = {
       for (final picked in uploadable)
         picked: '${DateTime.now().microsecondsSinceEpoch}_${picked.name}',
@@ -324,6 +337,7 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
       for (final picked in uploadable) (id: jobIds[picked]!, fileName: picked.name)
     ]);
 
+    final skipped = <String>[];
     for (final picked in uploadable) {
       final path = picked.path!;
       final jobId = jobIds[picked]!;
@@ -338,12 +352,118 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
           },
         );
         batch.complete(jobId);
+      } on FileAlreadyExistsException {
+        debugLogger.info('UPLOAD', 'Skipped, already exists', picked.name);
+        skipped.add(picked.name);
+        batch.fail(jobId, 'already exists');
       } catch (e) {
         debugLogger.error('UPLOAD', 'Error uploading ${picked.name}', e.toString());
         batch.fail(jobId, e.toString());
       }
     }
     batch.finishBatch();
+
+    if (skipped.isNotEmpty && mounted) {
+      _showSkippedDialog(skipped);
+    }
+  }
+
+  Future<void> _uploadSingleWithCollisionDialog(
+    FileTransferService service,
+    UploadBatchNotifier batch,
+    String targetFolder,
+    PlatformFile picked,
+  ) async {
+    final path = picked.path!;
+    final jobId = '${DateTime.now().microsecondsSinceEpoch}_${picked.name}';
+
+    batch.startBatch([(id: jobId, fileName: picked.name)]);
+    try {
+      await service.uploadFile(
+        targetFolder,
+        File(path),
+        onProgress: (sent, total) {
+          if (total > 0) {
+            batch.progress(jobId, sent / total, sentBytes: sent, totalBytes: total);
+          }
+        },
+      );
+      batch.complete(jobId);
+      batch.finishBatch();
+    } on FileAlreadyExistsException {
+      batch.finishBatch();
+      if (!mounted) return;
+      await _showAlreadyExistsDialog(picked.name, targetFolder);
+    } catch (e) {
+      debugLogger.error('UPLOAD', 'Error uploading ${picked.name}', e.toString());
+      batch.fail(jobId, e.toString());
+      batch.finishBatch();
+    }
+  }
+
+  Future<void> _showAlreadyExistsDialog(String fileName, String folderName) {
+    return showDialog<void>(
+      context: context,
+      builder: (ctx) => SnDialog(
+        title: 'File already exists',
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              fileName,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontFamily: SpaceNotesTheme.fontSans,
+                fontSize: 15,
+                color: SpaceNotesTheme.fg,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'already exists in $folderName',
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontFamily: SpaceNotesTheme.fontSans,
+                fontSize: 13,
+                color: SpaceNotesTheme.muted,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          SnDialogAction(
+            label: 'OK',
+            variant: SnButtonVariant.outline,
+            onPressed: () => Navigator.pop(ctx),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showSkippedDialog(List<String> skipped) {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => SnDialog(
+        title: 'Some files already existed',
+        content: Text(
+          '${skipped.length} file(s) were skipped because they already exist:\n\n${skipped.join('\n')}',
+          style: const TextStyle(
+            fontFamily: SpaceNotesTheme.fontSans,
+            fontSize: 13,
+            color: SpaceNotesTheme.fg,
+          ),
+        ),
+        actions: [
+          SnDialogAction(
+            label: 'OK',
+            variant: SnButtonVariant.outline,
+            onPressed: () => Navigator.pop(ctx),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _createQuickNote(String folderPath) async {

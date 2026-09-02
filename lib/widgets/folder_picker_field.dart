@@ -5,31 +5,44 @@ import '../providers/notes_providers.dart';
 import '../theme/spacenotes_theme.dart';
 import 'primitives/sn_dialog.dart';
 
+enum UploadSourceKind { picker, folder }
+
 class UploadTarget {
-  const UploadTarget({required this.folder, required this.source});
+  const UploadTarget({
+    required this.folder,
+    required this.kind,
+    this.source,
+  });
 
   final String folder;
-  final FileType source;
+  final UploadSourceKind kind;
+  final FileType? source;
 }
 
 /// Resolves an upload destination in one dialog: a fuzzy-find folder field
 /// (pre-populated with [currentFolder], typing a name with no match creates
-/// it) plus Photos / Files source buttons.
+/// it) plus source buttons — Photos / Files always, plus Folder when
+/// [showFolderOption] is set (desktop only; mobile has no directory picker).
 Future<UploadTarget?> pickUploadTarget(
   BuildContext context,
   WidgetRef ref, {
   String? currentFolder,
+  bool showFolderOption = false,
 }) async {
   return showDialog<UploadTarget>(
     context: context,
-    builder: (ctx) => _UploadTargetDialog(currentFolder: currentFolder),
+    builder: (ctx) => _UploadTargetDialog(
+      currentFolder: currentFolder,
+      showFolderOption: showFolderOption,
+    ),
   );
 }
 
 class _UploadTargetDialog extends ConsumerStatefulWidget {
-  const _UploadTargetDialog({this.currentFolder});
+  const _UploadTargetDialog({this.currentFolder, this.showFolderOption = false});
 
   final String? currentFolder;
+  final bool showFolderOption;
 
   @override
   ConsumerState<_UploadTargetDialog> createState() =>
@@ -56,10 +69,21 @@ class _UploadTargetDialogState extends ConsumerState<_UploadTargetDialog> {
     super.dispose();
   }
 
-  void _finish(FileType source) {
+  void _finishPicker(FileType source) {
     if (_query.trim().isEmpty) return;
-    Navigator.of(context)
-        .pop(UploadTarget(folder: _query.trim(), source: source));
+    Navigator.of(context).pop(UploadTarget(
+      folder: _query.trim(),
+      kind: UploadSourceKind.picker,
+      source: source,
+    ));
+  }
+
+  void _finishFolder() {
+    if (_query.trim().isEmpty) return;
+    Navigator.of(context).pop(UploadTarget(
+      folder: _query.trim(),
+      kind: UploadSourceKind.folder,
+    ));
   }
 
   @override
@@ -128,8 +152,9 @@ class _UploadTargetDialogState extends ConsumerState<_UploadTargetDialog> {
           const SizedBox(height: SpaceNotesTheme.space6),
           _SourceButtonRow(
             enabled: _query.trim().isNotEmpty,
-            onPhotos: () => _finish(FileType.media),
-            onFiles: () => _finish(FileType.any),
+            onPhotos: () => _finishPicker(FileType.media),
+            onFiles: () => _finishPicker(FileType.any),
+            onFolder: widget.showFolderOption ? _finishFolder : null,
           ),
         ],
       ),
@@ -142,40 +167,52 @@ class _SourceButtonRow extends StatelessWidget {
     required this.enabled,
     required this.onPhotos,
     required this.onFiles,
+    this.onFolder,
   });
 
   final bool enabled;
   final VoidCallback onPhotos;
   final VoidCallback onFiles;
+  final VoidCallback? onFolder;
 
   @override
   Widget build(BuildContext context) {
+    final buttons = <Widget>[
+      Expanded(
+        child: _SourceButton(
+          icon: Icons.photo_outlined,
+          label: 'Photos',
+          enabled: enabled,
+          onTap: onPhotos,
+        ),
+      ),
+      Container(width: 1, color: SpaceNotesTheme.hairlineStrong),
+      Expanded(
+        child: _SourceButton(
+          icon: Icons.insert_drive_file_outlined,
+          label: 'Files',
+          enabled: enabled,
+          onTap: onFiles,
+        ),
+      ),
+      if (onFolder != null) ...[
+        Container(width: 1, color: SpaceNotesTheme.hairlineStrong),
+        Expanded(
+          child: _SourceButton(
+            icon: Icons.folder_outlined,
+            label: 'Folder',
+            enabled: enabled,
+            onTap: onFolder!,
+          ),
+        ),
+      ],
+    ];
+
     return SizedBox(
       height: 88,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Expanded(
-            child: _SourceButton(
-              icon: Icons.photo_outlined,
-              label: 'Photos',
-              enabled: enabled,
-              onTap: onPhotos,
-            ),
-          ),
-          Container(
-            width: 1,
-            color: SpaceNotesTheme.hairlineStrong,
-          ),
-          Expanded(
-            child: _SourceButton(
-              icon: Icons.folder_outlined,
-              label: 'Files',
-              enabled: enabled,
-              onTap: onFiles,
-            ),
-          ),
-        ],
+        children: buttons,
       ),
     );
   }

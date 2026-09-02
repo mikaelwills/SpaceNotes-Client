@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../screens/unsupported_file_screen.dart';
+import '../screens/video_viewer_screen.dart';
 import 'file_type_handler.dart';
 
 class VideoFileHandler extends FileTypeHandler {
@@ -32,5 +32,5 @@ class VideoFileHandler extends FileTypeHandler {
   NewFileTemplate? get newFileTemplate => null;
 
   @override
-  Widget buildScreen(String fileId) => UnsupportedFileScreen(fileId: fileId);
+  Widget buildScreen(String fileId) => VideoViewerScreen(fileId: fileId);
 }

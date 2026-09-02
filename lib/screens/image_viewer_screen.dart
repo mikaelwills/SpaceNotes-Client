@@ -20,6 +20,8 @@ class ImageViewerScreen extends ConsumerStatefulWidget {
 class _ImageViewerScreenState extends ConsumerState<ImageViewerScreen> {
   bool _loading = false;
   double _progress = 0;
+  int _receivedBytes = 0;
+  DateTime? _downloadStartedAt;
   String? _error;
   String? _localPath;
 
@@ -48,6 +50,8 @@ class _ImageViewerScreenState extends ConsumerState<ImageViewerScreen> {
     setState(() {
       _loading = true;
       _progress = 0;
+      _receivedBytes = 0;
+      _downloadStartedAt = DateTime.now();
       _error = null;
     });
 
@@ -59,7 +63,12 @@ class _ImageViewerScreenState extends ConsumerState<ImageViewerScreen> {
         localPath,
         expectedSize: expectedSize,
         onProgress: (received, total) {
-          if (total > 0 && mounted) setState(() => _progress = received / total);
+          if (total > 0 && mounted) {
+            setState(() {
+              _progress = received / total;
+              _receivedBytes = received;
+            });
+          }
         },
       );
       final actualSize = await File(localPath).exists() ? await File(localPath).length() : -1;
@@ -86,10 +95,7 @@ class _ImageViewerScreenState extends ConsumerState<ImageViewerScreen> {
     final file = ref.watch(fileByIdProvider(widget.fileId));
 
     if (file == null) {
-      return const Scaffold(
-        backgroundColor: SpaceNotesTheme.bg,
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Center(child: CircularProgressIndicator());
     }
 
     final remotePath = file.path;
@@ -100,43 +106,133 @@ class _ImageViewerScreenState extends ConsumerState<ImageViewerScreen> {
       });
     }
 
-    return Scaffold(
-      backgroundColor: SpaceNotesTheme.bg,
-      appBar: AppBar(
-        backgroundColor: SpaceNotesTheme.bg,
-        title: Text(file.name, style: const TextStyle(color: SpaceNotesTheme.fg, fontSize: 15)),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.ios_share, color: SpaceNotesTheme.fg),
-            onPressed: _localPath == null
-                ? null
-                : () => SharePlus.instance.share(
-                      ShareParams(files: [XFile(_localPath!)]),
-                    ),
-          ),
-        ],
-      ),
-      body: SafeArea(
-        child: Center(
-          child: _error != null
-              ? Text(_error!, style: const TextStyle(color: Colors.red, fontSize: 13))
-              : _localPath != null
-                  ? InteractiveViewer(
-                      child: Image.file(File(_localPath!)),
-                    )
-                  : Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        SizedBox(
-                          width: 160,
-                          child: LinearProgressIndicator(value: _progress),
+    return ColoredBox(
+      color: SpaceNotesTheme.bg,
+      child: SafeArea(
+        child: Stack(
+          children: [
+            Center(
+              child: _error != null
+                  ? Text(_error!, style: const TextStyle(color: Colors.red, fontSize: 13))
+                  : _localPath != null
+                      ? InteractiveViewer(
+                          child: Image.file(File(_localPath!)),
+                        )
+                      : _DownloadProgress(
+                          progress: _progress,
+                          receivedBytes: _receivedBytes,
+                          startedAt: _downloadStartedAt,
                         ),
-                        const SizedBox(height: 8),
-                        Text('${(_progress * 100).toStringAsFixed(0)}%',
-                            style: const TextStyle(
-                                color: SpaceNotesTheme.muted, fontSize: 12)),
-                      ],
-                    ),
+            ),
+            if (_localPath != null)
+              Positioned(
+                right: 16,
+                bottom: 16,
+                child: _ShareButton(localPath: _localPath!),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DownloadProgress extends StatelessWidget {
+  const _DownloadProgress({
+    required this.progress,
+    required this.receivedBytes,
+    required this.startedAt,
+  });
+
+  final double progress;
+  final int receivedBytes;
+  final DateTime? startedAt;
+
+  String get _speedLabel {
+    if (startedAt == null || receivedBytes <= 0) return '';
+    final elapsed = DateTime.now().difference(startedAt!).inMilliseconds;
+    if (elapsed <= 0) return '';
+    final bytesPerSecond = receivedBytes / (elapsed / 1000);
+    if (bytesPerSecond < 1024) return '${bytesPerSecond.toStringAsFixed(0)} B/s';
+    if (bytesPerSecond < 1024 * 1024) {
+      return '${(bytesPerSecond / 1024).toStringAsFixed(0)} KB/s';
+    }
+    return '${(bytesPerSecond / (1024 * 1024)).toStringAsFixed(1)} MB/s';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        SizedBox(
+          width: 200,
+          height: 3,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              const ColoredBox(color: SpaceNotesTheme.hairline),
+              TweenAnimationBuilder<double>(
+                tween: Tween(begin: 0, end: progress.clamp(0, 1)),
+                duration: const Duration(milliseconds: 350),
+                curve: Curves.easeOut,
+                builder: (context, value, child) => Align(
+                  alignment: Alignment.centerLeft,
+                  child: FractionallySizedBox(
+                    widthFactor: value,
+                    heightFactor: 1,
+                    child: const ColoredBox(color: SpaceNotesTheme.accent),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 8),
+        SizedBox(
+          width: 200,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(_speedLabel,
+                  style: const TextStyle(
+                      fontFamily: SpaceNotesTheme.fontMono,
+                      color: SpaceNotesTheme.muted,
+                      fontSize: 11)),
+              Text('${(progress * 100).toStringAsFixed(0)}%',
+                  style: const TextStyle(
+                      fontFamily: SpaceNotesTheme.fontMono,
+                      color: SpaceNotesTheme.muted,
+                      fontSize: 11)),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ShareButton extends StatelessWidget {
+  const _ShareButton({required this.localPath});
+
+  final String localPath;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: SpaceNotesTheme.card,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(999),
+        side: const BorderSide(color: SpaceNotesTheme.hairlineStrong, width: 1),
+      ),
+      child: InkWell(
+        customBorder: const CircleBorder(),
+        onTap: () => SharePlus.instance.share(
+          ShareParams(files: [XFile(localPath)]),
+        ),
+        child: const Padding(
+          padding: EdgeInsets.all(14),
+          child: Icon(Icons.ios_share, size: 20, color: SpaceNotesTheme.fg),
         ),
       ),
     );

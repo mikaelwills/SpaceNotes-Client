@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../screens/unsupported_file_screen.dart';
+import '../screens/audio_viewer_screen.dart';
 import 'file_type_handler.dart';
 
 class AudioFileHandler extends FileTypeHandler {
@@ -32,5 +32,5 @@ class AudioFileHandler extends FileTypeHandler {
   NewFileTemplate? get newFileTemplate => null;
 
   @override
-  Widget buildScreen(String fileId) => UnsupportedFileScreen(fileId: fileId);
+  Widget buildScreen(String fileId) => AudioViewerScreen(fileId: fileId);
 }
