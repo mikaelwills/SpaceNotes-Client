@@ -9,7 +9,7 @@ class EqNotch {
   final double gainDb;
 }
 
-class ParametricEqPad extends StatefulWidget {
+class ParametricEqPad extends StatelessWidget {
   const ParametricEqPad({
     super.key,
     required this.notch,
@@ -55,13 +55,6 @@ class ParametricEqPad extends StatefulWidget {
   }
 
   @override
-  State<ParametricEqPad> createState() => _ParametricEqPadState();
-}
-
-class _ParametricEqPadState extends State<ParametricEqPad> {
-  Offset? _dragLocalPosition;
-
-  @override
   Widget build(BuildContext context) {
     return AspectRatio(
       aspectRatio: 1,
@@ -72,7 +65,6 @@ class _ParametricEqPadState extends State<ParametricEqPad> {
             behavior: HitTestBehavior.opaque,
             onPanStart: (details) => _handleDrag(details.localPosition, size),
             onPanUpdate: (details) => _handleDrag(details.localPosition, size),
-            onPanEnd: (_) => setState(() => _dragLocalPosition = null),
             onDoubleTapDown: (details) =>
                 _handleDoubleTap(details.localPosition, size),
             child: Container(
@@ -84,11 +76,11 @@ class _ParametricEqPadState extends State<ParametricEqPad> {
                 children: [
                   Positioned.fill(
                     child: CustomPaint(
-                      painter: _EqCurvePainter(notch: widget.notch),
+                      painter: _EqCurvePainter(notch: notch),
                     ),
                   ),
-                  if (_dragLocalPosition != null)
-                    _buildReadout(_dragLocalPosition!, size),
+                  if (notch != null)
+                    _buildReadout(notch!, size),
                 ],
               ),
             ),
@@ -98,18 +90,19 @@ class _ParametricEqPadState extends State<ParametricEqPad> {
     );
   }
 
-  Widget _buildReadout(Offset position, Size size) {
-    final frequency = ParametricEqPad.frequencyForX(position.dx, size.width);
-    final gain = ParametricEqPad.gainForY(position.dy, size.height);
-    final freqLabel = frequency >= 1000
-        ? '${(frequency / 1000).toStringAsFixed(1)}kHz'
-        : '${frequency.toStringAsFixed(0)}Hz';
-    final gainLabel = '${gain >= 0 ? '+' : ''}${gain.toStringAsFixed(1)}dB';
+  Widget _buildReadout(EqNotch notch, Size size) {
+    final x = ParametricEqPad.xForFrequency(notch.frequencyHz, size.width);
+    final y = ParametricEqPad.yForGain(notch.gainDb, size.height);
+    final freqLabel = notch.frequencyHz >= 1000
+        ? '${(notch.frequencyHz / 1000).toStringAsFixed(1)}kHz'
+        : '${notch.frequencyHz.toStringAsFixed(0)}Hz';
+    final gainLabel =
+        '${notch.gainDb >= 0 ? '+' : ''}${notch.gainDb.toStringAsFixed(1)}dB';
 
-    final labelY = (position.dy - 28).clamp(0.0, size.height - 20);
+    final labelY = (y - 28).clamp(0.0, size.height - 20);
 
     return Positioned(
-      left: (position.dx - 40).clamp(0.0, size.width - 80),
+      left: (x - 40).clamp(0.0, size.width - 80),
       top: labelY,
       child: IgnorePointer(
         child: Container(
@@ -139,18 +132,17 @@ class _ParametricEqPadState extends State<ParametricEqPad> {
     );
     final frequency = ParametricEqPad.frequencyForX(clamped.dx, size.width);
     final gain = ParametricEqPad.gainForY(clamped.dy, size.height);
-    setState(() => _dragLocalPosition = clamped);
-    widget.onNotchChanged(EqNotch(frequencyHz: frequency, gainDb: gain));
+    onNotchChanged(EqNotch(frequencyHz: frequency, gainDb: gain));
   }
 
   void _handleDoubleTap(Offset localPosition, Size size) {
-    final notch = widget.notch;
-    if (notch == null) return;
-    final notchX = ParametricEqPad.xForFrequency(notch.frequencyHz, size.width);
-    final notchY = ParametricEqPad.yForGain(notch.gainDb, size.height);
+    final currentNotch = notch;
+    if (currentNotch == null) return;
+    final notchX = ParametricEqPad.xForFrequency(currentNotch.frequencyHz, size.width);
+    final notchY = ParametricEqPad.yForGain(currentNotch.gainDb, size.height);
     final distance = (localPosition - Offset(notchX, notchY)).distance;
     if (distance <= ParametricEqPad.removeTapRadius) {
-      widget.onNotchCleared();
+      onNotchCleared();
     }
   }
 }
