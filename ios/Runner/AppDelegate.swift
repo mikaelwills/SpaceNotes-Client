@@ -12,6 +12,7 @@ import UIKit
     NativeH264DecoderPlugin.register(with: self.registrar(forPlugin: "NativeH264DecoderPlugin")!)
     NativeAudioCapturePlugin.register(with: self.registrar(forPlugin: "NativeAudioCapturePlugin")!)
     NativeAudioPlaybackPlugin.register(with: self.registrar(forPlugin: "NativeAudioPlaybackPlugin")!)
+    ParametricEqPlaybackPlugin.register(with: self.registrar(forPlugin: "ParametricEqPlaybackPlugin")!)
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
 }

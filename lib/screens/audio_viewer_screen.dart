@@ -1,14 +1,15 @@
 import 'dart:async';
-import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/notes_providers.dart';
 import '../providers/file_transfer_providers.dart';
 import '../services/local_download_store.dart';
 import '../services/debug_logger.dart';
+import '../services/parametric_eq_service.dart';
 import '../theme/spacenotes_theme.dart';
 import '../utils/pops_when_file_deleted.dart';
 import '../widgets/download_progress.dart';
+import '../widgets/parametric_eq_pad.dart';
 import '../widgets/share_button.dart';
 
 class AudioViewerScreen extends ConsumerStatefulWidget {
@@ -29,34 +30,19 @@ class _AudioViewerScreenState extends ConsumerState<AudioViewerScreen>
   String? _error;
   String? _localPath;
 
-  final AudioPlayer _player = AudioPlayer();
+  final ParametricEqService _eq = ParametricEqService();
   Duration _position = Duration.zero;
   Duration _duration = Duration.zero;
   bool _isPlaying = false;
-  StreamSubscription<Duration>? _positionSub;
-  StreamSubscription<Duration>? _durationSub;
-  StreamSubscription<PlayerState>? _stateSub;
+  Timer? _positionPoll;
 
-  @override
-  void initState() {
-    super.initState();
-    _positionSub = _player.onPositionChanged.listen((p) {
-      if (mounted) setState(() => _position = p);
-    });
-    _durationSub = _player.onDurationChanged.listen((d) {
-      if (mounted) setState(() => _duration = d);
-    });
-    _stateSub = _player.onPlayerStateChanged.listen((s) {
-      if (mounted) setState(() => _isPlaying = s == PlayerState.playing);
-    });
-  }
+  bool _eqPadOpen = false;
+  EqNotch? _notch;
 
   @override
   void dispose() {
-    _positionSub?.cancel();
-    _durationSub?.cancel();
-    _stateSub?.cancel();
-    _player.dispose();
+    _positionPoll?.cancel();
+    _eq.stop();
     super.dispose();
   }
 
@@ -90,11 +76,24 @@ class _AudioViewerScreenState extends ConsumerState<AudioViewerScreen>
                           position: _position,
                           duration: _duration,
                           formatDuration: _formatDuration,
-                          onPlayPause: () {
-                            _isPlaying ? _player.pause() : _player.resume();
-                          },
+                          onPlayPause: _togglePlayPause,
                           onSeek: (value) {
-                            _player.seek(Duration(milliseconds: value.round()));
+                            _eq.seek(Duration(milliseconds: value.round()));
+                          },
+                          eqPadOpen: _eqPadOpen,
+                          onToggleEqPad: () =>
+                              setState(() => _eqPadOpen = !_eqPadOpen),
+                          notch: _notch,
+                          onNotchChanged: (notch) {
+                            setState(() => _notch = notch);
+                            _eq.setEq(
+                              frequencyHz: notch.frequencyHz,
+                              gainDb: notch.gainDb,
+                            );
+                          },
+                          onNotchCleared: () {
+                            setState(() => _notch = null);
+                            _eq.clearEq();
                           },
                         )
                       : DownloadProgress(
@@ -167,13 +166,39 @@ class _AudioViewerScreenState extends ConsumerState<AudioViewerScreen>
 
   Future<void> _initPlayer(String localPath) async {
     try {
-      await _player.setSource(DeviceFileSource(localPath));
+      final loaded = await _eq.load(localPath);
+      if (!loaded) throw Exception('native player failed to load file');
       if (!mounted) return;
-      setState(() => _localPath = localPath);
-      await _player.resume();
+      final duration = await _eq.duration();
+      setState(() {
+        _localPath = localPath;
+        _duration = duration;
+      });
+      await _eq.play();
+      setState(() => _isPlaying = true);
+      _startPositionPoll();
     } catch (e) {
       debugLogger.error('AUDIO_VIEWER', 'Player init failed: $localPath', e.toString());
       if (mounted) setState(() => _error = 'Could not play audio: $e');
+    }
+  }
+
+  void _startPositionPoll() {
+    _positionPoll?.cancel();
+    _positionPoll = Timer.periodic(const Duration(milliseconds: 200), (_) async {
+      if (!mounted || !_isPlaying) return;
+      final position = await _eq.position();
+      if (mounted) setState(() => _position = position);
+    });
+  }
+
+  Future<void> _togglePlayPause() async {
+    if (_isPlaying) {
+      await _eq.pause();
+      setState(() => _isPlaying = false);
+    } else {
+      await _eq.play();
+      setState(() => _isPlaying = true);
     }
   }
 
@@ -192,6 +217,11 @@ class _AudioPlayerBody extends StatelessWidget {
     required this.formatDuration,
     required this.onPlayPause,
     required this.onSeek,
+    required this.eqPadOpen,
+    required this.onToggleEqPad,
+    required this.notch,
+    required this.onNotchChanged,
+    required this.onNotchCleared,
   });
 
   final bool isPlaying;
@@ -200,6 +230,11 @@ class _AudioPlayerBody extends StatelessWidget {
   final String Function(Duration) formatDuration;
   final VoidCallback onPlayPause;
   final ValueChanged<double> onSeek;
+  final bool eqPadOpen;
+  final VoidCallback onToggleEqPad;
+  final EqNotch? notch;
+  final ValueChanged<EqNotch> onNotchChanged;
+  final VoidCallback onNotchCleared;
 
   @override
   Widget build(BuildContext context) {
@@ -211,15 +246,40 @@ class _AudioPlayerBody extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        const Icon(Icons.music_note_outlined, size: 64, color: SpaceNotesTheme.accent),
-        const SizedBox(height: 24),
-        IconButton(
-          iconSize: 48,
-          icon: Icon(
-            isPlaying ? Icons.pause_circle_filled : Icons.play_circle_filled,
-            color: SpaceNotesTheme.accent,
+        if (eqPadOpen) ...[
+          SizedBox(
+            width: 260,
+            child: ParametricEqPad(
+              notch: notch,
+              onNotchChanged: onNotchChanged,
+              onNotchCleared: onNotchCleared,
+            ),
           ),
-          onPressed: onPlayPause,
+          const SizedBox(height: 20),
+        ] else ...[
+          const Icon(Icons.music_note_outlined, size: 64, color: SpaceNotesTheme.accent),
+          const SizedBox(height: 24),
+        ],
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              iconSize: 48,
+              icon: Icon(
+                isPlaying ? Icons.pause_circle_filled : Icons.play_circle_filled,
+                color: SpaceNotesTheme.accent,
+              ),
+              onPressed: onPlayPause,
+            ),
+            IconButton(
+              iconSize: 26,
+              icon: Icon(
+                Icons.graphic_eq,
+                color: eqPadOpen ? SpaceNotesTheme.accent : SpaceNotesTheme.muted,
+              ),
+              onPressed: onToggleEqPad,
+            ),
+          ],
         ),
         const SizedBox(height: 8),
         SizedBox(

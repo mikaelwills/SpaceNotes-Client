@@ -13,6 +13,9 @@ class MainFlutterWindow: NSWindow {
     self.styleMask.insert(.fullSizeContentView)
 
     RegisterGeneratedPlugins(registry: flutterViewController)
+    ParametricEqPlaybackPlugin.register(
+      with: flutterViewController.registrar(forPlugin: "ParametricEqPlaybackPlugin")
+    )
 
     super.awakeFromNib()
   }
