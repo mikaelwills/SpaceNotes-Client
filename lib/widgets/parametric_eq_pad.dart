@@ -27,6 +27,7 @@ class ParametricEqPad extends StatefulWidget {
   static const double removeTapRadius = 32;
 
   static double frequencyForX(double x, double width) {
+    if (width <= 0) return minFrequency;
     final t = (x / width).clamp(0.0, 1.0);
     final logMin = math.log(minFrequency);
     final logMax = math.log(maxFrequency);
@@ -34,6 +35,7 @@ class ParametricEqPad extends StatefulWidget {
   }
 
   static double xForFrequency(double frequencyHz, double width) {
+    if (width <= 0) return 0;
     final logMin = math.log(minFrequency);
     final logMax = math.log(maxFrequency);
     final logF = math.log(frequencyHz.clamp(minFrequency, maxFrequency));
@@ -41,11 +43,13 @@ class ParametricEqPad extends StatefulWidget {
   }
 
   static double gainForY(double y, double height) {
+    if (height <= 0) return 0;
     final t = (y / height).clamp(0.0, 1.0);
     return maxGainDb - t * (2 * maxGainDb);
   }
 
   static double yForGain(double gainDb, double height) {
+    if (height <= 0) return 0;
     final clamped = gainDb.clamp(-maxGainDb, maxGainDb);
     return ((maxGainDb - clamped) / (2 * maxGainDb)) * height;
   }
@@ -76,11 +80,16 @@ class _ParametricEqPadState extends State<ParametricEqPad> {
                 color: SpaceNotesTheme.card,
                 border: Border.all(color: SpaceNotesTheme.hairlineStrong),
               ),
-              child: CustomPaint(
-                painter: _EqCurvePainter(notch: widget.notch),
-                child: _dragLocalPosition != null
-                    ? _buildReadout(_dragLocalPosition!, size)
-                    : null,
+              child: Stack(
+                children: [
+                  Positioned.fill(
+                    child: CustomPaint(
+                      painter: _EqCurvePainter(notch: widget.notch),
+                    ),
+                  ),
+                  if (_dragLocalPosition != null)
+                    _buildReadout(_dragLocalPosition!, size),
+                ],
               ),
             ),
           );
@@ -123,9 +132,10 @@ class _ParametricEqPadState extends State<ParametricEqPad> {
   }
 
   void _handleDrag(Offset localPosition, Size size) {
+    if (size.width <= 0 || size.height <= 0) return;
     final clamped = Offset(
-      localPosition.dx.clamp(0, size.width),
-      localPosition.dy.clamp(0, size.height),
+      localPosition.dx.clamp(0.0, size.width),
+      localPosition.dy.clamp(0.0, size.height),
     );
     final frequency = ParametricEqPad.frequencyForX(clamped.dx, size.width);
     final gain = ParametricEqPad.gainForY(clamped.dy, size.height);
@@ -165,7 +175,7 @@ class _EqCurvePainter extends CustomPainter {
     } else {
       final notchX = ParametricEqPad.xForFrequency(notch!.frequencyHz, size.width);
       final notchY = ParametricEqPad.yForGain(notch!.gainDb, size.height);
-      const spread = 60.0;
+      const spread = 22.0;
 
       for (double x = 0; x <= size.width; x += 2) {
         final distance = (x - notchX).abs();

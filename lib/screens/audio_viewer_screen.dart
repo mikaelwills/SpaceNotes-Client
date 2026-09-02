@@ -166,15 +166,19 @@ class _AudioViewerScreenState extends ConsumerState<AudioViewerScreen>
 
   Future<void> _initPlayer(String localPath) async {
     try {
+      debugLogger.info('AUDIO_VIEWER', 'Loading into native EQ player', localPath);
       final loaded = await _eq.load(localPath);
+      debugLogger.info('AUDIO_VIEWER', 'Native load result', 'loaded=$loaded');
       if (!loaded) throw Exception('native player failed to load file');
       if (!mounted) return;
       final duration = await _eq.duration();
+      debugLogger.info('AUDIO_VIEWER', 'Duration reported', '${duration.inMilliseconds}ms');
       setState(() {
         _localPath = localPath;
         _duration = duration;
       });
       await _eq.play();
+      debugLogger.info('AUDIO_VIEWER', 'Play command sent', localPath);
       setState(() => _isPlaying = true);
       _startPositionPoll();
     } catch (e) {
