@@ -2,7 +2,8 @@ abstract class DesktopNotesEvent {}
 
 class OpenNote extends DesktopNotesEvent {
   final String noteId;
-  OpenNote(this.noteId);
+  final String parentFolderPath;
+  OpenNote(this.noteId, {required this.parentFolderPath});
 }
 
 class CloseNote extends DesktopNotesEvent {

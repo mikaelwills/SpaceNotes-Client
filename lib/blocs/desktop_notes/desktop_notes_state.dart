@@ -4,11 +4,13 @@ class DesktopNotesState extends Equatable {
   final List<String> openNoteIds;
   final String? activeNoteId;
   final int maxOpenNotes;
+  final Map<String, String> parentFolderByNoteId;
 
   const DesktopNotesState({
     this.openNoteIds = const [],
     this.activeNoteId,
     this.maxOpenNotes = 5,
+    this.parentFolderByNoteId = const {},
   });
 
   bool get hasOpenNotes => openNoteIds.isNotEmpty;
@@ -18,15 +20,18 @@ class DesktopNotesState extends Equatable {
     String? activeNoteId,
     bool clearActiveNote = false,
     int? maxOpenNotes,
+    Map<String, String>? parentFolderByNoteId,
   }) {
     return DesktopNotesState(
       openNoteIds: openNoteIds ?? this.openNoteIds,
       activeNoteId:
           clearActiveNote ? null : (activeNoteId ?? this.activeNoteId),
       maxOpenNotes: maxOpenNotes ?? this.maxOpenNotes,
+      parentFolderByNoteId: parentFolderByNoteId ?? this.parentFolderByNoteId,
     );
   }
 
   @override
-  List<Object?> get props => [openNoteIds, activeNoteId, maxOpenNotes];
+  List<Object?> get props =>
+      [openNoteIds, activeNoteId, maxOpenNotes, parentFolderByNoteId];
 }

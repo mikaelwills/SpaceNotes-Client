@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../theme/spacenotes_theme.dart';
 import '../generated/folder.dart';
+import 'right_click_menu.dart';
 import 'swipe_action.dart';
 
 class _LeftOnlyHorizontalDragGestureRecognizer
@@ -28,6 +29,8 @@ class FolderListItem extends StatefulWidget {
   final VoidCallback? onMove;
   final bool isSelected;
   final bool tall;
+  final List<PopupMenuEntry<String>>? contextMenuItems;
+  final void Function(String value)? onContextMenuSelected;
 
   const FolderListItem({
     super.key,
@@ -38,6 +41,8 @@ class FolderListItem extends StatefulWidget {
     this.onMove,
     this.isSelected = false,
     this.tall = false,
+    this.contextMenuItems,
+    this.onContextMenuSelected,
   });
 
   @override
@@ -73,6 +78,14 @@ class _FolderListItemState extends State<FolderListItem>
 
   @override
   Widget build(BuildContext context) {
+    return RightClickMenu(
+      items: widget.contextMenuItems,
+      onSelected: widget.onContextMenuSelected,
+      child: _buildContent(context),
+    );
+  }
+
+  Widget _buildContent(BuildContext context) {
     return Container(
       margin: EdgeInsets.zero,
       child: Stack(

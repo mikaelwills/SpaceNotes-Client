@@ -4,35 +4,93 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../blocs/desktop_notes/desktop_notes_bloc.dart';
 import '../../blocs/desktop_notes/desktop_notes_event.dart';
 import '../../blocs/desktop_notes/desktop_notes_state.dart';
+import '../../providers/middle_pane_mode_provider.dart';
 import '../../providers/notes_providers.dart';
+import '../../screens/folder_list_view.dart';
 import '../../theme/spacenotes_theme.dart';
 import '../../file_types/file_type_registry.dart';
 
-class NoteTabs extends StatelessWidget {
+class NoteTabs extends ConsumerWidget {
   const NoteTabs({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return BlocBuilder<DesktopNotesBloc, DesktopNotesState>(
       builder: (context, state) {
-        if (!state.hasOpenNotes) {
+        final mode = ref.watch(middlePaneModeProvider);
+        final backOnPressed = switch (mode) {
+          FileViewerMode() => () {
+              final activeId = state.activeNoteId;
+              if (activeId == null) return;
+              final parentFolder = state.parentFolderByNoteId[activeId] ?? '';
+              ref.read(middlePaneModeProvider.notifier).state =
+                  MiddlePaneMode.browse(parentFolder);
+            },
+          BrowseMode(:final folderPath) when folderPath.isNotEmpty => () {
+              final lastSlash = folderPath.lastIndexOf('/');
+              final parentPath =
+                  lastSlash == -1 ? '' : folderPath.substring(0, lastSlash);
+              ref.read(middlePaneModeProvider.notifier).state =
+                  MiddlePaneMode.browse(parentPath);
+            },
+          _ => null,
+        };
+
+        final showViewModeToggle = mode is! FileViewerMode;
+
+        if (backOnPressed == null && !state.hasOpenNotes && !showViewModeToggle) {
           return const SizedBox.shrink();
         }
 
-        return ListView.builder(
-          scrollDirection: Axis.horizontal,
-          itemCount: state.openNoteIds.length,
-          padding: EdgeInsets.zero,
-          itemBuilder: (context, index) {
-            final noteId = state.openNoteIds[index];
-            final isActive = noteId == state.activeNoteId;
-            return _NoteTab(
-              noteId: noteId,
-              isActive: isActive,
-            );
-          },
+        return Row(
+          children: [
+            if (backOnPressed != null)
+              _BackToFolderButton(onPressed: backOnPressed),
+            Expanded(
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                itemCount: state.openNoteIds.length,
+                padding: EdgeInsets.zero,
+                itemBuilder: (context, index) {
+                  final noteId = state.openNoteIds[index];
+                  final isActive = noteId == state.activeNoteId;
+                  return _NoteTab(
+                    noteId: noteId,
+                    isActive: isActive,
+                  );
+                },
+              ),
+            ),
+            if (showViewModeToggle) const ViewModeToggle(),
+          ],
         );
       },
+    );
+  }
+}
+
+class _BackToFolderButton extends StatelessWidget {
+  final VoidCallback onPressed;
+
+  const _BackToFolderButton({required this.onPressed});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onPressed,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10),
+        decoration: const BoxDecoration(
+          border: Border(
+            right: BorderSide(color: SpaceNotesTheme.hairline, width: 1),
+          ),
+        ),
+        child: const Icon(
+          Icons.arrow_back,
+          size: 14,
+          color: SpaceNotesTheme.muted,
+        ),
+      ),
     );
   }
 }
@@ -61,6 +119,8 @@ class _NoteTabState extends ConsumerState<_NoteTab> {
       child: GestureDetector(
         onTap: () {
           context.read<DesktopNotesBloc>().add(SetActiveNote(widget.noteId));
+          ref.read(middlePaneModeProvider.notifier).state =
+              MiddlePaneMode.fileViewer(widget.noteId);
         },
         child: Container(
           padding: const EdgeInsets.only(left: 14, right: 10),
@@ -108,11 +168,7 @@ class _NoteTabState extends ConsumerState<_NoteTab> {
               const SizedBox(width: 10),
               if (_isHovered || widget.isActive)
                 GestureDetector(
-                  onTap: () {
-                    context
-                        .read<DesktopNotesBloc>()
-                        .add(CloseNote(widget.noteId));
-                  },
+                  onTap: _closeTab,
                   child: const Padding(
                     padding: EdgeInsets.all(4),
                     child: Icon(
@@ -129,6 +185,17 @@ class _NoteTabState extends ConsumerState<_NoteTab> {
         ),
       ),
     );
+  }
+
+  void _closeTab() {
+    final bloc = context.read<DesktopNotesBloc>();
+    final isLastOpen = bloc.state.openNoteIds.length == 1;
+    if (isLastOpen && ref.read(middlePaneModeProvider) is FileViewerMode) {
+      ref.read(middlePaneModeProvider.notifier).state = MiddlePaneMode.browse(
+        bloc.state.parentFolderByNoteId[widget.noteId] ?? '',
+      );
+    }
+    bloc.add(CloseNote(widget.noteId));
   }
 
   String get _displayName {

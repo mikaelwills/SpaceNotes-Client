@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io' show Platform;
 
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
@@ -9,6 +10,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart' hide Provider;
 import 'package:get_it/get_it.dart';
 import 'package:spacenotes_client/providers/notes_providers.dart';
 import 'package:spacetimedb_sdk/protocol.dart' show SdkLogger, SdkLogLevel;
+import 'package:window_manager/window_manager.dart';
 
 import 'theme/spacenotes_theme.dart';
 import 'services/debug_logger.dart';
@@ -20,6 +22,10 @@ import 'services/web_config_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  if (!kIsWeb && Platform.isMacOS) {
+    await windowManager.ensureInitialized();
+  }
 
   await debugLogger.ensureInitialized();
   debugLogger.info('APP', 'SpaceNotes starting');

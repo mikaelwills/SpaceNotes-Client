@@ -16,24 +16,30 @@ class StaggeredFileGrid extends StatelessWidget {
   final void Function(SpaceFile file) onTap;
   final void Function(SpaceFile file)? onLongPress;
 
+  static const _targetCardWidth = 180.0;
+  static const _columnGap = 10.0;
+
   @override
   Widget build(BuildContext context) {
-    final leftColumn = <_IndexedFile>[];
-    final rightColumn = <_IndexedFile>[];
-
-    for (int i = 0; i < files.length; i++) {
-      final indexed = _IndexedFile(file: files[i], index: i + 1);
-      if (i % 2 == 0) {
-        leftColumn.add(indexed);
-      } else {
-        rightColumn.add(indexed);
-      }
-    }
+    final indexed = [
+      for (int i = 0; i < files.length; i++)
+        _IndexedFile(file: files[i], index: i + 1),
+    ];
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        const columnGap = 10.0;
-        final columnWidth = (constraints.maxWidth - columnGap) / 2;
+        final columnCount = ((constraints.maxWidth + _columnGap) /
+                (_targetCardWidth + _columnGap))
+            .floor()
+            .clamp(2, 6);
+        final columnWidth =
+            (constraints.maxWidth - _columnGap * (columnCount - 1)) /
+                columnCount;
+
+        final columns = List.generate(columnCount, (_) => <_IndexedFile>[]);
+        for (int i = 0; i < indexed.length; i++) {
+          columns[i % columnCount].add(indexed[i]);
+        }
 
         Widget buildCard(_IndexedFile f) => FileGridCard(
               file: f.file,
@@ -46,15 +52,13 @@ class StaggeredFileGrid extends StatelessWidget {
         return Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            SizedBox(
-              width: columnWidth,
-              child: Column(children: leftColumn.map(buildCard).toList()),
-            ),
-            const SizedBox(width: columnGap),
-            SizedBox(
-              width: columnWidth,
-              child: Column(children: rightColumn.map(buildCard).toList()),
-            ),
+            for (int c = 0; c < columnCount; c++) ...[
+              if (c > 0) const SizedBox(width: _columnGap),
+              SizedBox(
+                width: columnWidth,
+                child: Column(children: columns[c].map(buildCard).toList()),
+              ),
+            ],
           ],
         );
       },

@@ -90,6 +90,16 @@ final fileByIdProvider = Provider.family<SpaceFile?, String>((ref, id) {
   return watchListenable(ref, client.spaceFile.rowNotifier(id));
 });
 
+final folderNoteCountProvider = Provider.family<int, String>((ref, folderPath) {
+  final folderPathWithSlash = '$folderPath/';
+  return ref
+      .watch(fileListProvider)
+      .where((n) =>
+          n.folderPath == folderPathWithSlash ||
+          n.folderPath.startsWith(folderPathWithSlash))
+      .length;
+});
+
 final credentialStoreDotfileProvider =
     Provider.family<String?, String>((ref, fileName) {
   final files = ref.watch(fileListProvider);

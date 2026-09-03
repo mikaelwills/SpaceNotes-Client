@@ -3,7 +3,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../providers/middle_pane_mode_provider.dart';
 import '../../providers/notes_providers.dart';
+import '../../screens/folder_list_view.dart';
 import '../../theme/spacenotes_theme.dart';
 import '../adaptive/nav_cycle.dart';
 import '../note_chat_panel.dart';
@@ -14,7 +16,7 @@ import 'note_tabs.dart';
 import 'sidebar.dart';
 
 final sidebarCollapsedProvider = StateProvider<bool>((ref) => false);
-final sidebarWidthProvider = StateProvider<double>((ref) => 450.0);
+final sidebarWidthProvider = StateProvider<double>((ref) => 245.0);
 final chatPanelCollapsedProvider = StateProvider<bool>((ref) => false);
 
 class DesktopShell extends ConsumerStatefulWidget {
@@ -154,14 +156,15 @@ class _DesktopContentArea extends ConsumerWidget {
 
     final openNoteId = ref.watch(currentNotePathProvider);
     final chatPanelCollapsed = ref.watch(chatPanelCollapsedProvider);
+    final mode = ref.watch(middlePaneModeProvider);
 
     return Row(
       children: [
-        const Expanded(
+        Expanded(
           child: Column(
             children: [
-              _DesktopTopBar(showTabs: true),
-              Expanded(child: DesktopNoteView()),
+              const _DesktopTopBar(showTabs: true),
+              Expanded(child: _MiddlePaneContent(mode: mode)),
             ],
           ),
         ),
@@ -172,6 +175,23 @@ class _DesktopContentArea extends ConsumerWidget {
           ),
       ],
     );
+  }
+}
+
+class _MiddlePaneContent extends StatelessWidget {
+  final MiddlePaneMode mode;
+
+  const _MiddlePaneContent({required this.mode});
+
+  @override
+  Widget build(BuildContext context) {
+    return switch (mode) {
+      BrowseMode(:final folderPath) =>
+        FolderListView(key: ValueKey('browse:$folderPath'), folderPath: folderPath),
+      FileViewerMode() => const DesktopNoteView(),
+      SearchResultsMode() =>
+        const FolderListView(key: ValueKey('search'), folderPath: ''),
+    };
   }
 }
 

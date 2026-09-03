@@ -7,6 +7,7 @@ import '../../blocs/desktop_notes/desktop_notes_event.dart';
 import '../../generated/agent.dart';
 import '../../providers/chat_providers.dart';
 import '../../providers/connection_providers.dart';
+import '../../providers/middle_pane_mode_provider.dart';
 import '../../providers/notes_providers.dart';
 import '../../screens/agent_chat.dart';
 import '../../theme/spacenotes_theme.dart';
@@ -197,7 +198,11 @@ class _Footer extends StatelessWidget {
     final notePath = 'All Notes/${FileTypeRegistry.defaultNewFileName()}';
     final noteId = await repo.createNote(notePath, '');
     if (noteId != null && context.mounted) {
-      context.read<DesktopNotesBloc>().add(OpenNote(noteId));
+      context
+          .read<DesktopNotesBloc>()
+          .add(OpenNote(noteId, parentFolderPath: 'All Notes'));
+      ref.read(middlePaneModeProvider.notifier).state =
+          MiddlePaneMode.fileViewer(noteId);
       context.go('/notes');
     }
   }

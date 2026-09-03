@@ -19,15 +19,21 @@ class DesktopNotesBloc extends Bloc<DesktopNotesEvent, DesktopNotesState> {
       return;
     }
 
+    final parentFolderByNoteId =
+        Map<String, String>.from(state.parentFolderByNoteId)
+          ..[event.noteId] = event.parentFolderPath;
+
     currentIds.add(event.noteId);
 
     if (currentIds.length > state.maxOpenNotes) {
-      currentIds.removeAt(0);
+      final evictedId = currentIds.removeAt(0);
+      parentFolderByNoteId.remove(evictedId);
     }
 
     emit(state.copyWith(
       openNoteIds: currentIds,
       activeNoteId: event.noteId,
+      parentFolderByNoteId: parentFolderByNoteId,
     ));
   }
 
@@ -38,6 +44,9 @@ class DesktopNotesBloc extends Bloc<DesktopNotesEvent, DesktopNotesState> {
     if (closingIndex == -1) return;
 
     currentIds.remove(event.noteId);
+    final parentFolderByNoteId =
+        Map<String, String>.from(state.parentFolderByNoteId)
+          ..remove(event.noteId);
 
     String? newActiveId = state.activeNoteId;
     if (state.activeNoteId == event.noteId) {
@@ -54,6 +63,7 @@ class DesktopNotesBloc extends Bloc<DesktopNotesEvent, DesktopNotesState> {
       openNoteIds: currentIds,
       activeNoteId: newActiveId,
       clearActiveNote: newActiveId == null,
+      parentFolderByNoteId: parentFolderByNoteId,
     ));
   }
 
@@ -88,6 +98,7 @@ class DesktopNotesBloc extends Bloc<DesktopNotesEvent, DesktopNotesState> {
     emit(state.copyWith(
       openNoteIds: [],
       clearActiveNote: true,
+      parentFolderByNoteId: const {},
     ));
   }
 }

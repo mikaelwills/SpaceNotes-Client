@@ -1,23 +1,30 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../blocs/desktop_notes/desktop_notes_bloc.dart';
 import '../../blocs/desktop_notes/desktop_notes_state.dart';
-import '../../screens/note_screen.dart';
+import '../../file_types/file_type_registry.dart';
+import '../../providers/notes_providers.dart';
 import '../../theme/spacenotes_theme.dart';
 
-class DesktopNoteView extends StatelessWidget {
+class DesktopNoteView extends ConsumerWidget {
   const DesktopNoteView({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return BlocBuilder<DesktopNotesBloc, DesktopNotesState>(
       builder: (context, state) {
         if (!state.hasOpenNotes || state.activeNoteId == null) {
           return const _EmptyState();
         }
-        return NoteScreen(
-          key: ValueKey(state.activeNoteId),
-          noteId: state.activeNoteId!,
+        final noteId = state.activeNoteId!;
+        final file = ref.watch(fileByIdProvider(noteId));
+        if (file == null) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        return KeyedSubtree(
+          key: ValueKey(noteId),
+          child: FileTypeRegistry.forFile(file).buildScreen(noteId),
         );
       },
     );
