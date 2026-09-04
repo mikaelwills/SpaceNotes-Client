@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform;
 import 'package:flutter/material.dart';
@@ -213,9 +214,12 @@ class _SidebarSearch extends ConsumerStatefulWidget {
 }
 
 class _SidebarSearchState extends ConsumerState<_SidebarSearch> {
+  static const _debounce = Duration(milliseconds: 200);
+
   final _controller = TextEditingController();
   final _focusNode = FocusNode();
   String _previousFolderPath = '';
+  Timer? _debounceTimer;
 
   @override
   void initState() {
@@ -225,6 +229,7 @@ class _SidebarSearchState extends ConsumerState<_SidebarSearch> {
 
   @override
   void dispose() {
+    _debounceTimer?.cancel();
     _controller.dispose();
     _focusNode.dispose();
     super.dispose();
@@ -328,7 +333,6 @@ class _SidebarSearchState extends ConsumerState<_SidebarSearch> {
 
   void _onSearchChanged(String value) {
     final wasEmpty = ref.read(folderSearchQueryProvider).isEmpty;
-    ref.read(folderSearchQueryProvider.notifier).state = value;
 
     if (wasEmpty && value.isNotEmpty) {
       final mode = ref.read(middlePaneModeProvider);
@@ -339,9 +343,15 @@ class _SidebarSearchState extends ConsumerState<_SidebarSearch> {
     } else if (value.isEmpty) {
       _restoreBrowseAfterSearch();
     }
+
+    _debounceTimer?.cancel();
+    _debounceTimer = Timer(_debounce, () {
+      ref.read(folderSearchQueryProvider.notifier).state = value;
+    });
   }
 
   void _clearSearch() {
+    _debounceTimer?.cancel();
     _controller.clear();
     ref.read(folderSearchQueryProvider.notifier).state = '';
     _focusNode.unfocus();
