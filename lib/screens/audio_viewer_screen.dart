@@ -71,30 +71,34 @@ class _AudioViewerScreenState extends ConsumerState<AudioViewerScreen>
               child: _error != null
                   ? Text(_error!, style: const TextStyle(color: Colors.red, fontSize: 13))
                   : _localPath != null
-                      ? _AudioPlayerBody(
-                          isPlaying: _isPlaying,
-                          position: _position,
-                          duration: _duration,
-                          formatDuration: _formatDuration,
-                          onPlayPause: _togglePlayPause,
-                          onSeek: (value) {
-                            _eq.seek(Duration(milliseconds: value.round()));
-                          },
-                          eqPadOpen: _eqPadOpen,
-                          onToggleEqPad: () =>
-                              setState(() => _eqPadOpen = !_eqPadOpen),
-                          notch: _notch,
-                          onNotchChanged: (notch) {
-                            setState(() => _notch = notch);
-                            _eq.setEq(
-                              frequencyHz: notch.frequencyHz,
-                              gainDb: notch.gainDb,
-                            );
-                          },
-                          onNotchCleared: () {
-                            setState(() => _notch = null);
-                            _eq.clearEq();
-                          },
+                      ? SizedBox(
+                          width: double.infinity,
+                          child: _AudioPlayerBody(
+                            isPlaying: _isPlaying,
+                            position: _position,
+                            duration: _duration,
+                            formatDuration: _formatDuration,
+                            onPlayPause: _togglePlayPause,
+                            onSeek: (value) {
+                              _eq.seek(Duration(milliseconds: value.round()));
+                            },
+                            eqPadOpen: _eqPadOpen,
+                            onToggleEqPad: () =>
+                                setState(() => _eqPadOpen = !_eqPadOpen),
+                            notch: _notch,
+                            onNotchChanged: (notch) {
+                              setState(() => _notch = notch);
+                              _eq.setEq(
+                                frequencyHz: notch.frequencyHz,
+                                gainDb: notch.gainDb,
+                                bandwidth: notch.bandwidth,
+                              );
+                            },
+                            onNotchCleared: () {
+                              setState(() => _notch = null);
+                              _eq.clearEq();
+                            },
+                          ),
                         )
                       : DownloadProgress(
                           progress: _progress,
@@ -252,11 +256,14 @@ class _AudioPlayerBody extends StatelessWidget {
       children: [
         if (eqPadOpen) ...[
           SizedBox(
-            width: 260,
-            child: ParametricEqPad(
-              notch: notch,
-              onNotchChanged: onNotchChanged,
-              onNotchCleared: onNotchCleared,
+            width: double.infinity,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: ParametricEqPad(
+                notch: notch,
+                onNotchChanged: onNotchChanged,
+                onNotchCleared: onNotchCleared,
+              ),
             ),
           ),
           const SizedBox(height: 20),
@@ -266,6 +273,7 @@ class _AudioPlayerBody extends StatelessWidget {
         ],
         Row(
           mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             IconButton(
               iconSize: 48,

@@ -99,9 +99,10 @@ final class ParametricEqPlayback {
         return Double(file.length) / file.processingFormat.sampleRate
     }
 
-    func setEq(frequency: Double, gainDb: Double) {
+    func setEq(frequency: Double, gainDb: Double, bandwidth: Double) {
         eq.bands[0].frequency = Float(frequency)
         eq.bands[0].gain = Float(gainDb)
+        eq.bands[0].bandwidth = Float(bandwidth)
         eq.bands[0].bypass = false
     }
 
@@ -111,9 +112,24 @@ final class ParametricEqPlayback {
 
     func stop() {
         playerNode.stop()
+        if engine.isRunning {
+            engine.stop()
+        }
         isPlaying = false
         seekOffset = 0
         audioFile = nil
+
+        #if os(iOS)
+        do {
+            try AVAudioSession.sharedInstance().setActive(
+                false,
+                options: .notifyOthersOnDeactivation
+            )
+            NSLog("[PARAMETRIC_EQ] AVAudioSession deactivated")
+        } catch {
+            NSLog("[PARAMETRIC_EQ] Failed to deactivate AVAudioSession: \(error)")
+        }
+        #endif
     }
 
     private func scheduleFromCurrentOffset(file: AVAudioFile) {

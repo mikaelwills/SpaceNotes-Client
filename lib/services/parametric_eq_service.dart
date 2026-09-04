@@ -27,10 +27,15 @@ class ParametricEqService {
     return Duration(milliseconds: ((seconds ?? 0) * 1000).round());
   }
 
-  Future<void> setEq({required double frequencyHz, required double gainDb}) =>
+  Future<void> setEq({
+    required double frequencyHz,
+    required double gainDb,
+    required double bandwidth,
+  }) =>
       _channel.invokeMethod('setEq', {
         'frequency': frequencyHz,
         'gainDb': gainDb,
+        'bandwidth': bandwidth,
       });
 
   Future<void> clearEq() => _channel.invokeMethod('clearEq');

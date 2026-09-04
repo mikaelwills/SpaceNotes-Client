@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -43,7 +42,6 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
   bool _isFocused = false;
   Uint8List? _pendingImageBytes;
   HomeViewType? _focusedForView;
-  Timer? _searchDebounce;
 
   @override
   void initState() {
@@ -54,7 +52,6 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
 
   @override
   void dispose() {
-    _searchDebounce?.cancel();
     _textController.removeListener(_onTextChanged);
     _focusNode.removeListener(_onFocusChanged);
     _textController.dispose();
@@ -210,15 +207,11 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
       v != HomeViewType.note && v != HomeViewType.agents;
 
   void _onSearchChanged(String query) {
-    _searchDebounce?.cancel();
-    _searchDebounce = Timer(const Duration(milliseconds: 150), () {
-      if (!mounted) return;
-      if (_getCurrentViewType() == HomeViewType.passwords) {
-        ref.read(credentialFilterProvider.notifier).state = query;
-        return;
-      }
-      ref.read(folderSearchQueryProvider.notifier).state = query;
-    });
+    if (_getCurrentViewType() == HomeViewType.passwords) {
+      ref.read(credentialFilterProvider.notifier).state = query;
+      return;
+    }
+    ref.read(folderSearchQueryProvider.notifier).state = query;
   }
 
   void _onSend() {

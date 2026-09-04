@@ -21,13 +21,11 @@ class RecentNotesGrid extends ConsumerWidget {
         slivers: [
           SliverPadding(
             padding: const EdgeInsets.fromLTRB(12, 14, 12, 120),
-            sliver: SliverToBoxAdapter(
-              child: StaggeredFileGrid(
-                files: notes,
-                onTap: (file) => context.go('/notes/note/${file.id}'),
-                onLongPress: (file) =>
-                    NotesListDialogs.showNoteContextMenu(context, ref, file),
-              ),
+            sliver: StaggeredFileGrid(
+              files: notes,
+              onTap: (file) => context.go('/notes/note/${file.id}'),
+              onLongPress: (file) =>
+                  NotesListDialogs.showNoteContextMenu(context, ref, file),
             ),
           ),
         ],

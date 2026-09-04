@@ -47,12 +47,13 @@ class ParametricEqPlaybackPlugin: NSObject, FlutterPlugin {
 
         case "setEq":
             guard let frequency = args?["frequency"] as? Double,
-                  let gainDb = args?["gainDb"] as? Double
+                  let gainDb = args?["gainDb"] as? Double,
+                  let bandwidth = args?["bandwidth"] as? Double
             else {
-                result(FlutterError(code: "bad_args", message: "frequency and gainDb required", details: nil))
+                result(FlutterError(code: "bad_args", message: "frequency, gainDb and bandwidth required", details: nil))
                 return
             }
-            playback.setEq(frequency: frequency, gainDb: gainDb)
+            playback.setEq(frequency: frequency, gainDb: gainDb, bandwidth: bandwidth)
             result(nil)
 
         case "clearEq":

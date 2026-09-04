@@ -119,24 +119,22 @@ class _FolderListViewState extends ConsumerState<FolderListView> {
           if (notes.isNotEmpty)
             SliverPadding(
               padding: const EdgeInsets.fromLTRB(12, 14, 12, 120),
-              sliver: SliverToBoxAdapter(
-                child: StaggeredFileGrid(
-                  files: notes,
-                  onTap: (file) {
-                    FocusManager.instance.primaryFocus?.unfocus();
-                    ref.read(folderSearchQueryProvider.notifier).state = '';
-                    if (PlatformUtils.isDesktopLayout(context)) {
-                      _openNoteOnDesktop(context, file);
-                    } else {
-                      context.go('/notes/note/${file.id}');
-                    }
-                  },
-                  onLongPress: (file) {
-                    if (FileTypeRegistry.forFile(file).hasContextActions) {
-                      NotesListDialogs.showNoteContextMenu(context, ref, file);
-                    }
-                  },
-                ),
+              sliver: StaggeredFileGrid(
+                files: notes,
+                onTap: (file) {
+                  FocusManager.instance.primaryFocus?.unfocus();
+                  ref.read(folderSearchQueryProvider.notifier).state = '';
+                  if (PlatformUtils.isDesktopLayout(context)) {
+                    _openNoteOnDesktop(context, file);
+                  } else {
+                    context.go('/notes/note/${file.id}');
+                  }
+                },
+                onLongPress: (file) {
+                  if (FileTypeRegistry.forFile(file).hasContextActions) {
+                    NotesListDialogs.showNoteContextMenu(context, ref, file);
+                  }
+                },
               ),
             )
           else

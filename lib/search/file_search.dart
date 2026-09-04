@@ -1,6 +1,7 @@
 import '../file_types/file_type_registry.dart';
 import '../generated/folder.dart';
 import '../generated/space_file.dart';
+import '../services/debug_logger.dart';
 
 const int rankExactName = 0;
 const int rankNameStandalonePhrase = 1;
@@ -120,15 +121,18 @@ int indexedRank(SearchableFile entry, List<String> terms) {
 
 List<SpaceFile> searchAndRank(List<SearchableFile> index, List<String> terms) {
   if (terms.isEmpty) return [for (final f in index) f.file];
+  final span = debugLogger.span('SEARCH_SCAN', 'searchAndRank(${terms.join(" ")})');
   final scored = <(int, SearchableFile)>[];
   for (final f in index) {
     final rank = indexedRank(f, terms);
     if (rank < rankNoMatch) scored.add((rank, f));
   }
+  span.lap('scanned ${index.length} entries, ${scored.length} matched');
   scored.sort((a, b) {
     if (a.$1 != b.$1) return a.$1.compareTo(b.$1);
     return a.$2.name.compareTo(b.$2.name);
   });
+  span.end('sorted');
   return [for (final s in scored) s.$2.file];
 }
 

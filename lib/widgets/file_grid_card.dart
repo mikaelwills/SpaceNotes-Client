@@ -41,7 +41,6 @@ class FileGridCard extends ConsumerWidget {
             },
       child: Container(
         width: double.infinity,
-        margin: const EdgeInsets.only(bottom: 10),
         decoration: BoxDecoration(
           color: SpaceNotesTheme.card,
           border: Border.all(color: SpaceNotesTheme.hairline, width: 1),
@@ -119,9 +118,14 @@ class _StandardCardBody extends StatelessWidget {
   final SpaceFile file;
   final int index;
 
+  static const _previewCharLimit = 240;
+
   @override
   Widget build(BuildContext context) {
-    final preview = file.content.trim();
+    final trimmed = file.content.trim();
+    final preview = trimmed.length > _previewCharLimit
+        ? trimmed.substring(0, _previewCharLimit)
+        : trimmed;
     final hasPreview = preview.isNotEmpty;
 
     return Column(
