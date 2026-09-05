@@ -13,7 +13,7 @@ class EqNotch {
   final double gainDb;
   final int qLevel;
 
-  static const double baseBandwidth = 0.1;
+  static const double baseBandwidth = 0.025;
 
   double get bandwidth => baseBandwidth * math.pow(2, qLevel);
 
@@ -206,7 +206,12 @@ class _EqCurvePainter extends CustomPainter {
     } else {
       notchX = ParametricEqPad.xForFrequency(notch!.frequencyHz, size.width);
       notchY = ParametricEqPad.yForGain(notch!.gainDb, size.height);
-      final spread = 40.0 * math.pow(2, notch!.qLevel);
+      // Pixels of curve spread per unit of AVAudioUnitEQ bandwidth — the
+      // only knob for visual curve width, so it can never drift out of
+      // sync with the actual filter Q like a separately hand-tuned
+      // constant would.
+      const spreadPerBandwidth = 800.0;
+      final spread = notch!.bandwidth * spreadPerBandwidth;
 
       for (double x = 0; x <= size.width; x += 2) {
         final distance = (x - notchX).abs();
