@@ -30,11 +30,13 @@ class ParametricEqPad extends StatelessWidget {
     required this.notch,
     required this.onNotchChanged,
     required this.onNotchCleared,
+    this.bypassed = false,
   });
 
   final EqNotch? notch;
   final ValueChanged<EqNotch> onNotchChanged;
   final VoidCallback onNotchCleared;
+  final bool bypassed;
 
   static const double minFrequency = 20;
   static const double maxFrequency = 20000;
@@ -90,7 +92,7 @@ class ParametricEqPad extends StatelessWidget {
               children: [
                 Positioned.fill(
                   child: CustomPaint(
-                    painter: _EqCurvePainter(notch: notch),
+                    painter: _EqCurvePainter(notch: notch, bypassed: bypassed),
                   ),
                 ),
                 if (notch != null) _buildReadout(notch!, size),
@@ -120,10 +122,10 @@ class ParametricEqPad extends StatelessWidget {
         child: Text(
           '$freqLabel  $gainLabel',
           textAlign: TextAlign.center,
-          style: const TextStyle(
+          style: TextStyle(
             fontFamily: SpaceNotesTheme.fontMono,
             fontSize: 11,
-            color: SpaceNotesTheme.accent,
+            color: bypassed ? SpaceNotesTheme.muted : SpaceNotesTheme.accent,
             letterSpacing: 0.3,
           ),
         ),
@@ -190,12 +192,14 @@ class ParametricEqPad extends StatelessWidget {
 }
 
 class _EqCurvePainter extends CustomPainter {
-  _EqCurvePainter({required this.notch});
+  _EqCurvePainter({required this.notch, required this.bypassed});
 
   final EqNotch? notch;
+  final bool bypassed;
 
   @override
   void paint(Canvas canvas, Size size) {
+    final curveColor = bypassed ? SpaceNotesTheme.muted : SpaceNotesTheme.accent;
     final zeroY = size.height / 2;
     final path = Path()..moveTo(0, zeroY);
     double? notchX;
@@ -234,14 +238,14 @@ class _EqCurvePainter extends CustomPainter {
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
         colors: [
-          SpaceNotesTheme.accent.withValues(alpha: 0.16),
-          SpaceNotesTheme.accent.withValues(alpha: 0.0),
+          curveColor.withValues(alpha: 0.16),
+          curveColor.withValues(alpha: 0.0),
         ],
       ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
     canvas.drawPath(fillPath, fillPaint);
 
     final linePaint = Paint()
-      ..color = SpaceNotesTheme.accent
+      ..color = curveColor
       ..strokeWidth = 2
       ..strokeCap = StrokeCap.round
       ..style = PaintingStyle.stroke;
@@ -249,11 +253,11 @@ class _EqCurvePainter extends CustomPainter {
 
     if (notchX != null && notchY != null) {
       final glowPaint = Paint()
-        ..color = SpaceNotesTheme.accent.withValues(alpha: 0.35)
+        ..color = curveColor.withValues(alpha: 0.35)
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8);
       canvas.drawCircle(Offset(notchX, notchY), 10, glowPaint);
 
-      final dotPaint = Paint()..color = SpaceNotesTheme.accent;
+      final dotPaint = Paint()..color = curveColor;
       canvas.drawCircle(Offset(notchX, notchY), 4.5, dotPaint);
 
       final ringPaint = Paint()
@@ -267,5 +271,6 @@ class _EqCurvePainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _EqCurvePainter oldDelegate) =>
       oldDelegate.notch?.frequencyHz != notch?.frequencyHz ||
-      oldDelegate.notch?.gainDb != notch?.gainDb;
+      oldDelegate.notch?.gainDb != notch?.gainDb ||
+      oldDelegate.bypassed != bypassed;
 }

@@ -38,6 +38,7 @@ class _AudioViewerScreenState extends ConsumerState<AudioViewerScreen>
 
   bool _eqPadOpen = false;
   EqNotch? _notch;
+  bool _eqBypassed = false;
 
   @override
   void dispose() {
@@ -86,16 +87,37 @@ class _AudioViewerScreenState extends ConsumerState<AudioViewerScreen>
                             onToggleEqPad: () =>
                                 setState(() => _eqPadOpen = !_eqPadOpen),
                             notch: _notch,
+                            eqBypassed: _eqBypassed,
+                            onToggleEqBypass: _notch == null
+                                ? null
+                                : () {
+                                    final bypassing = !_eqBypassed;
+                                    setState(() => _eqBypassed = bypassing);
+                                    if (bypassing) {
+                                      _eq.clearEq();
+                                    } else {
+                                      _eq.setEq(
+                                        frequencyHz: _notch!.frequencyHz,
+                                        gainDb: _notch!.gainDb,
+                                        bandwidth: _notch!.bandwidth,
+                                      );
+                                    }
+                                  },
                             onNotchChanged: (notch) {
                               setState(() => _notch = notch);
-                              _eq.setEq(
-                                frequencyHz: notch.frequencyHz,
-                                gainDb: notch.gainDb,
-                                bandwidth: notch.bandwidth,
-                              );
+                              if (!_eqBypassed) {
+                                _eq.setEq(
+                                  frequencyHz: notch.frequencyHz,
+                                  gainDb: notch.gainDb,
+                                  bandwidth: notch.bandwidth,
+                                );
+                              }
                             },
                             onNotchCleared: () {
-                              setState(() => _notch = null);
+                              setState(() {
+                                _notch = null;
+                                _eqBypassed = false;
+                              });
                               _eq.clearEq();
                             },
                           ),
@@ -228,6 +250,8 @@ class _AudioPlayerBody extends StatelessWidget {
     required this.eqPadOpen,
     required this.onToggleEqPad,
     required this.notch,
+    required this.eqBypassed,
+    required this.onToggleEqBypass,
     required this.onNotchChanged,
     required this.onNotchCleared,
   });
@@ -241,6 +265,8 @@ class _AudioPlayerBody extends StatelessWidget {
   final bool eqPadOpen;
   final VoidCallback onToggleEqPad;
   final EqNotch? notch;
+  final bool eqBypassed;
+  final VoidCallback? onToggleEqBypass;
   final ValueChanged<EqNotch> onNotchChanged;
   final VoidCallback onNotchCleared;
 
@@ -259,10 +285,33 @@ class _AudioPlayerBody extends StatelessWidget {
             width: double.infinity,
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: ParametricEqPad(
-                notch: notch,
-                onNotchChanged: onNotchChanged,
-                onNotchCleared: onNotchCleared,
+              child: Stack(
+                children: [
+                  ParametricEqPad(
+                    notch: notch,
+                    bypassed: eqBypassed,
+                    onNotchChanged: onNotchChanged,
+                    onNotchCleared: onNotchCleared,
+                  ),
+                  Positioned(
+                    top: 0,
+                    right: 0,
+                    child: IconButton(
+                      iconSize: 22,
+                      icon: Icon(
+                        eqBypassed
+                            ? Icons.power_settings_new
+                            : Icons.power_settings_new_outlined,
+                        color: onToggleEqBypass == null
+                            ? SpaceNotesTheme.dim
+                            : eqBypassed
+                                ? SpaceNotesTheme.muted
+                                : SpaceNotesTheme.accent,
+                      ),
+                      onPressed: onToggleEqBypass,
+                    ),
+                  ),
+                ],
               ),
             ),
           ),

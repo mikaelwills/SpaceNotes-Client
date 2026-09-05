@@ -18,6 +18,7 @@ import '../widgets/staggered_file_grid.dart';
 import '../file_types/file_type_registry.dart';
 import '../blocs/desktop_notes/desktop_notes_bloc.dart';
 import '../blocs/desktop_notes/desktop_notes_event.dart';
+import '../widgets/desktop/content_actions_fab.dart';
 
 class FolderListView extends ConsumerStatefulWidget {
   final String folderPath;
@@ -71,7 +72,19 @@ class _FolderListViewState extends ConsumerState<FolderListView> {
             ),
             child: const ViewModeToggle(),
           ),
-        Expanded(child: _buildLoadedState(data.folders, data.notes)),
+        Expanded(
+          child: Stack(
+            children: [
+              _buildLoadedState(data.folders, data.notes),
+              if (isDesktop)
+                Positioned(
+                  right: 14,
+                  bottom: 15,
+                  child: ContentActionsFab(folderPath: widget.folderPath),
+                ),
+            ],
+          ),
+        ),
       ],
     );
   }
