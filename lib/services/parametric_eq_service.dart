@@ -1,11 +1,28 @@
 import 'package:flutter/services.dart';
 
 class ParametricEqService {
+  ParametricEqService() {
+    _channel.setMethodCallHandler(_handleNativeCall);
+  }
+
   static const MethodChannel _channel =
       MethodChannel('spacenotes/parametric_eq_playback');
 
-  Future<bool> load(String path) async {
-    final result = await _channel.invokeMethod<bool>('load', {'path': path});
+  ValueChanged<bool>? onPlaybackStateChanged;
+
+  Future<dynamic> _handleNativeCall(MethodCall call) async {
+    if (call.method != 'playbackStateChanged') return null;
+    final args = call.arguments as Map?;
+    final isPlaying = args?['isPlaying'] as bool?;
+    if (isPlaying != null) onPlaybackStateChanged?.call(isPlaying);
+    return null;
+  }
+
+  Future<bool> load(String path, {String? title}) async {
+    final result = await _channel.invokeMethod<bool>('load', {
+      'path': path,
+      if (title != null) 'title': title,
+    });
     return result ?? false;
   }
 

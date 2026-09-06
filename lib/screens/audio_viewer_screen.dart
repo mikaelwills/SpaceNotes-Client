@@ -41,8 +41,17 @@ class _AudioViewerScreenState extends ConsumerState<AudioViewerScreen>
   bool _eqBypassed = false;
 
   @override
+  void initState() {
+    super.initState();
+    _eq.onPlaybackStateChanged = (isPlaying) {
+      if (mounted) setState(() => _isPlaying = isPlaying);
+    };
+  }
+
+  @override
   void dispose() {
     _positionPoll?.cancel();
+    _eq.onPlaybackStateChanged = null;
     _eq.stop();
     super.dispose();
   }
@@ -193,7 +202,8 @@ class _AudioViewerScreenState extends ConsumerState<AudioViewerScreen>
   Future<void> _initPlayer(String localPath) async {
     try {
       debugLogger.info('AUDIO_VIEWER', 'Loading into native EQ player', localPath);
-      final loaded = await _eq.load(localPath);
+      final title = ref.read(fileByIdProvider(widget.fileId))?.name;
+      final loaded = await _eq.load(localPath, title: title);
       debugLogger.info('AUDIO_VIEWER', 'Native load result', 'loaded=$loaded');
       if (!loaded) throw Exception('native player failed to load file');
       if (!mounted) return;
@@ -216,7 +226,7 @@ class _AudioViewerScreenState extends ConsumerState<AudioViewerScreen>
   void _startPositionPoll() {
     _positionPoll?.cancel();
     _positionPoll = Timer.periodic(const Duration(milliseconds: 200), (_) async {
-      if (!mounted || !_isPlaying) return;
+      if (!mounted) return;
       final position = await _eq.position();
       if (mounted) setState(() => _position = position);
     });

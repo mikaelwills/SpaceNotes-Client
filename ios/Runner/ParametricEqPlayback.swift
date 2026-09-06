@@ -1,4 +1,5 @@
 import AVFoundation
+import MediaPlayer
 
 final class ParametricEqPlayback {
     private let engine = AVAudioEngine()
@@ -8,8 +9,13 @@ final class ParametricEqPlayback {
     private var seekOffset: AVAudioFramePosition = 0
     private var isPlaying = false
     private var interruptedPosition: Double?
+    private var title = ""
+    private let skipInterval: TimeInterval = 15
+
+    var onPlaybackStateChanged: ((Bool) -> Void)?
 
     init() {
+        configureRemoteCommands()
         eq.bands[0].filterType = .parametric
         eq.bands[0].bypass = true
         eq.bands[0].bandwidth = 0.025
@@ -81,6 +87,61 @@ final class ParametricEqPlayback {
     }
     #endif
 
+    private func configureRemoteCommands() {
+        let center = MPRemoteCommandCenter.shared()
+
+        center.playCommand.addTarget { [weak self] _ in
+            guard let self, self.audioFile != nil else { return .noActionableNowPlayingItem }
+            self.play()
+            self.onPlaybackStateChanged?(true)
+            return .success
+        }
+        center.pauseCommand.addTarget { [weak self] _ in
+            guard let self, self.audioFile != nil else { return .noActionableNowPlayingItem }
+            self.pause()
+            self.onPlaybackStateChanged?(false)
+            return .success
+        }
+        center.togglePlayPauseCommand.addTarget { [weak self] _ in
+            guard let self, self.audioFile != nil else { return .noActionableNowPlayingItem }
+            if self.isPlaying { self.pause() } else { self.play() }
+            self.onPlaybackStateChanged?(self.isPlaying)
+            return .success
+        }
+        center.changePlaybackPositionCommand.addTarget { [weak self] event in
+            guard let self, self.audioFile != nil,
+                  let event = event as? MPChangePlaybackPositionCommandEvent
+            else { return .noActionableNowPlayingItem }
+            self.seek(seconds: event.positionTime)
+            return .success
+        }
+        center.skipForwardCommand.preferredIntervals = [NSNumber(value: skipInterval)]
+        center.skipForwardCommand.addTarget { [weak self] _ in
+            guard let self, self.audioFile != nil else { return .noActionableNowPlayingItem }
+            self.seek(seconds: self.currentPosition() + self.skipInterval)
+            return .success
+        }
+        center.skipBackwardCommand.preferredIntervals = [NSNumber(value: skipInterval)]
+        center.skipBackwardCommand.addTarget { [weak self] _ in
+            guard let self, self.audioFile != nil else { return .noActionableNowPlayingItem }
+            self.seek(seconds: self.currentPosition() - self.skipInterval)
+            return .success
+        }
+    }
+
+    private func updateNowPlaying() {
+        guard audioFile != nil else {
+            MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
+            return
+        }
+        MPNowPlayingInfoCenter.default().nowPlayingInfo = [
+            MPMediaItemPropertyTitle: title,
+            MPMediaItemPropertyPlaybackDuration: duration(),
+            MPNowPlayingInfoPropertyElapsedPlaybackTime: currentPosition(),
+            MPNowPlayingInfoPropertyPlaybackRate: isPlaying ? 1.0 : 0.0,
+        ]
+    }
+
     private func ensureEngineRunning() -> Bool {
         if engine.isRunning { return true }
         do {
@@ -93,9 +154,10 @@ final class ParametricEqPlayback {
         }
     }
 
-    func load(path: String) -> Bool {
+    func load(path: String, title: String) -> Bool {
         NSLog("[PARAMETRIC_EQ] load called, path=\(path)")
         stop()
+        self.title = title
         do {
             let url = URL(fileURLWithPath: path)
             NSLog("[PARAMETRIC_EQ] file exists on disk: \(FileManager.default.fileExists(atPath: path))")
@@ -117,6 +179,7 @@ final class ParametricEqPlayback {
                 try engine.start()
                 NSLog("[PARAMETRIC_EQ] engine.start() succeeded")
             }
+            updateNowPlaying()
             return true
         } catch {
             NSLog("[PARAMETRIC_EQ] Failed to load \(path): \(error)")
@@ -137,11 +200,13 @@ final class ParametricEqPlayback {
             NSLog("[PARAMETRIC_EQ] playerNode.play() called, now isPlaying=\(playerNode.isPlaying)")
         }
         isPlaying = true
+        updateNowPlaying()
     }
 
     func pause() {
         playerNode.pause()
         isPlaying = false
+        updateNowPlaying()
     }
 
     func seek(seconds: Double) {
@@ -157,6 +222,7 @@ final class ParametricEqPlayback {
             guard ensureEngineRunning() else { return }
             playerNode.play()
         }
+        updateNowPlaying()
     }
 
     func currentPosition() -> Double {
@@ -194,6 +260,7 @@ final class ParametricEqPlayback {
         isPlaying = false
         seekOffset = 0
         audioFile = nil
+        MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
 
         #if os(iOS)
         do {

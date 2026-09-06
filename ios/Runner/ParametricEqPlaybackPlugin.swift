@@ -2,6 +2,7 @@ import Flutter
 
 class ParametricEqPlaybackPlugin: NSObject, FlutterPlugin {
     private let playback = ParametricEqPlayback()
+    private var channel: FlutterMethodChannel?
 
     static func register(with registrar: FlutterPluginRegistrar) {
         let instance = ParametricEqPlaybackPlugin()
@@ -9,6 +10,15 @@ class ParametricEqPlaybackPlugin: NSObject, FlutterPlugin {
             name: "spacenotes/parametric_eq_playback",
             binaryMessenger: registrar.messenger()
         )
+        instance.channel = channel
+        instance.playback.onPlaybackStateChanged = { [weak instance] isPlaying in
+            DispatchQueue.main.async {
+                instance?.channel?.invokeMethod(
+                    "playbackStateChanged",
+                    arguments: ["isPlaying": isPlaying]
+                )
+            }
+        }
         registrar.addMethodCallDelegate(instance, channel: channel)
     }
 
@@ -21,7 +31,8 @@ class ParametricEqPlaybackPlugin: NSObject, FlutterPlugin {
                 result(FlutterError(code: "bad_args", message: "path required", details: nil))
                 return
             }
-            result(playback.load(path: path))
+            let title = args?["title"] as? String ?? (path as NSString).lastPathComponent
+            result(playback.load(path: path, title: title))
 
         case "play":
             playback.play()
