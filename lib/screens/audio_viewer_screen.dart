@@ -13,7 +13,7 @@ import '../widgets/parametric_eq_pad.dart';
 import '../widgets/share_button.dart';
 import '../widgets/waveform_scrubber.dart';
 
-const double _waveformBinSeconds = 0.25;
+const double _waveformBinSeconds = 0.125;
 const Duration _skipStep = Duration(seconds: 10);
 
 class AudioViewerScreen extends ConsumerStatefulWidget {

@@ -86,7 +86,7 @@ void main() {
     await tester.pump();
 
     expect(seeked, isNotNull);
-    expect(seeked!.inMilliseconds, inInclusiveRange(38000, 40000));
+    expect(seeked!.inMilliseconds, inInclusiveRange(34000, 35000));
     expect(_displayed(tester), seeked);
   });
 }

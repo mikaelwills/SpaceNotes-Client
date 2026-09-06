@@ -15,8 +15,8 @@ class WaveformScrubber extends StatefulWidget {
     required this.duration,
     required this.isPlaying,
     required this.onSeek,
-    this.height = 96,
-    this.pixelsPerSecond = 12,
+    this.height = 180,
+    this.pixelsPerSecond = 24,
     this.playheadFraction = 0.2,
   });
 
