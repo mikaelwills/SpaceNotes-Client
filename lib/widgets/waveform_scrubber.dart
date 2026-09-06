@@ -85,13 +85,6 @@ class _WaveformScrubberState extends State<WaveformScrubber> {
     _lastTickElapsed = elapsed;
     _displayed.value = _extrapolated();
     _tickCount++;
-    if (_tickCount % 300 == 0) {
-      debugLogger.info(
-        'WAVE',
-        'ticker alive',
-        'ticks=$_tickCount elapsed=${elapsed.inMilliseconds}ms displayed=${_displayed.value.inMilliseconds}ms',
-      );
-    }
   }
 
   void _syncTicker() {
@@ -213,7 +206,6 @@ class _WaveformPainter extends CustomPainter {
   final bool scrubbing;
 
   static const double barWidth = 2;
-  static const double barPitch = 3;
   static const double minBarHeight = 2;
 
   @override
@@ -224,21 +216,25 @@ class _WaveformPainter extends CustomPainter {
     final positionSeconds = position.value.inMilliseconds / 1000;
     final durationSeconds = duration.inMilliseconds / 1000;
 
-    final barCount = (size.width / barPitch).ceil() + 1;
+    final visibleSeconds = size.width / pixelsPerSecond;
+    final leftSeconds = positionSeconds - playheadX / pixelsPerSecond;
+    final firstBin = (leftSeconds / binSeconds).floor() - 1;
+    final lastBin = ((leftSeconds + visibleSeconds) / binSeconds).ceil() + 1;
+    final barCount = lastBin - firstBin + 1;
     final played = Float32List(barCount * 4);
     final upcoming = Float32List(barCount * 4);
     var playedCount = 0;
     var upcomingCount = 0;
 
     final bins = peaks;
-    final firstBar = playheadX % barPitch;
-    for (var x = firstBar; x <= size.width; x += barPitch) {
-      final seconds = positionSeconds + (x - playheadX) / pixelsPerSecond;
+    for (var bin = firstBin; bin <= lastBin; bin++) {
+      final seconds = (bin + 0.5) * binSeconds;
       if (seconds < 0 || seconds >= durationSeconds) continue;
+      final x = playheadX + (seconds - positionSeconds) * pixelsPerSecond;
+      if (x < -barWidth || x > size.width + barWidth) continue;
       var level = 0.0;
       if (bins != null && bins.isNotEmpty) {
-        final index = (seconds / binSeconds).floor().clamp(0, bins.length - 1);
-        level = bins[index];
+        level = bins[bin.clamp(0, bins.length - 1)];
       }
       final half = (minBarHeight + level * (maxBarHeight - minBarHeight)) / 2;
       if (x < playheadX) {
