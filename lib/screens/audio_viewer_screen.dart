@@ -41,7 +41,6 @@ class _AudioViewerScreenState extends ConsumerState<AudioViewerScreen>
   Timer? _positionPoll;
   List<double>? _peaks;
 
-  bool _eqPadOpen = false;
   EqNotch? _notch;
   bool _eqBypassed = false;
 
@@ -84,7 +83,8 @@ class _AudioViewerScreenState extends ConsumerState<AudioViewerScreen>
           children: [
             Center(
               child: _error != null
-                  ? Text(_error!, style: const TextStyle(color: Colors.red, fontSize: 13))
+                  ? Text(_error!,
+                      style: const TextStyle(color: Colors.red, fontSize: 13))
                   : _localPath != null
                       ? SizedBox(
                           width: double.infinity,
@@ -97,9 +97,6 @@ class _AudioViewerScreenState extends ConsumerState<AudioViewerScreen>
                             onPlayPause: _togglePlayPause,
                             onSeek: _seekTo,
                             onSkip: (delta) => _seekTo(_position + delta),
-                            eqPadOpen: _eqPadOpen,
-                            onToggleEqPad: () =>
-                                setState(() => _eqPadOpen = !_eqPadOpen),
                             notch: _notch,
                             eqBypassed: _eqBypassed,
                             onToggleEqBypass: _notch == null
@@ -187,8 +184,8 @@ class _AudioViewerScreenState extends ConsumerState<AudioViewerScreen>
           }
         },
       );
-      final verified =
-          await store.markCompleteIfVerified(remotePath, localPath, expectedSize);
+      final verified = await store.markCompleteIfVerified(
+          remotePath, localPath, expectedSize);
       debugLogger.info(
         'AUDIO_VIEWER',
         verified ? 'Verified and marked complete' : 'Verification FAILED',
@@ -206,14 +203,16 @@ class _AudioViewerScreenState extends ConsumerState<AudioViewerScreen>
 
   Future<void> _initPlayer(String localPath) async {
     try {
-      debugLogger.info('AUDIO_VIEWER', 'Loading into native EQ player', localPath);
+      debugLogger.info(
+          'AUDIO_VIEWER', 'Loading into native EQ player', localPath);
       final title = ref.read(fileByIdProvider(widget.fileId))?.name;
       final loaded = await _eq.load(localPath, title: title);
       debugLogger.info('AUDIO_VIEWER', 'Native load result', 'loaded=$loaded');
       if (!loaded) throw Exception('native player failed to load file');
       if (!mounted) return;
       final duration = await _eq.duration();
-      debugLogger.info('AUDIO_VIEWER', 'Duration reported', '${duration.inMilliseconds}ms');
+      debugLogger.info(
+          'AUDIO_VIEWER', 'Duration reported', '${duration.inMilliseconds}ms');
       setState(() {
         _localPath = localPath;
         _duration = duration;
@@ -224,14 +223,16 @@ class _AudioViewerScreenState extends ConsumerState<AudioViewerScreen>
       _startPositionPoll();
       _loadWaveform();
     } catch (e) {
-      debugLogger.error('AUDIO_VIEWER', 'Player init failed: $localPath', e.toString());
+      debugLogger.error(
+          'AUDIO_VIEWER', 'Player init failed: $localPath', e.toString());
       if (mounted) setState(() => _error = 'Could not play audio: $e');
     }
   }
 
   void _startPositionPoll() {
     _positionPoll?.cancel();
-    _positionPoll = Timer.periodic(const Duration(milliseconds: 200), (_) async {
+    _positionPoll =
+        Timer.periodic(const Duration(milliseconds: 200), (_) async {
       if (!mounted) return;
       final position = await _eq.position();
       if (mounted) setState(() => _position = position);
@@ -241,7 +242,8 @@ class _AudioViewerScreenState extends ConsumerState<AudioViewerScreen>
   Future<void> _loadWaveform() async {
     try {
       final peaks = await _eq.waveform(binSeconds: _waveformBinSeconds);
-      debugLogger.info('AUDIO_VIEWER', 'Waveform loaded', '${peaks.length} bins');
+      debugLogger.info(
+          'AUDIO_VIEWER', 'Waveform loaded', '${peaks.length} bins');
       if (mounted) setState(() => _peaks = peaks);
     } catch (e) {
       debugLogger.error('AUDIO_VIEWER', 'Waveform failed', e.toString());
@@ -283,8 +285,6 @@ class _AudioPlayerBody extends StatelessWidget {
     required this.onPlayPause,
     required this.onSeek,
     required this.onSkip,
-    required this.eqPadOpen,
-    required this.onToggleEqPad,
     required this.notch,
     required this.eqBypassed,
     required this.onToggleEqBypass,
@@ -300,8 +300,6 @@ class _AudioPlayerBody extends StatelessWidget {
   final VoidCallback onPlayPause;
   final ValueChanged<Duration> onSeek;
   final ValueChanged<Duration> onSkip;
-  final bool eqPadOpen;
-  final VoidCallback onToggleEqPad;
   final EqNotch? notch;
   final bool eqBypassed;
   final VoidCallback? onToggleEqBypass;
@@ -313,79 +311,41 @@ class _AudioPlayerBody extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        if (eqPadOpen) ...[
-          SizedBox(
-            width: double.infinity,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Stack(
-                children: [
-                  ParametricEqPad(
-                    notch: notch,
-                    bypassed: eqBypassed,
-                    onNotchChanged: onNotchChanged,
-                    onNotchCleared: onNotchCleared,
-                  ),
-                  Positioned(
-                    top: 0,
-                    right: 0,
-                    child: IconButton(
-                      iconSize: 22,
-                      icon: Icon(
-                        eqBypassed
-                            ? Icons.power_settings_new
-                            : Icons.power_settings_new_outlined,
-                        color: onToggleEqBypass == null
-                            ? SpaceNotesTheme.dim
-                            : eqBypassed
-                                ? SpaceNotesTheme.muted
-                                : SpaceNotesTheme.accent,
-                      ),
-                      onPressed: onToggleEqBypass,
+        SizedBox(
+          width: double.infinity,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Stack(
+              children: [
+                ParametricEqPad(
+                  notch: notch,
+                  bypassed: eqBypassed,
+                  onNotchChanged: onNotchChanged,
+                  onNotchCleared: onNotchCleared,
+                ),
+                Positioned(
+                  top: 0,
+                  right: 0,
+                  child: IconButton(
+                    iconSize: 22,
+                    icon: Icon(
+                      eqBypassed
+                          ? Icons.power_settings_new
+                          : Icons.power_settings_new_outlined,
+                      color: onToggleEqBypass == null
+                          ? SpaceNotesTheme.dim
+                          : eqBypassed
+                              ? SpaceNotesTheme.muted
+                              : SpaceNotesTheme.accent,
                     ),
+                    onPressed: onToggleEqBypass,
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 20),
-        ] else ...[
-          const Icon(Icons.music_note_outlined, size: 64, color: SpaceNotesTheme.accent),
-          const SizedBox(height: 24),
-        ],
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            IconButton(
-              iconSize: 30,
-              icon: const Icon(Icons.replay_10, color: SpaceNotesTheme.fg),
-              onPressed: () => onSkip(-_skipStep),
-            ),
-            IconButton(
-              iconSize: 48,
-              icon: Icon(
-                isPlaying ? Icons.pause_circle_filled : Icons.play_circle_filled,
-                color: SpaceNotesTheme.accent,
-              ),
-              onPressed: onPlayPause,
-            ),
-            IconButton(
-              iconSize: 30,
-              icon: const Icon(Icons.forward_10, color: SpaceNotesTheme.fg),
-              onPressed: () => onSkip(_skipStep),
-            ),
-            IconButton(
-              iconSize: 26,
-              icon: Icon(
-                Icons.graphic_eq,
-                color: eqPadOpen ? SpaceNotesTheme.accent : SpaceNotesTheme.muted,
-              ),
-              onPressed: onToggleEqPad,
-            ),
-          ],
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 20),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Column(
@@ -415,6 +375,33 @@ class _AudioPlayerBody extends StatelessWidget {
               ),
             ],
           ),
+        ),
+        const SizedBox(height: 12),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            IconButton(
+              iconSize: 30,
+              icon: const Icon(Icons.replay_10, color: SpaceNotesTheme.fg),
+              onPressed: () => onSkip(-_skipStep),
+            ),
+            IconButton(
+              iconSize: 48,
+              icon: Icon(
+                isPlaying
+                    ? Icons.pause_circle_filled
+                    : Icons.play_circle_filled,
+                color: SpaceNotesTheme.accent,
+              ),
+              onPressed: onPlayPause,
+            ),
+            IconButton(
+              iconSize: 30,
+              icon: const Icon(Icons.forward_10, color: SpaceNotesTheme.fg),
+              onPressed: () => onSkip(_skipStep),
+            ),
+          ],
         ),
       ],
     );
