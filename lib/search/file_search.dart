@@ -130,6 +130,8 @@ List<SpaceFile> searchAndRank(List<SearchableFile> index, List<String> terms) {
   span.lap('scanned ${index.length} entries, ${scored.length} matched');
   scored.sort((a, b) {
     if (a.$1 != b.$1) return a.$1.compareTo(b.$1);
+    final byRecency = b.$2.file.modifiedTime.compareTo(a.$2.file.modifiedTime);
+    if (byRecency != 0) return byRecency;
     return a.$2.name.compareTo(b.$2.name);
   });
   span.end('sorted');

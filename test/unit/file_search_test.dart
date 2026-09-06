@@ -7,6 +7,7 @@ SpaceFile _note({
   String path = '',
   String content = '',
   String extension = 'md',
+  int modifiedTime = 0,
 }) =>
     SpaceFile.fromJson({
       'id': name,
@@ -14,6 +15,7 @@ SpaceFile _note({
       'path': path.isEmpty ? name : path,
       'content': content,
       'extension': extension,
+      'modifiedTime': modifiedTime,
     });
 
 void main() {
@@ -167,6 +169,24 @@ void main() {
         'Good Flutter Architecture',
         'Good Flutter Architecture Guide',
         'zzz',
+      ]);
+    });
+
+    test('within one rank the most recently modified file comes first', () {
+      final index = buildSearchIndex([
+        _note(name: 'Blood Bound Master 0509', modifiedTime: 100),
+        _note(name: 'Blood Bound Master 0509 1', modifiedTime: 200),
+        _note(name: 'Blood Bound Master 0509 3', modifiedTime: 400),
+        _note(name: 'Blood Bound Master 0509 2', modifiedTime: 300),
+      ]);
+
+      final result = searchAndRank(index, searchTerms('blood'));
+
+      expect(result.map((f) => f.name).toList(), [
+        'Blood Bound Master 0509 3',
+        'Blood Bound Master 0509 2',
+        'Blood Bound Master 0509 1',
+        'Blood Bound Master 0509',
       ]);
     });
 
