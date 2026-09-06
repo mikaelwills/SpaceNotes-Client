@@ -1,3 +1,6 @@
+import 'dart:ui' as ui;
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import '../theme/spacenotes_theme.dart';
@@ -32,7 +35,10 @@ class WaveformScrubber extends StatefulWidget {
 
 class _WaveformScrubberState extends State<WaveformScrubber>
     with SingleTickerProviderStateMixin {
+  static const Duration _reanchorTolerance = Duration(milliseconds: 250);
+
   late final Ticker _ticker;
+  late final ValueNotifier<Duration> _displayed;
   late Duration _anchorPosition;
   late DateTime _anchorTime;
   Duration? _scrubPosition;
@@ -41,23 +47,30 @@ class _WaveformScrubberState extends State<WaveformScrubber>
   void initState() {
     super.initState();
     _anchor(widget.position);
-    _ticker = createTicker((_) => setState(() {}));
+    _displayed = ValueNotifier(widget.position);
+    _ticker = createTicker(_onTick);
     _syncTicker();
   }
 
   @override
   void didUpdateWidget(WaveformScrubber oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.position != oldWidget.position ||
-        widget.isPlaying != oldWidget.isPlaying) {
+    if (widget.isPlaying != oldWidget.isPlaying) {
       _anchor(widget.position);
+    } else if (widget.position != oldWidget.position) {
+      final drift = (widget.position - _displayed.value).abs();
+      if (!widget.isPlaying || drift > _reanchorTolerance) {
+        _anchor(widget.position);
+      }
     }
+    if (_scrubPosition == null) _displayed.value = _extrapolated();
     _syncTicker();
   }
 
   @override
   void dispose() {
     _ticker.dispose();
+    _displayed.dispose();
     super.dispose();
   }
 
@@ -66,15 +79,17 @@ class _WaveformScrubberState extends State<WaveformScrubber>
     _anchorTime = DateTime.now();
   }
 
+  void _onTick(Duration _) {
+    _displayed.value = _extrapolated();
+  }
+
   void _syncTicker() {
     final shouldTick = widget.isPlaying && _scrubPosition == null;
     if (shouldTick && !_ticker.isActive) _ticker.start();
     if (!shouldTick && _ticker.isActive) _ticker.stop();
   }
 
-  Duration get _displayedPosition {
-    final scrubbing = _scrubPosition;
-    if (scrubbing != null) return scrubbing;
+  Duration _extrapolated() {
     if (!widget.isPlaying) return _anchorPosition;
     final elapsed = DateTime.now().difference(_anchorTime);
     return _clamp(_anchorPosition + elapsed);
@@ -90,7 +105,7 @@ class _WaveformScrubberState extends State<WaveformScrubber>
       Duration(milliseconds: (seconds * 1000).round());
 
   void _handleDragStart(DragStartDetails details) {
-    setState(() => _scrubPosition = _displayedPosition);
+    setState(() => _scrubPosition = _displayed.value);
     _syncTicker();
   }
 
@@ -98,19 +113,17 @@ class _WaveformScrubberState extends State<WaveformScrubber>
     final current = _scrubPosition;
     if (current == null) return;
     final deltaSeconds = -details.delta.dx / widget.pixelsPerSecond;
-    setState(() {
-      _scrubPosition = _clamp(current + _secondsToDuration(deltaSeconds));
-    });
+    final next = _clamp(current + _secondsToDuration(deltaSeconds));
+    _scrubPosition = next;
+    _displayed.value = next;
   }
 
   void _handleDragEnd(DragEndDetails details) {
     final target = _scrubPosition;
     if (target == null) return;
     widget.onSeek(target);
-    setState(() {
-      _anchor(target);
-      _scrubPosition = null;
-    });
+    _anchor(target);
+    setState(() => _scrubPosition = null);
     _syncTicker();
   }
 
@@ -119,9 +132,10 @@ class _WaveformScrubberState extends State<WaveformScrubber>
     final offsetSeconds =
         (details.localPosition.dx - playheadX) / widget.pixelsPerSecond;
     final target =
-        _clamp(_displayedPosition + _secondsToDuration(offsetSeconds));
+        _clamp(_displayed.value + _secondsToDuration(offsetSeconds));
     widget.onSeek(target);
-    setState(() => _anchor(target));
+    _anchor(target);
+    _displayed.value = target;
   }
 
   @override
@@ -135,18 +149,22 @@ class _WaveformScrubberState extends State<WaveformScrubber>
           onHorizontalDragUpdate: _handleDragUpdate,
           onHorizontalDragEnd: _handleDragEnd,
           onTapUp: (details) => _handleTapUp(details, width),
-          child: SizedBox(
-            height: widget.height,
-            width: width,
-            child: CustomPaint(
-              painter: _WaveformPainter(
-                peaks: widget.peaks,
-                binSeconds: widget.binSeconds,
-                position: _displayedPosition,
-                duration: widget.duration,
-                pixelsPerSecond: widget.pixelsPerSecond,
-                playheadFraction: widget.playheadFraction,
-                scrubbing: _scrubPosition != null,
+          child: RepaintBoundary(
+            child: SizedBox(
+              height: widget.height,
+              width: width,
+              child: CustomPaint(
+                isComplex: true,
+                willChange: true,
+                painter: _WaveformPainter(
+                  peaks: widget.peaks,
+                  binSeconds: widget.binSeconds,
+                  position: _displayed,
+                  duration: widget.duration,
+                  pixelsPerSecond: widget.pixelsPerSecond,
+                  playheadFraction: widget.playheadFraction,
+                  scrubbing: _scrubPosition != null,
+                ),
               ),
             ),
           ),
@@ -165,11 +183,11 @@ class _WaveformPainter extends CustomPainter {
     required this.pixelsPerSecond,
     required this.playheadFraction,
     required this.scrubbing,
-  });
+  }) : super(repaint: position);
 
   final List<double>? peaks;
   final double binSeconds;
-  final Duration position;
+  final ValueListenable<Duration> position;
   final Duration duration;
   final double pixelsPerSecond;
   final double playheadFraction;
@@ -184,20 +202,17 @@ class _WaveformPainter extends CustomPainter {
     final playheadX = size.width * playheadFraction;
     final centerY = size.height / 2;
     final maxBarHeight = size.height * 0.9;
-    final positionSeconds = position.inMilliseconds / 1000;
+    final positionSeconds = position.value.inMilliseconds / 1000;
     final durationSeconds = duration.inMilliseconds / 1000;
 
-    final playedPaint = Paint()
-      ..color = SpaceNotesTheme.accent
-      ..strokeWidth = barWidth
-      ..strokeCap = StrokeCap.round;
-    final upcomingPaint = Paint()
-      ..color = SpaceNotesTheme.muted.withValues(alpha: 0.55)
-      ..strokeWidth = barWidth
-      ..strokeCap = StrokeCap.round;
+    final barCount = (size.width / barPitch).ceil() + 1;
+    final played = Float32List(barCount * 4);
+    final upcoming = Float32List(barCount * 4);
+    var playedCount = 0;
+    var upcomingCount = 0;
 
     final bins = peaks;
-    final firstBar = (playheadX % barPitch);
+    final firstBar = playheadX % barPitch;
     for (var x = firstBar; x <= size.width; x += barPitch) {
       final seconds = positionSeconds + (x - playheadX) / pixelsPerSecond;
       if (seconds < 0 || seconds >= durationSeconds) continue;
@@ -207,24 +222,53 @@ class _WaveformPainter extends CustomPainter {
         level = bins[index];
       }
       final half = (minBarHeight + level * (maxBarHeight - minBarHeight)) / 2;
-      final paint = x < playheadX ? playedPaint : upcomingPaint;
-      canvas.drawLine(
-        Offset(x, centerY - half),
-        Offset(x, centerY + half),
-        paint,
+      if (x < playheadX) {
+        final i = playedCount * 4;
+        played[i] = x;
+        played[i + 1] = centerY - half;
+        played[i + 2] = x;
+        played[i + 3] = centerY + half;
+        playedCount++;
+      } else {
+        final i = upcomingCount * 4;
+        upcoming[i] = x;
+        upcoming[i + 1] = centerY - half;
+        upcoming[i + 2] = x;
+        upcoming[i + 3] = centerY + half;
+        upcomingCount++;
+      }
+    }
+
+    final barPaint = Paint()
+      ..strokeWidth = barWidth
+      ..strokeCap = StrokeCap.round;
+    if (playedCount > 0) {
+      barPaint.color = SpaceNotesTheme.accent;
+      canvas.drawRawPoints(
+        ui.PointMode.lines,
+        Float32List.sublistView(played, 0, playedCount * 4),
+        barPaint,
+      );
+    }
+    if (upcomingCount > 0) {
+      barPaint.color = SpaceNotesTheme.muted.withValues(alpha: 0.55);
+      canvas.drawRawPoints(
+        ui.PointMode.lines,
+        Float32List.sublistView(upcoming, 0, upcomingCount * 4),
+        barPaint,
       );
     }
 
     final playheadColor =
         scrubbing ? SpaceNotesTheme.accent2 : SpaceNotesTheme.accent;
-    final glowPaint = Paint()
-      ..color = playheadColor.withValues(alpha: 0.45)
-      ..strokeWidth = 6
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6);
+    final haloPaint = Paint()
+      ..color = playheadColor.withValues(alpha: 0.18)
+      ..strokeWidth = 8
+      ..strokeCap = StrokeCap.round;
     canvas.drawLine(
-      Offset(playheadX, 0),
-      Offset(playheadX, size.height),
-      glowPaint,
+      Offset(playheadX, 2),
+      Offset(playheadX, size.height - 2),
+      haloPaint,
     );
     final linePaint = Paint()
       ..color = playheadColor
@@ -235,12 +279,9 @@ class _WaveformPainter extends CustomPainter {
       Offset(playheadX, size.height - 2),
       linePaint,
     );
-    canvas.drawCircle(Offset(playheadX, 4), 3.5, Paint()..color = playheadColor);
-    canvas.drawCircle(
-      Offset(playheadX, size.height - 4),
-      3.5,
-      Paint()..color = playheadColor,
-    );
+    final dotPaint = Paint()..color = playheadColor;
+    canvas.drawCircle(Offset(playheadX, 4), 3.5, dotPaint);
+    canvas.drawCircle(Offset(playheadX, size.height - 4), 3.5, dotPaint);
   }
 
   @override
