@@ -7,6 +7,7 @@ final class ParametricEqPlayback {
     private var audioFile: AVAudioFile?
     private var seekOffset: AVAudioFramePosition = 0
     private var isPlaying = false
+    private var interruptedPosition: Double?
 
     init() {
         eq.bands[0].filterType = .parametric
@@ -17,6 +18,79 @@ final class ParametricEqPlayback {
         engine.attach(eq)
         engine.connect(playerNode, to: eq, format: nil)
         engine.connect(eq, to: engine.mainMixerNode, format: nil)
+
+        let center = NotificationCenter.default
+        center.addObserver(
+            self,
+            selector: #selector(handleEngineConfigurationChange),
+            name: .AVAudioEngineConfigurationChange,
+            object: engine
+        )
+        #if os(iOS)
+        center.addObserver(
+            self,
+            selector: #selector(handleSessionInterruption(_:)),
+            name: AVAudioSession.interruptionNotification,
+            object: AVAudioSession.sharedInstance()
+        )
+        #endif
+    }
+
+    deinit {
+        NotificationCenter.default.removeObserver(self)
+    }
+
+    @objc private func handleEngineConfigurationChange(_ notification: Notification) {
+        NSLog("[PARAMETRIC_EQ] engine configuration changed, isPlaying=\(isPlaying)")
+        guard isPlaying, audioFile != nil else { return }
+        let position = currentPosition()
+        playerNode.stop()
+        seek(seconds: position)
+    }
+
+    #if os(iOS)
+    @objc private func handleSessionInterruption(_ notification: Notification) {
+        guard let info = notification.userInfo,
+              let rawType = info[AVAudioSessionInterruptionTypeKey] as? UInt,
+              let type = AVAudioSession.InterruptionType(rawValue: rawType)
+        else { return }
+
+        switch type {
+        case .began:
+            NSLog("[PARAMETRIC_EQ] session interruption began, isPlaying=\(isPlaying)")
+            guard isPlaying else { return }
+            interruptedPosition = currentPosition()
+            playerNode.pause()
+        case .ended:
+            let rawOptions = info[AVAudioSessionInterruptionOptionKey] as? UInt ?? 0
+            let options = AVAudioSession.InterruptionOptions(rawValue: rawOptions)
+            NSLog("[PARAMETRIC_EQ] session interruption ended, shouldResume=\(options.contains(.shouldResume))")
+            guard let position = interruptedPosition else { return }
+            interruptedPosition = nil
+            guard options.contains(.shouldResume), isPlaying else { return }
+            do {
+                try AVAudioSession.sharedInstance().setActive(true)
+            } catch {
+                NSLog("[PARAMETRIC_EQ] Failed to reactivate AVAudioSession after interruption: \(error)")
+                return
+            }
+            seek(seconds: position)
+        @unknown default:
+            break
+        }
+    }
+    #endif
+
+    private func ensureEngineRunning() -> Bool {
+        if engine.isRunning { return true }
+        do {
+            try engine.start()
+            NSLog("[PARAMETRIC_EQ] engine restarted")
+            return true
+        } catch {
+            NSLog("[PARAMETRIC_EQ] engine restart failed: \(error)")
+            return false
+        }
     }
 
     func load(path: String) -> Bool {
@@ -57,6 +131,7 @@ final class ParametricEqPlayback {
             return
         }
         if !playerNode.isPlaying {
+            guard ensureEngineRunning() else { return }
             scheduleFromCurrentOffset(file: file)
             playerNode.play()
             NSLog("[PARAMETRIC_EQ] playerNode.play() called, now isPlaying=\(playerNode.isPlaying)")
@@ -79,6 +154,7 @@ final class ParametricEqPlayback {
         playerNode.stop()
         scheduleFromCurrentOffset(file: file)
         if isPlaying {
+            guard ensureEngineRunning() else { return }
             playerNode.play()
         }
     }
