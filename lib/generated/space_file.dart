@@ -15,6 +15,7 @@ class SpaceFile {
     required this.createdTime,
     required this.modifiedTime,
     required this.dbUpdatedAt,
+    required this.hasThumbnail,
   });
 
   factory SpaceFile.fromJson(Map<String, dynamic> json) {
@@ -30,6 +31,7 @@ class SpaceFile {
       createdTime: Int64(json['createdTime'] ?? 0),
       modifiedTime: Int64(json['modifiedTime'] ?? 0),
       dbUpdatedAt: Int64(json['dbUpdatedAt'] ?? 0),
+      hasThumbnail: json['hasThumbnail'] ?? false,
     );
   }
 
@@ -55,6 +57,8 @@ class SpaceFile {
 
   final Int64 dbUpdatedAt;
 
+  final bool hasThumbnail;
+
   void encodeBsatn(BsatnEncoder encoder) {
     encoder.writeString(id);
     encoder.writeString(path);
@@ -67,6 +71,7 @@ class SpaceFile {
     encoder.writeU64(createdTime);
     encoder.writeU64(modifiedTime);
     encoder.writeI64(dbUpdatedAt);
+    encoder.writeBool(hasThumbnail);
   }
 
   static SpaceFile decodeBsatn(BsatnDecoder decoder) {
@@ -82,6 +87,7 @@ class SpaceFile {
       createdTime: decoder.readU64(),
       modifiedTime: decoder.readU64(),
       dbUpdatedAt: decoder.readI64(),
+      hasThumbnail: decoder.readBool(),
     );
   }
 
@@ -98,6 +104,7 @@ class SpaceFile {
       'createdTime': createdTime.toInt(),
       'modifiedTime': modifiedTime.toInt(),
       'dbUpdatedAt': dbUpdatedAt.toInt(),
+      'hasThumbnail': hasThumbnail,
     };
   }
 
@@ -115,7 +122,8 @@ class SpaceFile {
             size == other.size &&
             createdTime == other.createdTime &&
             modifiedTime == other.modifiedTime &&
-            dbUpdatedAt == other.dbUpdatedAt;
+            dbUpdatedAt == other.dbUpdatedAt &&
+            hasThumbnail == other.hasThumbnail;
   }
 
   @override
@@ -131,13 +139,14 @@ class SpaceFile {
       size,
       createdTime,
       modifiedTime,
-      dbUpdatedAt
+      dbUpdatedAt,
+      hasThumbnail
     ]);
   }
 
   @override
   String toString() {
-    return 'SpaceFile(id: $id, path: $path, name: $name, content: $content, folderPath: $folderPath, depth: $depth, extension: $extension, size: $size, createdTime: $createdTime, modifiedTime: $modifiedTime, dbUpdatedAt: $dbUpdatedAt)';
+    return 'SpaceFile(id: $id, path: $path, name: $name, content: $content, folderPath: $folderPath, depth: $depth, extension: $extension, size: $size, createdTime: $createdTime, modifiedTime: $modifiedTime, dbUpdatedAt: $dbUpdatedAt, hasThumbnail: $hasThumbnail)';
   }
 
   SpaceFile copyWith({
@@ -152,6 +161,7 @@ class SpaceFile {
     Int64? createdTime,
     Int64? modifiedTime,
     Int64? dbUpdatedAt,
+    bool? hasThumbnail,
   }) {
     return SpaceFile(
       id: id ?? this.id,
@@ -165,6 +175,7 @@ class SpaceFile {
       createdTime: createdTime ?? this.createdTime,
       modifiedTime: modifiedTime ?? this.modifiedTime,
       dbUpdatedAt: dbUpdatedAt ?? this.dbUpdatedAt,
+      hasThumbnail: hasThumbnail ?? this.hasThumbnail,
     );
   }
 }

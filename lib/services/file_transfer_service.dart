@@ -142,14 +142,41 @@ class FileTransferService {
     }
   }
 
-  String get _filesBaseUrl {
+  Future<List<int>> fetchThumbnail(String id) async {
+    final url = '$_thumbnailsBaseUrl/${Uri.encodeComponent(id)}.jpg';
+    debugLogger.debug('THUMB', 'GET request', 'url=$url');
+    try {
+      final response = await _dio.get<List<int>>(
+        url,
+        options: Options(responseType: ResponseType.bytes),
+      );
+      debugLogger.debug(
+        'THUMB',
+        'GET response',
+        'url=$url status=${response.statusCode} bytes=${response.data?.length}',
+      );
+      return response.data!;
+    } on DioException catch (e) {
+      debugLogger.error(
+        'THUMB',
+        'GET failed',
+        'url=$url status=${e.response?.statusCode} type=${e.type} message=${e.message}',
+      );
+      rethrow;
+    }
+  }
+
+  String get _bareHost {
     final host = _repository.host;
     if (host == null || host.isEmpty) {
       throw StateError('Not configured: no host set');
     }
-    final bareHost = host.split(':').first;
-    return 'http://$bareHost:5051/files';
+    return host.split(':').first;
   }
+
+  String get _filesBaseUrl => 'http://$_bareHost:5051/files';
+
+  String get _thumbnailsBaseUrl => 'http://$_bareHost:5051/thumbnails';
 
   /// Percent-encodes each path segment individually, preserving the `/`
   /// separators — `Uri.encodeComponent` on the whole string would encode

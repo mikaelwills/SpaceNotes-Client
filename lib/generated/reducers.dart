@@ -69,6 +69,23 @@ class Reducers {
         optimisticChanges: optimisticChanges, dropIfOffline: dropIfOffline);
   }
 
+  /// Calls the `arm_todo_sweep_schedule` reducer.
+  ///
+  /// Returns a [TransactionResult] on success. Throws
+  /// [SpacetimeDbReducerException] if the reducer returns `Failed` or
+  /// `InternalError`. The returned status is one of `Committed`,
+  /// `Pending` (queued to offline storage), or `Dropped` (skipped via
+  /// `dropIfOffline: true` while offline).
+  Future<TransactionResult> armTodoSweepSchedule({
+    List<OptimisticChange>? optimisticChanges,
+    bool dropIfOffline = false,
+  }) async {
+    final encoder = BsatnEncoder();
+    return await _reducerCaller.call(
+        armTodoSweepScheduleDef.name, encoder.toBytes(),
+        optimisticChanges: optimisticChanges, dropIfOffline: dropIfOffline);
+  }
+
   /// Calls the `clear_all` reducer.
   ///
   /// Returns a [TransactionResult] on success. Throws
@@ -770,6 +787,25 @@ class Reducers {
         optimisticChanges: optimisticChanges, dropIfOffline: dropIfOffline);
   }
 
+  /// Calls the `set_thumbnail_available` reducer.
+  ///
+  /// Returns a [TransactionResult] on success. Throws
+  /// [SpacetimeDbReducerException] if the reducer returns `Failed` or
+  /// `InternalError`. The returned status is one of `Committed`,
+  /// `Pending` (queued to offline storage), or `Dropped` (skipped via
+  /// `dropIfOffline: true` while offline).
+  Future<TransactionResult> setThumbnailAvailable({
+    required String id,
+    List<OptimisticChange>? optimisticChanges,
+    bool dropIfOffline = false,
+  }) async {
+    final encoder = BsatnEncoder();
+    encoder.writeString(id);
+    return await _reducerCaller.call(
+        setThumbnailAvailableDef.name, encoder.toBytes(),
+        optimisticChanges: optimisticChanges, dropIfOffline: dropIfOffline);
+  }
+
   /// Calls the `update_file_content` reducer.
   ///
   /// Returns a [TransactionResult] on success. Throws
@@ -902,6 +938,19 @@ class Reducers {
       if (event is! ReducerEvent) return;
       final args = event.reducerArgs;
       if (args is! ArmSweepScheduleArgs) return;
+      callback(ctx);
+    });
+  }
+
+  StreamSubscription<void> onArmTodoSweepSchedule(
+      void Function(EventContext ctx) callback) {
+    return _reducerEmitter
+        .on(armTodoSweepScheduleDef)
+        .listen((EventContext ctx) {
+      final event = ctx.event;
+      if (event is! ReducerEvent) return;
+      final args = event.reducerArgs;
+      if (args is! ArmTodoSweepScheduleArgs) return;
       callback(ctx);
     });
   }
@@ -1314,6 +1363,19 @@ class Reducers {
       final args = event.reducerArgs;
       if (args is! SetDisplayNameArgs) return;
       callback(ctx, args.name);
+    });
+  }
+
+  StreamSubscription<void> onSetThumbnailAvailable(
+      void Function(EventContext ctx, String id) callback) {
+    return _reducerEmitter
+        .on(setThumbnailAvailableDef)
+        .listen((EventContext ctx) {
+      final event = ctx.event;
+      if (event is! ReducerEvent) return;
+      final args = event.reducerArgs;
+      if (args is! SetThumbnailAvailableArgs) return;
+      callback(ctx, args.id);
     });
   }
 

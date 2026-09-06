@@ -59,6 +59,20 @@ class ArmSweepScheduleArgsDecoder
   }
 }
 
+class ArmTodoSweepScheduleArgs {
+  ArmTodoSweepScheduleArgs();
+}
+
+class ArmTodoSweepScheduleArgsDecoder
+    implements ReducerArgDecoder<ArmTodoSweepScheduleArgs> {
+  const ArmTodoSweepScheduleArgsDecoder();
+
+  @override
+  ArmTodoSweepScheduleArgs decode(BsatnDecoder decoder) {
+    return ArmTodoSweepScheduleArgs();
+  }
+}
+
 class ClearAllArgs {
   ClearAllArgs();
 }
@@ -961,6 +975,25 @@ class SetDisplayNameArgsDecoder
   }
 }
 
+class SetThumbnailAvailableArgs {
+  SetThumbnailAvailableArgs({required this.id});
+
+  final String id;
+}
+
+class SetThumbnailAvailableArgsDecoder
+    implements ReducerArgDecoder<SetThumbnailAvailableArgs> {
+  const SetThumbnailAvailableArgsDecoder();
+
+  @override
+  SetThumbnailAvailableArgs decode(BsatnDecoder decoder) {
+    final id = decoder.readString();
+    return SetThumbnailAvailableArgs(
+      id: id,
+    );
+  }
+}
+
 class UpdateFileContentArgs {
   UpdateFileContentArgs({
     required this.id,
@@ -1124,6 +1157,8 @@ const appendToFileDef =
     ReducerDef<AppendToFileArgs>('append_to_file', AppendToFileArgsDecoder());
 const armSweepScheduleDef = ReducerDef<ArmSweepScheduleArgs>(
     'arm_sweep_schedule', ArmSweepScheduleArgsDecoder());
+const armTodoSweepScheduleDef = ReducerDef<ArmTodoSweepScheduleArgs>(
+    'arm_todo_sweep_schedule', ArmTodoSweepScheduleArgsDecoder());
 const clearAllDef =
     ReducerDef<ClearAllArgs>('clear_all', ClearAllArgsDecoder());
 const clearAllAgentsDef = ReducerDef<ClearAllAgentsArgs>(
@@ -1189,6 +1224,8 @@ const setA2aLimitsDef =
     ReducerDef<SetA2aLimitsArgs>('set_a2a_limits', SetA2aLimitsArgsDecoder());
 const setDisplayNameDef = ReducerDef<SetDisplayNameArgs>(
     'set_display_name', SetDisplayNameArgsDecoder());
+const setThumbnailAvailableDef = ReducerDef<SetThumbnailAvailableArgs>(
+    'set_thumbnail_available', SetThumbnailAvailableArgsDecoder());
 const updateFileContentDef = ReducerDef<UpdateFileContentArgs>(
     'update_file_content', UpdateFileContentArgsDecoder());
 const updateFilePathDef = ReducerDef<UpdateFilePathArgs>(

@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../generated/space_file.dart';
 import '../theme/spacenotes_theme.dart';
 import '../providers/file_transfer_providers.dart';
+import '../providers/thumbnail_cache_provider.dart';
+import '../services/debug_logger.dart';
 import '../services/local_download_store.dart';
 import '../file_types/file_type_registry.dart';
 
@@ -44,20 +46,24 @@ class FileGridCard extends ConsumerWidget {
         decoration: BoxDecoration(
           color: SpaceNotesTheme.card,
           border: Border.all(
-            color: _isImage
+            color: _usesSquareCard
                 ? SpaceNotesTheme.hairline
                 : FileTypeRegistry.forFile(file).color.withValues(alpha: 0.2),
             width: 1,
           ),
         ),
-        child: _isImage
+        child: _usesSquareCard
             ? _ImageCardBody(file: file)
             : _StandardCardBody(file: file, index: index),
       ),
     );
   }
 
-  bool get _isImage => FileTypeRegistry.forFile(file).icon == Icons.image_outlined;
+  bool get _usesSquareCard {
+    final icon = FileTypeRegistry.forFile(file).icon;
+    if (icon == Icons.image_outlined) return true;
+    return icon == Icons.videocam_outlined && file.hasThumbnail;
+  }
 }
 
 class _ImageCardBody extends ConsumerWidget {
@@ -91,28 +97,7 @@ class _NotDownloadedImageCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return AspectRatio(
       aspectRatio: 1,
-      child: Stack(
-        children: [
-          const _CloudPlaceholder(),
-          Positioned(
-            left: 10,
-            right: 10,
-            bottom: 10,
-            child: Text(
-              file.name,
-              style: const TextStyle(
-                fontFamily: SpaceNotesTheme.fontSans,
-                fontSize: 12,
-                color: SpaceNotesTheme.muted,
-                fontWeight: FontWeight.w500,
-                letterSpacing: -0.1,
-              ),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-        ],
-      ),
+      child: _ThumbnailFallback(file: file),
     );
   }
 }
@@ -228,13 +213,88 @@ class _ThumbnailImage extends ConsumerWidget {
       future: store.localPathFor(file.path),
       builder: (context, snapshot) {
         final path = snapshot.data;
-        if (path == null) return const _CloudPlaceholder();
+        if (path == null) {
+          return _ThumbnailFallback(file: file);
+        }
         return Image.file(
           File(path),
           fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => const _CloudPlaceholder(),
+          errorBuilder: (_, __, ___) => _ThumbnailFallback(file: file),
         );
       },
+    );
+  }
+}
+
+/// Shown for a not-yet-downloaded file: a small server-generated preview if
+/// one is available, else the plain cloud placeholder — same as before this
+/// feature existed.
+class _ThumbnailFallback extends ConsumerStatefulWidget {
+  const _ThumbnailFallback({required this.file});
+
+  final SpaceFile file;
+
+  @override
+  ConsumerState<_ThumbnailFallback> createState() => _ThumbnailFallbackState();
+}
+
+class _ThumbnailFallbackState extends ConsumerState<_ThumbnailFallback> {
+  @override
+  void initState() {
+    super.initState();
+    debugLogger.debug(
+      'THUMB',
+      'Card built',
+      'path=${widget.file.path} id=${widget.file.id} hasThumbnail=${widget.file.hasThumbnail}',
+    );
+    if (widget.file.hasThumbnail) {
+      ref.read(thumbnailCacheProvider.notifier).request(widget.file.id);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    Uint8List? bytes;
+    if (widget.file.hasThumbnail) {
+      ref.watch(thumbnailCacheProvider);
+      bytes = ref.read(thumbnailCacheProvider.notifier).touch(widget.file.id);
+    }
+
+    if (bytes == null) {
+      return Stack(
+        fit: StackFit.expand,
+        children: [
+          const _CloudPlaceholder(),
+          Positioned(
+            left: 10,
+            right: 10,
+            bottom: 10,
+            child: Text(
+              widget.file.name,
+              style: const TextStyle(
+                fontFamily: SpaceNotesTheme.fontSans,
+                fontSize: 12,
+                color: SpaceNotesTheme.muted,
+                fontWeight: FontWeight.w500,
+                letterSpacing: -0.1,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      );
+    }
+
+    return SizedBox.expand(
+      child: Image.memory(
+        bytes,
+        fit: BoxFit.cover,
+        errorBuilder: (_, error, __) {
+          debugLogger.error('THUMB', 'Image.memory decode failed', '${widget.file.id} error=$error');
+          return const _CloudPlaceholder();
+        },
+      ),
     );
   }
 }

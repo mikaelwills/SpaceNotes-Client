@@ -431,6 +431,7 @@ class SpacetimeDbNotesRepository {
         createdTime: Int64(now),
         modifiedTime: Int64(now),
         dbUpdatedAt: Int64(0),
+        hasThumbnail: false,
       );
 
       await _notesLane.client!.reducers.createFile(
@@ -483,6 +484,7 @@ class SpacetimeDbNotesRepository {
         createdTime: oldNote.createdTime,
         modifiedTime: Int64(now),
         dbUpdatedAt: oldNote.dbUpdatedAt,
+        hasThumbnail: oldNote.hasThumbnail,
       );
 
       await _notesLane.client!.reducers.updateFileContent(
@@ -571,6 +573,7 @@ class SpacetimeDbNotesRepository {
         createdTime: oldNote.createdTime,
         modifiedTime: Int64(DateTime.now().millisecondsSinceEpoch),
         dbUpdatedAt: oldNote.dbUpdatedAt,
+        hasThumbnail: oldNote.hasThumbnail,
       );
 
       await _notesLane.client!.reducers.renameFile(
