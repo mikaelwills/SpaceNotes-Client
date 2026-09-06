@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
+import '../services/debug_logger.dart';
 import '../theme/spacenotes_theme.dart';
 
 class WaveformScrubber extends StatefulWidget {
@@ -33,14 +34,15 @@ class WaveformScrubber extends StatefulWidget {
   State<WaveformScrubber> createState() => _WaveformScrubberState();
 }
 
-class _WaveformScrubberState extends State<WaveformScrubber>
-    with SingleTickerProviderStateMixin {
+class _WaveformScrubberState extends State<WaveformScrubber> {
   static const Duration _reanchorTolerance = Duration(milliseconds: 250);
 
   late final Ticker _ticker;
   late final ValueNotifier<Duration> _displayed;
   late Duration _anchorPosition;
-  late DateTime _anchorTime;
+  Duration _anchorElapsed = Duration.zero;
+  Duration _lastTickElapsed = Duration.zero;
+  int _tickCount = 0;
   Duration? _scrubPosition;
 
   @override
@@ -48,7 +50,7 @@ class _WaveformScrubberState extends State<WaveformScrubber>
     super.initState();
     _anchor(widget.position);
     _displayed = ValueNotifier(widget.position);
-    _ticker = createTicker(_onTick);
+    _ticker = Ticker(_onTick, debugLabel: 'WaveformScrubber');
     _syncTicker();
   }
 
@@ -76,23 +78,40 @@ class _WaveformScrubberState extends State<WaveformScrubber>
 
   void _anchor(Duration position) {
     _anchorPosition = position;
-    _anchorTime = DateTime.now();
+    _anchorElapsed = _lastTickElapsed;
   }
 
-  void _onTick(Duration _) {
+  void _onTick(Duration elapsed) {
+    _lastTickElapsed = elapsed;
     _displayed.value = _extrapolated();
+    _tickCount++;
+    if (_tickCount % 300 == 0) {
+      debugLogger.info(
+        'WAVE',
+        'ticker alive',
+        'ticks=$_tickCount elapsed=${elapsed.inMilliseconds}ms displayed=${_displayed.value.inMilliseconds}ms',
+      );
+    }
   }
 
   void _syncTicker() {
     final shouldTick = widget.isPlaying && _scrubPosition == null;
-    if (shouldTick && !_ticker.isActive) _ticker.start();
-    if (!shouldTick && _ticker.isActive) _ticker.stop();
+    if (shouldTick && !_ticker.isActive) {
+      _lastTickElapsed = Duration.zero;
+      _anchorElapsed = Duration.zero;
+      _ticker.start();
+      debugLogger.info('WAVE', 'ticker started',
+          'muted=${_ticker.muted} anchor=${_anchorPosition.inMilliseconds}ms');
+    }
+    if (!shouldTick && _ticker.isActive) {
+      _ticker.stop();
+      debugLogger.info('WAVE', 'ticker stopped', 'ticks=$_tickCount');
+    }
   }
 
   Duration _extrapolated() {
     if (!widget.isPlaying) return _anchorPosition;
-    final elapsed = DateTime.now().difference(_anchorTime);
-    return _clamp(_anchorPosition + elapsed);
+    return _clamp(_anchorPosition + (_lastTickElapsed - _anchorElapsed));
   }
 
   Duration _clamp(Duration value) {
