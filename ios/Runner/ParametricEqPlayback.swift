@@ -10,7 +10,8 @@ final class ParametricEqPlayback {
     private var isPlaying = false
     private var interruptedPosition: Double?
     private var title = ""
-    private let skipInterval: TimeInterval = 15
+    private var filePath: String?
+    private let skipInterval: TimeInterval = 10
 
     var onPlaybackStateChanged: ((Bool) -> Void)?
 
@@ -158,6 +159,7 @@ final class ParametricEqPlayback {
         NSLog("[PARAMETRIC_EQ] load called, path=\(path)")
         stop()
         self.title = title
+        self.filePath = path
         do {
             let url = URL(fileURLWithPath: path)
             NSLog("[PARAMETRIC_EQ] file exists on disk: \(FileManager.default.fileExists(atPath: path))")
@@ -239,6 +241,48 @@ final class ParametricEqPlayback {
     func duration() -> Double {
         guard let file = audioFile else { return 0 }
         return Double(file.length) / file.processingFormat.sampleRate
+    }
+
+    func waveform(binSeconds: Double) -> [Double] {
+        guard let path = filePath else { return [] }
+        do {
+            let file = try AVAudioFile(forReading: URL(fileURLWithPath: path))
+            let format = file.processingFormat
+            let framesPerBin = max(1, Int(format.sampleRate * binSeconds))
+            let totalFrames = Int(file.length)
+            guard totalFrames > 0 else { return [] }
+            let binCount = (totalFrames + framesPerBin - 1) / framesPerBin
+            var peaks = [Float](repeating: 0, count: binCount)
+
+            let chunkFrames: AVAudioFrameCount = 65536
+            guard let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: chunkFrames) else {
+                return []
+            }
+            let channelCount = Int(format.channelCount)
+            var frameIndex = 0
+            while frameIndex < totalFrames {
+                try file.read(into: buffer, frameCount: chunkFrames)
+                let frames = Int(buffer.frameLength)
+                if frames == 0 { break }
+                guard let channels = buffer.floatChannelData else { break }
+                for i in 0..<frames {
+                    var peak: Float = 0
+                    for c in 0..<channelCount {
+                        peak = max(peak, abs(channels[c][i]))
+                    }
+                    let bin = (frameIndex + i) / framesPerBin
+                    if peak > peaks[bin] { peaks[bin] = peak }
+                }
+                frameIndex += frames
+            }
+
+            let loudest = peaks.max() ?? 0
+            guard loudest > 0 else { return peaks.map { Double($0) } }
+            return peaks.map { Double($0 / loudest) }
+        } catch {
+            NSLog("[PARAMETRIC_EQ] waveform failed for \(path): \(error)")
+            return []
+        }
     }
 
     func setEq(frequency: Double, gainDb: Double, bandwidth: Double) {

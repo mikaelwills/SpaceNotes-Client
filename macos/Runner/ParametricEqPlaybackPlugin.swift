@@ -45,6 +45,14 @@ class ParametricEqPlaybackPlugin: NSObject, FlutterPlugin {
         case "duration":
             result(playback.duration())
 
+        case "waveform":
+            let binSeconds = args?["binSeconds"] as? Double ?? 0.25
+            let playback = self.playback
+            DispatchQueue.global(qos: .userInitiated).async {
+                let peaks = playback.waveform(binSeconds: binSeconds)
+                DispatchQueue.main.async { result(peaks) }
+            }
+
         case "setEq":
             guard let frequency = args?["frequency"] as? Double,
                   let gainDb = args?["gainDb"] as? Double,

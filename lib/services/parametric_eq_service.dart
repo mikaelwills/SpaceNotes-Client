@@ -44,6 +44,13 @@ class ParametricEqService {
     return Duration(milliseconds: ((seconds ?? 0) * 1000).round());
   }
 
+  Future<List<double>> waveform({required double binSeconds}) async {
+    final peaks = await _channel.invokeMethod<List<dynamic>>('waveform', {
+      'binSeconds': binSeconds,
+    });
+    return [for (final p in peaks ?? const []) (p as num).toDouble()];
+  }
+
   Future<void> setEq({
     required double frequencyHz,
     required double gainDb,

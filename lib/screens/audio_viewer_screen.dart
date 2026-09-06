@@ -11,6 +11,10 @@ import '../utils/pops_when_file_deleted.dart';
 import '../widgets/download_progress.dart';
 import '../widgets/parametric_eq_pad.dart';
 import '../widgets/share_button.dart';
+import '../widgets/waveform_scrubber.dart';
+
+const double _waveformBinSeconds = 0.25;
+const Duration _skipStep = Duration(seconds: 10);
 
 class AudioViewerScreen extends ConsumerStatefulWidget {
   const AudioViewerScreen({super.key, required this.fileId});
@@ -35,6 +39,7 @@ class _AudioViewerScreenState extends ConsumerState<AudioViewerScreen>
   Duration _duration = Duration.zero;
   bool _isPlaying = false;
   Timer? _positionPoll;
+  List<double>? _peaks;
 
   bool _eqPadOpen = false;
   EqNotch? _notch;
@@ -87,11 +92,11 @@ class _AudioViewerScreenState extends ConsumerState<AudioViewerScreen>
                             isPlaying: _isPlaying,
                             position: _position,
                             duration: _duration,
+                            peaks: _peaks,
                             formatDuration: _formatDuration,
                             onPlayPause: _togglePlayPause,
-                            onSeek: (value) {
-                              _eq.seek(Duration(milliseconds: value.round()));
-                            },
+                            onSeek: _seekTo,
+                            onSkip: (delta) => _seekTo(_position + delta),
                             eqPadOpen: _eqPadOpen,
                             onToggleEqPad: () =>
                                 setState(() => _eqPadOpen = !_eqPadOpen),
@@ -217,6 +222,7 @@ class _AudioViewerScreenState extends ConsumerState<AudioViewerScreen>
       debugLogger.info('AUDIO_VIEWER', 'Play command sent', localPath);
       setState(() => _isPlaying = true);
       _startPositionPoll();
+      _loadWaveform();
     } catch (e) {
       debugLogger.error('AUDIO_VIEWER', 'Player init failed: $localPath', e.toString());
       if (mounted) setState(() => _error = 'Could not play audio: $e');
@@ -230,6 +236,24 @@ class _AudioViewerScreenState extends ConsumerState<AudioViewerScreen>
       final position = await _eq.position();
       if (mounted) setState(() => _position = position);
     });
+  }
+
+  Future<void> _loadWaveform() async {
+    try {
+      final peaks = await _eq.waveform(binSeconds: _waveformBinSeconds);
+      debugLogger.info('AUDIO_VIEWER', 'Waveform loaded', '${peaks.length} bins');
+      if (mounted) setState(() => _peaks = peaks);
+    } catch (e) {
+      debugLogger.error('AUDIO_VIEWER', 'Waveform failed', e.toString());
+    }
+  }
+
+  Future<void> _seekTo(Duration target) async {
+    var clamped = target;
+    if (clamped < Duration.zero) clamped = Duration.zero;
+    if (clamped > _duration) clamped = _duration;
+    setState(() => _position = clamped);
+    await _eq.seek(clamped);
   }
 
   Future<void> _togglePlayPause() async {
@@ -254,9 +278,11 @@ class _AudioPlayerBody extends StatelessWidget {
     required this.isPlaying,
     required this.position,
     required this.duration,
+    required this.peaks,
     required this.formatDuration,
     required this.onPlayPause,
     required this.onSeek,
+    required this.onSkip,
     required this.eqPadOpen,
     required this.onToggleEqPad,
     required this.notch,
@@ -269,9 +295,11 @@ class _AudioPlayerBody extends StatelessWidget {
   final bool isPlaying;
   final Duration position;
   final Duration duration;
+  final List<double>? peaks;
   final String Function(Duration) formatDuration;
   final VoidCallback onPlayPause;
-  final ValueChanged<double> onSeek;
+  final ValueChanged<Duration> onSeek;
+  final ValueChanged<Duration> onSkip;
   final bool eqPadOpen;
   final VoidCallback onToggleEqPad;
   final EqNotch? notch;
@@ -282,11 +310,6 @@ class _AudioPlayerBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final totalMs = duration.inMilliseconds.toDouble();
-    final currentMs = position.inMilliseconds
-        .toDouble()
-        .clamp(0, totalMs == 0 ? 1 : totalMs);
-
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -335,12 +358,22 @@ class _AudioPlayerBody extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             IconButton(
+              iconSize: 30,
+              icon: const Icon(Icons.replay_10, color: SpaceNotesTheme.fg),
+              onPressed: () => onSkip(-_skipStep),
+            ),
+            IconButton(
               iconSize: 48,
               icon: Icon(
                 isPlaying ? Icons.pause_circle_filled : Icons.play_circle_filled,
                 color: SpaceNotesTheme.accent,
               ),
               onPressed: onPlayPause,
+            ),
+            IconButton(
+              iconSize: 30,
+              icon: const Icon(Icons.forward_10, color: SpaceNotesTheme.fg),
+              onPressed: () => onSkip(_skipStep),
             ),
             IconButton(
               iconSize: 26,
@@ -353,25 +386,19 @@ class _AudioPlayerBody extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 8),
-        SizedBox(
-          width: 280,
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Column(
             children: [
-              SliderTheme(
-                data: SliderTheme.of(context).copyWith(
-                  activeTrackColor: SpaceNotesTheme.accent,
-                  inactiveTrackColor: SpaceNotesTheme.hairline,
-                  thumbColor: SpaceNotesTheme.accent,
-                  overlayColor: SpaceNotesTheme.accent.withValues(alpha: 0.2),
-                  trackHeight: 3,
-                ),
-                child: Slider(
-                  min: 0,
-                  max: totalMs == 0 ? 1 : totalMs,
-                  value: currentMs.toDouble(),
-                  onChanged: totalMs == 0 ? null : onSeek,
-                ),
+              WaveformScrubber(
+                peaks: peaks,
+                binSeconds: _waveformBinSeconds,
+                position: position,
+                duration: duration,
+                isPlaying: isPlaying,
+                onSeek: onSeek,
               ),
+              const SizedBox(height: 6),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 4),
                 child: Row(
