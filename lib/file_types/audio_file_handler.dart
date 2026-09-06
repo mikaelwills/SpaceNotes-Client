@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../screens/audio_viewer_screen.dart';
+import '../theme/spacenotes_theme.dart';
 import 'file_type_handler.dart';
 
 class AudioFileHandler extends FileTypeHandler {
@@ -12,6 +13,12 @@ class AudioFileHandler extends FileTypeHandler {
 
   @override
   IconData get icon => Icons.music_note_outlined;
+
+  @override
+  Color get color => SpaceNotesTheme.accent;
+
+  @override
+  bool get isOffloadable => true;
 
   @override
   bool get isMovable => true;

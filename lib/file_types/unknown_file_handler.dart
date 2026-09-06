@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../generated/space_file.dart';
 import '../screens/unsupported_file_screen.dart';
+import '../theme/spacenotes_theme.dart';
 import 'file_type_handler.dart';
 
 class UnknownFileHandler extends FileTypeHandler {
@@ -11,6 +12,12 @@ class UnknownFileHandler extends FileTypeHandler {
 
   @override
   IconData get icon => Icons.insert_drive_file_outlined;
+
+  @override
+  Color get color => SpaceNotesTheme.dim;
+
+  @override
+  bool get isOffloadable => true;
 
   @override
   bool get isMovable => true;

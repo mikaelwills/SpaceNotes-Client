@@ -5,6 +5,8 @@ import '../generated/space_file.dart';
 import '../generated/folder.dart';
 import '../theme/spacenotes_theme.dart';
 import '../providers/notes_providers.dart';
+import '../providers/file_transfer_providers.dart';
+import '../services/local_download_store.dart';
 import '../file_types/file_type_registry.dart';
 
 /// Static dialog functions for TopFolderListScreen
@@ -55,6 +57,38 @@ class NotesListDialogs {
                 onTap: () {
                   Navigator.of(dialogContext).pop();
                   showMoveNoteDialog(context, ref, note);
+                },
+              ),
+            if (FileTypeRegistry.forFile(note).isOffloadable)
+              Consumer(
+                builder: (context, dialogRef, _) {
+                  final state = dialogRef
+                      .watch(downloadStateProvider(note.path))
+                      .valueOrNull;
+                  if (state != DownloadState.complete) {
+                    return const SizedBox.shrink();
+                  }
+                  return ListTile(
+                    leading: const Icon(
+                      Icons.cloud_off_outlined,
+                      color: SpaceNotesTheme.primary,
+                    ),
+                    title: const Text(
+                      'Offload file',
+                      style: TextStyle(
+                        fontFamily: 'FiraCode',
+                        fontSize: 14,
+                        color: SpaceNotesTheme.text,
+                      ),
+                    ),
+                    onTap: () async {
+                      Navigator.of(dialogContext).pop();
+                      await dialogRef
+                          .read(localDownloadStoreProvider)
+                          .offload(note.path);
+                      dialogRef.invalidate(downloadStateProvider(note.path));
+                    },
+                  );
                 },
               ),
             if (FileTypeRegistry.forFile(note).isDeletable)

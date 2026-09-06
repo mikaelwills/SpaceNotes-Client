@@ -12,6 +12,12 @@ class PdfFileHandler extends FileTypeHandler {
   IconData get icon => Icons.picture_as_pdf_outlined;
 
   @override
+  Color get color => const Color(0xFFE0836E);
+
+  @override
+  bool get isOffloadable => true;
+
+  @override
   bool get isMovable => true;
 
   @override

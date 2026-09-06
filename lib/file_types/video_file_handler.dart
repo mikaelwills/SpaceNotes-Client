@@ -14,6 +14,12 @@ class VideoFileHandler extends FileTypeHandler {
   IconData get icon => Icons.videocam_outlined;
 
   @override
+  Color get color => const Color(0xFFE8A2C4);
+
+  @override
+  bool get isOffloadable => true;
+
+  @override
   bool get isMovable => true;
 
   @override

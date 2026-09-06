@@ -104,6 +104,11 @@ class LocalDownloadStore {
     await db.delete('downloads', where: 'path = ?', whereArgs: [remotePath]);
   }
 
+  /// Deletes just this one local file — the STDB row and vault copy are
+  /// untouched, this only frees on-device storage. Tapping the file
+  /// afterward re-downloads it, same as if it had never been fetched.
+  Future<void> offload(String remotePath) => remove(remotePath);
+
   /// Total bytes currently held on this device, complete downloads only.
   Future<int> totalSize() async {
     final db = await _database();

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../screens/note_screen.dart';
+import '../theme/spacenotes_theme.dart';
 import 'file_type_handler.dart';
 
 class MarkdownFileHandler extends FileTypeHandler {
@@ -10,6 +11,9 @@ class MarkdownFileHandler extends FileTypeHandler {
 
   @override
   IconData get icon => Icons.description_outlined;
+
+  @override
+  Color get color => SpaceNotesTheme.online;
 
   @override
   bool get isMovable => true;

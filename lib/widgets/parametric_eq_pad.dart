@@ -13,9 +13,9 @@ class EqNotch {
   final double gainDb;
   final int qLevel;
 
-  static const double baseBandwidth = 0.025;
+  static const List<double> qLevelBandwidths = [0.3, 0.7, 1.3];
 
-  double get bandwidth => baseBandwidth * math.pow(2, qLevel);
+  double get bandwidth => qLevelBandwidths[qLevel];
 
   EqNotch withQLevel(int level) => EqNotch(
         frequencyHz: frequencyHz,
@@ -214,7 +214,7 @@ class _EqCurvePainter extends CustomPainter {
       // only knob for visual curve width, so it can never drift out of
       // sync with the actual filter Q like a separately hand-tuned
       // constant would.
-      const spreadPerBandwidth = 800.0;
+      const spreadPerBandwidth = 65.0;
       final spread = notch!.bandwidth * spreadPerBandwidth;
 
       for (double x = 0; x <= size.width; x += 2) {

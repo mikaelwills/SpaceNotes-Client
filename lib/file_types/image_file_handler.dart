@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../screens/image_viewer_screen.dart';
+import '../theme/spacenotes_theme.dart';
 import 'file_type_handler.dart';
 
 class ImageFileHandler extends FileTypeHandler {
@@ -12,6 +13,12 @@ class ImageFileHandler extends FileTypeHandler {
 
   @override
   IconData get icon => Icons.image_outlined;
+
+  @override
+  Color get color => SpaceNotesTheme.accent2;
+
+  @override
+  bool get isOffloadable => true;
 
   @override
   bool get isMovable => true;

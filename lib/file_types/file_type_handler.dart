@@ -23,6 +23,8 @@ abstract class FileTypeHandler {
 
   IconData get icon;
 
+  Color get color;
+
   bool get isRenameable;
 
   bool get isMovable;
@@ -32,6 +34,10 @@ abstract class FileTypeHandler {
   bool get isDeletable;
 
   bool get hasTextRepresentation;
+
+  /// Whether this type is downloaded on demand and cached locally, so it can
+  /// be offloaded to free device storage without losing the vault copy.
+  bool get isOffloadable => false;
 
   NewFileTemplate? get newFileTemplate;
 

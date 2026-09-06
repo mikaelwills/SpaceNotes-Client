@@ -43,7 +43,12 @@ class FileGridCard extends ConsumerWidget {
         width: double.infinity,
         decoration: BoxDecoration(
           color: SpaceNotesTheme.card,
-          border: Border.all(color: SpaceNotesTheme.hairline, width: 1),
+          border: Border.all(
+            color: _isImage
+                ? SpaceNotesTheme.hairline
+                : FileTypeRegistry.forFile(file).color.withValues(alpha: 0.2),
+            width: 1,
+          ),
         ),
         child: _isImage
             ? _ImageCardBody(file: file)
@@ -112,7 +117,7 @@ class _NotDownloadedImageCard extends StatelessWidget {
   }
 }
 
-class _StandardCardBody extends StatelessWidget {
+class _StandardCardBody extends ConsumerWidget {
   const _StandardCardBody({required this.file, required this.index});
 
   final SpaceFile file;
@@ -121,12 +126,17 @@ class _StandardCardBody extends StatelessWidget {
   static const _previewCharLimit = 240;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final trimmed = file.content.trim();
     final preview = trimmed.length > _previewCharLimit
         ? trimmed.substring(0, _previewCharLimit)
         : trimmed;
     final hasPreview = preview.isNotEmpty;
+    final handler = FileTypeRegistry.forFile(file);
+    final typeColor = handler.color;
+    final downloadState = handler.isOffloadable
+        ? ref.watch(downloadStateProvider(file.path)).valueOrNull
+        : null;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -146,10 +156,22 @@ class _StandardCardBody extends StatelessWidget {
                   letterSpacing: 0.6,
                 ),
               ),
-              Icon(
-                FileTypeRegistry.forFile(file).icon,
-                size: 13,
-                color: SpaceNotesTheme.dim,
+              Row(
+                children: [
+                  if (downloadState == DownloadState.complete) ...[
+                    const Icon(
+                      Icons.arrow_circle_down,
+                      size: 11,
+                      color: SpaceNotesTheme.online,
+                    ),
+                    const SizedBox(width: 5),
+                  ],
+                  Icon(
+                    handler.icon,
+                    size: 13,
+                    color: typeColor,
+                  ),
+                ],
               ),
             ],
           ),
