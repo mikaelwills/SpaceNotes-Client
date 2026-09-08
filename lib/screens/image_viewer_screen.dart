@@ -83,7 +83,7 @@ class _ImageViewerScreenState extends ConsumerState<ImageViewerScreen>
 
     final store = ref.read(localDownloadStoreProvider);
     final localPath = await store.localPathFor(remotePath);
-    final state = await store.stateFor(remotePath);
+    final state = await store.stateFor(remotePath, expectedSize: expectedSize);
     debugLogger.info(
       'IMAGE_VIEWER',
       'Local state checked',

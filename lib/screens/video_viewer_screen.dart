@@ -58,9 +58,7 @@ class _VideoViewerScreenState extends ConsumerState<VideoViewerScreen>
     final fullscreen = isLandscape && ready;
 
     final content = _error != null
-        ? Center(
-            child: Text(_error!,
-                style: const TextStyle(color: Colors.red, fontSize: 13)))
+        ? _VideoErrorPanel(message: _error!, path: remotePath)
         : ready
             ? _VideoPlayerBody(
                 controller: _controller!,
@@ -105,7 +103,7 @@ class _VideoViewerScreenState extends ConsumerState<VideoViewerScreen>
   Future<void> _ensureAvailable(String remotePath, int expectedSize) async {
     final store = ref.read(localDownloadStoreProvider);
     final localPath = await store.localPathFor(remotePath);
-    final state = await store.stateFor(remotePath);
+    final state = await store.stateFor(remotePath, expectedSize: expectedSize);
 
     if (state == DownloadState.complete) {
       await _initPlayer(localPath);
@@ -160,6 +158,25 @@ class _VideoViewerScreenState extends ConsumerState<VideoViewerScreen>
         await controller.dispose();
         return;
       }
+      final value = controller.value;
+      debugLogger.info(
+        'VIDEO_VIEWER',
+        'Player initialised',
+        'size=${value.size.width.toInt()}x${value.size.height.toInt()} '
+            'duration=${value.duration.inMilliseconds}ms',
+      );
+      if (value.size.width == 0 || value.size.height == 0) {
+        await controller.dispose();
+        _fail(
+          'The file opened but contains no video track this device can decode '
+          '(reported size 0×0, duration ${_formatDuration(value.duration)}).\n\n'
+          'Usually the codec: iOS plays H.264 and HEVC, not VP9 or AV1. '
+          'Check with ffprobe on the NAS and re-encode to H.264.',
+          localPath,
+        );
+        return;
+      }
+      controller.addListener(_onControllerChanged);
       setState(() {
         _controller = controller;
         _localPath = localPath;
@@ -167,9 +184,83 @@ class _VideoViewerScreenState extends ConsumerState<VideoViewerScreen>
       controller.play();
     } catch (e) {
       await controller.dispose();
-      debugLogger.error('VIDEO_VIEWER', 'Player init failed: $localPath', e.toString());
-      if (mounted) setState(() => _error = 'Could not play video: $e');
+      _fail('Player failed to initialise.\n\n$e', localPath);
     }
+  }
+
+  void _onControllerChanged() {
+    final controller = _controller;
+    if (controller == null || !controller.value.hasError || _error != null) {
+      return;
+    }
+    final description = controller.value.errorDescription ?? 'unknown error';
+    controller.removeListener(_onControllerChanged);
+    _fail('Playback error after start.\n\n$description', _localPath ?? '');
+  }
+
+  void _fail(String message, String localPath) {
+    debugLogger.error('VIDEO_VIEWER', 'Playback failed: $localPath', message);
+    if (mounted) setState(() => _error = message);
+  }
+
+  String _formatDuration(Duration d) {
+    final minutes = d.inMinutes.remainder(60).toString().padLeft(2, '0');
+    final seconds = d.inSeconds.remainder(60).toString().padLeft(2, '0');
+    return '$minutes:$seconds';
+  }
+}
+
+class _VideoErrorPanel extends StatelessWidget {
+  const _VideoErrorPanel({required this.message, required this.path});
+
+  final String message;
+  final String path;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.videocam_off_outlined,
+                  size: 22, color: SpaceNotesTheme.offline),
+              SizedBox(width: 10),
+              Text(
+                "Couldn't play this video",
+                style: TextStyle(
+                  color: SpaceNotesTheme.fg,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          SelectableText(
+            message,
+            style: const TextStyle(
+              color: SpaceNotesTheme.fg,
+              fontSize: 13,
+              height: 1.45,
+            ),
+          ),
+          const SizedBox(height: 14),
+          SelectableText(
+            path,
+            style: const TextStyle(
+              color: SpaceNotesTheme.muted,
+              fontSize: 11,
+              fontFamily: 'monospace',
+              height: 1.4,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 

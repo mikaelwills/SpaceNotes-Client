@@ -154,7 +154,7 @@ class _AudioViewerScreenState extends ConsumerState<AudioViewerScreen>
   Future<void> _ensureAvailable(String remotePath, int expectedSize) async {
     final store = ref.read(localDownloadStoreProvider);
     final localPath = await store.localPathFor(remotePath);
-    final state = await store.stateFor(remotePath);
+    final state = await store.stateFor(remotePath, expectedSize: expectedSize);
 
     if (state == DownloadState.complete) {
       await _initPlayer(localPath);

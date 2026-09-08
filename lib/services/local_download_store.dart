@@ -9,7 +9,7 @@ enum DownloadState { notDownloaded, partial, complete }
 class LocalDownloadStore {
   Database? _db;
 
-  Future<DownloadState> stateFor(String remotePath) async {
+  Future<DownloadState> stateFor(String remotePath, {int? expectedSize}) async {
     final db = await _database();
     final rows = await db.query(
       'downloads',
@@ -30,7 +30,14 @@ class LocalDownloadStore {
 
     final state = row['state'];
     if (state is! String) return DownloadState.notDownloaded;
-    return DownloadState.values.byName(state);
+    final parsed = DownloadState.values.byName(state);
+    if (parsed == DownloadState.complete &&
+        expectedSize != null &&
+        row['size'] != expectedSize) {
+      await db.delete('downloads', where: 'path = ?', whereArgs: [remotePath]);
+      return DownloadState.notDownloaded;
+    }
+    return parsed;
   }
 
   Future<String> localPathFor(String remotePath) async {
