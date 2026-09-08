@@ -22,18 +22,21 @@ class ContentActionsFab extends ConsumerWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           _FabSegment(
+            key: const ValueKey('action-new-note'),
             icon: Icons.post_add_outlined,
             tooltip: 'new note',
             onTap: () => createNoteInFolder(context, ref, folderPath),
           ),
           const _FabDivider(),
           _FabSegment(
+            key: const ValueKey('action-new-folder'),
             icon: Icons.create_new_folder_outlined,
             tooltip: 'new folder',
             onTap: () => createFolderIn(context, ref, folderPath),
           ),
           const _FabDivider(),
           _FabSegment(
+            key: const ValueKey('action-upload'),
             icon: Icons.cloud_upload_outlined,
             tooltip: 'upload files',
             onTap: () => uploadFilesToFolder(context, ref, folderPath),
@@ -62,6 +65,7 @@ class _FabDivider extends StatelessWidget {
 
 class _FabSegment extends StatefulWidget {
   const _FabSegment({
+    super.key,
     required this.icon,
     required this.tooltip,
     required this.onTap,

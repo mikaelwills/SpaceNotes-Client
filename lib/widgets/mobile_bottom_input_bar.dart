@@ -164,6 +164,7 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
     }
     return [
       SnDockTile(
+        key: const ValueKey('action-new-folder'),
         icon: Icons.create_new_folder_outlined,
         onTap: () => NotesListDialogs.showCreateFolderDialog(
           context,
@@ -173,11 +174,13 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
         semanticLabel: 'new folder',
       ),
       SnDockTile(
+        key: const ValueKey('action-upload'),
         icon: Icons.cloud_upload_outlined,
         onTap: () => _uploadFiles(folderPath),
         semanticLabel: 'upload files',
       ),
       SnDockTile(
+        key: const ValueKey('action-new-note'),
         icon: Icons.post_add_outlined,
         onTap: () => _createQuickNote(folderPath),
         semanticLabel: 'new note',

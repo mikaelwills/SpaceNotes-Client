@@ -65,7 +65,6 @@ class _NotesSearchBarState extends State<NotesSearchBar> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         TerminalInputField(
-          key: const ValueKey('search-field'),
           controller: widget.controller,
           hintText: widget.hintText ?? 'Search notes...',
           onChanged: widget.onChanged,
@@ -107,7 +106,6 @@ class _NotesSearchBarState extends State<NotesSearchBar> {
       children: [
         if (hasText)
           GestureDetector(
-            key: const ValueKey('search-clear'),
             onTap: _handleClear,
             child: const Padding(
               padding: EdgeInsets.only(right: 14),
@@ -154,7 +152,6 @@ class _NotesSearchBarState extends State<NotesSearchBar> {
           ),
         if (showImage && !hasImage)
           GestureDetector(
-            key: const ValueKey('search-image'),
             onTap: () {
               HapticFeedback.selectionClick();
               widget.onImagePickerTap?.call();
