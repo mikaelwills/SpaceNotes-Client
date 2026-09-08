@@ -58,7 +58,11 @@ class _VideoViewerScreenState extends ConsumerState<VideoViewerScreen>
     final fullscreen = isLandscape && ready;
 
     final content = _error != null
-        ? _VideoErrorPanel(message: _error!, path: remotePath)
+        ? _VideoErrorPanel(
+            message: _error!,
+            path: remotePath,
+            onRetry: () => _retryFresh(remotePath),
+          )
         : ready
             ? _VideoPlayerBody(
                 controller: _controller!,
@@ -198,6 +202,20 @@ class _VideoViewerScreenState extends ConsumerState<VideoViewerScreen>
     _fail('Playback error after start.\n\n$description', _localPath ?? '');
   }
 
+  Future<void> _retryFresh(String remotePath) async {
+    debugLogger.info('VIDEO_VIEWER', 'Deleting local copy and retrying', remotePath);
+    await ref.read(localDownloadStoreProvider).remove(remotePath);
+    final controller = _controller;
+    _controller = null;
+    await controller?.dispose();
+    if (!mounted) return;
+    setState(() {
+      _error = null;
+      _localPath = null;
+      _loading = false;
+    });
+  }
+
   void _fail(String message, String localPath) {
     debugLogger.error('VIDEO_VIEWER', 'Playback failed: $localPath', message);
     if (mounted) setState(() => _error = message);
@@ -211,10 +229,15 @@ class _VideoViewerScreenState extends ConsumerState<VideoViewerScreen>
 }
 
 class _VideoErrorPanel extends StatelessWidget {
-  const _VideoErrorPanel({required this.message, required this.path});
+  const _VideoErrorPanel({
+    required this.message,
+    required this.path,
+    required this.onRetry,
+  });
 
   final String message;
   final String path;
+  final VoidCallback onRetry;
 
   @override
   Widget build(BuildContext context) {
@@ -256,6 +279,16 @@ class _VideoErrorPanel extends StatelessWidget {
               fontSize: 11,
               fontFamily: 'monospace',
               height: 1.4,
+            ),
+          ),
+          const SizedBox(height: 20),
+          OutlinedButton.icon(
+            onPressed: onRetry,
+            icon: const Icon(Icons.refresh, size: 18),
+            label: const Text('Delete download and retry'),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: SpaceNotesTheme.accent,
+              side: const BorderSide(color: SpaceNotesTheme.hairlineStrong),
             ),
           ),
         ],

@@ -34,6 +34,7 @@ class LocalDownloadStore {
     if (parsed == DownloadState.complete &&
         expectedSize != null &&
         row['size'] != expectedSize) {
+      await file.delete();
       await db.delete('downloads', where: 'path = ?', whereArgs: [remotePath]);
       return DownloadState.notDownloaded;
     }
