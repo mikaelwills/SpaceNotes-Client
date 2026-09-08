@@ -1,13 +1,14 @@
 import 'dart:async';
 import 'dart:io' show Platform;
 
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart' hide Provider;
 import 'package:get_it/get_it.dart';
+import 'package:marionette_flutter/marionette_flutter.dart';
 import 'package:spacenotes_client/providers/notes_providers.dart';
 import 'package:spacetimedb_sdk/protocol.dart' show SdkLogger, SdkLogLevel;
 import 'package:window_manager/window_manager.dart';
@@ -21,7 +22,15 @@ import 'router/app_router.dart';
 import 'services/web_config_service.dart';
 
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
+  if (kDebugMode) {
+    final logCollector = PrintLogCollector();
+    MarionetteBinding.ensureInitialized(
+      MarionetteConfiguration(logCollector: logCollector),
+    );
+    debugLogger.sink = logCollector.addLog;
+  } else {
+    WidgetsFlutterBinding.ensureInitialized();
+  }
 
   if (!kIsWeb && Platform.isMacOS) {
     await windowManager.ensureInitialized();

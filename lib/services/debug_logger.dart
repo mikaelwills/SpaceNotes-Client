@@ -13,6 +13,9 @@ class DebugLogger {
 
   platform.PlatformLogStorage? _storage;
   Future<void>? _initFuture;
+  void Function(String line)? _sink;
+
+  set sink(void Function(String line)? value) => _sink = value;
 
   Future<void> ensureInitialized() async {
     _initFuture ??= _init();
@@ -24,6 +27,7 @@ class DebugLogger {
         ? '${_time()} [$level][$category] $msg | $details'
         : '${_time()} [$level][$category] $msg';
     _storage?.writeLine(line);
+    _sink?.call(line);
     if (kDebugMode) debugPrint(line);
   }
 
