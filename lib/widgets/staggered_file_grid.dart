@@ -31,6 +31,7 @@ class StaggeredFileGrid extends StatelessWidget {
       crossAxisSpacing: _gap,
       childCount: files.length,
       itemBuilder: (context, i) => FileGridCard(
+        key: ValueKey(files[i].path),
         file: files[i],
         index: i + 1,
         onTap: () => onTap(files[i]),
