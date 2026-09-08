@@ -36,6 +36,18 @@ String? _focusedFieldText() {
 
 void registerSpaceNotesMarionetteExtensions(ProviderContainer container) {
   registerMarionetteExtension(
+    name: 'dismissKeyboard',
+    description: 'Unfocus any focused text field and hide the soft keyboard.',
+    callback: (_) async {
+      final focused = FocusManager.instance.primaryFocus;
+      focused?.unfocus();
+      return MarionetteExtensionResult.success({
+        'wasFocused': focused != null,
+      });
+    },
+  );
+
+  registerMarionetteExtension(
     name: 'whereAmI',
     description:
         'Current screen: route location, and the note or folder path when on one.',
@@ -75,7 +87,8 @@ void registerSpaceNotesMarionetteExtensions(ProviderContainer container) {
         if (notePath != null) 'notePath': notePath,
         if (folderPath != null) 'folderPath': folderPath,
         'modalOpen': _isModalOpen(router),
-        'focusedField': _focusedFieldText(),
+        'keyboardUp': _focusedFieldText() != null,
+        'focusedField': _focusedFieldText() ?? '',
       });
     },
   );

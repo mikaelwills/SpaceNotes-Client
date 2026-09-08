@@ -29,19 +29,22 @@ class ModalTracker extends NavigatorObserver {
 
   static bool get isModalOpen => _depth > 0;
 
+  bool _isModal(Route<void> route) =>
+      route is PopupRoute || route is ModalBottomSheetRoute;
+
   @override
   void didPush(Route<void> route, Route<void>? previousRoute) {
-    if (route is PopupRoute) _depth++;
+    if (_isModal(route)) _depth++;
   }
 
   @override
   void didPop(Route<void> route, Route<void>? previousRoute) {
-    if (route is PopupRoute && _depth > 0) _depth--;
+    if (_isModal(route) && _depth > 0) _depth--;
   }
 
   @override
   void didRemove(Route<void> route, Route<void>? previousRoute) {
-    if (route is PopupRoute && _depth > 0) _depth--;
+    if (_isModal(route) && _depth > 0) _depth--;
   }
 }
 

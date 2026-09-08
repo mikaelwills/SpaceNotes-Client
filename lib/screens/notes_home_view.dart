@@ -103,6 +103,7 @@ class _StatusLine extends StatelessWidget {
     return SnStatusLine(
       leading: onFolders
           ? GestureDetector(
+              key: const ValueKey('tab-recent'),
               onTap: onTapRecent,
               behavior: HitTestBehavior.opaque,
               child: const Row(
@@ -119,6 +120,7 @@ class _StatusLine extends StatelessWidget {
       trailing: onFolders
           ? SnStatusDiamond('folders', trail: '/ $folderCount')
           : GestureDetector(
+              key: const ValueKey('tab-folders'),
               onTap: onTapFolders,
               behavior: HitTestBehavior.opaque,
               child: const Row(
