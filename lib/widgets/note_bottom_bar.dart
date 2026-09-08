@@ -97,11 +97,13 @@ class _NoteBottomBarState extends ConsumerState<NoteBottomBar> {
   Widget _buildMobileBar(bool isChatConnected) {
     final leading = [
       SnDockTile(
+        key: const ValueKey('note-more'),
         icon: Icons.more_horiz,
         onTap: () => _showNoteActions(context),
         semanticLabel: 'more actions',
       ),
       SnDockTile(
+        key: const ValueKey('note-undo'),
         icon: Icons.undo,
         onTap: () => widget.quillKey?.currentState?.undo(),
         semanticLabel: 'undo',

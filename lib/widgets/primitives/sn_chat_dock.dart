@@ -104,6 +104,7 @@ class SnChatDock extends StatelessWidget {
             return KeyEventResult.handled;
           },
           child: SnField(
+            key: const ValueKey('note-ask-field'),
             controller: controller,
             focusNode: focusNode,
             hint: hint,
@@ -122,6 +123,7 @@ class SnChatDock extends StatelessWidget {
       ...trailing,
       if (showSend)
         SnDockTile(
+          key: const ValueKey('note-ask-send'),
           icon: Icons.arrow_upward,
           onTap: onSend,
           semanticLabel: 'send',

@@ -32,6 +32,7 @@ class MobileNavBar extends ConsumerWidget {
         children: [
           if (isOnFolder) ...[
             _NavIcon(
+              key: const ValueKey('nav-back'),
               icon: Icons.arrow_back,
               onTap: () => _navigateToParentFolder(
                 context,
@@ -55,6 +56,7 @@ class MobileNavBar extends ConsumerWidget {
               final note = ref.watch(fileByIdProvider(noteId));
               final notePath = note?.path ?? '';
               return _NavIcon(
+                key: const ValueKey('nav-back'),
                 icon: Icons.arrow_back,
                 onTap: () => _navigateBackFromNote(context, notePath),
                 active: false,
@@ -85,6 +87,7 @@ class MobileNavBar extends ConsumerWidget {
           if (showMain) const Spacer(),
           if (!isOnSettings) ...[
             _NavIcon(
+              key: const ValueKey('nav-settings'),
               icon: Icons.settings_outlined,
               onTap: () => context.go('/settings'),
               active: false,
@@ -138,6 +141,7 @@ class MobileNavBar extends ConsumerWidget {
       final isAtRoot = isActive && location == route;
       icons.add(
         _NavIcon(
+          key: ValueKey('nav-${route.split('/').last}'),
           icon: icon,
           onTap: isAtRoot ? null : () => context.go(route),
           active: isActive,
@@ -224,6 +228,7 @@ class _NavIcon extends StatelessWidget {
   final AlignmentGeometry iconAlignment;
 
   const _NavIcon({
+    super.key,
     required this.icon,
     required this.onTap,
     required this.active,

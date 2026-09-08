@@ -42,6 +42,7 @@ class NotesListDialogs {
           children: [
             if (FileTypeRegistry.forFile(note).isMovable)
               ListTile(
+                key: const ValueKey('dialog-move'),
                 leading: const Icon(
                   Icons.drive_file_move_outline,
                   color: SpaceNotesTheme.primary,
@@ -69,6 +70,7 @@ class NotesListDialogs {
                     return const SizedBox.shrink();
                   }
                   return ListTile(
+                    key: const ValueKey('dialog-offload'),
                     leading: const Icon(
                       Icons.cloud_off_outlined,
                       color: SpaceNotesTheme.primary,
@@ -93,6 +95,7 @@ class NotesListDialogs {
               ),
             if (FileTypeRegistry.forFile(note).isDeletable)
               ListTile(
+                key: const ValueKey('dialog-delete'),
                 leading: const Icon(
                   Icons.delete_outline,
                   color: SpaceNotesTheme.error,
@@ -149,6 +152,7 @@ class NotesListDialogs {
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
+              key: const ValueKey('dialog-rename'),
               leading: const Icon(
                 Icons.edit_outlined,
                 color: SpaceNotesTheme.primary,
@@ -167,6 +171,7 @@ class NotesListDialogs {
               },
             ),
             ListTile(
+              key: const ValueKey('dialog-move'),
               leading: const Icon(
                 Icons.drive_file_move_outline,
                 color: SpaceNotesTheme.primary,
@@ -185,6 +190,7 @@ class NotesListDialogs {
               },
             ),
             ListTile(
+              key: const ValueKey('dialog-delete'),
               leading: const Icon(
                 Icons.delete_outline,
                 color: SpaceNotesTheme.error,
@@ -341,6 +347,7 @@ class NotesListDialogs {
               children: [
                 Expanded(
                   child: TextButton(
+                    key: const ValueKey('dialog-cancel'),
                     onPressed: () => Navigator.of(dialogContext).pop(),
                     style: TextButton.styleFrom(
                       foregroundColor: SpaceNotesTheme.textSecondary,
@@ -351,6 +358,7 @@ class NotesListDialogs {
                 const SizedBox(width: 8),
                 Expanded(
                   child: ElevatedButton(
+                    key: const ValueKey('dialog-confirm'),
                     onPressed: () {
                       if (formKey.currentState?.validate() ?? false) {
                         final folderName = nameController.text.trim();
@@ -423,6 +431,7 @@ class NotesListDialogs {
         ),
         actions: [
           TextButton(
+            key: const ValueKey('dialog-cancel'),
             onPressed: () => Navigator.of(dialogContext).pop(),
             style: TextButton.styleFrom(
               foregroundColor: SpaceNotesTheme.textSecondary,
@@ -430,6 +439,7 @@ class NotesListDialogs {
             child: const Text('Cancel'),
           ),
           TextButton(
+            key: const ValueKey('dialog-confirm'),
             onPressed: () {
               Navigator.of(dialogContext).pop();
 
@@ -495,6 +505,7 @@ class NotesListDialogs {
         ),
         actions: [
           TextButton(
+            key: const ValueKey('dialog-cancel'),
             onPressed: () => Navigator.of(dialogContext).pop(),
             style: TextButton.styleFrom(
               foregroundColor: SpaceNotesTheme.textSecondary,
@@ -502,6 +513,7 @@ class NotesListDialogs {
             child: const Text('Cancel'),
           ),
           TextButton(
+            key: const ValueKey('dialog-confirm'),
             onPressed: () {
               Navigator.of(dialogContext).pop();
               ref.read(notesRepositoryProvider).deleteFolder(folder.path);
@@ -562,6 +574,7 @@ class NotesListDialogs {
             ),
             actions: [
               TextButton(
+                key: const ValueKey('dialog-ok'),
                 onPressed: () => Navigator.of(dialogContext).pop(),
                 child: const Text('OK'),
               ),
@@ -841,6 +854,7 @@ class NotesListDialogs {
                                   ),
                                   actions: [
                                     TextButton(
+                                      key: const ValueKey('dialog-ok'),
                                       onPressed: () =>
                                           Navigator.of(errorContext).pop(),
                                       child: const Text('OK'),
@@ -1078,6 +1092,7 @@ class NotesListDialogs {
                 const SizedBox(width: 8),
                 Expanded(
                   child: ElevatedButton(
+                    key: const ValueKey('dialog-confirm'),
                     onPressed: () {
                       if (formKey.currentState?.validate() ?? false) {
                         final newName = nameController.text.trim();
