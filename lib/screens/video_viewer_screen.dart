@@ -370,7 +370,9 @@ class _VideoPlayerBodyState extends State<_VideoPlayerBody> {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        AspectRatio(aspectRatio: aspectRatio, child: tapToPlay),
+        Flexible(
+          child: AspectRatio(aspectRatio: aspectRatio, child: tapToPlay),
+        ),
         const SizedBox(height: 12),
         SizedBox(
           width: 280,
