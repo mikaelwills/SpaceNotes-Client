@@ -1,8 +1,38 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:marionette_flutter/marionette_flutter.dart';
 
 import '../providers/notes_providers.dart';
 import '../router/app_router.dart';
+
+bool _isModalOpen(GoRouter router) => ModalTracker.isModalOpen;
+
+String? _focusedFieldText() {
+  final focused = FocusManager.instance.primaryFocus;
+  if (focused == null) return null;
+
+  final root = WidgetsBinding.instance.rootElement;
+  if (root == null) return null;
+
+  EditableTextState? found;
+  void visit(Element element) {
+    if (found != null) return;
+    if (element is StatefulElement && element.state is EditableTextState) {
+      final state = element.state as EditableTextState;
+      if (state.widget.focusNode == focused) {
+        found = state;
+        return;
+      }
+    }
+    element.visitChildren(visit);
+  }
+
+  visit(root);
+  final state = found;
+  if (state == null) return null;
+  return state.textEditingValue.text;
+}
 
 void registerSpaceNotesMarionetteExtensions(ProviderContainer container) {
   registerMarionetteExtension(
@@ -44,6 +74,8 @@ void registerSpaceNotesMarionetteExtensions(ProviderContainer container) {
         'location': location,
         if (notePath != null) 'notePath': notePath,
         if (folderPath != null) 'folderPath': folderPath,
+        'modalOpen': _isModalOpen(router),
+        'focusedField': _focusedFieldText(),
       });
     },
   );

@@ -24,6 +24,29 @@ import '../services/debug_logger.dart';
 final RouteObserver<ModalRoute<void>> routeObserver =
     RouteObserver<ModalRoute<void>>();
 
+class ModalTracker extends NavigatorObserver {
+  static int _depth = 0;
+
+  static bool get isModalOpen => _depth > 0;
+
+  @override
+  void didPush(Route<void> route, Route<void>? previousRoute) {
+    if (route is PopupRoute) _depth++;
+  }
+
+  @override
+  void didPop(Route<void> route, Route<void>? previousRoute) {
+    if (route is PopupRoute && _depth > 0) _depth--;
+  }
+
+  @override
+  void didRemove(Route<void> route, Route<void>? previousRoute) {
+    if (route is PopupRoute && _depth > 0) _depth--;
+  }
+}
+
+final ModalTracker modalTracker = ModalTracker();
+
 GoRouter createAppRouter(ProviderContainer container) {
   bool navigatedToIncoming = false;
 
@@ -39,7 +62,7 @@ GoRouter createAppRouter(ProviderContainer container) {
 
   _router = GoRouter(
     initialLocation: '/notes',
-    observers: [routeObserver],
+    observers: [routeObserver, modalTracker],
     redirect: (context, state) {
       final lane = connectionLaneForLocation(state.matchedLocation);
       final laneController =
