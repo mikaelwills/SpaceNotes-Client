@@ -37,6 +37,16 @@ void main() async {
   }
 
   await debugLogger.ensureInitialized();
+
+  final priorOnError = FlutterError.onError;
+  FlutterError.onError = (details) {
+    debugLogger.error(
+      'FLUTTER',
+      details.exceptionAsString(),
+      details.library,
+    );
+    priorOnError?.call(details);
+  };
   debugLogger.info('APP', 'SpaceNotes starting');
   await exitRecorder.init();
 

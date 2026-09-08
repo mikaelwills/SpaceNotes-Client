@@ -137,12 +137,13 @@ class QuillNoteEditorState extends State<QuillNoteEditor> {
 
   @override
   Widget build(BuildContext context) {
+    final editor = _isRawMode ? buildRawEditor() : buildQuillEditor();
+
     return Column(
+      mainAxisSize: widget.scrollable ? MainAxisSize.max : MainAxisSize.min,
       children: [
         if (widget.showToolbar) buildCollapsibleToolbar(),
-        Expanded(
-          child: _isRawMode ? buildRawEditor() : buildQuillEditor(),
-        ),
+        if (widget.scrollable) Expanded(child: editor) else editor,
       ],
     );
   }
@@ -182,7 +183,8 @@ class QuillNoteEditorState extends State<QuillNoteEditor> {
   Widget buildRawEditor() {
     return ScrollConfiguration(
       behavior: ScrollConfiguration.of(context).copyWith(scrollbars: false),
-      child: SingleChildScrollView(
+      child: _MaybeScroll(
+        scrollable: widget.scrollable,
         child: TextField(
           contextMenuBuilder: SpaceNotesContextMenu.buildForTextField,
           controller: _rawController,
@@ -615,5 +617,18 @@ class _UnknownEmbedBuilder extends EmbedBuilder {
         ),
       ),
     );
+  }
+}
+
+class _MaybeScroll extends StatelessWidget {
+  const _MaybeScroll({required this.scrollable, required this.child});
+
+  final bool scrollable;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!scrollable) return child;
+    return SingleChildScrollView(child: child);
   }
 }
