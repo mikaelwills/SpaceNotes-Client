@@ -15,8 +15,9 @@ class NotesListDialogs {
   static void showNoteContextMenu(
     BuildContext context,
     WidgetRef ref,
-    SpaceFile note,
-  ) {
+    SpaceFile note, {
+    String? navigateToAfterDelete,
+  }) {
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -110,9 +111,12 @@ class NotesListDialogs {
                 ),
                 onTap: () {
                   Navigator.of(dialogContext).pop();
-                  print(
-                      '🗑️  Context Menu DELETE: No navigation path (staying on list)');
-                  showDeleteNoteConfirmation(context, ref, note);
+                  showDeleteNoteConfirmation(
+                    context,
+                    ref,
+                    note,
+                    navigateToAfterDelete: navigateToAfterDelete,
+                  );
                 },
               ),
           ],
@@ -692,6 +696,7 @@ class NotesListDialogs {
                                 ),
                                 actions: [
                                   TextButton(
+                                    key: const ValueKey('dialog-ok'),
                                     onPressed: () =>
                                         Navigator.of(errorContext).pop(),
                                     child: const Text('OK'),
@@ -707,6 +712,7 @@ class NotesListDialogs {
           ),
           actions: [
             TextButton(
+              key: const ValueKey('dialog-cancel'),
               onPressed: () => Navigator.of(dialogContext).pop(),
               style: TextButton.styleFrom(
                 foregroundColor: SpaceNotesTheme.textSecondary,
@@ -930,6 +936,7 @@ class NotesListDialogs {
                           ),
                           actions: [
                             TextButton(
+                              key: const ValueKey('dialog-ok'),
                               onPressed: () => Navigator.of(errorContext).pop(),
                               child: const Text('OK'),
                             ),
@@ -944,6 +951,7 @@ class NotesListDialogs {
           ),
           actions: [
             TextButton(
+              key: const ValueKey('dialog-cancel'),
               onPressed: () => Navigator.of(dialogContext).pop(),
               style: TextButton.styleFrom(
                 foregroundColor: SpaceNotesTheme.textSecondary,
@@ -1082,6 +1090,7 @@ class NotesListDialogs {
               children: [
                 Expanded(
                   child: TextButton(
+                    key: const ValueKey('dialog-cancel'),
                     onPressed: () => Navigator.of(dialogContext).pop(),
                     style: TextButton.styleFrom(
                       foregroundColor: SpaceNotesTheme.textSecondary,

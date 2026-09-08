@@ -172,87 +172,6 @@ class _NoteBottomBarState extends ConsumerState<NoteBottomBar> {
     );
   }
 
-  Widget _buildActionsSheet(BuildContext sheetContext) {
-    return Container(
-      decoration: const BoxDecoration(
-        color: SpaceNotesTheme.bg,
-        border: Border(
-          top: BorderSide(color: SpaceNotesTheme.hairlineStrong, width: 1),
-        ),
-      ),
-      child: SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              margin: const EdgeInsets.only(top: 10),
-              width: 36,
-              height: 2,
-              color: SpaceNotesTheme.hairlineStrong,
-            ),
-            const SizedBox(height: 14),
-            _buildActionTile(
-              sheetContext: sheetContext,
-              icon: Icons.drive_file_move_outlined,
-              label: 'move to folder',
-              color: SpaceNotesTheme.accent,
-              onTap: () {
-                Navigator.of(sheetContext).pop();
-                _handleMoveNote();
-              },
-            ),
-            _buildActionTile(
-              sheetContext: sheetContext,
-              icon: Icons.delete_outline,
-              label: 'delete note',
-              color: SpaceNotesTheme.offline,
-              onTap: () {
-                Navigator.of(sheetContext).pop();
-                _handleDeleteNote();
-              },
-            ),
-            const SizedBox(height: 12),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildActionTile({
-    required BuildContext sheetContext,
-    required IconData icon,
-    required String label,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-        decoration: const BoxDecoration(
-          border: Border(
-            bottom: BorderSide(color: SpaceNotesTheme.hairline, width: 1),
-          ),
-        ),
-        child: Row(
-          children: [
-            Icon(icon, color: color, size: 16),
-            const SizedBox(width: 14),
-            Text(
-              label.toUpperCase(),
-              style: TextStyle(
-                fontFamily: SpaceNotesTheme.fontMono,
-                fontSize: 11,
-                color: color,
-                letterSpacing: 1.2,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 
   void _sendMessage() {
     final message = _controller.text.trim();
@@ -273,12 +192,22 @@ class _NoteBottomBarState extends ConsumerState<NoteBottomBar> {
   }
 
   void _showNoteActions(BuildContext context) {
+    final note = _getCurrentNote();
+    if (note == null) return;
     HapticFeedback.lightImpact();
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (sheetContext) => _buildActionsSheet(sheetContext),
+    NotesListDialogs.showNoteContextMenu(
+      context,
+      ref,
+      note,
+      navigateToAfterDelete: _parentLocation(),
     );
+  }
+
+  String _parentLocation() {
+    final path = widget.notePath;
+    if (path == null || !path.contains('/')) return '/notes';
+    final folderPath = path.substring(0, path.lastIndexOf('/'));
+    return '/notes/folder/${Uri.encodeComponent(folderPath)}';
   }
 
   SpaceFile? _getCurrentNote() {
@@ -287,31 +216,4 @@ class _NoteBottomBarState extends ConsumerState<NoteBottomBar> {
     return notes.firstWhereOrNull((n) => n.path == widget.notePath);
   }
 
-  void _handleMoveNote() {
-    final note = _getCurrentNote();
-    if (note == null) return;
-    NotesListDialogs.showMoveNoteDialog(context, ref, note);
-  }
-
-  void _handleDeleteNote() {
-    final note = _getCurrentNote();
-    if (note == null) return;
-
-    final String navigateTo;
-    if (widget.notePath!.contains('/')) {
-      final lastSlash = widget.notePath!.lastIndexOf('/');
-      final folderPath = widget.notePath!.substring(0, lastSlash);
-      final encodedFolderPath = Uri.encodeComponent(folderPath);
-      navigateTo = '/notes/folder/$encodedFolderPath';
-    } else {
-      navigateTo = '/notes';
-    }
-
-    NotesListDialogs.showDeleteNoteConfirmation(
-      context,
-      ref,
-      note,
-      navigateToAfterDelete: navigateTo,
-    );
-  }
 }
