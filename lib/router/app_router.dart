@@ -210,6 +210,8 @@ GoRouter createAppRouter(ProviderContainer container) {
 
 GoRouter? _router;
 
+GoRouter? get appRouter => _router;
+
 CustomTransitionPage<void> _buildFadeTransitionPage({
   required LocalKey key,
   required Widget child,

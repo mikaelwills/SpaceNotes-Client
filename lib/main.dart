@@ -15,6 +15,7 @@ import 'package:window_manager/window_manager.dart';
 
 import 'theme/spacenotes_theme.dart';
 import 'services/debug_logger.dart';
+import 'services/marionette_extensions.dart';
 import 'services/exit_recorder.dart';
 import 'blocs/config/config_cubit.dart';
 import 'blocs/desktop_notes/desktop_notes_bloc.dart';
@@ -61,6 +62,10 @@ void main() async {
   }
 
   final container = ProviderContainer();
+
+  if (kDebugMode) {
+    registerSpaceNotesMarionetteExtensions(container);
+  }
 
   final repo = container.read(notesRepositoryProvider);
   await repo.loadSavedConfig();
