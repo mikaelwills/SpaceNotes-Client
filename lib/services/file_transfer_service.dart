@@ -11,6 +11,25 @@ class FileAlreadyExistsException implements Exception {
   String toString() => 'FileAlreadyExistsException: $fileName already exists';
 }
 
+class FileDownloadException implements Exception {
+  FileDownloadException(this.message);
+  final String message;
+
+  @override
+  String toString() => message;
+
+  static FileDownloadException fromDio(DioException e, String url) {
+    final status = e.response?.statusCode;
+    if (status != null) {
+      final reason = e.response?.statusMessage ?? '';
+      return FileDownloadException(
+          'Server returned HTTP $status $reason for GET $url'.trim());
+    }
+    return FileDownloadException(
+        'Download failed (${e.type.name}) for GET $url: ${e.message ?? e.error}');
+  }
+}
+
 class FileTransferService {
   FileTransferService(this._repository);
 
@@ -135,7 +154,7 @@ class FileTransferService {
         'Download failed: $remotePath',
         'url=$url status=${e.response?.statusCode} type=${e.type} message=${e.message}',
       );
-      rethrow;
+      throw FileDownloadException.fromDio(e, url);
     } catch (e) {
       debugLogger.error('DOWNLOAD', 'Download failed (non-Dio): $remotePath', 'url=$url error=$e');
       rethrow;
