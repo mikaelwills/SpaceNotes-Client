@@ -19,6 +19,8 @@ final sidebarCollapsedProvider = StateProvider<bool>((ref) => false);
 final sidebarWidthProvider = StateProvider<double>((ref) => 245.0);
 final chatPanelCollapsedProvider = StateProvider<bool>((ref) => false);
 
+const double kCollapsedPaneWidth = 48.0;
+
 class DesktopShell extends ConsumerStatefulWidget {
   final Widget child;
 
@@ -34,7 +36,7 @@ class DesktopShell extends ConsumerStatefulWidget {
 class _DesktopShellState extends ConsumerState<DesktopShell> {
   static const double _minSidebarWidth = 200.0;
   static const double _maxSidebarWidth = 500.0;
-  static const double _collapsedWidth = 48.0;
+  static const double _collapsedWidth = kCollapsedPaneWidth;
   static const double _dividerWidth = 1.0;
 
   bool _isResizing = false;
@@ -172,8 +174,52 @@ class _DesktopContentArea extends ConsumerWidget {
           NoteChatPanel(
             notePath: openNoteId ?? '',
             isDesktop: true,
+          )
+        else
+          _ChatPanelReopenTab(
+            onTap: () =>
+                ref.read(chatPanelCollapsedProvider.notifier).state = false,
           ),
       ],
+    );
+  }
+}
+
+class _ChatPanelReopenTab extends StatelessWidget {
+  const _ChatPanelReopenTab({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      key: const ValueKey('chat-panel-expand'),
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Container(
+        width: kCollapsedPaneWidth,
+        decoration: const BoxDecoration(
+          color: SpaceNotesTheme.bg,
+          border: Border(
+            left: BorderSide(color: SpaceNotesTheme.hairline, width: 1),
+          ),
+        ),
+        child: const Align(
+          alignment: Alignment.topCenter,
+          child: Padding(
+            padding: EdgeInsets.only(top: 12),
+            child: Text(
+              '‹',
+              style: TextStyle(
+                fontFamily: SpaceNotesTheme.fontMono,
+                fontSize: 14,
+                color: SpaceNotesTheme.dim,
+                height: 1,
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
