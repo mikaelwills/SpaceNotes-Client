@@ -1,3 +1,6 @@
+import 'dart:io';
+
+import 'package:desktop_drop/desktop_drop.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -19,6 +22,10 @@ import '../file_types/file_type_registry.dart';
 import '../blocs/desktop_notes/desktop_notes_bloc.dart';
 import '../blocs/desktop_notes/desktop_notes_event.dart';
 import '../widgets/desktop/content_actions_fab.dart';
+import '../providers/file_transfer_providers.dart';
+import '../providers/upload_progress_providers.dart';
+import '../services/debug_logger.dart';
+import '../services/folder_upload.dart';
 
 class FolderListView extends ConsumerStatefulWidget {
   final String folderPath;
@@ -35,6 +42,36 @@ class FolderListView extends ConsumerStatefulWidget {
 }
 
 class _FolderListViewState extends ConsumerState<FolderListView> {
+  bool _isDropTarget = false;
+
+  Future<void> _handleDrop(DropDoneDetails details) async {
+    setState(() => _isDropTarget = false);
+
+    final files = <File>[];
+    for (final item in details.files) {
+      final file = File(item.path);
+      if (await FileSystemEntity.isDirectory(item.path)) {
+        debugLogger.info('UPLOAD', 'Skipped dropped directory', item.path);
+        continue;
+      }
+      if (await file.exists()) files.add(file);
+    }
+    if (files.isEmpty || !mounted) return;
+
+    final targetFolder =
+        widget.folderPath.isEmpty ? 'All Notes' : widget.folderPath;
+
+    final result = await uploadFilesToFolder(
+      service: ref.read(fileTransferServiceProvider),
+      batch: ref.read(uploadBatchProvider.notifier),
+      folderPath: targetFolder,
+      files: files,
+    );
+
+    if (!mounted || !result.hasSkipped) return;
+    showUploadSkippedDialog(context, result.skipped);
+  }
+
   @override
   void initState() {
     super.initState();
@@ -58,6 +95,30 @@ class _FolderListViewState extends ConsumerState<FolderListView> {
   Widget build(BuildContext context) {
     final data = ref.watch(dynamicFolderContentsProvider(widget.folderPath));
     final isDesktop = PlatformUtils.isDesktopLayout(context);
+    return DropTarget(
+      onDragEntered: (_) => setState(() => _isDropTarget = true),
+      onDragExited: (_) => setState(() => _isDropTarget = false),
+      onDragDone: _handleDrop,
+      child: Container(
+        foregroundDecoration: _isDropTarget
+            ? BoxDecoration(
+                border: Border.all(
+                  color: SpaceNotesTheme.accent.withValues(alpha: 0.35),
+                  width: 1,
+                ),
+                color: SpaceNotesTheme.accent.withValues(alpha: 0.03),
+              )
+            : null,
+        child: _buildBody(context, data, isDesktop),
+      ),
+    );
+  }
+
+  Widget _buildBody(
+    BuildContext context,
+    ({List<Folder> folders, List<SpaceFile> notes}) data,
+    bool isDesktop,
+  ) {
     return Column(
       children: [
         if (!isDesktop)
@@ -103,56 +164,61 @@ class _FolderListViewState extends ConsumerState<FolderListView> {
     final viewMode = ref.watch(folderBrowserViewModeProvider);
 
     return KeyboardDismissOnScroll(
-      child: CustomScrollView(
-        slivers: [
-          if (folders.isNotEmpty && viewMode == FolderBrowserViewMode.list)
-            SliverList.builder(
-              itemCount: folders.length,
-              itemBuilder: (context, index) => _buildFolderItem(folders[index]),
-            ),
-          if (folders.isNotEmpty && viewMode == FolderBrowserViewMode.grid)
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(12, 14, 12, 0),
-              sliver: SliverToBoxAdapter(
-                child: FolderCardGrid(
-                  folders: folders,
-                  onTap: (folder) => _onFolderTap(context, folder),
-                  onLongPress: (folder) =>
-                      FileTypeRegistry.isProtectedPath(folder.path)
-                          ? null
-                          : NotesListDialogs.showFolderContextMenu(
-                              context, ref, folder),
-                  contextMenuItems: (folder) =>
-                      FavouriteFolderMenu.items(ref, folder),
-                  onContextMenuSelected: (folder, value) =>
-                      FavouriteFolderMenu.onSelected(ref, folder)?.call(value),
+      child: ScrollConfiguration(
+        behavior: ScrollConfiguration.of(context).copyWith(scrollbars: false),
+        child: CustomScrollView(
+          slivers: [
+            if (folders.isNotEmpty && viewMode == FolderBrowserViewMode.list)
+              SliverList.builder(
+                itemCount: folders.length,
+                itemBuilder: (context, index) =>
+                    _buildFolderItem(folders[index]),
+              ),
+            if (folders.isNotEmpty && viewMode == FolderBrowserViewMode.grid)
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(12, 14, 12, 0),
+                sliver: SliverToBoxAdapter(
+                  child: FolderCardGrid(
+                    folders: folders,
+                    onTap: (folder) => _onFolderTap(context, folder),
+                    onLongPress: (folder) =>
+                        FileTypeRegistry.isProtectedPath(folder.path)
+                            ? null
+                            : NotesListDialogs.showFolderContextMenu(
+                                context, ref, folder),
+                    contextMenuItems: (folder) =>
+                        FavouriteFolderMenu.items(ref, folder),
+                    onContextMenuSelected: (folder, value) =>
+                        FavouriteFolderMenu.onSelected(ref, folder)
+                            ?.call(value),
+                  ),
                 ),
               ),
-            ),
-          if (notes.isNotEmpty)
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(12, 14, 12, 120),
-              sliver: StaggeredFileGrid(
-                files: notes,
-                onTap: (file) {
-                  FocusManager.instance.primaryFocus?.unfocus();
-                  ref.read(folderSearchQueryProvider.notifier).state = '';
-                  if (PlatformUtils.isDesktopLayout(context)) {
-                    _openNoteOnDesktop(context, file);
-                  } else {
-                    context.go('/notes/note/${file.id}');
-                  }
-                },
-                onLongPress: (file) {
-                  if (FileTypeRegistry.forFile(file).hasContextActions) {
-                    NotesListDialogs.showNoteContextMenu(context, ref, file);
-                  }
-                },
-              ),
-            )
-          else
-            const SliverPadding(padding: EdgeInsets.only(bottom: 120)),
-        ],
+            if (notes.isNotEmpty)
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(12, 14, 12, 120),
+                sliver: StaggeredFileGrid(
+                  files: notes,
+                  onTap: (file) {
+                    FocusManager.instance.primaryFocus?.unfocus();
+                    ref.read(folderSearchQueryProvider.notifier).state = '';
+                    if (PlatformUtils.isDesktopLayout(context)) {
+                      _openNoteOnDesktop(context, file);
+                    } else {
+                      context.go('/notes/note/${file.id}');
+                    }
+                  },
+                  onLongPress: (file) {
+                    if (FileTypeRegistry.forFile(file).hasContextActions) {
+                      NotesListDialogs.showNoteContextMenu(context, ref, file);
+                    }
+                  },
+                ),
+              )
+            else
+              const SliverPadding(padding: EdgeInsets.only(bottom: 120)),
+          ],
+        ),
       ),
     );
   }
@@ -242,8 +308,8 @@ class _FolderListViewState extends ConsumerState<FolderListView> {
           : () => NotesListDialogs.showMoveFolderDialog(context, ref, folder),
       onDelete: FileTypeRegistry.isProtectedPath(folder.path)
           ? null
-          : () =>
-              NotesListDialogs.showDeleteFolderConfirmation(context, ref, folder),
+          : () => NotesListDialogs.showDeleteFolderConfirmation(
+              context, ref, folder),
       contextMenuItems: FavouriteFolderMenu.items(ref, folder),
       onContextMenuSelected: FavouriteFolderMenu.onSelected(ref, folder),
     );
