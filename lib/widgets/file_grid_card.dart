@@ -35,6 +35,7 @@ class FileGridCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return GestureDetector(
       onTap: onTap,
+      onSecondaryTap: onLongPress,
       onLongPress: onLongPress == null
           ? null
           : () {
