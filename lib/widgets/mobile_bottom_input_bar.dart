@@ -18,6 +18,7 @@ import 'primitives/primitives.dart';
 import 'folder_picker_field.dart';
 import '../file_types/file_type_registry.dart';
 import '../services/debug_logger.dart';
+import '../services/folder_upload.dart';
 import '../services/file_transfer_service.dart';
 import '../theme/spacenotes_theme.dart';
 import 'adaptive/platform_utils.dart';
@@ -325,42 +326,15 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
       return;
     }
 
-    final jobIds = {
-      for (final picked in uploadable)
-        picked: '${DateTime.now().microsecondsSinceEpoch}_${picked.name}',
-    };
-    batch.startBatch([
-      for (final picked in uploadable) (id: jobIds[picked]!, fileName: picked.name)
-    ]);
+    final uploadResult = await uploadFilesToFolder(
+      service: service,
+      batch: batch,
+      folderPath: targetFolder,
+      files: [for (final picked in uploadable) File(picked.path!)],
+    );
 
-    final skipped = <String>[];
-    for (final picked in uploadable) {
-      final path = picked.path!;
-      final jobId = jobIds[picked]!;
-      try {
-        await service.uploadFile(
-          targetFolder,
-          File(path),
-          onProgress: (sent, total) {
-            if (total > 0) {
-              batch.progress(jobId, sent / total, sentBytes: sent, totalBytes: total);
-            }
-          },
-        );
-        batch.complete(jobId);
-      } on FileAlreadyExistsException {
-        debugLogger.info('UPLOAD', 'Skipped, already exists', picked.name);
-        skipped.add(picked.name);
-        batch.fail(jobId, 'already exists');
-      } catch (e) {
-        debugLogger.error('UPLOAD', 'Error uploading ${picked.name}', e.toString());
-        batch.fail(jobId, e.toString());
-      }
-    }
-    batch.finishBatch();
-
-    if (skipped.isNotEmpty && mounted) {
-      _showSkippedDialog(skipped);
+    if (uploadResult.hasSkipped && mounted) {
+      showUploadSkippedDialog(context, uploadResult.skipped);
     }
   }
 
@@ -438,29 +412,6 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
     );
   }
 
-  void _showSkippedDialog(List<String> skipped) {
-    showDialog<void>(
-      context: context,
-      builder: (ctx) => SnDialog(
-        title: 'Some files already existed',
-        content: Text(
-          '${skipped.length} file(s) were skipped because they already exist:\n\n${skipped.join('\n')}',
-          style: const TextStyle(
-            fontFamily: SpaceNotesTheme.fontSans,
-            fontSize: 13,
-            color: SpaceNotesTheme.fg,
-          ),
-        ),
-        actions: [
-          SnDialogAction(
-            label: 'OK',
-            variant: SnButtonVariant.outline,
-            onPressed: () => Navigator.pop(ctx),
-          ),
-        ],
-      ),
-    );
-  }
 
   Future<void> _createQuickNote(String folderPath) async {
     final basePath = folderPath.isEmpty ? 'All Notes' : folderPath;
