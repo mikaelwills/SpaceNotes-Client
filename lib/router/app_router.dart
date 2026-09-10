@@ -19,6 +19,7 @@ import '../widgets/adaptive/adaptive_app_shell.dart';
 import '../providers/call_providers.dart';
 import '../providers/connection_providers.dart';
 import '../providers/notes_providers.dart';
+import '../providers/preferences_provider.dart';
 import '../services/debug_logger.dart';
 
 final RouteObserver<ModalRoute<void>> routeObserver =
@@ -67,7 +68,13 @@ GoRouter createAppRouter(ProviderContainer container) {
     initialLocation: '/notes',
     observers: [routeObserver, modalTracker],
     redirect: (context, state) {
-      final lane = connectionLaneForLocation(state.matchedLocation);
+      final location = state.matchedLocation;
+      if (location.startsWith('/agents') &&
+          !container.read(agentsEnabledProvider)) {
+        return '/notes';
+      }
+
+      final lane = connectionLaneForLocation(location);
       final laneController =
           container.read(activeConnectionLaneProvider.notifier);
       if (laneController.state != lane) {

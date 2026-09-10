@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/notes_providers.dart';
+import '../providers/preferences_provider.dart';
 import '../widgets/adaptive/nav_cycle.dart';
 import '../widgets/adaptive/platform_utils.dart';
 import '../widgets/mobile_bottom_input_bar.dart';
@@ -23,7 +24,7 @@ class HomeScreen extends ConsumerWidget {
     return CallbackShortcuts(
       bindings: {
         const SingleActivator(LogicalKeyboardKey.tab, shift: true): () =>
-            cycleNav(context),
+            cycleNav(context, agentsEnabled: ref.read(agentsEnabledProvider)),
         const SingleActivator(LogicalKeyboardKey.keyL, meta: true): () =>
             ref.read(mobileInputFocusNodeProvider).requestFocus(),
       },

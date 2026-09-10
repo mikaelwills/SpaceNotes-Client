@@ -13,6 +13,7 @@ import '../widgets/primitives/primitives.dart';
 import '../services/debug_logger.dart';
 import '../services/credential_key_store.dart';
 import '../services/local_download_store.dart';
+import '../providers/preferences_provider.dart';
 import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 
@@ -71,6 +72,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             children: [
               _buildPageHeader(),
               _buildServerSection(),
+              _buildPreferencesSection(),
               if (PlatformUtils.isDesktopLayout(context))
                 _buildMaxOpenNotesSection(),
               _buildPasswordManagerSection(),
@@ -163,6 +165,35 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildPreferencesSection() {
+    final prefs = ref.watch(preferencesProvider);
+    final notifier = ref.read(preferencesProvider.notifier);
+    final isDesktop = PlatformUtils.isDesktopLayout(context);
+
+    return _Section(
+      label: 'preferences',
+      children: [
+        if (isDesktop) ...[
+          _PreferenceRow(
+            label: 'Start with the sidebar collapsed',
+            value: prefs.sidebarStartsCollapsed,
+            onChanged: notifier.setSidebarStartsCollapsed,
+          ),
+          _PreferenceRow(
+            label: 'Start with the agent panel collapsed',
+            value: prefs.chatPanelStartsCollapsed,
+            onChanged: notifier.setChatPanelStartsCollapsed,
+          ),
+        ],
+        _PreferenceRow(
+          label: 'Show the agents feature',
+          value: prefs.agentsEnabled,
+          onChanged: notifier.setAgentsEnabled,
+        ),
+      ],
     );
   }
 
@@ -321,13 +352,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       ],
     );
   }
-
-  static const TextStyle _proseStyle = TextStyle(
-    fontFamily: SpaceNotesTheme.fontSans,
-    fontSize: 14,
-    color: SpaceNotesTheme.muted,
-    height: 1.55,
-  );
 
   Future<void> _importCredentialKey() async {
     final picked = await FilePicker.platform.pickFiles(withData: true);
@@ -551,6 +575,38 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             onPressed: () => Navigator.pop(ctx, controller.text),
             child: const Text('Save Logs'),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+const TextStyle _proseStyle = TextStyle(
+  fontFamily: SpaceNotesTheme.fontSans,
+  fontSize: 14,
+  color: SpaceNotesTheme.muted,
+  height: 1.55,
+);
+
+class _PreferenceRow extends StatelessWidget {
+  const _PreferenceRow({
+    required this.label,
+    required this.value,
+    required this.onChanged,
+  });
+
+  final String label;
+  final bool value;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        children: [
+          Expanded(child: Text(label, style: _proseStyle)),
+          SnToggle(value: value, onChanged: onChanged),
         ],
       ),
     );

@@ -16,6 +16,7 @@ import 'package:window_manager/window_manager.dart';
 import 'theme/spacenotes_theme.dart';
 import 'services/debug_logger.dart';
 import 'services/marionette_extensions.dart';
+import 'providers/preferences_provider.dart';
 import 'services/exit_recorder.dart';
 import 'blocs/config/config_cubit.dart';
 import 'blocs/desktop_notes/desktop_notes_bloc.dart';
@@ -61,7 +62,15 @@ void main() async {
     await WebConfigService.tryAutoConfigureSpace(configCubit);
   }
 
-  final container = ProviderContainer();
+  final preferences = await PreferencesNotifier.load();
+
+  final container = ProviderContainer(
+    overrides: [
+      preferencesProvider.overrideWith(
+        (ref) => PreferencesNotifier(preferences),
+      ),
+    ],
+  );
 
   if (kDebugMode) {
     registerSpaceNotesMarionetteExtensions(container);

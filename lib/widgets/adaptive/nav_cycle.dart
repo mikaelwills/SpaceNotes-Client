@@ -10,6 +10,17 @@ const navScreens = <String>[
   '/notes/passwords',
 ];
 
+/// The agents feature routes, hidden when the agents preference is off.
+const agentRoutes = <String>{'/agents/chat', '/agents'};
+
+List<String> navScreensFor({required bool agentsEnabled}) {
+  if (agentsEnabled) return navScreens;
+  return [
+    for (final route in navScreens)
+      if (!agentRoutes.contains(route)) route,
+  ];
+}
+
 String currentNavScreen(String location) {
   if (location.startsWith('/agents/chat')) return '/agents/chat';
   if (location.startsWith('/agents')) return '/agents';
@@ -18,11 +29,17 @@ String currentNavScreen(String location) {
 }
 
 /// Navigates to the next nav destination, wrapping. [reverse] steps backward.
-void cycleNav(BuildContext context, {bool reverse = false}) {
+void cycleNav(
+  BuildContext context, {
+  bool reverse = false,
+  bool agentsEnabled = true,
+}) {
+  final screens = navScreensFor(agentsEnabled: agentsEnabled);
   final location = GoRouterState.of(context).uri.toString();
   final current = currentNavScreen(location);
-  final index = navScreens.indexOf(current);
+  final index = screens.indexOf(current);
   final step = reverse ? -1 : 1;
-  final next = navScreens[(index + step) % navScreens.length];
+  final from = index < 0 ? 0 : index;
+  final next = screens[(from + step) % screens.length];
   context.go(next);
 }
