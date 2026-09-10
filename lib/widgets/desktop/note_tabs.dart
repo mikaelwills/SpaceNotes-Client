@@ -6,7 +6,6 @@ import '../../blocs/desktop_notes/desktop_notes_event.dart';
 import '../../blocs/desktop_notes/desktop_notes_state.dart';
 import '../../providers/middle_pane_mode_provider.dart';
 import '../../providers/notes_providers.dart';
-import '../../screens/folder_list_view.dart';
 import '../../theme/spacenotes_theme.dart';
 import '../../file_types/file_type_registry.dart';
 
@@ -36,9 +35,7 @@ class NoteTabs extends ConsumerWidget {
           _ => null,
         };
 
-        final showViewModeToggle = mode is! FileViewerMode;
-
-        if (backOnPressed == null && !state.hasOpenNotes && !showViewModeToggle) {
+        if (backOnPressed == null && !state.hasOpenNotes) {
           return const SizedBox.shrink();
         }
 
@@ -61,7 +58,6 @@ class NoteTabs extends ConsumerWidget {
                 },
               ),
             ),
-            if (showViewModeToggle) const ViewModeToggle(),
           ],
         );
       },

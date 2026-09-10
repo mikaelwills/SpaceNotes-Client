@@ -1,11 +1,10 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:collection/collection.dart';
 import 'adaptive/nav_cycle.dart';
 import '../theme/spacenotes_theme.dart';
 import '../providers/notes_providers.dart';
+import '../providers/preferences_provider.dart';
 import 'connection_indicator.dart';
 import '../file_types/file_type_registry.dart';
 
@@ -18,7 +17,6 @@ class MobileNavBar extends ConsumerWidget {
     final isOnNote = _isOnNoteScreen(currentLocation);
     final isOnFolder = currentLocation.startsWith('/notes/folder/');
     final isOnSettings = currentLocation == '/settings';
-    final showMain = !isOnNote && !isOnFolder;
 
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 14, 20, 16),
@@ -30,61 +28,28 @@ class MobileNavBar extends ConsumerWidget {
       ),
       child: Row(
         children: [
-          if (isOnFolder) ...[
-            _NavIcon(
-              key: const ValueKey('nav-back'),
-              icon: Icons.arrow_back,
-              onTap: () => _navigateToParentFolder(
-                context,
-                _extractFullFolderPath(currentLocation),
-              ),
-              active: false,
-              slotWidth: 40,
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: _EditableFolderName(
-                folderPath: _extractFullFolderPath(currentLocation),
-                currentName: _extractFolderName(currentLocation),
-              ),
-            ),
-            const SizedBox(width: 16),
-          ],
-          if (isOnNote) ...[
-            Builder(builder: (context) {
-              final noteId = _extractNoteIdFromLocation(currentLocation);
-              final note = ref.watch(fileByIdProvider(noteId));
-              final notePath = note?.path ?? '';
-              return _NavIcon(
-                key: const ValueKey('nav-back'),
-                icon: Icons.arrow_back,
-                onTap: () => _navigateBackFromNote(context, notePath),
-                active: false,
-                slotWidth: 40,
-              );
-            }),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Builder(builder: (context) {
-                final noteId = _extractNoteIdFromLocation(currentLocation);
-                final note = ref.watch(fileByIdProvider(noteId));
-                final notePath = note?.path ?? '';
-                final fileName = notePath.split('/').last;
-                final noteName =
-                    FileTypeRegistry.forFileName(fileName).stripExtension(fileName);
-                return _EditableNoteName(
-                  notePath: notePath,
-                  currentName: noteName,
-                  isRenameable:
-                      FileTypeRegistry.forFileName(fileName).isRenameable,
-                );
-              }),
-            ),
-            const SizedBox(width: 16),
-          ],
-          if (showMain)
-            ..._buildNavIcons(context, currentLocation, isOnSettings),
-          if (showMain) const Spacer(),
+          ..._buildNavIcons(
+            context,
+            currentLocation,
+            isOnSettings,
+            agentsEnabled: ref.watch(agentsEnabledProvider),
+            backOverride: switch ((isOnFolder, isOnNote)) {
+              (true, _) => () => _navigateToParentFolder(
+                    context,
+                    _extractFullFolderPath(currentLocation),
+                  ),
+              (_, true) => () => _navigateBackFromNote(
+                    context,
+                    ref
+                            .read(fileByIdProvider(
+                                _extractNoteIdFromLocation(currentLocation)))
+                            ?.path ??
+                        '',
+                  ),
+              _ => null,
+            },
+          ),
+          const Spacer(),
           if (!isOnSettings) ...[
             _NavIcon(
               key: const ValueKey('nav-settings'),
@@ -132,10 +97,29 @@ class MobileNavBar extends ConsumerWidget {
   String _currentScreen(String location) => currentNavScreen(location);
 
   List<Widget> _buildNavIcons(
-      BuildContext context, String location, bool isOnSettings) {
+    BuildContext context,
+    String location,
+    bool isOnSettings, {
+    required bool agentsEnabled,
+    VoidCallback? backOverride,
+  }) {
     final current = isOnSettings ? null : _currentScreen(location);
     final icons = <Widget>[];
-    for (final route in navScreens) {
+    for (final route in navScreensFor(agentsEnabled: agentsEnabled)) {
+      final isNotesSlot = route == '/notes';
+      if (isNotesSlot && backOverride != null) {
+        icons.add(
+          _NavIcon(
+            key: const ValueKey('nav-back'),
+            icon: Icons.arrow_back,
+            onTap: backOverride,
+            active: false,
+            slotWidth: 46,
+          ),
+        );
+        continue;
+      }
+
       final icon = _navIcons[route]!;
       final isActive = route == current;
       final isAtRoot = isActive && location == route;
@@ -207,17 +191,6 @@ class MobileNavBar extends ConsumerWidget {
     return '';
   }
 
-  String _extractFolderName(String location) {
-    final uri = Uri.parse(location);
-    final pathSegments = uri.pathSegments;
-
-    if (pathSegments.length >= 3 && pathSegments[1] == 'folder') {
-      final lastSegment = pathSegments.last;
-      return _safeDecodeUri(lastSegment);
-    }
-
-    return 'Folder';
-  }
 }
 
 class _NavIcon extends StatelessWidget {
@@ -259,357 +232,3 @@ class _NavIcon extends StatelessWidget {
   }
 }
 
-class _EditableNoteName extends ConsumerStatefulWidget {
-  final String notePath;
-  final String currentName;
-  final bool isRenameable;
-
-  const _EditableNoteName({
-    required this.notePath,
-    required this.currentName,
-    required this.isRenameable,
-  });
-
-  @override
-  ConsumerState<_EditableNoteName> createState() => _EditableNoteNameState();
-}
-
-class _EditableNoteNameState extends ConsumerState<_EditableNoteName> {
-  bool _isEditing = false;
-  late TextEditingController _controller;
-  late FocusNode _focusNode;
-  Timer? _debounceTimer;
-  String _lastRenamedTo = '';
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = TextEditingController(text: widget.currentName);
-    _lastRenamedTo = widget.currentName;
-    _focusNode = FocusNode();
-    _focusNode.addListener(_onFocusChanged);
-    _controller.addListener(_onTextChanged);
-  }
-
-  @override
-  void dispose() {
-    _debounceTimer?.cancel();
-    _controller.removeListener(_onTextChanged);
-    _controller.dispose();
-    _focusNode.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final folderPath = _extractFolderPath();
-
-    if (_isEditing) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          TextField(
-            controller: _controller,
-            focusNode: _focusNode,
-            style: const TextStyle(
-              fontFamily: SpaceNotesTheme.fontSans,
-              fontSize: 16,
-              color: SpaceNotesTheme.fg,
-              fontWeight: FontWeight.w500,
-              letterSpacing: -0.2,
-            ),
-            cursorColor: SpaceNotesTheme.accent,
-            cursorWidth: 1.5,
-            decoration: const InputDecoration(
-              border: InputBorder.none,
-              enabledBorder: InputBorder.none,
-              focusedBorder: InputBorder.none,
-              contentPadding: EdgeInsets.zero,
-              isDense: true,
-            ),
-            onSubmitted: (_) => _performRename(),
-          ),
-          if (folderPath.isNotEmpty)
-            Text(
-              folderPath,
-              style: const TextStyle(
-                fontFamily: SpaceNotesTheme.fontMono,
-                fontSize: 10,
-                color: SpaceNotesTheme.dim,
-                letterSpacing: 0.3,
-              ),
-              overflow: TextOverflow.ellipsis,
-            ),
-        ],
-      );
-    }
-
-    return GestureDetector(
-      onTap: widget.isRenameable ? _startEditing : null,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            widget.currentName,
-            style: const TextStyle(
-              fontFamily: SpaceNotesTheme.fontSans,
-              fontSize: 16,
-              color: SpaceNotesTheme.fg,
-              fontWeight: FontWeight.w500,
-              letterSpacing: -0.2,
-            ),
-            overflow: TextOverflow.ellipsis,
-          ),
-          if (folderPath.isNotEmpty)
-            Text(
-              folderPath,
-              style: const TextStyle(
-                fontFamily: SpaceNotesTheme.fontMono,
-                fontSize: 10,
-                color: SpaceNotesTheme.dim,
-                letterSpacing: 0.3,
-              ),
-              overflow: TextOverflow.ellipsis,
-            ),
-        ],
-      ),
-    );
-  }
-
-  void _onTextChanged() {
-    if (!_isEditing) return;
-
-    _debounceTimer?.cancel();
-    _debounceTimer = Timer(const Duration(milliseconds: 500), () {
-      _performRename();
-    });
-  }
-
-  void _onFocusChanged() {
-    if (!_focusNode.hasFocus && _isEditing) {
-      _debounceTimer?.cancel();
-      _performRename();
-    }
-  }
-
-  void _startEditing() {
-    if (!widget.isRenameable) return;
-    setState(() {
-      _isEditing = true;
-      _controller.text = widget.currentName;
-      _controller.selection = TextSelection(
-        baseOffset: 0,
-        extentOffset: widget.currentName.length,
-      );
-    });
-    _focusNode.requestFocus();
-  }
-
-  Future<void> _performRename() async {
-    final newName = _controller.text.trim();
-
-    if (newName.isEmpty || newName == _lastRenamedTo) {
-      return;
-    }
-
-    final notes = ref.read(fileListProvider);
-    final note = notes.firstWhereOrNull((n) => n.path == widget.notePath);
-
-    if (note == null) return;
-    if (!FileTypeRegistry.forFile(note).isRenameable) return;
-
-    final folderPath = widget.notePath.contains('/')
-        ? widget.notePath.substring(0, widget.notePath.lastIndexOf('/') + 1)
-        : '';
-
-    final newPath =
-        '$folderPath${FileTypeRegistry.forFile(note).applyExtension(newName)}';
-
-    if (newPath == widget.notePath) return;
-
-    final repo = ref.read(notesRepositoryProvider);
-    debugPrint('🏷️  RENAME: $newPath');
-    final success = await repo.renameNote(note.id, newPath);
-
-    if (success) {
-      _lastRenamedTo = newName;
-    }
-  }
-
-  String _extractFolderPath() {
-    final lastSlash = widget.notePath.lastIndexOf('/');
-    if (lastSlash == -1) return '';
-    return widget.notePath.substring(0, lastSlash);
-  }
-}
-
-class _EditableFolderName extends ConsumerStatefulWidget {
-  final String folderPath;
-  final String currentName;
-
-  const _EditableFolderName({
-    required this.folderPath,
-    required this.currentName,
-  });
-
-  @override
-  ConsumerState<_EditableFolderName> createState() =>
-      _EditableFolderNameState();
-}
-
-class _EditableFolderNameState extends ConsumerState<_EditableFolderName> {
-  bool _isEditing = false;
-  late TextEditingController _controller;
-  late FocusNode _focusNode;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = TextEditingController(text: widget.currentName);
-    _focusNode = FocusNode();
-    _focusNode.addListener(_onFocusChanged);
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    _focusNode.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final parentPath = _extractParentPath();
-
-    if (_isEditing) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          TextField(
-            controller: _controller,
-            focusNode: _focusNode,
-            style: const TextStyle(
-              fontFamily: SpaceNotesTheme.fontSans,
-              fontSize: 16,
-              color: SpaceNotesTheme.fg,
-              fontWeight: FontWeight.w500,
-              letterSpacing: -0.2,
-            ),
-            cursorColor: SpaceNotesTheme.accent,
-            cursorWidth: 1.5,
-            decoration: const InputDecoration(
-              border: InputBorder.none,
-              enabledBorder: InputBorder.none,
-              focusedBorder: InputBorder.none,
-              contentPadding: EdgeInsets.zero,
-              isDense: true,
-            ),
-            onSubmitted: (_) => _performRename(),
-          ),
-          if (parentPath.isNotEmpty)
-            Text(
-              parentPath,
-              style: const TextStyle(
-                fontFamily: SpaceNotesTheme.fontMono,
-                fontSize: 10,
-                color: SpaceNotesTheme.dim,
-                letterSpacing: 0.3,
-              ),
-              overflow: TextOverflow.ellipsis,
-            ),
-        ],
-      );
-    }
-
-    return GestureDetector(
-      onLongPress: FileTypeRegistry.isProtectedPath(widget.folderPath)
-          ? null
-          : _startEditing,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            widget.currentName,
-            style: const TextStyle(
-              fontFamily: SpaceNotesTheme.fontSans,
-              fontSize: 16,
-              color: SpaceNotesTheme.fg,
-              fontWeight: FontWeight.w500,
-              letterSpacing: -0.2,
-            ),
-            overflow: TextOverflow.ellipsis,
-          ),
-          if (parentPath.isNotEmpty)
-            Text(
-              parentPath,
-              style: const TextStyle(
-                fontFamily: SpaceNotesTheme.fontMono,
-                fontSize: 10,
-                color: SpaceNotesTheme.dim,
-                letterSpacing: 0.3,
-              ),
-              overflow: TextOverflow.ellipsis,
-            ),
-        ],
-      ),
-    );
-  }
-
-  void _onFocusChanged() {
-    if (!_focusNode.hasFocus && _isEditing) {
-      _performRename();
-    }
-  }
-
-  void _startEditing() {
-    if (FileTypeRegistry.isProtectedPath(widget.folderPath)) return;
-    setState(() {
-      _isEditing = true;
-      _controller.text = widget.currentName;
-      _controller.selection = TextSelection(
-        baseOffset: 0,
-        extentOffset: widget.currentName.length,
-      );
-    });
-    _focusNode.requestFocus();
-  }
-
-  Future<void> _performRename() async {
-    final newName = _controller.text.trim();
-
-    setState(() {
-      _isEditing = false;
-    });
-
-    if (newName.isEmpty || newName == widget.currentName) {
-      return;
-    }
-
-    if (FileTypeRegistry.isProtectedPath(widget.folderPath)) return;
-
-    final parentPath = widget.folderPath.contains('/')
-        ? widget.folderPath.substring(0, widget.folderPath.lastIndexOf('/') + 1)
-        : '';
-    final newFolderPath = '$parentPath$newName';
-
-    final repo = ref.read(notesRepositoryProvider);
-    debugPrint('🏷️  RENAME FOLDER: ${widget.folderPath} -> $newFolderPath');
-
-    final success = await repo.moveFolder(widget.folderPath, newFolderPath);
-
-    if (mounted && success) {
-      final encodedNewPath = Uri.encodeComponent(newFolderPath);
-      context.go('/notes/folder/$encodedNewPath');
-    }
-  }
-
-  String _extractParentPath() {
-    final lastSlash = widget.folderPath.lastIndexOf('/');
-    if (lastSlash == -1) return '';
-    return widget.folderPath.substring(0, lastSlash);
-  }
-}

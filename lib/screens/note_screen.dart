@@ -8,6 +8,7 @@ import '../providers/notes_providers.dart';
 import '../services/genui_note_parser.dart';
 import '../widgets/dashboard/genui_surface.dart';
 import '../widgets/quill_note_editor.dart';
+import '../widgets/note_status_bar.dart';
 import '../widgets/note_bottom_bar.dart';
 import '../widgets/adaptive/platform_utils.dart';
 import '../services/debug_logger.dart';
@@ -97,7 +98,12 @@ class _NoteScreenState extends ConsumerState<NoteScreen> {
   Widget _buildDesktopLayout(SpaceFile? note) {
     return Stack(
       children: [
-        _buildEditor(note),
+        Column(
+          children: [
+            if (note != null) NoteStatusBar(note: note),
+            Expanded(child: _buildEditor(note)),
+          ],
+        ),
         Positioned(
           left: 0,
           right: 0,
@@ -115,6 +121,7 @@ class _NoteScreenState extends ConsumerState<NoteScreen> {
   Widget _buildMobileLayout(SpaceFile? note) {
     return Column(
       children: [
+        if (note != null) NoteStatusBar(note: note),
         Expanded(
           child: _buildEditor(note),
         ),

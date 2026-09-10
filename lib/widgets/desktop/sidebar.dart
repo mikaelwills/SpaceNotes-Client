@@ -14,6 +14,7 @@ import '../../theme/spacenotes_theme.dart';
 import '../../version.dart';
 import '../primitives/primitives.dart';
 import 'desktop_shell.dart';
+import '../../providers/preferences_provider.dart';
 
 final searchFocusRequestProvider = StateProvider<int>((ref) => 0);
 
@@ -436,16 +437,18 @@ class _CollapsedSidebar extends ConsumerWidget {
             tooltip: 'Notes',
             onTap: () => context.go('/notes'),
           ),
-          _CollapsedIconButton(
-            icon: Icons.chat_bubble_outline,
-            tooltip: 'Chat',
-            onTap: () => context.go('/agents/chat'),
-          ),
-          _CollapsedIconButton(
-            icon: Icons.terminal_outlined,
-            tooltip: 'Agents',
-            onTap: () => context.go('/agents'),
-          ),
+          if (ref.watch(agentsEnabledProvider)) ...[
+            _CollapsedIconButton(
+              icon: Icons.chat_bubble_outline,
+              tooltip: 'Chat',
+              onTap: () => context.go('/agents/chat'),
+            ),
+            _CollapsedIconButton(
+              icon: Icons.terminal_outlined,
+              tooltip: 'Agents',
+              onTap: () => context.go('/agents'),
+            ),
+          ],
           _CollapsedIconButton(
             icon: Icons.search,
             tooltip: 'Search',
@@ -453,6 +456,11 @@ class _CollapsedSidebar extends ConsumerWidget {
               ref.read(sidebarCollapsedProvider.notifier).state = false;
               ref.read(searchFocusRequestProvider.notifier).state++;
             },
+          ),
+          _CollapsedIconButton(
+            icon: Icons.settings_outlined,
+            tooltip: 'Settings',
+            onTap: () => context.go('/settings'),
           ),
         ],
       ),
@@ -534,20 +542,22 @@ class _SidebarFooter extends ConsumerWidget {
                 active: onNotes,
                 tooltip: 'notes',
               ),
-              const SizedBox(width: 4),
-              SnIconButton(
-                icon: const Icon(Icons.chat_bubble_outline),
-                onPressed: onChat ? null : () => context.go('/agents/chat'),
-                active: onChat,
-                tooltip: 'chat',
-              ),
-              const SizedBox(width: 4),
-              SnIconButton(
-                icon: const Icon(Icons.terminal_outlined),
-                onPressed: onAgents ? null : () => context.go('/agents'),
-                active: onAgents,
-                tooltip: 'agents',
-              ),
+              if (ref.watch(agentsEnabledProvider)) ...[
+                const SizedBox(width: 4),
+                SnIconButton(
+                  icon: const Icon(Icons.chat_bubble_outline),
+                  onPressed: onChat ? null : () => context.go('/agents/chat'),
+                  active: onChat,
+                  tooltip: 'chat',
+                ),
+                const SizedBox(width: 4),
+                SnIconButton(
+                  icon: const Icon(Icons.terminal_outlined),
+                  onPressed: onAgents ? null : () => context.go('/agents'),
+                  active: onAgents,
+                  tooltip: 'agents',
+                ),
+              ],
               const SizedBox(width: 4),
               SnIconButton(
                 icon: const Icon(Icons.key_outlined),

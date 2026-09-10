@@ -12,9 +12,7 @@ import '../generated/folder.dart';
 import '../generated/space_file.dart';
 import '../widgets/adaptive/platform_utils.dart';
 import '../widgets/favourite_folder_menu.dart';
-import '../widgets/folder_list_item.dart';
 import '../widgets/folder_grid_card.dart';
-import '../providers/folder_browser_view_mode_provider.dart';
 import '../dialogs/notes_list_dialogs.dart';
 import '../widgets/keyboard_dismiss_on_scroll.dart';
 import '../widgets/staggered_file_grid.dart';
@@ -22,6 +20,7 @@ import '../file_types/file_type_registry.dart';
 import '../blocs/desktop_notes/desktop_notes_bloc.dart';
 import '../blocs/desktop_notes/desktop_notes_event.dart';
 import '../widgets/desktop/content_actions_fab.dart';
+import '../widgets/folder_status_bar.dart';
 import '../providers/file_transfer_providers.dart';
 import '../providers/upload_progress_providers.dart';
 import '../services/debug_logger.dart';
@@ -121,18 +120,8 @@ class _FolderListViewState extends ConsumerState<FolderListView> {
   ) {
     return Column(
       children: [
-        if (!isDesktop)
-          Container(
-            height: 32,
-            alignment: Alignment.centerRight,
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            decoration: const BoxDecoration(
-              border: Border(
-                bottom: BorderSide(color: SpaceNotesTheme.hairline, width: 1),
-              ),
-            ),
-            child: const ViewModeToggle(),
-          ),
+        if (widget.folderPath.isNotEmpty)
+          FolderStatusBar(folderPath: widget.folderPath),
         Expanded(
           child: Stack(
             children: [
@@ -161,20 +150,12 @@ class _FolderListViewState extends ConsumerState<FolderListView> {
       return _buildEmptyState();
     }
 
-    final viewMode = ref.watch(folderBrowserViewModeProvider);
-
     return KeyboardDismissOnScroll(
       child: ScrollConfiguration(
         behavior: ScrollConfiguration.of(context).copyWith(scrollbars: false),
         child: CustomScrollView(
           slivers: [
-            if (folders.isNotEmpty && viewMode == FolderBrowserViewMode.list)
-              SliverList.builder(
-                itemCount: folders.length,
-                itemBuilder: (context, index) =>
-                    _buildFolderItem(folders[index]),
-              ),
-            if (folders.isNotEmpty && viewMode == FolderBrowserViewMode.grid)
+            if (folders.isNotEmpty)
               SliverPadding(
                 padding: const EdgeInsets.fromLTRB(12, 14, 12, 0),
                 sliver: SliverToBoxAdapter(
@@ -294,27 +275,6 @@ class _FolderListViewState extends ConsumerState<FolderListView> {
     );
   }
 
-  Widget _buildFolderItem(Folder folder) {
-    return FolderListItem(
-      key: ValueKey(folder.path),
-      folder: folder,
-      tall: widget.tallFolderRows,
-      onTap: () => _onFolderTap(context, folder),
-      onLongPress: FileTypeRegistry.isProtectedPath(folder.path)
-          ? null
-          : () => NotesListDialogs.showFolderContextMenu(context, ref, folder),
-      onMove: FileTypeRegistry.isProtectedPath(folder.path)
-          ? null
-          : () => NotesListDialogs.showMoveFolderDialog(context, ref, folder),
-      onDelete: FileTypeRegistry.isProtectedPath(folder.path)
-          ? null
-          : () => NotesListDialogs.showDeleteFolderConfirmation(
-              context, ref, folder),
-      contextMenuItems: FavouriteFolderMenu.items(ref, folder),
-      onContextMenuSelected: FavouriteFolderMenu.onSelected(ref, folder),
-    );
-  }
-
   void _onFolderTap(BuildContext context, Folder folder) {
     FocusManager.instance.primaryFocus?.unfocus();
     ref.read(folderSearchQueryProvider.notifier).state = '';
@@ -364,38 +324,5 @@ class _FolderListViewState extends ConsumerState<FolderListView> {
     } else {
       context.go('/notes/note/$noteId');
     }
-  }
-}
-
-class ViewModeToggle extends ConsumerWidget {
-  const ViewModeToggle({super.key});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final mode = ref.watch(folderBrowserViewModeProvider);
-
-    Widget button(FolderBrowserViewMode target, IconData icon) {
-      final isActive = mode == target;
-      return GestureDetector(
-        onTap: () =>
-            ref.read(folderBrowserViewModeProvider.notifier).state = target,
-        child: Padding(
-          padding: const EdgeInsets.all(6),
-          child: Icon(
-            icon,
-            size: 16,
-            color: isActive ? SpaceNotesTheme.accent : SpaceNotesTheme.dim,
-          ),
-        ),
-      );
-    }
-
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        button(FolderBrowserViewMode.list, Icons.view_list_outlined),
-        button(FolderBrowserViewMode.grid, Icons.grid_view_outlined),
-      ],
-    );
   }
 }

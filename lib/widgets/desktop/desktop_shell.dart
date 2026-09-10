@@ -14,10 +14,15 @@ import 'desktop_note_view.dart';
 import 'desktop_agents_layout.dart';
 import 'note_tabs.dart';
 import 'sidebar.dart';
+import '../../providers/preferences_provider.dart';
 
-final sidebarCollapsedProvider = StateProvider<bool>((ref) => false);
+final sidebarCollapsedProvider = StateProvider<bool>(
+  (ref) => ref.read(preferencesProvider).sidebarStartsCollapsed,
+);
 final sidebarWidthProvider = StateProvider<double>((ref) => 245.0);
-final chatPanelCollapsedProvider = StateProvider<bool>((ref) => false);
+final chatPanelCollapsedProvider = StateProvider<bool>(
+  (ref) => ref.read(preferencesProvider).chatPanelStartsCollapsed,
+);
 
 const double kCollapsedPaneWidth = 48.0;
 
@@ -55,7 +60,7 @@ class _DesktopShellState extends ConsumerState<DesktopShell> {
       bindings: {
         const SingleActivator(LogicalKeyboardKey.keyL, meta: true): _focusSearch,
         const SingleActivator(LogicalKeyboardKey.tab, shift: true): () =>
-            cycleNav(context),
+            cycleNav(context, agentsEnabled: ref.read(agentsEnabledProvider)),
       },
       child: Focus(autofocus: true, child: _buildBody(context)),
     );
