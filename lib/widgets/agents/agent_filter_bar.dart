@@ -30,7 +30,7 @@ class _AgentFilterBarState extends ConsumerState<AgentFilterBar> {
       behavior: HitTestBehavior.opaque,
       onTap: _focusNode.requestFocus,
       child: Container(
-        height: 40,
+        height: kStatusBarHeight,
         padding: const EdgeInsets.symmetric(horizontal: 20),
         decoration: const BoxDecoration(
           border: Border(

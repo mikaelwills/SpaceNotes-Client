@@ -112,8 +112,9 @@ class _Header extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 18, 20, 14),
+    return Container(
+      height: kStatusBarHeight,
+      padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [

@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import '../../theme/spacenotes_theme.dart';
 import 'sn_micro_label.dart';
 
+/// Shared height for every status strip that sits directly below the nav.
+/// Matches the recent-notes bar: 10px mono text with 12px padding either side.
+const double kStatusBarHeight = 34.0;
+
 class SnStatusLine extends StatelessWidget {
   final Widget? leading;
   final Widget? trailing;
@@ -12,13 +16,14 @@ class SnStatusLine extends StatelessWidget {
     super.key,
     this.leading,
     this.trailing,
-    this.padding = const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+    this.padding = const EdgeInsets.symmetric(horizontal: 20),
     this.divider = true,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
+      height: kStatusBarHeight,
       padding: padding,
       decoration: BoxDecoration(
         border: divider
