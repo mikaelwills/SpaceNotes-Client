@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../providers/file_sort_provider.dart';
 import '../theme/spacenotes_theme.dart';
 import 'editable_name.dart';
 import 'primitives/primitives.dart';
@@ -55,7 +57,46 @@ class FolderStatusBar extends StatelessWidget {
           ],
         ],
       ),
-      trailing: trailing,
+      trailing: trailing ?? const FileSortToggle(),
+    );
+  }
+}
+
+class FileSortToggle extends ConsumerWidget {
+  const FileSortToggle({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final mode = ref.watch(fileSortModeProvider);
+    final byName = mode == FileSortMode.name;
+
+    return GestureDetector(
+      key: const ValueKey('sort-toggle'),
+      behavior: HitTestBehavior.opaque,
+      onTap: () => ref.read(fileSortModeProvider.notifier).toggle(),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              byName ? Icons.sort_by_alpha : Icons.schedule,
+              size: 13,
+              color: SpaceNotesTheme.dim,
+            ),
+            const SizedBox(width: 6),
+            Text(
+              byName ? 'name' : 'modified',
+              style: const TextStyle(
+                fontFamily: SpaceNotesTheme.fontMono,
+                fontSize: 10,
+                color: SpaceNotesTheme.dim,
+                letterSpacing: 0.5,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

@@ -13,6 +13,7 @@ import '../services/credential_writer.dart';
 import '../services/debug_logger.dart';
 import '../file_types/file_type_registry.dart';
 import '../search/file_search.dart';
+import 'file_sort_provider.dart';
 
 String _getDefaultHost() {
   if (kIsWeb) {
@@ -212,7 +213,10 @@ final dynamicFolderContentsProvider = Provider.family
           .toList();
     }
 
-    return (folders: childFolders, notes: childNotes);
+    return (
+      folders: childFolders,
+      notes: sortFiles(childNotes, ref.watch(fileSortModeProvider)),
+    );
   }
 
   final terms = searchTerms(searchQuery);
