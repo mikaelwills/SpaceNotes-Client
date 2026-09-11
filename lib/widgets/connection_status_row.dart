@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/chat_providers.dart';
@@ -31,6 +32,8 @@ class ConnectionStatusRow extends ConsumerWidget {
         ? '${_fmtTokens(ctxUsed)}/${_fmtTokens(ctxWindow)}'
         : null;
 
+    final lastSeenMicros = agent?.lastSeen.toInt();
+
     return SnStatusLine(
       leading: Row(
         mainAxisSize: MainAxisSize.min,
@@ -63,6 +66,10 @@ class ConnectionStatusRow extends ConsumerWidget {
               overflow: TextOverflow.ellipsis,
             ),
           ],
+          if (lastSeenMicros != null) ...[
+            const SizedBox(width: 8),
+            _LastSeenLabel(microsSinceEpoch: lastSeenMicros),
+          ],
         ],
       ),
       trailing: Row(
@@ -82,6 +89,63 @@ class ConnectionStatusRow extends ConsumerWidget {
       ),
     );
   }
+}
+
+/// Ticks itself so the relative time doesn't freeze — the agent row only
+/// rebuilds on state changes, which for an idle agent may never happen.
+class _LastSeenLabel extends StatefulWidget {
+  const _LastSeenLabel({required this.microsSinceEpoch});
+
+  final int microsSinceEpoch;
+
+  @override
+  State<_LastSeenLabel> createState() => _LastSeenLabelState();
+}
+
+class _LastSeenLabelState extends State<_LastSeenLabel> {
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer.periodic(const Duration(seconds: 30), (_) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final label = _fmtLastSeen(widget.microsSinceEpoch);
+    if (label == null) return const SizedBox.shrink();
+    return SnUiText(
+      '· $label',
+      color: SpaceNotesTheme.dim,
+      fontSize: 10,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+    );
+  }
+}
+
+/// Relative age of the agent's last heartbeat. Heartbeats persist at most
+/// every 5 minutes server-side, so this is coarse by design.
+String? _fmtLastSeen(int? microsSinceEpoch) {
+  if (microsSinceEpoch == null || microsSinceEpoch <= 0) return null;
+
+  final seen = DateTime.fromMicrosecondsSinceEpoch(microsSinceEpoch);
+  final elapsed = DateTime.now().difference(seen);
+  if (elapsed.isNegative) return 'now';
+
+  if (elapsed.inMinutes < 1) return 'now';
+  if (elapsed.inMinutes < 60) return '${elapsed.inMinutes}m ago';
+  if (elapsed.inHours < 24) return '${elapsed.inHours}h ago';
+  return '${elapsed.inDays}d ago';
 }
 
 String _fmtTokens(int n) {
