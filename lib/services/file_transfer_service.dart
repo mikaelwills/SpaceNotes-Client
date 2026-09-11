@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:dio/dio.dart';
 import '../repositories/spacetimedb_notes_repository.dart';
 import 'debug_logger.dart';
+import 'local_download_store.dart';
 
 class FileAlreadyExistsException implements Exception {
   FileAlreadyExistsException(this.fileName);
@@ -51,6 +52,33 @@ class FileTransferService {
         .toSet();
   }
 
+  /// Puts the just-uploaded bytes into the download cache so opening the file
+  /// doesn't pull it straight back down. Best-effort: the upload has already
+  /// succeeded by this point, so a caching failure must never surface.
+  Future<void> _cacheUploadedFile(
+    String remotePath,
+    File source,
+    int size,
+  ) async {
+    try {
+      final store = LocalDownloadStore();
+      final localPath = await store.localPathFor(remotePath);
+      await source.copy(localPath);
+      final cached = await store.markCompleteIfVerified(
+        remotePath,
+        localPath,
+        size,
+      );
+      debugLogger.info(
+        'UPLOAD',
+        cached ? 'Cached locally' : 'Local cache verification failed',
+        remotePath,
+      );
+    } catch (e) {
+      debugLogger.warning('UPLOAD', 'Could not cache locally', e.toString());
+    }
+  }
+
   Future<void> uploadFile(
     String folderPath,
     File file, {
@@ -85,6 +113,8 @@ class FileTransferService {
       );
 
       debugLogger.info('UPLOAD', 'Upload complete', 'path=$remotePath status=${response.statusCode}');
+
+      await _cacheUploadedFile(remotePath, file, size);
     } on DioException catch (e) {
       debugLogger.error(
         'UPLOAD',
