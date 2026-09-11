@@ -39,6 +39,10 @@
 	<string>Unlocks your stored passwords on this device.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>SpaceNotes uses the microphone for voice and video calls</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Save photos and videos from SpaceNotes to your photo library.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Save photos and videos from SpaceNotes to your photo library.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
