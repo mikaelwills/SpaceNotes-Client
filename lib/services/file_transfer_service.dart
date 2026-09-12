@@ -34,6 +34,18 @@ class FileDownloadException implements Exception {
   }
 }
 
+/// Where a download should restart from, given what is on disk.
+///
+/// Zero means start over: either nothing is there, the expected size is
+/// unknown, or the file is already at/over full length and a Range request
+/// would be pointless or invalid.
+int resumeOffsetFor(int existingLength, int expectedSize) {
+  if (existingLength <= 0) return 0;
+  if (expectedSize <= 0) return 0;
+  if (existingLength >= expectedSize) return 0;
+  return existingLength;
+}
+
 class FileTransferService {
   FileTransferService(this._repository);
 
@@ -298,16 +310,20 @@ class FileTransferService {
   }) async {
     final localFile = File(localPath);
     final existingLength = await localFile.exists() ? await localFile.length() : 0;
-    final startByte =
-        (existingLength > 0 && expectedSize > 0 && existingLength < expectedSize)
-            ? existingLength
-            : 0;
+    final startByte = resumeOffsetFor(existingLength, expectedSize);
     final url = _remoteUrl(remotePath);
     debugLogger.info(
       'DOWNLOAD',
       'Starting download',
       'path=$remotePath url=$url resumeFrom=$startByte',
     );
+
+    // Report what is already on disk BEFORE the request goes out. Waiting for
+    // the first chunk means a resume on bad signal shows 0% until the network
+    // answers, hiding progress the device already has.
+    if (startByte > 0 && expectedSize > 0) {
+      onProgress?.call(startByte, expectedSize);
+    }
 
     try {
       final response = await _dio.get<ResponseBody>(

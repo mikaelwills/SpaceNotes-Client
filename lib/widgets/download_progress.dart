@@ -1,7 +1,14 @@
 import 'package:flutter/material.dart';
 import '../theme/spacenotes_theme.dart';
 
-class DownloadProgress extends StatelessWidget {
+/// Progress for one download attempt.
+///
+/// On a resume the first reported value is whatever is already on disk, not
+/// zero. That byte count is a starting position rather than transfer, so the
+/// widget remembers it and excludes it from the speed reading — otherwise a
+/// resumed 40MB file divided by a fraction of a second reads as hundreds of
+/// MB/s before a single new byte has arrived.
+class DownloadProgress extends StatefulWidget {
   const DownloadProgress({
     super.key,
     required this.progress,
@@ -14,7 +21,16 @@ class DownloadProgress extends StatelessWidget {
   final DateTime? startedAt;
 
   @override
+  State<DownloadProgress> createState() => _DownloadProgressState();
+}
+
+class _DownloadProgressState extends State<DownloadProgress> {
+  int? _resumedFrom;
+
+  @override
   Widget build(BuildContext context) {
+    _resumedFrom ??= widget.receivedBytes;
+    final progress = widget.progress;
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -65,10 +81,13 @@ class DownloadProgress extends StatelessWidget {
   }
 
   String get _speedLabel {
-    if (startedAt == null || receivedBytes <= 0) return '';
-    final elapsed = DateTime.now().difference(startedAt!).inMilliseconds;
+    final startedAt = widget.startedAt;
+    if (startedAt == null) return '';
+    final movedThisAttempt = widget.receivedBytes - (_resumedFrom ?? 0);
+    if (movedThisAttempt <= 0) return '';
+    final elapsed = DateTime.now().difference(startedAt).inMilliseconds;
     if (elapsed <= 0) return '';
-    final bytesPerSecond = receivedBytes / (elapsed / 1000);
+    final bytesPerSecond = movedThisAttempt / (elapsed / 1000);
     if (bytesPerSecond < 1024) return '${bytesPerSecond.toStringAsFixed(0)} B/s';
     if (bytesPerSecond < 1024 * 1024) {
       return '${(bytesPerSecond / 1024).toStringAsFixed(0)} KB/s';
