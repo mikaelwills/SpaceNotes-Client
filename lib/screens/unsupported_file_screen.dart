@@ -139,29 +139,19 @@ class _UnsupportedFileScreenState extends ConsumerState<UnsupportedFileScreen> {
       _error = null;
     });
 
-    final store = ref.read(localDownloadStoreProvider);
     final service = ref.read(fileTransferServiceProvider);
-    final localPath = await store.localPathFor(remotePath);
     final file = ref.read(fileByIdProvider(widget.fileId));
     final expectedSize = file?.size.toInt() ?? 0;
 
     try {
-      await service.downloadFile(
+      await service.ensureDownloaded(
         remotePath,
-        localPath,
-        expectedSize: expectedSize,
+        expectedSize,
         onProgress: (received, total) {
           if (total > 0 && mounted) {
             setState(() => _progress = received / total);
           }
         },
-      );
-      final verified = await store.markCompleteIfVerified(
-          remotePath, localPath, expectedSize);
-      debugLogger.info(
-        'DOWNLOAD',
-        verified ? 'Verified and marked complete' : 'Verification failed',
-        'path=$remotePath expectedSize=$expectedSize',
       );
     } catch (e) {
       debugLogger.error(

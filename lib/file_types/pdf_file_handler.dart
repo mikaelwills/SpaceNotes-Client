@@ -36,5 +36,5 @@ class PdfFileHandler extends FileTypeHandler {
   NewFileTemplate? get newFileTemplate => null;
 
   @override
-  Widget buildScreen(String fileId) => UnsupportedFileScreen(fileId: fileId);
+  Widget buildViewer(String fileId) => UnsupportedFileScreen(fileId: fileId);
 }

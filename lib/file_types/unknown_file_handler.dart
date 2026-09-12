@@ -41,5 +41,5 @@ class UnknownFileHandler extends FileTypeHandler {
   String displayName(SpaceFile file) => file.name;
 
   @override
-  Widget buildScreen(String fileId) => UnsupportedFileScreen(fileId: fileId);
+  Widget buildViewer(String fileId) => UnsupportedFileScreen(fileId: fileId);
 }

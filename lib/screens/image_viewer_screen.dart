@@ -106,11 +106,9 @@ class _ImageViewerScreenState extends ConsumerState<ImageViewerScreen>
 
     final service = ref.read(fileTransferServiceProvider);
     try {
-      debugLogger.info('IMAGE_VIEWER', 'Calling downloadFile', 'remotePath=$remotePath -> localPath=$localPath');
-      await service.downloadFile(
+      await service.ensureDownloaded(
         remotePath,
-        localPath,
-        expectedSize: expectedSize,
+        expectedSize,
         onProgress: (received, total) {
           if (total > 0 && mounted) {
             setState(() {
@@ -120,15 +118,6 @@ class _ImageViewerScreenState extends ConsumerState<ImageViewerScreen>
           }
         },
       );
-      final actualSize = await File(localPath).exists() ? await File(localPath).length() : -1;
-      debugLogger.info(
-        'IMAGE_VIEWER',
-        'downloadFile returned, verifying',
-        'expectedSize=$expectedSize actualLocalFileSize=$actualSize',
-      );
-      final verified =
-          await store.markCompleteIfVerified(remotePath, localPath, expectedSize);
-      debugLogger.info('IMAGE_VIEWER', verified ? 'Verified and marked complete' : 'Verification FAILED (size mismatch or missing file)', remotePath);
       if (mounted) setState(() => _localPath = localPath);
     } catch (e, st) {
       debugLogger.error('IMAGE_VIEWER', 'Fetch failed: $remotePath', '$e\n$st');

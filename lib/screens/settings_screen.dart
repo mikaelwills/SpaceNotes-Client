@@ -411,6 +411,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   Future<void> _loadDownloadStats() async {
+    // Clear untracked leftovers before reporting, so the figure shown is the
+    // real on-disk cost rather than only what the table knows about.
+    final reclaimed = await _downloadStore.sweepOrphans();
+    if (reclaimed > 0) {
+      debugLogger.info('STORAGE', 'Swept orphaned downloads', '$reclaimed bytes');
+    }
+
     final bytes = await _downloadStore.totalSize();
     final count = await _downloadStore.downloadedCount();
     if (mounted) {

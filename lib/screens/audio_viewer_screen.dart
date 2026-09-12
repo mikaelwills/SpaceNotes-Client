@@ -183,10 +183,9 @@ class _AudioViewerScreenState extends ConsumerState<AudioViewerScreen>
 
     final service = ref.read(fileTransferServiceProvider);
     try {
-      await service.downloadFile(
+      await service.ensureDownloaded(
         remotePath,
-        localPath,
-        expectedSize: expectedSize,
+        expectedSize,
         onProgress: (received, total) {
           if (total > 0 && mounted) {
             setState(() {
@@ -195,13 +194,6 @@ class _AudioViewerScreenState extends ConsumerState<AudioViewerScreen>
             });
           }
         },
-      );
-      final verified = await store.markCompleteIfVerified(
-          remotePath, localPath, expectedSize);
-      debugLogger.info(
-        'AUDIO_VIEWER',
-        verified ? 'Verified and marked complete' : 'Verification FAILED',
-        remotePath,
       );
       await _initPlayer(localPath);
     } catch (e, st) {

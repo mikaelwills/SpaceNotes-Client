@@ -34,5 +34,5 @@ class CredentialFileHandler extends FileTypeHandler {
   NewFileTemplate? get newFileTemplate => null;
 
   @override
-  Widget buildScreen(String fileId) => CredentialScreen(fileId: fileId);
+  Widget buildViewer(String fileId) => CredentialScreen(fileId: fileId);
 }

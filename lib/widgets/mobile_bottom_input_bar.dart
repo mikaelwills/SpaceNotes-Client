@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import '../platform/capabilities.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -174,12 +175,13 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
         ),
         semanticLabel: 'new folder',
       ),
-      SnDockTile(
-        key: const ValueKey('action-upload'),
-        icon: Icons.cloud_upload_outlined,
-        onTap: () => _uploadFiles(folderPath),
-        semanticLabel: 'upload files',
-      ),
+      if (Capabilities.canUploadFiles)
+        SnDockTile(
+          key: const ValueKey('action-upload'),
+          icon: Icons.cloud_upload_outlined,
+          onTap: () => _uploadFiles(folderPath),
+          semanticLabel: 'upload files',
+        ),
       SnDockTile(
         key: const ValueKey('action-new-note'),
         icon: Icons.post_add_outlined,

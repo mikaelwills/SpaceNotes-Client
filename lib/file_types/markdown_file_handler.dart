@@ -35,5 +35,5 @@ class MarkdownFileHandler extends FileTypeHandler {
       const NewFileTemplate(label: 'Note', extension: 'md');
 
   @override
-  Widget buildScreen(String fileId) => NoteScreen(noteId: fileId);
+  Widget buildViewer(String fileId) => NoteScreen(noteId: fileId);
 }

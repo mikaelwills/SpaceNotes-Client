@@ -39,5 +39,5 @@ class ImageFileHandler extends FileTypeHandler {
   NewFileTemplate? get newFileTemplate => null;
 
   @override
-  Widget buildScreen(String fileId) => ImageViewerScreen(fileId: fileId);
+  Widget buildViewer(String fileId) => ImageViewerScreen(fileId: fileId);
 }

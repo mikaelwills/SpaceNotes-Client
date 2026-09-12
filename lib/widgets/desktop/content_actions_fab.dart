@@ -1,3 +1,4 @@
+import '../../platform/capabilities.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../actions/note_actions.dart';
@@ -34,13 +35,15 @@ class ContentActionsFab extends ConsumerWidget {
             tooltip: 'new folder',
             onTap: () => createFolderIn(context, ref, folderPath),
           ),
-          const _FabDivider(),
-          _FabSegment(
-            key: const ValueKey('action-upload'),
-            icon: Icons.cloud_upload_outlined,
-            tooltip: 'upload files',
-            onTap: () => uploadFilesToFolder(context, ref, folderPath),
-          ),
+          if (Capabilities.canUploadFiles) ...[
+            const _FabDivider(),
+            _FabSegment(
+              key: const ValueKey('action-upload'),
+              icon: Icons.cloud_upload_outlined,
+              tooltip: 'upload files',
+              onTap: () => uploadFilesToFolder(context, ref, folderPath),
+            ),
+          ],
         ],
       ),
     );

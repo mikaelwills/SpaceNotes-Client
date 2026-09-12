@@ -124,10 +124,9 @@ class _VideoViewerScreenState extends ConsumerState<VideoViewerScreen>
 
     final service = ref.read(fileTransferServiceProvider);
     try {
-      await service.downloadFile(
+      await service.ensureDownloaded(
         remotePath,
-        localPath,
-        expectedSize: expectedSize,
+        expectedSize,
         onProgress: (received, total) {
           if (total > 0 && mounted) {
             setState(() {
@@ -136,13 +135,6 @@ class _VideoViewerScreenState extends ConsumerState<VideoViewerScreen>
             });
           }
         },
-      );
-      final verified =
-          await store.markCompleteIfVerified(remotePath, localPath, expectedSize);
-      debugLogger.info(
-        'VIDEO_VIEWER',
-        verified ? 'Verified and marked complete' : 'Verification FAILED',
-        remotePath,
       );
       await _initPlayer(localPath);
     } catch (e, st) {

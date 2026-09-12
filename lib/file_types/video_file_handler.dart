@@ -38,5 +38,5 @@ class VideoFileHandler extends FileTypeHandler {
   NewFileTemplate? get newFileTemplate => null;
 
   @override
-  Widget buildScreen(String fileId) => VideoViewerScreen(fileId: fileId);
+  Widget buildViewer(String fileId) => VideoViewerScreen(fileId: fileId);
 }
