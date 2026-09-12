@@ -12,6 +12,14 @@ import 'package:spacenotes_client/services/resumable_upload.dart';
 /// The unit tests use a fake server, which proves the client is self-consistent
 /// but not that it agrees with the daemon. Excluded from the default run
 /// because it needs the NAS: `flutter test --tags live`.
+///
+/// LEAVES FILES IN THE VAULT. Every run writes to `.live-check/` and there is
+/// no HTTP delete for vault files (DELETE on `/files/` is 405 by design), so
+/// these tests cannot tidy up after themselves. Five runs left 170MB behind
+/// on 2026-09-12. Clear it when you are done:
+///
+///   ssh mikael@100.84.184.121 \
+///     "docker exec spacenotes rm -rf /vault/.live-check"
 void main() {
   const host = String.fromEnvironment('SPACENOTES_HOST',
       defaultValue: '100.84.184.121');

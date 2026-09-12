@@ -11,6 +11,9 @@ import 'package:flutter_test/flutter_test.dart';
 /// cannot verify on its own.
 ///
 /// `flutter test --tags live`
+///
+/// LEAVES FILES IN THE VAULT — see the note in `resumable_upload_live_test.dart`.
+/// Clear with: ssh mikael@100.84.184.121 "docker exec spacenotes rm -rf /vault/.live-check"
 void main() {
   const host = String.fromEnvironment('SPACENOTES_HOST',
       defaultValue: '100.84.184.121');
