@@ -6,6 +6,29 @@ import 'package:crypto/crypto.dart';
 
 enum DownloadState { notDownloaded, partial, complete }
 
+/// An upload that outlived the process that started it.
+class ResumableUploadRow {
+  const ResumableUploadRow({
+    required this.remotePath,
+    required this.sessionId,
+    required this.sourcePath,
+    required this.size,
+    required this.sent,
+  });
+
+  final String remotePath;
+  final String sessionId;
+  final String sourcePath;
+  final int size;
+
+  /// Last offset this device recorded. The server is the authority, so a
+  /// resume asks it rather than trusting this — it is for showing progress
+  /// before the first request goes out.
+  final int sent;
+
+  String get fileName => remotePath.split('/').last;
+}
+
 class LocalDownloadStore {
   Database? _db;
 
@@ -51,6 +74,8 @@ class LocalDownloadStore {
     return p.join(downloadsDir.path, safeName);
   }
 
+  /// Records an in-flight download so an abandoned partial is visible to
+  /// [totalSize]/[offloadAll] instead of sitting on disk untracked.
   Future<void> markPartial(String remotePath, String localPath, int size) async {
     final db = await _database();
     await db.insert(
@@ -158,23 +183,165 @@ class LocalDownloadStore {
     await db.delete('downloads');
   }
 
+  /// Deletes files in the downloads directory that no row points at.
+  ///
+  /// Partials written before [markPartial] had any callers left untracked
+  /// bytes behind, and a crash between writing a file and inserting its row
+  /// can still do so. Returns the number of bytes reclaimed.
+  Future<int> sweepOrphans() async {
+    final dir = await getApplicationSupportDirectory();
+    final downloadsDir = Directory(p.join(dir.path, 'downloads'));
+    if (!await downloadsDir.exists()) return 0;
+
+    final db = await _database();
+    final rows = await db.query('downloads', columns: ['local_path']);
+    final known = {
+      for (final row in rows)
+        if (row['local_path'] is String) row['local_path'] as String,
+    };
+
+    var reclaimed = 0;
+    await for (final entity in downloadsDir.list()) {
+      if (entity is! File || known.contains(entity.path)) continue;
+      reclaimed += await entity.length();
+      await entity.delete();
+    }
+    return reclaimed;
+  }
+
+  /// Records an upload's server session so a relaunch can resume it.
+  ///
+  /// Written before the first chunk and updated as chunks land, so a process
+  /// killed at any point leaves a row pointing at real server-side bytes.
+  Future<void> rememberUpload({
+    required String remotePath,
+    required String sessionId,
+    required String sourcePath,
+    required int size,
+    required int sent,
+  }) async {
+    final db = await _database();
+    await db.insert(
+      'uploads',
+      {
+        'remote_path': remotePath,
+        'session_id': sessionId,
+        'source_path': sourcePath,
+        'size': size,
+        'sent': sent,
+        'started_ms': DateTime.now().millisecondsSinceEpoch,
+      },
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  Future<void> updateUploadProgress(String remotePath, int sent) async {
+    final db = await _database();
+    await db.update(
+      'uploads',
+      {'sent': sent},
+      where: 'remote_path = ?',
+      whereArgs: [remotePath],
+    );
+  }
+
+  Future<void> forgetUpload(String remotePath) async {
+    final db = await _database();
+    await db.delete('uploads', where: 'remote_path = ?', whereArgs: [remotePath]);
+  }
+
+  /// Uploads that were in flight when the app last stopped.
+  ///
+  /// A row whose source file has since disappeared is dropped rather than
+  /// returned — on iOS a picked file can live in a temp directory the system
+  /// clears between launches, and there is nothing left to resume from.
+  Future<List<ResumableUploadRow>> pendingUploads() async {
+    final db = await _database();
+    final rows = await db.query('uploads');
+
+    final pending = <ResumableUploadRow>[];
+    for (final row in rows) {
+      final sourcePath = row['source_path'];
+      final remotePath = row['remote_path'];
+      if (sourcePath is! String || remotePath is! String) continue;
+
+      if (!await File(sourcePath).exists()) {
+        await db.delete('uploads',
+            where: 'remote_path = ?', whereArgs: [remotePath]);
+        continue;
+      }
+
+      pending.add(ResumableUploadRow(
+        remotePath: remotePath,
+        sessionId: row['session_id'] as String,
+        sourcePath: sourcePath,
+        size: row['size'] as int,
+        sent: row['sent'] as int,
+      ));
+    }
+    return pending;
+  }
+
+  /// Downloads that were partway through when the app last stopped.
+  Future<List<String>> pendingDownloads() async {
+    final db = await _database();
+    final rows = await db.query(
+      'downloads',
+      where: 'state = ?',
+      whereArgs: [DownloadState.partial.name],
+    );
+    return rows
+        .map((r) => r['path'])
+        .whereType<String>()
+        .toList();
+  }
+
+  static Future<void> _createDownloads(Database db) async {
+    await db.execute('''
+      CREATE TABLE downloads (
+        path TEXT PRIMARY KEY,
+        local_path TEXT NOT NULL,
+        size INTEGER NOT NULL,
+        hash TEXT,
+        state TEXT NOT NULL
+      )
+    ''');
+  }
+
+  /// One row per upload that has not finished.
+  ///
+  /// `session_id` is what makes an upload resumable after the process dies:
+  /// the server holds the bytes under that id, and without it a relaunch has
+  /// no way to ask what survived.
+  static Future<void> _createUploads(Database db) async {
+    await db.execute('''
+      CREATE TABLE uploads (
+        remote_path TEXT PRIMARY KEY,
+        session_id TEXT NOT NULL,
+        source_path TEXT NOT NULL,
+        size INTEGER NOT NULL,
+        sent INTEGER NOT NULL,
+        started_ms INTEGER NOT NULL
+      )
+    ''');
+  }
+
   Future<Database> _database() async {
     if (_db != null) return _db!;
     final dir = await getApplicationSupportDirectory();
     final dbPath = p.join(dir.path, 'spacenotes_downloads.db');
     _db = await openDatabase(
       dbPath,
-      version: 1,
+      version: 2,
       onCreate: (db, version) async {
-        await db.execute('''
-          CREATE TABLE downloads (
-            path TEXT PRIMARY KEY,
-            local_path TEXT NOT NULL,
-            size INTEGER NOT NULL,
-            hash TEXT,
-            state TEXT NOT NULL
-          )
-        ''');
+        await _createDownloads(db);
+        await _createUploads(db);
+      },
+      onUpgrade: (db, from, to) async {
+        // Additive only. An existing install's `downloads` rows are the
+        // record of every offloaded file on disk; dropping or recreating
+        // that table would make all of them re-download.
+        if (from < 2) await _createUploads(db);
       },
     );
     return _db!;

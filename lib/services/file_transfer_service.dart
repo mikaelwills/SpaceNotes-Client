@@ -162,7 +162,18 @@ class FileTransferService {
     void Function(int sent, int total)? onProgress,
   ) async {
     final client = ResumableUploadClient(_dio, _uploadsBaseUrl);
-    final session = await client.open(remotePath, size);
+    final store = Capabilities.hasFileSystem ? LocalDownloadStore() : null;
+
+    final resumed = await _resumeSession(store, client, remotePath, file, size);
+    final session = resumed ?? await client.open(remotePath, size);
+
+    await store?.rememberUpload(
+      remotePath: remotePath,
+      sessionId: session.id,
+      sourcePath: file.path,
+      size: size,
+      sent: session.offset,
+    );
 
     var offset = session.offset;
     var attempts = 0;
@@ -175,6 +186,7 @@ class FileTransferService {
         final bytes = await readChunk(file, offset, length);
         offset = await client.sendChunk(session.id, offset, bytes);
         onProgress?.call(offset, size);
+        await store?.updateUploadProgress(remotePath, offset);
         attempts = 0;
       } catch (e) {
         attempts++;
@@ -198,8 +210,46 @@ class FileTransferService {
       }
     }
 
+    await store?.forgetUpload(remotePath);
     debugLogger.info('UPLOAD', 'Resumable upload complete',
         'path=$remotePath bytes=$size');
+  }
+
+  /// Picks up a session this device recorded earlier, if the server still has
+  /// it and it refers to the same file.
+  ///
+  /// The server's offset wins over the stored one: a chunk can land while the
+  /// response is lost, so the local number can only ever be behind.
+  Future<UploadSession?> _resumeSession(
+    LocalDownloadStore? store,
+    ResumableUploadClient client,
+    String remotePath,
+    File file,
+    int size,
+  ) async {
+    if (store == null) return null;
+
+    final pending = await store.pendingUploads();
+    final match = pending
+        .where((row) =>
+            row.remotePath == remotePath &&
+            row.sourcePath == file.path &&
+            row.size == size)
+        .firstOrNull;
+
+    if (match == null) return null;
+
+    try {
+      final offset = await client.confirmedOffset(match.sessionId);
+      debugLogger.info('UPLOAD', 'Resuming previous session',
+          'path=$remotePath id=${match.sessionId} offset=$offset');
+      return UploadSession(id: match.sessionId, offset: offset);
+    } catch (e) {
+      debugLogger.info('UPLOAD', 'Stored session is gone, starting over',
+          'path=$remotePath error=$e');
+      await store.forgetUpload(remotePath);
+      return null;
+    }
   }
 
   /// Ensures [remotePath] is on disk and verified, downloading if needed.
