@@ -18,6 +18,9 @@ import 'services/debug_logger.dart';
 import 'services/marionette_extensions.dart';
 import 'providers/preferences_provider.dart';
 import 'services/exit_recorder.dart';
+import 'services/resume_pending_transfers.dart';
+import 'providers/file_transfer_providers.dart';
+import 'providers/upload_progress_providers.dart';
 import 'blocs/config/config_cubit.dart';
 import 'blocs/desktop_notes/desktop_notes_bloc.dart';
 import 'router/app_router.dart';
@@ -155,7 +158,31 @@ class _SpaceNotesAppState extends State<SpaceNotesApp>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final repo = widget.container.read(notesRepositoryProvider);
       repo.connectAndGetInitialData();
+      _resumeInterruptedUploads();
     });
+  }
+
+  /// Picks up uploads the last run did not finish.
+  ///
+  /// Deliberately not awaited: a slow or dead network must never hold up the
+  /// first frame. Each upload continues from the offset the server confirms,
+  /// so nothing already sent goes up twice.
+  Future<void> _resumeInterruptedUploads() async {
+    try {
+      final pending = await findPendingTransfers();
+      if (pending.uploads.isEmpty) return;
+
+      debugLogger.info('RESUME', 'Continuing interrupted uploads',
+          'count=${pending.uploads.length}');
+
+      await resumeUploads(
+        pending,
+        widget.container.read(fileTransferServiceProvider),
+        widget.container.read(uploadBatchProvider.notifier),
+      );
+    } catch (e) {
+      debugLogger.warning('RESUME', 'Could not resume uploads', e.toString());
+    }
   }
 
   @override
