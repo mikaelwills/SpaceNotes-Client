@@ -121,6 +121,10 @@ class FileTransferService {
       'file=$originalName folder=$folderPath size=$size',
     );
 
+    // A fast path only. The server refuses a collision itself, which is what
+    // actually enforces it: this check reads the subscribed table, so before
+    // hydration it sees an empty vault and waves everything through. Its worth
+    // is avoiding a pointless 40MB upload when the answer is already known.
     if (await nameExists(folderPath, originalName)) {
       debugLogger.info('UPLOAD', 'Skipped, already exists', originalName);
       throw FileAlreadyExistsException(originalName);
@@ -149,6 +153,18 @@ class FileTransferService {
 
       await _cacheUploadedFile(remotePath, file, size);
     } on DioException catch (e) {
+      // The server refuses a collision with 409. Surfacing it as the same
+      // exception the local check throws means callers handle one case, and
+      // an upload started before hydration behaves like any other duplicate
+      // instead of silently overwriting.
+      if (e.response?.statusCode == 409) {
+        debugLogger.info(
+          'UPLOAD',
+          'Server refused, already exists',
+          originalName,
+        );
+        throw FileAlreadyExistsException(originalName);
+      }
       debugLogger.error(
         'UPLOAD',
         'Upload failed: $originalName',
