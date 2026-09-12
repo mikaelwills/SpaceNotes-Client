@@ -24,12 +24,20 @@ class FileGridCard extends ConsumerWidget {
     required this.index,
     required this.onTap,
     this.onLongPress,
+    this.selected = false,
+    this.selectable = false,
   });
 
   final SpaceFile file;
   final int index;
   final VoidCallback onTap;
   final VoidCallback? onLongPress;
+
+  /// Ticked, and part of whatever a bulk action will apply to.
+  final bool selected;
+
+  /// Select mode is on, so the card shows an empty tick rather than nothing.
+  final bool selectable;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -42,20 +50,34 @@ class FileGridCard extends ConsumerWidget {
               HapticFeedback.mediumImpact();
               onLongPress!();
             },
-      child: Container(
-        width: double.infinity,
-        decoration: BoxDecoration(
-          color: SpaceNotesTheme.card,
-          border: Border.all(
-            color: _usesSquareCard
-                ? SpaceNotesTheme.hairline
-                : FileTypeRegistry.forFile(file).color.withValues(alpha: 0.2),
-            width: 1,
+      child: Stack(
+        children: [
+          Container(
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: SpaceNotesTheme.card,
+              border: Border.all(
+                color: selected
+                    ? SpaceNotesTheme.primary
+                    : _usesSquareCard
+                        ? SpaceNotesTheme.hairline
+                        : FileTypeRegistry.forFile(file)
+                            .color
+                            .withValues(alpha: 0.2),
+                width: selected ? 2 : 1,
+              ),
+            ),
+            child: _usesSquareCard
+                ? _ImageCardBody(file: file)
+                : _StandardCardBody(file: file, index: index),
           ),
-        ),
-        child: _usesSquareCard
-            ? _ImageCardBody(file: file)
-            : _StandardCardBody(file: file, index: index),
+          if (selectable)
+            Positioned(
+              top: 6,
+              right: 6,
+              child: _SelectionTick(selected: selected),
+            ),
+        ],
       ),
     );
   }
@@ -64,6 +86,35 @@ class FileGridCard extends ConsumerWidget {
     final icon = FileTypeRegistry.forFile(file).icon;
     if (icon == Icons.image_outlined) return true;
     return icon == Icons.videocam_outlined && file.hasThumbnail;
+  }
+}
+
+/// Reads as a checkbox on both an image thumbnail and a plain card, so it
+/// carries its own opaque ground rather than relying on what is behind it.
+class _SelectionTick extends StatelessWidget {
+  const _SelectionTick({required this.selected});
+
+  final bool selected;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 20,
+      height: 20,
+      decoration: BoxDecoration(
+        color: selected
+            ? SpaceNotesTheme.primary
+            : SpaceNotesTheme.bg.withValues(alpha: 0.75),
+        shape: BoxShape.circle,
+        border: Border.all(
+          color: selected ? SpaceNotesTheme.primary : SpaceNotesTheme.dim,
+          width: 1,
+        ),
+      ),
+      child: selected
+          ? const Icon(Icons.check, size: 14, color: SpaceNotesTheme.bg)
+          : null,
+    );
   }
 }
 

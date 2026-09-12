@@ -14,11 +14,15 @@ class StaggeredFileGrid extends StatelessWidget {
     required this.files,
     required this.onTap,
     this.onLongPress,
+    this.selectable = false,
+    this.selectedIds = const {},
   });
 
   final List<SpaceFile> files;
   final void Function(SpaceFile file) onTap;
   final void Function(SpaceFile file)? onLongPress;
+  final bool selectable;
+  final Set<String> selectedIds;
 
   static const _targetCardWidth = 180.0;
   static const _gap = 10.0;
@@ -36,6 +40,8 @@ class StaggeredFileGrid extends StatelessWidget {
         index: i + 1,
         onTap: () => onTap(files[i]),
         onLongPress: onLongPress == null ? null : () => onLongPress!(files[i]),
+        selectable: selectable,
+        selected: selectedIds.contains(files[i].id),
       ),
     );
   }

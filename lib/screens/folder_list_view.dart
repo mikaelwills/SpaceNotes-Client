@@ -1,3 +1,4 @@
+import '../platform/capabilities.dart';
 import 'dart:io';
 
 import 'package:desktop_drop/desktop_drop.dart';
@@ -25,6 +26,10 @@ import '../providers/file_transfer_providers.dart';
 import '../providers/upload_progress_providers.dart';
 import '../services/debug_logger.dart';
 import '../services/folder_upload.dart';
+import '../providers/file_selection_provider.dart';
+import '../widgets/file_selection_bar.dart';
+import '../services/bulk_file_actions.dart';
+import '../dialogs/bulk_action_dialogs.dart';
 
 class FolderListView extends ConsumerStatefulWidget {
   final String folderPath;
@@ -86,6 +91,9 @@ class _FolderListViewState extends ConsumerState<FolderListView> {
     if (oldWidget.folderPath != widget.folderPath) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         ref.read(currentFolderPathProvider.notifier).state = widget.folderPath;
+        // Ticks belong to the folder they were made in; carrying them into a
+        // new folder would aim a bulk action at files no longer on screen.
+        ref.read(fileSelectionProvider.notifier).exit();
       });
     }
   }
@@ -94,6 +102,8 @@ class _FolderListViewState extends ConsumerState<FolderListView> {
   Widget build(BuildContext context) {
     final data = ref.watch(dynamicFolderContentsProvider(widget.folderPath));
     final isDesktop = PlatformUtils.isDesktopLayout(context);
+    if (!Capabilities.canDropFiles) return _buildBody(context, data, isDesktop);
+
     return DropTarget(
       onDragEntered: (_) => setState(() => _isDropTarget = true),
       onDragExited: (_) => setState(() => _isDropTarget = false),
@@ -118,10 +128,24 @@ class _FolderListViewState extends ConsumerState<FolderListView> {
     ({List<Folder> folders, List<SpaceFile> notes}) data,
     bool isDesktop,
   ) {
+    final selection = ref.watch(fileSelectionProvider);
+
     return Column(
       children: [
         if (widget.folderPath.isNotEmpty)
-          FolderStatusBar(folderPath: widget.folderPath),
+          FolderStatusBar(
+            folderPath: widget.folderPath,
+            trailing: selection.active
+                ? FileSelectionControls(
+                    files: data.notes,
+                    onDelete: () => _bulkDelete(context, data.notes),
+                    onMove: () => _bulkMove(context, data.notes),
+                  )
+                : const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [FileSelectToggle(), FileSortToggle()],
+                  ),
+          ),
         Expanded(
           child: Stack(
             children: [
@@ -141,6 +165,9 @@ class _FolderListViewState extends ConsumerState<FolderListView> {
 
   Widget _buildLoadedState(List<Folder> folders, List<SpaceFile> notes) {
     final searchQuery = ref.watch(folderSearchQueryProvider);
+    final selection = ref.watch(fileSelectionProvider);
+    final selectionActive = selection.active;
+    final selectedIds = selection.selectedIds;
 
     if (searchQuery.trim().isNotEmpty && folders.isEmpty && notes.isEmpty) {
       return _buildNoSearchResultsState(searchQuery);
@@ -180,7 +207,13 @@ class _FolderListViewState extends ConsumerState<FolderListView> {
                 padding: const EdgeInsets.fromLTRB(12, 14, 12, 120),
                 sliver: StaggeredFileGrid(
                   files: notes,
+                  selectable: selectionActive,
+                  selectedIds: selectedIds,
                   onTap: (file) {
+                    if (selectionActive) {
+                      ref.read(fileSelectionProvider.notifier).toggle(file.id);
+                      return;
+                    }
                     FocusManager.instance.primaryFocus?.unfocus();
                     ref.read(folderSearchQueryProvider.notifier).state = '';
                     if (PlatformUtils.isDesktopLayout(context)) {
@@ -190,6 +223,7 @@ class _FolderListViewState extends ConsumerState<FolderListView> {
                     }
                   },
                   onLongPress: (file) {
+                    if (selectionActive) return;
                     if (FileTypeRegistry.forFile(file).hasContextActions) {
                       NotesListDialogs.showNoteContextMenu(context, ref, file);
                     }
@@ -202,6 +236,44 @@ class _FolderListViewState extends ConsumerState<FolderListView> {
         ),
       ),
     );
+  }
+
+  List<SpaceFile> _selectedFiles(List<SpaceFile> notes) {
+    final ids = ref.read(fileSelectionProvider).selectedIds;
+    return notes.where((n) => ids.contains(n.id)).toList();
+  }
+
+  Future<void> _bulkDelete(BuildContext context, List<SpaceFile> notes) async {
+    final files = _selectedFiles(notes);
+    if (files.isEmpty) return;
+
+    final confirmed = await BulkActionDialogs.confirmDelete(context, files);
+    if (!confirmed || !context.mounted) return;
+
+    final result = await deleteFiles(
+      ref.read(notesRepositoryProvider),
+      files,
+    );
+
+    ref.read(fileSelectionProvider.notifier).exit();
+    if (context.mounted) BulkActionDialogs.reportResult(context, 'Deleted', result);
+  }
+
+  Future<void> _bulkMove(BuildContext context, List<SpaceFile> notes) async {
+    final files = _selectedFiles(notes);
+    if (files.isEmpty) return;
+
+    final target = await BulkActionDialogs.pickFolder(context, ref, files.length);
+    if (target == null || !context.mounted) return;
+
+    final result = await moveFiles(
+      ref.read(notesRepositoryProvider),
+      files,
+      target,
+    );
+
+    ref.read(fileSelectionProvider.notifier).exit();
+    if (context.mounted) BulkActionDialogs.reportResult(context, 'Moved', result);
   }
 
   Widget _buildEmptyState() {
