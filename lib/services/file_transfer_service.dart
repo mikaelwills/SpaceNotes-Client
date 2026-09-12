@@ -1,8 +1,11 @@
+import 'dart:async';
+import '../platform/capabilities.dart';
 import 'dart:io';
 import 'package:dio/dio.dart';
 import '../repositories/spacetimedb_notes_repository.dart';
 import 'debug_logger.dart';
 import 'local_download_store.dart';
+import 'resumable_upload.dart';
 
 class FileAlreadyExistsException implements Exception {
   FileAlreadyExistsException(this.fileName);
@@ -35,7 +38,20 @@ class FileTransferService {
   FileTransferService(this._repository);
 
   final SpacetimeDbNotesRepository _repository;
-  final Dio _dio = Dio();
+  /// `receiveTimeout` only covers waiting for response HEADERS — dio hands the
+  /// body stream through untimed (verified in dio 5.9.0 io_adapter.dart:162).
+  /// A silent drop mid-body is caught by [_idleTimeout] on the stream instead.
+  final Dio _dio = Dio(BaseOptions(
+    connectTimeout: const Duration(seconds: 15),
+    receiveTimeout: const Duration(seconds: 30),
+    sendTimeout: const Duration(seconds: 30),
+  ));
+
+  /// Longest gap allowed between chunks before a transfer is considered dead.
+  static const _idleTimeout = Duration(seconds: 30);
+
+  /// Consecutive failures on one chunk before the upload gives up.
+  static const _maxChunkAttempts = 3;
 
   Future<bool> nameExists(String folderPath, String fileName) async {
     final existing = await listNames(folderPath);
@@ -60,6 +76,7 @@ class FileTransferService {
     File source,
     int size,
   ) async {
+    if (!Capabilities.hasFileSystem) return;
     try {
       final store = LocalDownloadStore();
       final localPath = await store.localPathFor(remotePath);
@@ -101,18 +118,22 @@ class FileTransferService {
         folderPath.isEmpty ? originalName : '$folderPath/$originalName';
 
     try {
-      final url = _remoteUrl(remotePath);
-      debugLogger.info('UPLOAD', 'PUT request', 'url=$url');
-      final response = await _dio.put(
-        url,
-        data: file.openRead(),
-        options: Options(
-          headers: {Headers.contentLengthHeader: size},
-        ),
-        onSendProgress: onProgress,
-      );
-
-      debugLogger.info('UPLOAD', 'Upload complete', 'path=$remotePath status=${response.statusCode}');
+      if (size > kResumableThresholdBytes) {
+        await _uploadResumable(remotePath, file, size, onProgress);
+      } else {
+        final url = _remoteUrl(remotePath);
+        debugLogger.info('UPLOAD', 'PUT request', 'url=$url');
+        final response = await _dio.put(
+          url,
+          data: file.openRead(),
+          options: Options(
+            headers: {Headers.contentLengthHeader: size},
+          ),
+          onSendProgress: onProgress,
+        );
+        debugLogger.info('UPLOAD', 'Upload complete',
+            'path=$remotePath status=${response.statusCode}');
+      }
 
       await _cacheUploadedFile(remotePath, file, size);
     } on DioException catch (e) {
@@ -126,6 +147,97 @@ class FileTransferService {
       debugLogger.error('UPLOAD', 'Upload failed (non-Dio): $originalName', e.toString());
       rethrow;
     }
+  }
+
+  /// Uploads in chunks, resuming from whatever the server confirms after a
+  /// failure rather than starting again.
+  ///
+  /// The server's offset is the only authority on progress: a chunk can be
+  /// written and the response lost, so asking beats assuming. Retries are
+  /// bounded, and a run that makes no progress stops instead of looping.
+  Future<void> _uploadResumable(
+    String remotePath,
+    File file,
+    int size,
+    void Function(int sent, int total)? onProgress,
+  ) async {
+    final client = ResumableUploadClient(_dio, _uploadsBaseUrl);
+    final session = await client.open(remotePath, size);
+
+    var offset = session.offset;
+    var attempts = 0;
+
+    while (offset < size) {
+      final length =
+          offset + kUploadChunkBytes > size ? size - offset : kUploadChunkBytes;
+
+      try {
+        final bytes = await readChunk(file, offset, length);
+        offset = await client.sendChunk(session.id, offset, bytes);
+        onProgress?.call(offset, size);
+        attempts = 0;
+      } catch (e) {
+        attempts++;
+        if (attempts > _maxChunkAttempts) {
+          debugLogger.error('UPLOAD', 'Giving up after $attempts attempts',
+              'path=$remotePath offset=$offset');
+          rethrow;
+        }
+
+        debugLogger.warning('UPLOAD', 'Chunk failed, asking what survived',
+            'path=$remotePath attempt=$attempts error=$e');
+
+        final resumed = await client.confirmedOffset(session.id);
+        if (resumed <= offset && attempts > 1) {
+          debugLogger.error('UPLOAD', 'No progress on retry, stopping',
+              'path=$remotePath offset=$offset');
+          rethrow;
+        }
+        offset = resumed;
+        onProgress?.call(offset, size);
+      }
+    }
+
+    debugLogger.info('UPLOAD', 'Resumable upload complete',
+        'path=$remotePath bytes=$size');
+  }
+
+  /// Ensures [remotePath] is on disk and verified, downloading if needed.
+  /// Returns the local path.
+  ///
+  /// The four viewers each had their own copy of this and all four ignored
+  /// the verification result, so a size-mismatched file was played anyway.
+  /// Verification failure deletes the bad copy and throws.
+  Future<String> ensureDownloaded(
+    String remotePath,
+    int expectedSize, {
+    void Function(int received, int total)? onProgress,
+  }) async {
+    final store = LocalDownloadStore();
+    final localPath = await store.localPathFor(remotePath);
+
+    final state = await store.stateFor(remotePath, expectedSize: expectedSize);
+    if (state == DownloadState.complete) return localPath;
+
+    await downloadFile(
+      remotePath,
+      localPath,
+      expectedSize: expectedSize,
+      onProgress: onProgress,
+    );
+
+    final verified = await store.markCompleteIfVerified(
+      remotePath,
+      localPath,
+      expectedSize,
+    );
+    if (!verified) {
+      await store.remove(remotePath);
+      throw FileDownloadException(
+        'Downloaded file did not match the expected size. Try again.',
+      );
+    }
+    return localPath;
   }
 
   Future<void> downloadFile(
@@ -161,6 +273,13 @@ class FileTransferService {
         'status=${response.statusCode} contentLength=${response.headers.value(Headers.contentLengthHeader)}',
       );
 
+      // Record the partial BEFORE writing, so an app kill mid-stream leaves a
+      // tracked row rather than an invisible orphan on disk.
+      if (Capabilities.hasFileSystem) {
+        await LocalDownloadStore()
+            .markPartial(remotePath, localPath, expectedSize);
+      }
+
       final sink = localFile.openWrite(
         mode: startByte > 0 ? FileMode.append : FileMode.write,
       );
@@ -170,12 +289,18 @@ class FileTransferService {
           ) ??
           0;
 
-      await for (final chunk in response.data!.stream) {
-        sink.add(chunk);
-        received += chunk.length;
-        onProgress?.call(received, startByte + total);
+      try {
+        await for (final chunk
+            in response.data!.stream.timeout(_idleTimeout)) {
+          sink.add(chunk);
+          received += chunk.length;
+          onProgress?.call(received, startByte + total);
+        }
+      } finally {
+        // Must close on the error path too, or the next attempt opens a
+        // second sink on the same file while this one is still flushing.
+        await sink.close();
       }
-      await sink.close();
 
       debugLogger.info('DOWNLOAD', 'Download complete', 'path=$remotePath bytes=$received');
     } on DioException catch (e) {
@@ -185,6 +310,12 @@ class FileTransferService {
         'url=$url status=${e.response?.statusCode} type=${e.type} message=${e.message}',
       );
       throw FileDownloadException.fromDio(e, url);
+    } on TimeoutException {
+      debugLogger.error('DOWNLOAD', 'Stalled: $remotePath', 'url=$url');
+      throw FileDownloadException(
+        'Download stalled — no data for ${_idleTimeout.inSeconds}s. '
+        'Reopen the file to resume.',
+      );
     } catch (e) {
       debugLogger.error('DOWNLOAD', 'Download failed (non-Dio): $remotePath', 'url=$url error=$e');
       rethrow;
@@ -224,6 +355,8 @@ class FileTransferService {
   }
 
   String get _filesBaseUrl => 'http://$_bareHost:5051/files';
+
+  String get _uploadsBaseUrl => 'http://$_bareHost:5051';
 
   String get _thumbnailsBaseUrl => 'http://$_bareHost:5051/thumbnails';
 
