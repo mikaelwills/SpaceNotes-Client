@@ -15,6 +15,7 @@ import 'desktop_agents_layout.dart';
 import 'note_tabs.dart';
 import 'sidebar.dart';
 import '../../providers/preferences_provider.dart';
+import '../records_view_after_dwell.dart';
 
 final sidebarCollapsedProvider = StateProvider<bool>(
   (ref) => ref.read(preferencesProvider).sidebarStartsCollapsed,
@@ -239,7 +240,12 @@ class _MiddlePaneContent extends StatelessWidget {
     return switch (mode) {
       BrowseMode(:final folderPath) =>
         FolderListView(key: ValueKey('browse:$folderPath'), folderPath: folderPath),
-      FileViewerMode() => const DesktopNoteView(),
+      // Desktop bypasses the router, so the view is recorded here instead.
+      // Six places set this mode; this is the one place that renders it.
+      FileViewerMode(:final noteId) => RecordsViewAfterDwell(
+          fileId: noteId,
+          child: const DesktopNoteView(),
+        ),
       SearchResultsMode() =>
         const FolderListView(key: ValueKey('search'), folderPath: ''),
     };

@@ -21,6 +21,7 @@ import '../providers/connection_providers.dart';
 import '../providers/notes_providers.dart';
 import '../providers/preferences_provider.dart';
 import '../services/debug_logger.dart';
+import '../widgets/records_view_after_dwell.dart';
 
 final RouteObserver<ModalRoute<void>> routeObserver =
     RouteObserver<ModalRoute<void>>();
@@ -276,6 +277,11 @@ class _FileScreen extends ConsumerWidget {
       return const Center(child: CircularProgressIndicator());
     }
 
-    return FileTypeRegistry.forFile(file).buildScreen(fileId);
+    // Every mobile route into a file lands here, so recording the view once at
+    // this point covers all of them and any added later.
+    return RecordsViewAfterDwell(
+      fileId: fileId,
+      child: FileTypeRegistry.forFile(file).buildScreen(fileId),
+    );
   }
 }
