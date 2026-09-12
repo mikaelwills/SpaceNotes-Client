@@ -74,27 +74,15 @@ class FileSortToggle extends ConsumerWidget {
       key: const ValueKey('sort-toggle'),
       behavior: HitTestBehavior.opaque,
       onTap: () => ref.read(fileSortModeProvider.notifier).toggle(),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              byName ? Icons.sort_by_alpha : Icons.schedule,
-              size: 13,
-              color: SpaceNotesTheme.dim,
-            ),
-            const SizedBox(width: 6),
-            Text(
-              byName ? 'name' : 'modified',
-              style: const TextStyle(
-                fontFamily: SpaceNotesTheme.fontMono,
-                fontSize: 10,
-                color: SpaceNotesTheme.dim,
-                letterSpacing: 0.5,
-              ),
-            ),
-          ],
+      child: Tooltip(
+        message: byName ? 'Sorted by name' : 'Sorted by date modified',
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+          child: Icon(
+            byName ? Icons.sort_by_alpha : Icons.schedule,
+            size: 13,
+            color: SpaceNotesTheme.dim,
+          ),
         ),
       ),
     );
