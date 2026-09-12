@@ -55,8 +55,10 @@ class ParametricEqService {
     required double frequencyHz,
     required double gainDb,
     required double bandwidth,
+    int band = 0,
   }) =>
       _channel.invokeMethod('setEq', {
+        'band': band,
         'frequency': frequencyHz,
         'gainDb': gainDb,
         'bandwidth': bandwidth,

@@ -41,8 +41,21 @@ class _AudioViewerScreenState extends ConsumerState<AudioViewerScreen>
   Timer? _positionPoll;
   List<double>? _peaks;
 
-  EqNotch? _notch;
+  final List<EqNotch> _notches = [];
   bool _eqBypassed = false;
+
+  /// Pushes every notch to its own native band. Band index is positional, so
+  /// removing a notch re-indexes the rest — clearEq() first, then re-apply.
+  void _applyAllBands() {
+    for (var i = 0; i < _notches.length; i++) {
+      _eq.setEq(
+        band: i,
+        frequencyHz: _notches[i].frequencyHz,
+        gainDb: _notches[i].gainDb,
+        bandwidth: _notches[i].bandwidth,
+      );
+    }
+  }
 
   @override
   void initState() {
@@ -97,9 +110,9 @@ class _AudioViewerScreenState extends ConsumerState<AudioViewerScreen>
                             onPlayPause: _togglePlayPause,
                             onSeek: _seekTo,
                             onSkip: (delta) => _seekTo(_position + delta),
-                            notch: _notch,
+                            notches: _notches,
                             eqBypassed: _eqBypassed,
-                            onToggleEqBypass: _notch == null
+                            onToggleEqBypass: _notches.isEmpty
                                 ? null
                                 : () {
                                     final bypassing = !_eqBypassed;
@@ -107,29 +120,28 @@ class _AudioViewerScreenState extends ConsumerState<AudioViewerScreen>
                                     if (bypassing) {
                                       _eq.clearEq();
                                     } else {
-                                      _eq.setEq(
-                                        frequencyHz: _notch!.frequencyHz,
-                                        gainDb: _notch!.gainDb,
-                                        bandwidth: _notch!.bandwidth,
-                                      );
+                                      _applyAllBands();
                                     }
                                   },
-                            onNotchChanged: (notch) {
-                              setState(() => _notch = notch);
-                              if (!_eqBypassed) {
-                                _eq.setEq(
-                                  frequencyHz: notch.frequencyHz,
-                                  gainDb: notch.gainDb,
-                                  bandwidth: notch.bandwidth,
-                                );
-                              }
-                            },
-                            onNotchCleared: () {
+                            onNotchChanged: (index, notch) {
                               setState(() {
-                                _notch = null;
+                                if (index < _notches.length) {
+                                  _notches[index] = notch;
+                                } else {
+                                  _notches.add(notch);
+                                }
+                              });
+                              if (!_eqBypassed) _applyAllBands();
+                            },
+                            onNotchCleared: (index) {
+                              setState(() {
+                                if (index < _notches.length) {
+                                  _notches.removeAt(index);
+                                }
                                 _eqBypassed = false;
                               });
                               _eq.clearEq();
+                              if (_notches.isNotEmpty) _applyAllBands();
                             },
                           ),
                         )
@@ -285,7 +297,7 @@ class _AudioPlayerBody extends StatelessWidget {
     required this.onPlayPause,
     required this.onSeek,
     required this.onSkip,
-    required this.notch,
+    required this.notches,
     required this.eqBypassed,
     required this.onToggleEqBypass,
     required this.onNotchChanged,
@@ -300,11 +312,11 @@ class _AudioPlayerBody extends StatelessWidget {
   final VoidCallback onPlayPause;
   final ValueChanged<Duration> onSeek;
   final ValueChanged<Duration> onSkip;
-  final EqNotch? notch;
+  final List<EqNotch> notches;
   final bool eqBypassed;
   final VoidCallback? onToggleEqBypass;
-  final ValueChanged<EqNotch> onNotchChanged;
-  final VoidCallback onNotchCleared;
+  final void Function(int index, EqNotch notch) onNotchChanged;
+  final ValueChanged<int> onNotchCleared;
 
   @override
   Widget build(BuildContext context) {
@@ -318,7 +330,7 @@ class _AudioPlayerBody extends StatelessWidget {
             child: Stack(
               children: [
                 ParametricEqPad(
-                  notch: notch,
+                  notches: notches,
                   bypassed: eqBypassed,
                   onNotchChanged: onNotchChanged,
                   onNotchCleared: onNotchCleared,

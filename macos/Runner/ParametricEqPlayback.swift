@@ -3,16 +3,18 @@ import AVFoundation
 final class ParametricEqPlayback {
     private let engine = AVAudioEngine()
     private let playerNode = AVAudioPlayerNode()
-    private let eq = AVAudioUnitEQ(numberOfBands: 1)
+    private let eq = AVAudioUnitEQ(numberOfBands: 2)
     private var audioFile: AVAudioFile?
     private var seekOffset: AVAudioFramePosition = 0
     private var isPlaying = false
     private var filePath: String?
 
     init() {
-        eq.bands[0].filterType = .parametric
-        eq.bands[0].bypass = true
-        eq.bands[0].bandwidth = 0.025
+        for band in eq.bands {
+            band.filterType = .parametric
+            band.bypass = true
+            band.bandwidth = 0.3
+        }
 
         engine.attach(playerNode)
         engine.attach(eq)
@@ -143,15 +145,18 @@ final class ParametricEqPlayback {
         }
     }
 
-    func setEq(frequency: Double, gainDb: Double, bandwidth: Double) {
-        eq.bands[0].frequency = Float(frequency)
-        eq.bands[0].gain = Float(gainDb)
-        eq.bands[0].bandwidth = Float(bandwidth)
-        eq.bands[0].bypass = false
+    func setEq(band: Int, frequency: Double, gainDb: Double, bandwidth: Double) {
+        guard band >= 0 && band < eq.bands.count else { return }
+        eq.bands[band].frequency = Float(frequency)
+        eq.bands[band].gain = Float(gainDb)
+        eq.bands[band].bandwidth = Float(bandwidth)
+        eq.bands[band].bypass = false
     }
 
     func clearEq() {
-        eq.bands[0].bypass = true
+        for band in eq.bands {
+            band.bypass = true
+        }
     }
 
     func stop() {

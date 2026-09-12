@@ -24,24 +24,33 @@ class EqNotch {
       );
 }
 
-class ParametricEqPad extends StatelessWidget {
+class ParametricEqPad extends StatefulWidget {
   const ParametricEqPad({
     super.key,
-    required this.notch,
+    required this.notches,
     required this.onNotchChanged,
     required this.onNotchCleared,
     this.bypassed = false,
   });
 
-  final EqNotch? notch;
-  final ValueChanged<EqNotch> onNotchChanged;
-  final VoidCallback onNotchCleared;
+  final List<EqNotch> notches;
+
+  /// Fires with the notch's index and its new value. An index equal to the
+  /// current length means a new notch was placed.
+  final void Function(int index, EqNotch notch) onNotchChanged;
+
+  /// Fires with the index of the notch to remove.
+  final ValueChanged<int> onNotchCleared;
   final bool bypassed;
 
   static const double minFrequency = 20;
   static const double maxFrequency = 20000;
   static const double maxGainDb = 12;
   static const double removeTapRadius = 32;
+  /// Raise to 2 to re-enable the second band. Everything below this — the
+  /// list plumbing, per-band native routing, nearest-dot hit testing — is
+  /// already multi-notch; this is the only gate.
+  static const int maxNotches = 1;
 
   static double frequencyForX(double x, double width) {
     if (width <= 0) return minFrequency;
@@ -74,9 +83,17 @@ class ParametricEqPad extends StatelessWidget {
   static const double height = 260;
 
   @override
+  State<ParametricEqPad> createState() => _ParametricEqPadState();
+}
+
+class _ParametricEqPadState extends State<ParametricEqPad> {
+  /// Which notch the in-flight drag is moving. Null between drags.
+  int? _draggingIndex;
+
+  @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: height,
+      height: ParametricEqPad.height,
       width: double.infinity,
       child: LayoutBuilder(
         builder: (context, constraints) {
@@ -85,6 +102,8 @@ class ParametricEqPad extends StatelessWidget {
             behavior: HitTestBehavior.opaque,
             onPanStart: (details) => _handlePanStart(details.localPosition, size),
             onPanUpdate: (details) => _handlePanUpdate(details.delta, size),
+            onPanEnd: (_) => _handlePanEnd(),
+            onPanCancel: _handlePanEnd,
             onDoubleTapDown: (details) =>
                 _handleDoubleTap(details.localPosition, size),
             onTapUp: (details) => _handleTapUp(details.localPosition, size),
@@ -92,10 +111,13 @@ class ParametricEqPad extends StatelessWidget {
               children: [
                 Positioned.fill(
                   child: CustomPaint(
-                    painter: _EqCurvePainter(notch: notch, bypassed: bypassed),
+                    painter: _EqCurvePainter(
+                      notches: widget.notches,
+                      bypassed: widget.bypassed,
+                    ),
                   ),
                 ),
-                if (notch != null) _buildReadout(notch!, size),
+                for (final notch in widget.notches) _buildReadout(notch, size),
               ],
             ),
           );
@@ -113,88 +135,164 @@ class ParametricEqPad extends StatelessWidget {
     final gainLabel =
         '${notch.gainDb >= 0 ? '+' : ''}${notch.gainDb.toStringAsFixed(1)}dB';
 
-    final labelY = (y - 26).clamp(0.0, size.height - 18);
+    final qLabel = 'Q ${notch.bandwidth.toStringAsFixed(1)}';
+
+    // A boost reads above the notch, a cut below it, so the label never sits
+    // over the curve it describes. Two lines, so allow for both.
+    final labelY = notch.gainDb < 0
+        ? (y + 14).clamp(0.0, size.height - 32)
+        : (y - 40).clamp(0.0, size.height - 32);
 
     return Positioned(
       left: (x - 40).clamp(0.0, size.width - 80),
       top: labelY,
       child: IgnorePointer(
-        child: Text(
-          '$freqLabel  $gainLabel',
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            fontFamily: SpaceNotesTheme.fontMono,
-            fontSize: 11,
-            color: bypassed ? SpaceNotesTheme.muted : SpaceNotesTheme.accent,
-            letterSpacing: 0.3,
-          ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Text(
+              '$freqLabel  $gainLabel',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontFamily: SpaceNotesTheme.fontMono,
+                fontSize: 11,
+                color: widget.bypassed
+                    ? SpaceNotesTheme.muted
+                    : SpaceNotesTheme.accent,
+                letterSpacing: 0.3,
+              ),
+            ),
+            Text(
+              qLabel,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontFamily: SpaceNotesTheme.fontMono,
+                fontSize: 10,
+                color: widget.bypassed
+                    ? SpaceNotesTheme.muted
+                    : SpaceNotesTheme.dim,
+                letterSpacing: 0.3,
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 
+  /// Index of the notch under [localPosition], or null if the touch landed on
+  /// empty pad. Picks the nearest when both are within the radius.
+  int? _notchAt(Offset localPosition, Size size) {
+    int? best;
+    var bestDistance = double.infinity;
+    for (var i = 0; i < widget.notches.length; i++) {
+      final notch = widget.notches[i];
+      final notchX =
+          ParametricEqPad.xForFrequency(notch.frequencyHz, size.width);
+      final notchY = ParametricEqPad.yForGain(notch.gainDb, size.height);
+      final distance = (localPosition - Offset(notchX, notchY)).distance;
+      if (distance <= ParametricEqPad.removeTapRadius &&
+          distance < bestDistance) {
+        best = i;
+        bestDistance = distance;
+      }
+    }
+    return best;
+  }
+
+  /// Nearest notch at any distance, unlike [_notchAt] which requires a hit
+  /// inside the tap radius.
+  int _nearestNotch(Offset localPosition, Size size) {
+    var best = 0;
+    var bestDistance = double.infinity;
+    for (var i = 0; i < widget.notches.length; i++) {
+      final notch = widget.notches[i];
+      final notchX =
+          ParametricEqPad.xForFrequency(notch.frequencyHz, size.width);
+      final notchY = ParametricEqPad.yForGain(notch.gainDb, size.height);
+      final distance = (localPosition - Offset(notchX, notchY)).distance;
+      if (distance < bestDistance) {
+        best = i;
+        bestDistance = distance;
+      }
+    }
+    return best;
+  }
+
   void _handlePanStart(Offset localPosition, Size size) {
     if (size.width <= 0 || size.height <= 0) return;
-    if (notch != null) return;
+
+    final hit = _notchAt(localPosition, size);
+    if (hit != null) {
+      _draggingIndex = hit;
+      return;
+    }
+
+    // At capacity, a drag on empty pad grabs the nearest notch rather than
+    // doing nothing — otherwise you can only move it by catching the dot.
+    if (widget.notches.length >= ParametricEqPad.maxNotches) {
+      if (widget.notches.isEmpty) return;
+      _draggingIndex = _nearestNotch(localPosition, size);
+      return;
+    }
+
     final clamped = Offset(
       localPosition.dx.clamp(0.0, size.width),
       localPosition.dy.clamp(0.0, size.height),
     );
-    final frequency = ParametricEqPad.frequencyForX(clamped.dx, size.width);
-    final gain = ParametricEqPad.gainForY(clamped.dy, size.height);
-    onNotchChanged(EqNotch(
-      frequencyHz: frequency,
-      gainDb: gain,
-      qLevel: notch?.qLevel ?? 0,
-    ));
+    _draggingIndex = widget.notches.length;
+    widget.onNotchChanged(
+      widget.notches.length,
+      EqNotch(
+        frequencyHz: ParametricEqPad.frequencyForX(clamped.dx, size.width),
+        gainDb: ParametricEqPad.gainForY(clamped.dy, size.height),
+      ),
+    );
   }
 
   void _handlePanUpdate(Offset delta, Size size) {
     if (size.width <= 0 || size.height <= 0) return;
-    final currentNotch = notch;
-    if (currentNotch == null) return;
+    final index = _draggingIndex;
+    if (index == null || index >= widget.notches.length) return;
+    final current = widget.notches[index];
 
-    final currentX = ParametricEqPad.xForFrequency(currentNotch.frequencyHz, size.width);
-    final currentY = ParametricEqPad.yForGain(currentNotch.gainDb, size.height);
+    final currentX =
+        ParametricEqPad.xForFrequency(current.frequencyHz, size.width);
+    final currentY = ParametricEqPad.yForGain(current.gainDb, size.height);
     final movedX = (currentX + delta.dx).clamp(0.0, size.width);
     final movedY = (currentY + delta.dy).clamp(0.0, size.height);
 
-    final frequency = ParametricEqPad.frequencyForX(movedX, size.width);
-    final gain = ParametricEqPad.gainForY(movedY, size.height);
-    onNotchChanged(EqNotch(
-      frequencyHz: frequency,
-      gainDb: gain,
-      qLevel: currentNotch.qLevel,
-    ));
+    widget.onNotchChanged(
+      index,
+      EqNotch(
+        frequencyHz: ParametricEqPad.frequencyForX(movedX, size.width),
+        gainDb: ParametricEqPad.gainForY(movedY, size.height),
+        qLevel: current.qLevel,
+      ),
+    );
   }
 
+  void _handlePanEnd() => _draggingIndex = null;
+
   void _handleTapUp(Offset localPosition, Size size) {
-    final currentNotch = notch;
-    if (currentNotch == null) return;
-    final notchX = ParametricEqPad.xForFrequency(currentNotch.frequencyHz, size.width);
-    final notchY = ParametricEqPad.yForGain(currentNotch.gainDb, size.height);
-    final distance = (localPosition - Offset(notchX, notchY)).distance;
-    if (distance <= ParametricEqPad.removeTapRadius) {
-      onNotchChanged(currentNotch.withQLevel((currentNotch.qLevel + 1) % 3));
-    }
+    final index = _notchAt(localPosition, size);
+    if (index == null) return;
+    final current = widget.notches[index];
+    widget.onNotchChanged(index, current.withQLevel((current.qLevel + 1) % 3));
   }
 
   void _handleDoubleTap(Offset localPosition, Size size) {
-    final currentNotch = notch;
-    if (currentNotch == null) return;
-    final notchX = ParametricEqPad.xForFrequency(currentNotch.frequencyHz, size.width);
-    final notchY = ParametricEqPad.yForGain(currentNotch.gainDb, size.height);
-    final distance = (localPosition - Offset(notchX, notchY)).distance;
-    if (distance <= ParametricEqPad.removeTapRadius) {
-      onNotchCleared();
-    }
+    final index = _notchAt(localPosition, size);
+    if (index == null) return;
+    widget.onNotchCleared(index);
   }
 }
 
 class _EqCurvePainter extends CustomPainter {
-  _EqCurvePainter({required this.notch, required this.bypassed});
+  _EqCurvePainter({required this.notches, required this.bypassed});
 
-  final EqNotch? notch;
+  final List<EqNotch> notches;
   final bool bypassed;
 
   @override
@@ -202,26 +300,30 @@ class _EqCurvePainter extends CustomPainter {
     final curveColor = bypassed ? SpaceNotesTheme.muted : SpaceNotesTheme.accent;
     final zeroY = size.height / 2;
     final path = Path()..moveTo(0, zeroY);
-    double? notchX;
-    double? notchY;
 
-    if (notch == null) {
+    if (notches.isEmpty) {
       path.lineTo(size.width, zeroY);
     } else {
-      notchX = ParametricEqPad.xForFrequency(notch!.frequencyHz, size.width);
-      notchY = ParametricEqPad.yForGain(notch!.gainDb, size.height);
       // Pixels of curve spread per unit of AVAudioUnitEQ bandwidth — the
       // only knob for visual curve width, so it can never drift out of
       // sync with the actual filter Q like a separately hand-tuned
       // constant would.
       const spreadPerBandwidth = 65.0;
-      final spread = notch!.bandwidth * spreadPerBandwidth;
 
       for (double x = 0; x <= size.width; x += 2) {
-        final distance = (x - notchX).abs();
-        final influence = math.exp(-(distance * distance) / (2 * spread * spread));
-        final y = zeroY + (notchY - zeroY) * influence;
-        path.lineTo(x, y);
+        // Bands sum, the same way the real filters do.
+        var offset = 0.0;
+        for (final notch in notches) {
+          final notchX =
+              ParametricEqPad.xForFrequency(notch.frequencyHz, size.width);
+          final notchY = ParametricEqPad.yForGain(notch.gainDb, size.height);
+          final spread = notch.bandwidth * spreadPerBandwidth;
+          final distance = (x - notchX).abs();
+          final influence =
+              math.exp(-(distance * distance) / (2 * spread * spread));
+          offset += (notchY - zeroY) * influence;
+        }
+        path.lineTo(x, (zeroY + offset).clamp(0.0, size.height));
       }
     }
 
@@ -251,7 +353,11 @@ class _EqCurvePainter extends CustomPainter {
       ..style = PaintingStyle.stroke;
     canvas.drawPath(path, linePaint);
 
-    if (notchX != null && notchY != null) {
+    for (final notch in notches) {
+      final notchX =
+          ParametricEqPad.xForFrequency(notch.frequencyHz, size.width);
+      final notchY = ParametricEqPad.yForGain(notch.gainDb, size.height);
+
       final glowPaint = Paint()
         ..color = curveColor.withValues(alpha: 0.35)
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8);
@@ -269,8 +375,16 @@ class _EqCurvePainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _EqCurvePainter oldDelegate) =>
-      oldDelegate.notch?.frequencyHz != notch?.frequencyHz ||
-      oldDelegate.notch?.gainDb != notch?.gainDb ||
-      oldDelegate.bypassed != bypassed;
+  bool shouldRepaint(covariant _EqCurvePainter oldDelegate) {
+    if (oldDelegate.bypassed != bypassed) return true;
+    if (oldDelegate.notches.length != notches.length) return true;
+    for (var i = 0; i < notches.length; i++) {
+      if (oldDelegate.notches[i].frequencyHz != notches[i].frequencyHz ||
+          oldDelegate.notches[i].gainDb != notches[i].gainDb ||
+          oldDelegate.notches[i].qLevel != notches[i].qLevel) {
+        return true;
+      }
+    }
+    return false;
+  }
 }
