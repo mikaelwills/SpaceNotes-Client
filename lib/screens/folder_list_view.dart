@@ -207,7 +207,6 @@ class _FolderListViewState extends ConsumerState<FolderListView> {
                 padding: const EdgeInsets.fromLTRB(12, 14, 12, 120),
                 sliver: StaggeredFileGrid(
                   files: notes,
-                  selectable: selectionActive,
                   selectedIds: selectedIds,
                   onTap: (file) {
                     if (selectionActive) {

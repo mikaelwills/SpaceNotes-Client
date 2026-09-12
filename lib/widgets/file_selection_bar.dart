@@ -139,6 +139,7 @@ class _SelectionMenu extends StatelessWidget {
         PopupMenuItem(
           key: ValueKey('bulk-move'),
           value: 'move',
+          padding: EdgeInsets.symmetric(horizontal: 24, vertical: 4),
           child: Text(
             'Move to folder',
             style: TextStyle(
@@ -151,6 +152,7 @@ class _SelectionMenu extends StatelessWidget {
         PopupMenuItem(
           key: ValueKey('bulk-delete'),
           value: 'delete',
+          padding: EdgeInsets.symmetric(horizontal: 24, vertical: 4),
           child: Text(
             'Delete',
             style: TextStyle(
