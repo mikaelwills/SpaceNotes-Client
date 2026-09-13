@@ -23,6 +23,7 @@ import 'package:spacetimedb_sdk/spacetimedb_sdk.dart'
         SpacetimeDbAuthException;
 import 'package:uuid/uuid.dart';
 import '../generated/client.dart';
+import '../generated/file_content.dart';
 import '../generated/space_file.dart';
 import 'shared_preferences_token_store.dart';
 import 'package:rxdart/rxdart.dart';
@@ -94,6 +95,8 @@ class _ClientLane {
   OfflineStorage? offlineStorage;
   bool nonTableListenersRegistered = false;
   LogSpan? hydrationSpan;
+  int hydrationWireBytes = 0;
+  final Set<LogSpan> contentSpans = {};
   int connectAttempts = 0;
   bool retryScheduled = false;
   int retryAttempt = 0;
@@ -196,6 +199,53 @@ class SpacetimeDbNotesRepository {
     if (client == null || !identical(owner, client)) return;
     if (!client.connection.state.isConnected) {
       _chatLane.deferredUnsubscribes.add(querySetId);
+      client.subscriptions.forgetQuerySet(querySetId);
+      return;
+    }
+    client.subscriptions.unsubscribe(querySetId);
+  }
+
+  /// Subscribe one file's body row. `file_content` is deliberately absent
+  /// from the cold-start set: bodies are only streamed while a note is open,
+  /// so listing files never pays for downloading every body. Returns the SDK
+  /// querySetId to pass back to [unsubscribeFileContent]. Awaits
+  /// SubscribeApplied so the row is in the cache on resolve. A file with no
+  /// `file_content` row (large binaries) resolves normally with nothing in
+  /// cache — that is empty content, not an error.
+  Future<int?> subscribeFileContent(String fileId) async {
+    final client = _notesLane.client;
+    if (client == null) {
+      debugLogger.warning(
+          'SUB', _notesLane.tag('subscribeFileContent: client null'));
+      return null;
+    }
+    final span = debugLogger.span(
+        'HYDRATION', _notesLane.tag('note-content $fileId'));
+    _notesLane.contentSpans.add(span);
+    try {
+      final qsId = await client.subscriptions.subscribe(
+          ["SELECT * FROM file_content WHERE file_id = '$fileId'"]);
+      _notesLane.querySetOwners[qsId] = client;
+      final row = client.fileContent.rows.value
+          .firstWhereOrNull((r) => r.fileId == fileId);
+      span.end(row == null
+          ? 'applied, no file_content row'
+          : 'applied chars=${row.content.length}');
+      return qsId;
+    } catch (e) {
+      span.end('aborted: $e');
+      rethrow;
+    } finally {
+      _notesLane.contentSpans.remove(span);
+    }
+  }
+
+  void unsubscribeFileContent(int querySetId) {
+    final owner = _notesLane.querySetOwners.remove(querySetId);
+    final client = _notesLane.client;
+    if (client == null || !identical(owner, client)) return;
+    if (!client.connection.state.isConnected) {
+      _notesLane.deferredUnsubscribes.add(querySetId);
       client.subscriptions.forgetQuerySet(querySetId);
       return;
     }
@@ -423,7 +473,6 @@ class SpacetimeDbNotesRepository {
         id: id,
         path: path,
         name: name,
-        content: content,
         folderPath: folderPath,
         depth: depth,
         extension: extension,
@@ -445,7 +494,13 @@ class SpacetimeDbNotesRepository {
         size: Int64(content.length),
         createdTime: Int64(now),
         modifiedTime: Int64(now),
-        optimisticChanges: [OptimisticChange.insert('space_file', newNote.toJson())],
+        optimisticChanges: [
+          OptimisticChange.insert('space_file', newNote.toJson()),
+          OptimisticChange.insert(
+            'file_content',
+            FileContent(fileId: id, content: content).toJson(),
+          ),
+        ],
       );
 
       debugLogger.save('Note created: $id');
@@ -458,6 +513,15 @@ class SpacetimeDbNotesRepository {
     }
   }
 
+  /// Saves a note's body.
+  ///
+  /// Both the metadata row and the content row change optimistically. Without
+  /// the content half the editor would show its own typing revert until the
+  /// server echo arrived, because the body it renders now comes from
+  /// `file_content` rather than from the file row.
+  ///
+  /// The content row may legitimately not exist yet — a large binary never has
+  /// one — so this inserts rather than updates in that case.
   Future<bool> updateNote(String id, String content) async {
     try {
       await _ensureConnected();
@@ -476,7 +540,6 @@ class SpacetimeDbNotesRepository {
         id: oldNote.id,
         path: oldNote.path,
         name: oldNote.name,
-        content: content,
         folderPath: oldNote.folderPath,
         depth: oldNote.depth,
         extension: oldNote.extension,
@@ -487,13 +550,24 @@ class SpacetimeDbNotesRepository {
         hasThumbnail: oldNote.hasThumbnail,
       );
 
+      final oldContent = _notesLane.client!.fileContent.find(id);
+      final newContent = FileContent(fileId: id, content: content);
+
       await _notesLane.client!.reducers.updateFileContent(
         id: id,
         content: content,
         size: Int64(content.length),
         modifiedTime: Int64(now),
         optimisticChanges: [
-          OptimisticChange.update('space_file', oldNote.toJson(), newNote.toJson())
+          OptimisticChange.update('space_file', oldNote.toJson(), newNote.toJson()),
+          if (oldContent == null)
+            OptimisticChange.insert('file_content', newContent.toJson())
+          else
+            OptimisticChange.update(
+              'file_content',
+              oldContent.toJson(),
+              newContent.toJson(),
+            ),
         ],
       );
 
@@ -565,7 +639,6 @@ class SpacetimeDbNotesRepository {
         id: oldNote.id,
         path: newPath,
         name: newName,
-        content: oldNote.content,
         folderPath: newFolderPath,
         depth: newDepth,
         extension: newExtension,
@@ -772,7 +845,6 @@ class SpacetimeDbNotesRepository {
 
       final matchingNotes = notes.where((note) {
         return note.name.toLowerCase().contains(queryLower) ||
-            note.content.toLowerCase().contains(queryLower) ||
             note.path.toLowerCase().contains(queryLower);
       }).toList();
 
@@ -817,12 +889,18 @@ class SpacetimeDbNotesRepository {
   void pauseSpanClocks() {
     for (final lane in _lanes) {
       lane.hydrationSpan?.pause();
+      for (final span in lane.contentSpans) {
+        span.pause();
+      }
     }
   }
 
   void resumeSpanClocks() {
     for (final lane in _lanes) {
       lane.hydrationSpan?.resume();
+      for (final span in lane.contentSpans) {
+        span.resume();
+      }
     }
   }
 
@@ -1447,7 +1525,7 @@ class SpacetimeDbNotesRepository {
       debugLogger
           .connection(lane.tag('subscriptionsReady -> ${ready.value}'));
       if (ready.value) {
-        lane.hydrationSpan?.end('subscriptionsReady');
+        lane.hydrationSpan?.end(_hydrationSummary(lane, client));
         lane.hydrationSpan = null;
         _flushDeferredUnsubscribes(lane);
       }
@@ -1473,8 +1551,9 @@ class SpacetimeDbNotesRepository {
       debugLogger.connection(lane.tag('state -> ${state.displayName}'));
       if (state is stdb.Connected) {
         lane.hydrationSpan?.end('superseded by new Connected');
+        lane.hydrationWireBytes = 0;
         lane.hydrationSpan =
-            debugLogger.span('CONN', lane.tag('resume-hydration'));
+            debugLogger.span('HYDRATION', lane.tag('connect-hydration'));
         _authErrorAttempts = 0;
         return;
       }
@@ -1498,13 +1577,33 @@ class SpacetimeDbNotesRepository {
 
     final subscribeAppliedSub =
         client.subscriptions.onSubscribeApplied.listen((applied) {
-      lane.hydrationSpan?.lap(
-        'SubscribeApplied querySetId=${applied.querySetId} tables=${applied.rows.tables.length}',
-      );
+      var bytes = 0;
+      final tables = <String>[];
+      for (final table in applied.rows.tables) {
+        bytes += table.rows.rowsData.length;
+        tables.add('${table.tableName}=${table.rows.rowsData.length}B');
+      }
+      lane.hydrationWireBytes += bytes;
+      final summary =
+          'SubscribeApplied querySetId=${applied.querySetId} ${tables.join(' ')} wire=${bytes}B';
+      if (lane.hydrationSpan != null) {
+        lane.hydrationSpan!.lap(summary);
+      } else {
+        debugLogger.info('HYDRATION', lane.tag(summary));
+      }
     });
     lane.subscriptions.add(subscribeAppliedSub);
 
     debugLogger.sync(lane.tag('Non-table listeners registered'));
+  }
+
+  /// Row counts come from the cache rather than the wire so the end line
+  /// reports what the app can actually see once hydration completes.
+  String _hydrationSummary(_ClientLane lane, SpacetimeDbClient client) {
+    final rows = identical(lane, _notesLane)
+        ? 'space_file=${client.spaceFile.rows.value.length} folder=${client.folder.rows.value.length}'
+        : 'agent=${client.agent.rows.value.length} message=${client.message.rows.value.length}';
+    return 'subscriptionsReady rows: $rows wire=${lane.hydrationWireBytes}B';
   }
 
   Future<void> _handleAuthErrorGated() async {

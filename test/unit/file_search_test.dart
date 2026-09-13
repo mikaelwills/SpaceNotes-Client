@@ -5,7 +5,6 @@ import 'package:spacenotes_client/search/file_search.dart';
 SpaceFile _note({
   required String name,
   String path = '',
-  String content = '',
   String extension = 'md',
   int modifiedTime = 0,
 }) =>
@@ -13,19 +12,18 @@ SpaceFile _note({
       'id': name,
       'name': name,
       'path': path.isEmpty ? name : path,
-      'content': content,
       'extension': extension,
       'modifiedTime': modifiedTime,
     });
 
 void main() {
   group('rank ladder', () {
-    test('exact name beats phrase beats all-terms beats content', () {
+    test('exact name beats phrase beats all-terms beats name-and-path', () {
       final exact = _note(name: 'Good Flutter Architecture');
       final phrase = _note(name: 'Good Flutter Architecture Notes');
       final terms3 = _note(name: 'Flutter is good for architecture');
-      final contentOnly =
-          _note(name: 'CV', content: 'good flutter architecture experience');
+      final nameAndPath =
+          _note(name: 'architecture', path: 'good/flutter/architecture.md');
 
       final terms = searchTerms('good flutter architecture');
       expect(indexedRank(SearchableFile(exact), terms), rankExactName);
@@ -33,7 +31,7 @@ void main() {
           indexedRank(SearchableFile(phrase), terms), rankNameStandalonePhrase);
       expect(
           indexedRank(SearchableFile(terms3), terms), rankNameStandaloneWords);
-      expect(indexedRank(SearchableFile(contentOnly), terms), rankContentOnly);
+      expect(indexedRank(SearchableFile(nameAndPath), terms), rankNameAndPath);
     });
 
     test('a whole-word match outranks the same letters inside another word',
@@ -103,18 +101,9 @@ void main() {
     });
 
     test('non-match ranks below everything', () {
-      final miss = _note(name: 'unrelated', content: 'nothing here');
+      final miss = _note(name: 'unrelated');
       expect(
         indexedRank(SearchableFile(miss), searchTerms('flutter')),
-        rankNoMatch,
-      );
-    });
-
-    test('a non-text file never matches on content', () {
-      final img = _note(name: 'photo', content: 'flutter', extension: 'png');
-      expect(SearchableFile(img).content, isNull);
-      expect(
-        indexedRank(SearchableFile(img), searchTerms('flutter')),
         rankNoMatch,
       );
     });
@@ -157,7 +146,7 @@ void main() {
   group('searchAndRank', () {
     test('orders by rank then name, dropping non-matches', () {
       final index = buildSearchIndex([
-        _note(name: 'zzz', content: 'good flutter architecture'),
+        _note(name: 'zzz', path: 'good/flutter/architecture/zzz.md'),
         _note(name: 'Good Flutter Architecture'),
         _note(name: 'unrelated'),
         _note(name: 'Good Flutter Architecture Guide'),

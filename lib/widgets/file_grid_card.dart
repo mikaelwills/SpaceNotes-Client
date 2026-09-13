@@ -16,7 +16,8 @@ import '../file_types/file_type_registry.dart';
 /// — no name, no index. A not-yet-downloaded image shows the name and a
 /// cloud icon in the same reserved square; tapping it downloads and opens
 /// (handled by the viewer screen itself). Every other file type keeps the
-/// index/icon header, name, and text preview.
+/// index/icon header and name. There is no body preview: bodies live in
+/// `file_content`, which is only streamed while a note is open.
 class FileGridCard extends ConsumerWidget {
   const FileGridCard({
     super.key,
@@ -136,15 +137,8 @@ class _StandardCardBody extends ConsumerWidget {
   final SpaceFile file;
   final int index;
 
-  static const _previewCharLimit = 240;
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final trimmed = file.content.trim();
-    final preview = trimmed.length > _previewCharLimit
-        ? trimmed.substring(0, _previewCharLimit)
-        : trimmed;
-    final hasPreview = preview.isNotEmpty;
     final handler = FileTypeRegistry.forFile(file);
     final typeColor = handler.color;
     final downloadState = handler.isOffloadable
@@ -206,24 +200,7 @@ class _StandardCardBody extends ConsumerWidget {
             overflow: TextOverflow.ellipsis,
           ),
         ),
-        if (hasPreview) ...[
-          const SizedBox(height: 6),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(13, 0, 13, 14),
-            child: Text(
-              preview,
-              style: const TextStyle(
-                fontFamily: SpaceNotesTheme.fontSans,
-                fontSize: 12,
-                color: SpaceNotesTheme.muted,
-                height: 1.5,
-              ),
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-        ] else
-          const SizedBox(height: 12),
+        const SizedBox(height: 12),
       ],
     );
   }

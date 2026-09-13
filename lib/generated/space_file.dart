@@ -7,7 +7,6 @@ class SpaceFile {
     required this.id,
     required this.path,
     required this.name,
-    required this.content,
     required this.folderPath,
     required this.depth,
     required this.extension,
@@ -23,7 +22,6 @@ class SpaceFile {
       id: json['id'] ?? '',
       path: json['path'] ?? '',
       name: json['name'] ?? '',
-      content: json['content'] ?? '',
       folderPath: json['folderPath'] ?? '',
       depth: json['depth'] ?? 0,
       extension: json['extension'] ?? '',
@@ -40,8 +38,6 @@ class SpaceFile {
   final String path;
 
   final String name;
-
-  final String content;
 
   final String folderPath;
 
@@ -63,7 +59,6 @@ class SpaceFile {
     encoder.writeString(id);
     encoder.writeString(path);
     encoder.writeString(name);
-    encoder.writeString(content);
     encoder.writeString(folderPath);
     encoder.writeU32(depth);
     encoder.writeString(extension);
@@ -79,7 +74,6 @@ class SpaceFile {
       id: decoder.readString(),
       path: decoder.readString(),
       name: decoder.readString(),
-      content: decoder.readString(),
       folderPath: decoder.readString(),
       depth: decoder.readU32(),
       extension: decoder.readString(),
@@ -96,7 +90,6 @@ class SpaceFile {
       'id': id,
       'path': path,
       'name': name,
-      'content': content,
       'folderPath': folderPath,
       'depth': depth,
       'extension': extension,
@@ -115,7 +108,6 @@ class SpaceFile {
             id == other.id &&
             path == other.path &&
             name == other.name &&
-            content == other.content &&
             folderPath == other.folderPath &&
             depth == other.depth &&
             extension == other.extension &&
@@ -132,7 +124,6 @@ class SpaceFile {
       id,
       path,
       name,
-      content,
       folderPath,
       depth,
       extension,
@@ -146,14 +137,13 @@ class SpaceFile {
 
   @override
   String toString() {
-    return 'SpaceFile(id: $id, path: $path, name: $name, content: $content, folderPath: $folderPath, depth: $depth, extension: $extension, size: $size, createdTime: $createdTime, modifiedTime: $modifiedTime, dbUpdatedAt: $dbUpdatedAt, hasThumbnail: $hasThumbnail)';
+    return 'SpaceFile(id: $id, path: $path, name: $name, folderPath: $folderPath, depth: $depth, extension: $extension, size: $size, createdTime: $createdTime, modifiedTime: $modifiedTime, dbUpdatedAt: $dbUpdatedAt, hasThumbnail: $hasThumbnail)';
   }
 
   SpaceFile copyWith({
     String? id,
     String? path,
     String? name,
-    String? content,
     String? folderPath,
     int? depth,
     String? extension,
@@ -167,7 +157,6 @@ class SpaceFile {
       id: id ?? this.id,
       path: path ?? this.path,
       name: name ?? this.name,
-      content: content ?? this.content,
       folderPath: folderPath ?? this.folderPath,
       depth: depth ?? this.depth,
       extension: extension ?? this.extension,

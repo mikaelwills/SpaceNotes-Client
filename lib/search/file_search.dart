@@ -1,4 +1,3 @@
-import '../file_types/file_type_registry.dart';
 import '../generated/folder.dart';
 import '../generated/space_file.dart';
 import '../services/debug_logger.dart';
@@ -11,8 +10,7 @@ const int rankNameAllWords = 4;
 const int rankNamePhrase = 5;
 const int rankNameAllTerms = 6;
 const int rankNameAndPath = 7;
-const int rankContentOnly = 8;
-const int rankNoMatch = 9;
+const int rankNoMatch = 8;
 
 /// True when [term] stands alone in [text] — whitespace on both sides, so
 /// "mcu" matches "MCU Watch Order" but not "dotfiles-mcu-download".
@@ -48,18 +46,16 @@ bool _isSpace(int c) => c == 32 || c == 9 || c == 10 || c == 13;
 bool _isWordChar(int c) =>
     (c >= 48 && c <= 57) || (c >= 97 && c <= 122) || (c >= 65 && c <= 90);
 
+/// Name and path only. Bodies live in `file_content`, which is streamed
+/// per open note rather than held client-side, so search cannot see them.
 class SearchableFile {
   SearchableFile(this.file)
       : name = file.name.toLowerCase(),
-        path = file.path.toLowerCase(),
-        content = FileTypeRegistry.forFile(file).hasTextRepresentation
-            ? file.content.toLowerCase()
-            : null;
+        path = file.path.toLowerCase();
 
   final SpaceFile file;
   final String name;
   final String path;
-  final String? content;
 }
 
 List<SearchableFile> buildSearchIndex(List<SpaceFile> notes) =>
@@ -110,13 +106,7 @@ int indexedRank(SearchableFile entry, List<String> terms) {
   bool nameOrPathHasEvery() =>
       terms.every((t) => entry.name.contains(t) || entry.path.contains(t));
 
-  if (nameOrPathHasEvery()) return rankNameAndPath;
-
-  final content = entry.content;
-  if (content == null) return rankNoMatch;
-  final matchesInContent = terms.every((t) =>
-      entry.name.contains(t) || entry.path.contains(t) || content.contains(t));
-  return matchesInContent ? rankContentOnly : rankNoMatch;
+  return nameOrPathHasEvery() ? rankNameAndPath : rankNoMatch;
 }
 
 List<SpaceFile> searchAndRank(List<SearchableFile> index, List<String> terms) {

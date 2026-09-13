@@ -203,15 +203,15 @@ class _CredentialScreenState extends ConsumerState<CredentialScreen> {
   @override
   Widget build(BuildContext context) {
     final file = ref.watch(fileByIdProvider(widget.fileId));
+    final content = ref.watch(noteContentProvider(widget.fileId));
 
-    if (file == null) {
+    if (file == null || content == null) {
       return const Center(child: CircularProgressIndicator());
     }
 
     if (!_started) {
       _started = true;
-      WidgetsBinding.instance
-          .addPostFrameCallback((_) => _reveal(file.content));
+      WidgetsBinding.instance.addPostFrameCallback((_) => _reveal(content));
     }
 
     final entry = CredentialEntry.fromPath(file.path);

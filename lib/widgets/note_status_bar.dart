@@ -7,9 +7,17 @@ import 'editable_name.dart';
 import 'primitives/primitives.dart';
 
 class NoteStatusBar extends StatelessWidget {
-  const NoteStatusBar({super.key, required this.note});
+  const NoteStatusBar({
+    super.key,
+    required this.note,
+    this.contentHydrated = false,
+  });
 
   final SpaceFile note;
+
+  /// Shows the fresh-content mark: the server's current body has arrived.
+  /// A note painted from cache opens without it until the live row lands.
+  final bool contentHydrated;
 
   @override
   Widget build(BuildContext context) {
@@ -18,6 +26,13 @@ class NoteStatusBar extends StatelessWidget {
     final folder = note.folderPath;
 
     return SnStatusLine(
+      trailing: contentHydrated
+          ? const Icon(
+              Icons.cloud_done_outlined,
+              size: 12,
+              color: SpaceNotesTheme.online,
+            )
+          : null,
       leading: Row(
         mainAxisSize: MainAxisSize.min,
         children: [

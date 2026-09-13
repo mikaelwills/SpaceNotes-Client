@@ -91,6 +91,50 @@ final fileByIdProvider = Provider.family<SpaceFile?, String>((ref, id) {
   return watchListenable(ref, client.spaceFile.rowNotifier(id));
 });
 
+/// Owns the per-note body subscription lifecycle. Watching
+/// `noteContentSubscriptionProvider(fileId)` subscribes that file's
+/// `file_content` row on first watch and unsubscribes when the last watcher
+/// disposes. autoDispose ref-counts watchers, so two widgets on the same
+/// file share ONE subscription. Rebuilds when the notes client is replaced
+/// so the subscription always lives on the live socket.
+final noteContentSubscriptionProvider =
+    Provider.autoDispose.family<Future<int?>, String>((ref, fileId) {
+  ref.watch(notesClientProvider);
+  final repo = ref.read(notesRepositoryProvider);
+  final pending = repo.subscribeFileContent(fileId);
+  ref.onDispose(() async {
+    final qsId = await pending;
+    if (qsId != null) repo.unsubscribeFileContent(qsId);
+  });
+  return pending;
+});
+
+/// True once the body subscription's SubscribeApplied has resolved, meaning
+/// the cache now holds the server's current body (or its absence).
+final noteContentHydratedProvider =
+    FutureProvider.autoDispose.family<bool, String>((ref, fileId) async {
+  final qsId = await ref.watch(noteContentSubscriptionProvider(fileId));
+  return qsId != null;
+});
+
+/// The file's body, or null while it is still unknown. A row already in
+/// cache answers immediately; otherwise the value stays null until
+/// SubscribeApplied, at which point a missing row means the file genuinely
+/// has no body (large binaries are stored without one). Callers must not
+/// treat null as empty: an editor seeded with '' before the body arrives
+/// would autosave over the real note.
+final noteContentProvider =
+    Provider.autoDispose.family<String?, String>((ref, fileId) {
+  final hydrated = ref
+      .watch(noteContentHydratedProvider(fileId))
+      .maybeWhen(data: (v) => v, orElse: () => false);
+  final client = ref.watch(notesClientProvider);
+  if (client == null) return null;
+  final row = watchListenable(ref, client.fileContent.rowNotifier(fileId));
+  if (row != null) return row.content;
+  return hydrated ? '' : null;
+});
+
 final folderNoteCountProvider = Provider.family<int, String>((ref, folderPath) {
   final folderPathWithSlash = '$folderPath/';
   return ref
@@ -107,7 +151,8 @@ final credentialStoreDotfileProvider =
   final row = files.firstWhereOrNull(
     (f) => f.path == '${CredentialNameDeriver.storeRoot}/$fileName',
   );
-  return row?.content;
+  if (row == null) return null;
+  return ref.watch(noteContentProvider(row.id));
 });
 
 final credentialWriterProvider = Provider<CredentialWriter?>((ref) {

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:spacetimedb_sdk/spacetimedb_sdk.dart';
 import '../generated/client.dart';
+import '../generated/file_content.dart';
 import '../generated/space_file.dart';
 import '../providers/notes_providers.dart';
 import '../services/genui_note_parser.dart';
@@ -34,6 +35,7 @@ class _NoteScreenState extends ConsumerState<NoteScreen> {
   String _currentPath = '';
   String _currentContent = '';
   String _lastSavedContent = '';
+  bool _contentLoaded = false;
   bool _isChatOpen = false;
   double _chatHeight = 0;
 
@@ -41,7 +43,8 @@ class _NoteScreenState extends ConsumerState<NoteScreen> {
 
   Timer? _debounceTimer;
   SpacetimeDbClient? _listenedClient;
-  StreamSubscription<TableUpdateEvent<SpaceFile>>? _contentSubscription;
+  StreamSubscription<TableInsertEvent<FileContent>>? _contentInsertSubscription;
+  StreamSubscription<TableUpdateEvent<FileContent>>? _contentUpdateSubscription;
   StreamSubscription<TableUpdateEvent<SpaceFile>>? _pathSubscription;
 
   @override
@@ -54,7 +57,7 @@ class _NoteScreenState extends ConsumerState<NoteScreen> {
   void didUpdateWidget(NoteScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.noteId != widget.noteId) {
-      _saveContent();
+      _saveContent(noteId: oldWidget.noteId);
       _initNote();
     }
   }
@@ -74,9 +77,17 @@ class _NoteScreenState extends ConsumerState<NoteScreen> {
   @override
   Widget build(BuildContext context) {
     final note = ref.watch(fileByIdProvider(widget.noteId));
+    final content = ref.watch(noteContentProvider(widget.noteId));
+    final hydrated = ref
+        .watch(noteContentHydratedProvider(widget.noteId))
+        .maybeWhen(data: (v) => v, orElse: () => false);
 
     if (note != null && note.path != _currentPath) {
       _currentPath = note.path;
+    }
+
+    if (content != null && !_contentLoaded) {
+      _seedContent(content);
     }
 
     final isDesktop = PlatformUtils.isDesktopLayout(context);
@@ -91,17 +102,20 @@ class _NoteScreenState extends ConsumerState<NoteScreen> {
         }
         await _saveAndExit();
       },
-      child: isDesktop ? _buildDesktopLayout(note) : _buildMobileLayout(note),
+      child: isDesktop
+          ? _buildDesktopLayout(note, content, hydrated)
+          : _buildMobileLayout(note, content, hydrated),
     );
   }
 
-  Widget _buildDesktopLayout(SpaceFile? note) {
+  Widget _buildDesktopLayout(SpaceFile? note, String? content, bool hydrated) {
     return Stack(
       children: [
         Column(
           children: [
-            if (note != null) NoteStatusBar(note: note),
-            Expanded(child: _buildEditor(note)),
+            if (note != null)
+              NoteStatusBar(note: note, contentHydrated: hydrated),
+            Expanded(child: _buildEditor(content)),
           ],
         ),
         Positioned(
@@ -118,12 +132,12 @@ class _NoteScreenState extends ConsumerState<NoteScreen> {
     );
   }
 
-  Widget _buildMobileLayout(SpaceFile? note) {
+  Widget _buildMobileLayout(SpaceFile? note, String? content, bool hydrated) {
     return Column(
       children: [
-        if (note != null) NoteStatusBar(note: note),
+        if (note != null) NoteStatusBar(note: note, contentHydrated: hydrated),
         Expanded(
-          child: _buildEditor(note),
+          child: _buildEditor(content),
         ),
         if (_isChatOpen) _buildMobileChatArea(),
         NoteBottomBar(
@@ -199,18 +213,15 @@ class _NoteScreenState extends ConsumerState<NoteScreen> {
     );
   }
 
-  Widget _buildEditor(SpaceFile? note) {
-    final content =
-        _currentContent.isNotEmpty ? _currentContent : (note?.content ?? '');
+  /// No editor exists until the body is known. The editor autosaves, so an
+  /// editor seeded with '' during the gap before the body arrives would write
+  /// that '' over the real note; not building it is what rules that out.
+  Widget _buildEditor(String? content) {
+    if (content == null) return const SizedBox.shrink();
 
-    if (_currentContent.isEmpty && note != null) {
-      _currentContent = note.content;
-      _lastSavedContent = note.content;
-    }
-
-    if (GenuiNoteParser.parse(content) != null) {
+    if (GenuiNoteParser.parse(_currentContent) != null) {
       return GenuiSurface(
-        body: content,
+        body: _currentContent,
         onBodyChanged: (newBody) {
           _currentContent = newBody;
           _debounceTimer?.cancel();
@@ -225,7 +236,7 @@ class _NoteScreenState extends ConsumerState<NoteScreen> {
     return KeyboardDismissOnScroll(
       child: QuillNoteEditor(
         key: _quillKey,
-        initialContent: content,
+        initialContent: _currentContent,
         showToolbar: PlatformUtils.isDesktopLayout(context),
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
         onContentChanged: (markdown) {
@@ -242,21 +253,25 @@ class _NoteScreenState extends ConsumerState<NoteScreen> {
 
   String get _noteName => _currentPath.split('/').last;
 
+  void _seedContent(String content) {
+    _contentLoaded = true;
+    _currentContent = content;
+    _lastSavedContent = content;
+    debugLogger.info('NOTE', 'Opened: $_noteName (${content.length} chars)');
+  }
+
   void _initNote() {
     _debounceTimer?.cancel();
+    _contentLoaded = false;
+    _currentContent = '';
+    _lastSavedContent = '';
 
     final note = ref.read(fileByIdProvider(widget.noteId));
 
     if (note != null) {
       _currentPath = note.path;
-      _currentContent = note.content;
-      _lastSavedContent = note.content;
-      debugLogger.info(
-          'NOTE', 'Opened: $_noteName (${note.content.length} chars)');
     } else {
       _currentPath = '';
-      _currentContent = '';
-      _lastSavedContent = '';
       debugLogger.info('NOTE', 'Note not found: ${widget.noteId}');
     }
 
@@ -292,37 +307,48 @@ class _NoteScreenState extends ConsumerState<NoteScreen> {
       ref.read(currentNotePathProvider.notifier).state = _currentPath;
     });
 
-    _contentSubscription = client.spaceFile.onUpdate.listen((event) {
-      if (event.newRow.id != widget.noteId) return;
+    _contentInsertSubscription = client.fileContent.onInsert.listen((event) {
+      if (event.row.fileId != widget.noteId) return;
+      _applyRemoteContent(event.row.content, event.context);
+    });
 
-      debugLogger.info(
-        'SYNC_DEBUG',
-        'NoteScreen update',
-        'isMyTransaction=${event.context.isMyTransaction}, isOptimistic=${event.context.isOptimistic}, contentChanged=${event.newRow.content != _currentContent}, name=${event.newRow.name}',
-      );
-
-      if (event.context.isMyTransaction) {
-        debugLogger.info('SYNC_DEBUG', 'Dropped as local echo');
-        _lastSavedContent = event.newRow.content;
-        return;
-      }
-
-      if (event.newRow.content != _currentContent) {
-        debugLogger.info('SYNC_DEBUG', 'Applying external update to editor');
-        _debounceTimer?.cancel();
-        _currentContent = event.newRow.content;
-        _lastSavedContent = event.newRow.content;
-        _quillKey.currentState?.updateContent(event.newRow.content);
-        if (mounted) setState(() {});
-      } else {
-        debugLogger.info('SYNC_DEBUG', 'Content identical, skipping');
-      }
+    _contentUpdateSubscription = client.fileContent.onUpdate.listen((event) {
+      if (event.newRow.fileId != widget.noteId) return;
+      _applyRemoteContent(event.newRow.content, event.context);
     });
   }
 
+  void _applyRemoteContent(String content, EventContext context) {
+    debugLogger.info(
+      'SYNC_DEBUG',
+      'NoteScreen content event',
+      'isMyTransaction=${context.isMyTransaction}, isOptimistic=${context.isOptimistic}, contentChanged=${content != _currentContent}',
+    );
+
+    if (context.isMyTransaction) {
+      debugLogger.info('SYNC_DEBUG', 'Dropped as local echo');
+      _lastSavedContent = content;
+      return;
+    }
+
+    if (content == _currentContent) {
+      debugLogger.info('SYNC_DEBUG', 'Content identical, skipping');
+      return;
+    }
+
+    debugLogger.info('SYNC_DEBUG', 'Applying external update to editor');
+    _debounceTimer?.cancel();
+    _currentContent = content;
+    _lastSavedContent = content;
+    _quillKey.currentState?.updateContent(content);
+    if (mounted) setState(() {});
+  }
+
   void _detachSubscriptions() {
-    _contentSubscription?.cancel();
-    _contentSubscription = null;
+    _contentInsertSubscription?.cancel();
+    _contentInsertSubscription = null;
+    _contentUpdateSubscription?.cancel();
+    _contentUpdateSubscription = null;
     _pathSubscription?.cancel();
     _pathSubscription = null;
     _listenedClient = null;
@@ -335,12 +361,19 @@ class _NoteScreenState extends ConsumerState<NoteScreen> {
     if (mounted) Navigator.of(context).pop();
   }
 
-  Future<void> _saveContent() async {
+  /// Flushes pending edits, optionally against a note other than the one now
+  /// on screen.
+  ///
+  /// Navigating between notes reuses this State, and `didUpdateWidget` runs
+  /// after `widget.noteId` has already become the new note — so a flush that
+  /// read the id off the widget would write the previous note's text over a
+  /// different file.
+  Future<void> _saveContent({String? noteId}) async {
     if (_currentContent == _lastSavedContent) return;
 
     try {
       debugLogger.save('$_noteName: ${_currentContent.length} chars');
-      await _repo.updateNote(widget.noteId, _currentContent);
+      await _repo.updateNote(noteId ?? widget.noteId, _currentContent);
       _lastSavedContent = _currentContent;
     } catch (e) {
       debugLogger.error('SAVE', '$_noteName failed: $e');
