@@ -364,10 +364,11 @@ class _NoteScreenState extends ConsumerState<NoteScreen> {
   /// Flushes pending edits, optionally against a note other than the one now
   /// on screen.
   ///
-  /// Navigating between notes reuses this State, and `didUpdateWidget` runs
-  /// after `widget.noteId` has already become the new note — so a flush that
-  /// read the id off the widget would write the previous note's text over a
-  /// different file.
+  /// Both hosts key this screen by note id, so switching notes normally
+  /// remounts it and `dispose` flushes under the old id. `didUpdateWidget`
+  /// remains for any unkeyed host: it runs after `widget.noteId` has already
+  /// become the new note, so a flush that read the id off the widget would
+  /// write the previous note's text over a different file.
   Future<void> _saveContent({String? noteId}) async {
     if (_currentContent == _lastSavedContent) return;
 

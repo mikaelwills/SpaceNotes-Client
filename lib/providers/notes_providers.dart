@@ -109,12 +109,18 @@ final noteContentSubscriptionProvider =
   return pending;
 });
 
-/// True once the body subscription's SubscribeApplied has resolved, meaning
-/// the cache now holds the server's current body (or its absence).
+/// True once the SDK has processed the body subscription's SubscribeApplied,
+/// meaning the cache now holds the server's current body (or its absence).
+/// The subscribe future alone is not that signal: the SDK resolves it
+/// without error when the socket drops, so this also requires the query set
+/// to be in the repository's applied set. Turns true later when a reconnect
+/// resubscribes the set and its rows land.
 final noteContentHydratedProvider =
     FutureProvider.autoDispose.family<bool, String>((ref, fileId) async {
+  final applied = ref.read(notesRepositoryProvider).appliedNotesQuerySets;
+  watchListenable(ref, applied);
   final qsId = await ref.watch(noteContentSubscriptionProvider(fileId));
-  return qsId != null;
+  return qsId != null && applied.value.contains(qsId);
 });
 
 /// The file's body, or null while it is still unknown. A row already in

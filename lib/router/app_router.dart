@@ -187,7 +187,7 @@ GoRouter createAppRouter(ProviderContainer container) {
                   final noteId = state.pathParameters['id']!;
                   return _buildFadeTransitionPage(
                     key: state.pageKey,
-                    child: _FileScreen(fileId: noteId),
+                    child: _FileScreen(key: ValueKey(noteId), fileId: noteId),
                   );
                 },
               ),
@@ -265,7 +265,7 @@ CustomTransitionPage<void> _buildFadeTransitionPage({
 }
 
 class _FileScreen extends ConsumerWidget {
-  const _FileScreen({required this.fileId});
+  const _FileScreen({super.key, required this.fileId});
 
   final String fileId;
 

@@ -5,7 +5,7 @@ import 'package:collection/collection.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart'
-    show kIsWeb, ValueNotifier, visibleForTesting;
+    show kIsWeb, ValueListenable, ValueNotifier, visibleForTesting;
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:spacetimedb_sdk/spacetimedb_sdk.dart' as stdb;
@@ -103,11 +103,23 @@ class _ClientLane {
 
   final ValueNotifier<SpacetimeDbClient?> clientNotifier =
       ValueNotifier<SpacetimeDbClient?>(null);
+  final ValueNotifier<Set<int>> appliedQuerySets =
+      ValueNotifier<Set<int>>(const {});
   final Map<int, SpacetimeDbClient> querySetOwners = {};
   final Set<int> deferredUnsubscribes = {};
   final List<StreamSubscription> subscriptions = [];
 
   String tag(String message) => '[$name] $message';
+
+  void markApplied(int querySetId) {
+    if (appliedQuerySets.value.contains(querySetId)) return;
+    appliedQuerySets.value = {...appliedQuerySets.value, querySetId};
+  }
+
+  void forgetApplied(int querySetId) {
+    if (!appliedQuerySets.value.contains(querySetId)) return;
+    appliedQuerySets.value = {...appliedQuerySets.value}..remove(querySetId);
+  }
 }
 
 /// Notes repository implementation using SpacetimeDB
@@ -146,6 +158,9 @@ class SpacetimeDbNotesRepository {
 
   ValueNotifier<SpacetimeDbClient?> get chatClientNotifier =>
       _chatLane.clientNotifier;
+
+  ValueListenable<Set<int>> get appliedNotesQuerySets =>
+      _notesLane.appliedQuerySets;
 
   final _syncStateSubject =
       BehaviorSubject<SyncState>.seeded(const SyncState());
@@ -195,6 +210,7 @@ class SpacetimeDbNotesRepository {
 
   void unsubscribeAgent(int querySetId) {
     final owner = _chatLane.querySetOwners.remove(querySetId);
+    _chatLane.forgetApplied(querySetId);
     final client = _chatLane.client;
     if (client == null || !identical(owner, client)) return;
     if (!client.connection.state.isConnected) {
@@ -211,7 +227,9 @@ class SpacetimeDbNotesRepository {
   /// querySetId to pass back to [unsubscribeFileContent]. Awaits
   /// SubscribeApplied so the row is in the cache on resolve. A file with no
   /// `file_content` row (large binaries) resolves normally with nothing in
-  /// cache — that is empty content, not an error.
+  /// cache — that is empty content, not an error. The SDK also resolves when
+  /// the connection drops before SubscribeApplied; check the returned id
+  /// against [appliedNotesQuerySets] to tell the two apart.
   Future<int?> subscribeFileContent(String fileId) async {
     final client = _notesLane.client;
     if (client == null) {
@@ -226,6 +244,10 @@ class SpacetimeDbNotesRepository {
       final qsId = await client.subscriptions.subscribe(
           ["SELECT * FROM file_content WHERE file_id = '$fileId'"]);
       _notesLane.querySetOwners[qsId] = client;
+      if (!_notesLane.appliedQuerySets.value.contains(qsId)) {
+        span.end('resolved without SubscribeApplied (connection dropped)');
+        return qsId;
+      }
       final row = client.fileContent.rows.value
           .firstWhereOrNull((r) => r.fileId == fileId);
       span.end(row == null
@@ -242,6 +264,7 @@ class SpacetimeDbNotesRepository {
 
   void unsubscribeFileContent(int querySetId) {
     final owner = _notesLane.querySetOwners.remove(querySetId);
+    _notesLane.forgetApplied(querySetId);
     final client = _notesLane.client;
     if (client == null || !identical(owner, client)) return;
     if (!client.connection.state.isConnected) {
@@ -956,6 +979,7 @@ class SpacetimeDbNotesRepository {
     _syncStateSubject.close();
     for (final lane in _lanes) {
       lane.clientNotifier.dispose();
+      lane.appliedQuerySets.dispose();
       await lane.offlineStorage?.dispose();
       lane.offlineStorage = null;
     }
@@ -1133,6 +1157,7 @@ class SpacetimeDbNotesRepository {
     lane.subscriptions.clear();
     lane.querySetOwners.clear();
     lane.deferredUnsubscribes.clear();
+    lane.appliedQuerySets.value = const {};
     lane.hydrationSpan?.end('aborted: connection reset');
     lane.hydrationSpan = null;
 
@@ -1577,6 +1602,7 @@ class SpacetimeDbNotesRepository {
 
     final subscribeAppliedSub =
         client.subscriptions.onSubscribeApplied.listen((applied) {
+      lane.markApplied(applied.querySetId);
       var bytes = 0;
       final tables = <String>[];
       for (final table in applied.rows.tables) {
