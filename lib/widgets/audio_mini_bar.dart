@@ -6,6 +6,8 @@ import '../providers/audio_playback_provider.dart';
 import '../theme/spacenotes_theme.dart';
 import 'adaptive/platform_utils.dart';
 
+const double _miniBarTile = 52;
+
 class AudioMiniBar extends ConsumerWidget {
   const AudioMiniBar({super.key});
 
@@ -154,7 +156,7 @@ class _MiniBarSurface extends StatelessWidget {
                         onPressed: onDismiss,
                       )
                     else
-                      const SizedBox(width: 4),
+                      const SizedBox.shrink(),
                   ],
                 ),
               ],
@@ -204,7 +206,9 @@ class _TransportButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return IconButton(
       iconSize: 26,
-      padding: const EdgeInsets.all(10),
+      padding: EdgeInsets.zero,
+      constraints:
+          const BoxConstraints.tightFor(width: _miniBarTile, height: 48),
       tooltip: isPlaying ? 'pause' : 'play',
       icon: Icon(
         isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
@@ -229,9 +233,10 @@ class _SkipButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return IconButton(
-      iconSize: 20,
+      iconSize: 22,
       padding: EdgeInsets.zero,
-      constraints: const BoxConstraints.tightFor(width: 40, height: 48),
+      constraints:
+          const BoxConstraints.tightFor(width: _miniBarTile, height: 48),
       tooltip: tooltip,
       icon: Icon(icon, color: SpaceNotesTheme.fg),
       onPressed: onPressed,
