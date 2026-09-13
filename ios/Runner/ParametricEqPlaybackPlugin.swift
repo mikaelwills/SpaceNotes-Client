@@ -32,7 +32,16 @@ class ParametricEqPlaybackPlugin: NSObject, FlutterPlugin {
                 return
             }
             let title = args?["title"] as? String ?? (path as NSString).lastPathComponent
-            result(playback.load(path: path, title: title))
+            let loaded = playback.load(path: path, title: title)
+            if loaded {
+                result(true)
+            } else {
+                result(FlutterError(
+                    code: "load_failed",
+                    message: playback.lastError ?? "unknown native load failure",
+                    details: path
+                ))
+            }
 
         case "play":
             playback.play()

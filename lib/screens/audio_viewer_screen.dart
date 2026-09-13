@@ -212,7 +212,7 @@ class _AudioViewerScreenState extends ConsumerState<AudioViewerScreen>
       final title = ref.read(fileByIdProvider(widget.fileId))?.name;
       final loaded = await _eq.load(localPath, title: title);
       debugLogger.info('AUDIO_VIEWER', 'Native load result', 'loaded=$loaded');
-      if (!loaded) throw Exception('native player failed to load file');
+      if (!loaded) throw Exception('native player rejected the file');
       if (!mounted) return;
       final duration = await _eq.duration();
       debugLogger.info(

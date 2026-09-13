@@ -32,8 +32,7 @@ final class ParametricEqPlayback {
             let file = try AVAudioFile(forReading: url)
             NSLog("[PARAMETRIC_EQ] AVAudioFile opened, length=\(file.length) format=\(file.processingFormat)")
             audioFile = file
-            engine.disconnectNodeOutput(playerNode)
-            engine.connect(playerNode, to: eq, format: file.processingFormat)
+            rewireGraph(format: file.processingFormat)
 
             #if os(iOS)
             let session = AVAudioSession.sharedInstance()
@@ -61,6 +60,7 @@ final class ParametricEqPlayback {
             return
         }
         if !playerNode.isPlaying {
+            playerNode.stop()
             scheduleFromCurrentOffset(file: file)
             playerNode.play()
             NSLog("[PARAMETRIC_EQ] playerNode.play() called, now isPlaying=\(playerNode.isPlaying)")
@@ -69,16 +69,17 @@ final class ParametricEqPlayback {
     }
 
     func pause() {
-        playerNode.pause()
+        let position = currentPosition()
+        playerNode.stop()
+        if let file = audioFile {
+            seekOffset = frames(forSeconds: position, in: file)
+        }
         isPlaying = false
     }
 
     func seek(seconds: Double) {
         guard let file = audioFile else { return }
-        let sampleRate = file.processingFormat.sampleRate
-        seekOffset = AVAudioFramePosition(seconds * sampleRate)
-        if seekOffset < 0 { seekOffset = 0 }
-        if seekOffset > file.length { seekOffset = file.length }
+        seekOffset = frames(forSeconds: seconds, in: file)
 
         playerNode.stop()
         scheduleFromCurrentOffset(file: file)
@@ -167,6 +168,19 @@ final class ParametricEqPlayback {
         isPlaying = false
         seekOffset = 0
         audioFile = nil
+    }
+
+    private func rewireGraph(format: AVAudioFormat) {
+        engine.disconnectNodeOutput(playerNode)
+        engine.disconnectNodeOutput(eq)
+        engine.connect(playerNode, to: eq, format: format)
+        engine.connect(eq, to: engine.mainMixerNode, format: format)
+        NSLog("[PARAMETRIC_EQ] graph rewired at \(format.sampleRate)Hz, mixer=\(engine.mainMixerNode.outputFormat(forBus: 0).sampleRate)Hz")
+    }
+
+    private func frames(forSeconds seconds: Double, in file: AVAudioFile) -> AVAudioFramePosition {
+        let frames = AVAudioFramePosition(seconds * file.processingFormat.sampleRate)
+        return min(max(frames, 0), file.length)
     }
 
     private func scheduleFromCurrentOffset(file: AVAudioFile) {

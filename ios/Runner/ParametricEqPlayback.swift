@@ -12,6 +12,7 @@ final class ParametricEqPlayback {
     private var title = ""
     private var filePath: String?
     private let skipInterval: TimeInterval = 10
+    private(set) var lastError: String?
 
     var onPlaybackStateChanged: ((Bool) -> Void)?
 
@@ -162,33 +163,56 @@ final class ParametricEqPlayback {
         stop()
         self.title = title
         self.filePath = path
+        let url = URL(fileURLWithPath: path)
+        NSLog("[PARAMETRIC_EQ] file exists on disk: \(FileManager.default.fileExists(atPath: path))")
+        let file: AVAudioFile
         do {
-            let url = URL(fileURLWithPath: path)
-            NSLog("[PARAMETRIC_EQ] file exists on disk: \(FileManager.default.fileExists(atPath: path))")
-            let file = try AVAudioFile(forReading: url)
-            NSLog("[PARAMETRIC_EQ] AVAudioFile opened, length=\(file.length) format=\(file.processingFormat)")
-            audioFile = file
-            engine.disconnectNodeOutput(playerNode)
-            engine.connect(playerNode, to: eq, format: file.processingFormat)
+            file = try AVAudioFile(forReading: url)
+        } catch {
+            NSLog("[PARAMETRIC_EQ] open failed \(path): \(error)")
+            lastError = "open: \(error.localizedDescription)"
+            return false
+        }
+        NSLog("[PARAMETRIC_EQ] AVAudioFile opened, length=\(file.length) format=\(file.processingFormat)")
+        audioFile = file
 
-            #if os(iOS)
-            let session = AVAudioSession.sharedInstance()
+        #if os(iOS)
+        let session = AVAudioSession.sharedInstance()
+        do {
             try session.setCategory(.playback, mode: .default)
             try session.setActive(true)
             NSLog("[PARAMETRIC_EQ] AVAudioSession activated, category=\(session.category.rawValue)")
-            #endif
-
-            NSLog("[PARAMETRIC_EQ] engine.isRunning before start: \(engine.isRunning)")
-            if !engine.isRunning {
-                try engine.start()
-                NSLog("[PARAMETRIC_EQ] engine.start() succeeded")
-            }
-            updateNowPlaying()
-            return true
         } catch {
-            NSLog("[PARAMETRIC_EQ] Failed to load \(path): \(error)")
+            NSLog("[PARAMETRIC_EQ] session activation failed: \(error)")
+            lastError = "session: \(error.localizedDescription)"
             return false
         }
+        #endif
+
+        rewireGraph(format: file.processingFormat)
+
+        NSLog("[PARAMETRIC_EQ] engine.isRunning before start: \(engine.isRunning)")
+        if !engine.isRunning {
+            do {
+                try engine.start()
+                NSLog("[PARAMETRIC_EQ] engine.start() succeeded")
+            } catch {
+                NSLog("[PARAMETRIC_EQ] engine.start failed at \(file.processingFormat.sampleRate)Hz: \(error)")
+                lastError = "engine.start: \(error.localizedDescription)"
+                return false
+            }
+        }
+        updateNowPlaying()
+        lastError = nil
+        return true
+    }
+
+    private func rewireGraph(format: AVAudioFormat) {
+        engine.disconnectNodeOutput(playerNode)
+        engine.disconnectNodeOutput(eq)
+        engine.connect(playerNode, to: eq, format: format)
+        engine.connect(eq, to: engine.mainMixerNode, format: format)
+        NSLog("[PARAMETRIC_EQ] graph rewired at \(format.sampleRate)Hz, mixer=\(engine.mainMixerNode.outputFormat(forBus: 0).sampleRate)Hz")
     }
 
     func play() {
@@ -199,6 +223,7 @@ final class ParametricEqPlayback {
         }
         if !playerNode.isPlaying {
             guard ensureEngineRunning() else { return }
+            playerNode.stop()
             scheduleFromCurrentOffset(file: file)
             playerNode.play()
             NSLog("[PARAMETRIC_EQ] playerNode.play() called, now isPlaying=\(playerNode.isPlaying)")
@@ -208,17 +233,18 @@ final class ParametricEqPlayback {
     }
 
     func pause() {
-        playerNode.pause()
+        let position = currentPosition()
+        playerNode.stop()
+        if let file = audioFile {
+            seekOffset = frames(forSeconds: position, in: file)
+        }
         isPlaying = false
         updateNowPlaying()
     }
 
     func seek(seconds: Double) {
         guard let file = audioFile else { return }
-        let sampleRate = file.processingFormat.sampleRate
-        seekOffset = AVAudioFramePosition(seconds * sampleRate)
-        if seekOffset < 0 { seekOffset = 0 }
-        if seekOffset > file.length { seekOffset = file.length }
+        seekOffset = frames(forSeconds: seconds, in: file)
 
         playerNode.stop()
         scheduleFromCurrentOffset(file: file)
@@ -322,6 +348,11 @@ final class ParametricEqPlayback {
             NSLog("[PARAMETRIC_EQ] Failed to deactivate AVAudioSession: \(error)")
         }
         #endif
+    }
+
+    private func frames(forSeconds seconds: Double, in file: AVAudioFile) -> AVAudioFramePosition {
+        let frames = AVAudioFramePosition(seconds * file.processingFormat.sampleRate)
+        return min(max(frames, 0), file.length)
     }
 
     private func scheduleFromCurrentOffset(file: AVAudioFile) {
