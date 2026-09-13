@@ -73,6 +73,7 @@ class _VideoViewerScreenState extends ConsumerState<VideoViewerScreen>
                   progress: _progress,
                   receivedBytes: _receivedBytes,
                   startedAt: _downloadStartedAt,
+                  totalBytes: file.size.toInt(),
                 ),
               );
 

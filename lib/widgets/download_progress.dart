@@ -14,11 +14,13 @@ class DownloadProgress extends StatefulWidget {
     required this.progress,
     required this.receivedBytes,
     required this.startedAt,
+    this.totalBytes = 0,
   });
 
   final double progress;
   final int receivedBytes;
   final DateTime? startedAt;
+  final int totalBytes;
 
   @override
   State<DownloadProgress> createState() => _DownloadProgressState();
@@ -68,7 +70,7 @@ class _DownloadProgressState extends State<DownloadProgress> {
                       fontFamily: SpaceNotesTheme.fontMono,
                       color: SpaceNotesTheme.muted,
                       fontSize: 11)),
-              Text('${(progress * 100).toStringAsFixed(0)}%',
+              Text(_transferredLabel,
                   style: const TextStyle(
                       fontFamily: SpaceNotesTheme.fontMono,
                       color: SpaceNotesTheme.muted,
@@ -78,6 +80,22 @@ class _DownloadProgressState extends State<DownloadProgress> {
         ),
       ],
     );
+  }
+
+  String get _transferredLabel {
+    final total = widget.totalBytes;
+    if (total <= 0) return '${(widget.progress * 100).toStringAsFixed(0)}%';
+    const megabyte = 1024 * 1024;
+    if (total < megabyte) {
+      final receivedKb = widget.receivedBytes / 1024;
+      return '${receivedKb.toStringAsFixed(0)}/${(total / 1024).toStringAsFixed(0)}KB';
+    }
+    final receivedMb = widget.receivedBytes / megabyte;
+    final totalMb = total / megabyte;
+    final receivedText = receivedMb >= 10
+        ? receivedMb.toStringAsFixed(0)
+        : receivedMb.toStringAsFixed(1);
+    return '$receivedText/${totalMb.toStringAsFixed(0)}MB';
   }
 
   String get _speedLabel {

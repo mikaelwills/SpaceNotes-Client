@@ -91,6 +91,7 @@ class _AudioViewerScreenState extends ConsumerState<AudioViewerScreen>
                           progress: _progress,
                           receivedBytes: _receivedBytes,
                           startedAt: _downloadStartedAt,
+                          totalBytes: file.size.toInt(),
                         ),
             ),
             if (_localPath != null)

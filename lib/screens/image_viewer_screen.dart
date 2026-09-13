@@ -60,6 +60,7 @@ class _ImageViewerScreenState extends ConsumerState<ImageViewerScreen>
                           progress: _progress,
                           receivedBytes: _receivedBytes,
                           startedAt: _downloadStartedAt,
+                          totalBytes: file.size.toInt(),
                         ),
             ),
             if (_localPath != null)
