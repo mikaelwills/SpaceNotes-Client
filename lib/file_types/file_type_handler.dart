@@ -48,6 +48,8 @@ abstract class FileTypeHandler {
   /// so a new binary type can't forget to opt out.
   bool get isViewableHere => !isOffloadable || Capabilities.canDownloadFiles;
 
+  bool get hostsMobileDock => false;
+
   NewFileTemplate? get newFileTemplate;
 
   bool get isCreatable => newFileTemplate != null;

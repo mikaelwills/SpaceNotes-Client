@@ -19,6 +19,7 @@ class SnChatDock extends StatelessWidget {
   final List<Widget> leading;
   final List<Widget> trailing;
   final EdgeInsets padding;
+  final BorderRadius borderRadius;
   final int maxLines;
   final int minLines;
   final bool showFade;
@@ -38,6 +39,8 @@ class SnChatDock extends StatelessWidget {
     this.leading = const [],
     this.trailing = const [],
     this.padding = const EdgeInsets.fromLTRB(14, 8, 14, 12),
+    this.borderRadius =
+        const BorderRadius.all(Radius.circular(SpaceNotesTheme.radiusXs)),
     this.maxLines = 6,
     this.minLines = 1,
     this.showFade = true,
@@ -75,7 +78,7 @@ class SnChatDock extends StatelessWidget {
             decoration: BoxDecoration(
               color: SpaceNotesTheme.bgAlt,
               border: Border.all(color: SpaceNotesTheme.hairline, width: 1),
-              borderRadius: BorderRadius.circular(SpaceNotesTheme.radiusXs),
+              borderRadius: borderRadius,
             ),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.end,

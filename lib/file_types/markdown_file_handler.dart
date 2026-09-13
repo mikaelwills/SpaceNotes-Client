@@ -31,6 +31,9 @@ class MarkdownFileHandler extends FileTypeHandler {
   bool get hasTextRepresentation => true;
 
   @override
+  bool get hostsMobileDock => true;
+
+  @override
   NewFileTemplate? get newFileTemplate =>
       const NewFileTemplate(label: 'Note', extension: 'md');
 

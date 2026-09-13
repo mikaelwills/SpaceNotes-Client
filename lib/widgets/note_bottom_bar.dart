@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:collection/collection.dart';
 import '../theme/spacenotes_theme.dart';
+import '../providers/audio_playback_provider.dart';
 import '../providers/notes_providers.dart';
 import '../providers/connection_providers.dart';
 import '../providers/chat_providers.dart';
@@ -11,6 +12,7 @@ import '../generated/space_file.dart';
 import 'desktop/desktop_shell.dart';
 import 'quill_note_editor.dart';
 import 'adaptive/platform_utils.dart';
+import 'audio_mini_bar.dart';
 import 'primitives/primitives.dart';
 
 class NoteBottomBar extends ConsumerStatefulWidget {
@@ -129,12 +131,22 @@ class _NoteBottomBarState extends ConsumerState<NoteBottomBar> {
       );
     }
 
+    final audioFileId =
+        ref.watch(audioPlaybackProvider.select((s) => s.fileId));
+    final attachedToMiniBar = AudioMiniBar.isVisible(context, audioFileId);
+
     return SafeArea(
       top: false,
       child: SnChatDock(
         controller: _controller,
         hint: 'ask about note…',
-        padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
+        padding: attachedToMiniBar
+            ? const EdgeInsets.fromLTRB(12, 0, 12, 12)
+            : const EdgeInsets.fromLTRB(14, 10, 14, 12),
+        borderRadius: attachedToMiniBar
+            ? const BorderRadius.vertical(
+                bottom: Radius.circular(SpaceNotesTheme.radiusXs))
+            : const BorderRadius.all(Radius.circular(SpaceNotesTheme.radiusXs)),
         onSend: _sendMessage,
         leading: leading,
       ),

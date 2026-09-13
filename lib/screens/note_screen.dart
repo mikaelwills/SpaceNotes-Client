@@ -7,6 +7,7 @@ import '../generated/file_content.dart';
 import '../generated/space_file.dart';
 import '../providers/notes_providers.dart';
 import '../services/genui_note_parser.dart';
+import '../widgets/audio_mini_bar.dart';
 import '../widgets/dashboard/genui_surface.dart';
 import '../widgets/quill_note_editor.dart';
 import '../widgets/note_status_bar.dart';
@@ -140,6 +141,7 @@ class _NoteScreenState extends ConsumerState<NoteScreen> {
           child: _buildEditor(content),
         ),
         if (_isChatOpen) _buildMobileChatArea(),
+        const AudioMiniBar(),
         NoteBottomBar(
           notePath: _currentPath,
           quillKey: _quillKey,

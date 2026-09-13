@@ -160,9 +160,6 @@ final class ParametricEqPlayback {
 
     func load(path: String, title: String) -> Bool {
         NSLog("[PARAMETRIC_EQ] load called, path=\(path)")
-        stop()
-        self.title = title
-        self.filePath = path
         let url = URL(fileURLWithPath: path)
         NSLog("[PARAMETRIC_EQ] file exists on disk: \(FileManager.default.fileExists(atPath: path))")
         let file: AVAudioFile
@@ -174,6 +171,9 @@ final class ParametricEqPlayback {
             return false
         }
         NSLog("[PARAMETRIC_EQ] AVAudioFile opened, length=\(file.length) format=\(file.processingFormat)")
+        stop()
+        self.title = title
+        self.filePath = path
         audioFile = file
 
         #if os(iOS)

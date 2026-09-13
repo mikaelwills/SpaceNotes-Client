@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import 'package:image/image.dart' as image_lib;
 import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
+import '../providers/audio_playback_provider.dart';
 import '../providers/notes_providers.dart';
 import '../providers/chat_providers.dart';
 import '../providers/file_transfer_providers.dart';
@@ -16,6 +17,7 @@ import '../dialogs/notes_list_dialogs.dart';
 import '../screens/credential_screen.dart';
 import '../screens/home_screen.dart';
 import 'primitives/primitives.dart';
+import 'audio_mini_bar.dart';
 import 'folder_picker_field.dart';
 import '../file_types/file_type_registry.dart';
 import '../services/debug_logger.dart';
@@ -99,6 +101,9 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
     }
 
     final folderPath = ref.watch(currentFolderPathProvider);
+    final audioFileId =
+        ref.watch(audioPlaybackProvider.select((s) => s.fileId));
+    final attachedToMiniBar = AudioMiniBar.isVisible(context, audioFileId);
 
     return SafeArea(
       top: false,
@@ -106,7 +111,13 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
         controller: _textController,
         focusNode: _focusNode,
         hint: _computeHint(isChat),
-        padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+        padding: attachedToMiniBar
+            ? const EdgeInsets.fromLTRB(12, 0, 12, 12)
+            : const EdgeInsets.fromLTRB(12, 8, 12, 12),
+        borderRadius: attachedToMiniBar
+            ? const BorderRadius.vertical(
+                bottom: Radius.circular(SpaceNotesTheme.radiusXs))
+            : const BorderRadius.all(Radius.circular(SpaceNotesTheme.radiusXs)),
         onChanged: isChat ? null : _onSearchChanged,
         onSend: _onSend,
         showSend: viewType != HomeViewType.passwords &&
@@ -356,7 +367,8 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
         File(path),
         onProgress: (sent, total) {
           if (total > 0) {
-            batch.progress(jobId, sent / total, sentBytes: sent, totalBytes: total);
+            batch.progress(jobId, sent / total,
+                sentBytes: sent, totalBytes: total);
           }
         },
       );
@@ -367,7 +379,8 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
       if (!mounted) return;
       await _showAlreadyExistsDialog(picked.name, targetFolder);
     } catch (e) {
-      debugLogger.error('UPLOAD', 'Error uploading ${picked.name}', e.toString());
+      debugLogger.error(
+          'UPLOAD', 'Error uploading ${picked.name}', e.toString());
       batch.fail(jobId, e.toString());
       batch.finishBatch();
     }
@@ -413,7 +426,6 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
       ),
     );
   }
-
 
   Future<void> _createQuickNote(String folderPath) async {
     final basePath = folderPath.isEmpty ? 'All Notes' : folderPath;

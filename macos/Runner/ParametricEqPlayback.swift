@@ -24,13 +24,19 @@ final class ParametricEqPlayback {
 
     func load(path: String) -> Bool {
         NSLog("[PARAMETRIC_EQ] load called, path=\(path)")
+        let url = URL(fileURLWithPath: path)
+        NSLog("[PARAMETRIC_EQ] file exists on disk: \(FileManager.default.fileExists(atPath: path))")
+        let file: AVAudioFile
+        do {
+            file = try AVAudioFile(forReading: url)
+        } catch {
+            NSLog("[PARAMETRIC_EQ] open failed \(path): \(error)")
+            return false
+        }
+        NSLog("[PARAMETRIC_EQ] AVAudioFile opened, length=\(file.length) format=\(file.processingFormat)")
         stop()
         filePath = path
         do {
-            let url = URL(fileURLWithPath: path)
-            NSLog("[PARAMETRIC_EQ] file exists on disk: \(FileManager.default.fileExists(atPath: path))")
-            let file = try AVAudioFile(forReading: url)
-            NSLog("[PARAMETRIC_EQ] AVAudioFile opened, length=\(file.length) format=\(file.processingFormat)")
             audioFile = file
             rewireGraph(format: file.processingFormat)
 

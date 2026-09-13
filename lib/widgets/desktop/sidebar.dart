@@ -9,6 +9,7 @@ import '../../providers/connection_providers.dart';
 import '../../providers/favourite_folders_provider.dart';
 import '../../providers/middle_pane_mode_provider.dart';
 import '../../providers/window_state_provider.dart';
+import '../audio_mini_bar.dart';
 import '../upload_progress_bar.dart';
 import '../../theme/spacenotes_theme.dart';
 import '../../version.dart';
@@ -43,6 +44,7 @@ class Sidebar extends ConsumerWidget {
           if (!isCollapsed) ...[
             const Expanded(child: _FavouritesList()),
             const _SidebarSearch(),
+            const AudioMiniBar(),
             const UploadProgressBar(),
             const _SidebarFooter(),
           ] else

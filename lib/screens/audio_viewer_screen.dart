@@ -1,20 +1,16 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../providers/audio_playback_provider.dart';
 import '../providers/notes_providers.dart';
 import '../providers/file_transfer_providers.dart';
 import '../services/local_download_store.dart';
 import '../services/debug_logger.dart';
-import '../services/parametric_eq_service.dart';
 import '../theme/spacenotes_theme.dart';
 import '../utils/pops_when_file_deleted.dart';
 import '../widgets/download_progress.dart';
 import '../widgets/parametric_eq_pad.dart';
 import '../widgets/share_button.dart';
 import '../widgets/waveform_scrubber.dart';
-
-const double _waveformBinSeconds = 0.125;
-const Duration _skipStep = Duration(seconds: 10);
 
 class AudioViewerScreen extends ConsumerStatefulWidget {
   const AudioViewerScreen({super.key, required this.fileId});
@@ -27,51 +23,12 @@ class AudioViewerScreen extends ConsumerStatefulWidget {
 
 class _AudioViewerScreenState extends ConsumerState<AudioViewerScreen>
     with PopsWhenFileDeleted<AudioViewerScreen> {
-  bool _loading = false;
+  bool _started = false;
   double _progress = 0;
   int _receivedBytes = 0;
   DateTime? _downloadStartedAt;
   String? _error;
   String? _localPath;
-
-  final ParametricEqService _eq = ParametricEqService();
-  Duration _position = Duration.zero;
-  Duration _duration = Duration.zero;
-  bool _isPlaying = false;
-  Timer? _positionPoll;
-  List<double>? _peaks;
-
-  final List<EqNotch> _notches = [];
-  bool _eqBypassed = false;
-
-  /// Pushes every notch to its own native band. Band index is positional, so
-  /// removing a notch re-indexes the rest — clearEq() first, then re-apply.
-  void _applyAllBands() {
-    for (var i = 0; i < _notches.length; i++) {
-      _eq.setEq(
-        band: i,
-        frequencyHz: _notches[i].frequencyHz,
-        gainDb: _notches[i].gainDb,
-        bandwidth: _notches[i].bandwidth,
-      );
-    }
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _eq.onPlaybackStateChanged = (isPlaying) {
-      if (mounted) setState(() => _isPlaying = isPlaying);
-    };
-  }
-
-  @override
-  void dispose() {
-    _positionPoll?.cancel();
-    _eq.onPlaybackStateChanged = null;
-    _eq.stop();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -81,11 +38,22 @@ class _AudioViewerScreenState extends ConsumerState<AudioViewerScreen>
       return const Center(child: CircularProgressIndicator());
     }
 
+    final playback = ref.watch(audioPlaybackProvider);
+    final controller = ref.read(audioPlaybackProvider.notifier);
+    final isCurrent = playback.fileId == widget.fileId;
     final remotePath = file!.path;
 
-    if (_localPath == null && !_loading && _error == null) {
+    if (!_started) {
+      _started = true;
+      final size = file.size.toInt();
+      final title = file.name;
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        _ensureAvailable(remotePath, file.size.toInt());
+        if (!mounted) return;
+        if (isCurrent) {
+          _resolveLocalPath(remotePath);
+        } else {
+          _ensureAvailable(remotePath, size, title);
+        }
       });
     }
 
@@ -98,51 +66,25 @@ class _AudioViewerScreenState extends ConsumerState<AudioViewerScreen>
               child: _error != null
                   ? Text(_error!,
                       style: const TextStyle(color: Colors.red, fontSize: 13))
-                  : _localPath != null
+                  : isCurrent
                       ? SizedBox(
                           width: double.infinity,
                           child: _AudioPlayerBody(
-                            isPlaying: _isPlaying,
-                            position: _position,
-                            duration: _duration,
-                            peaks: _peaks,
+                            isPlaying: playback.isPlaying,
+                            position: playback.position,
+                            duration: playback.duration,
+                            peaks: playback.peaks,
                             formatDuration: _formatDuration,
-                            onPlayPause: _togglePlayPause,
-                            onSeek: _seekTo,
-                            onSkip: (delta) => _seekTo(_position + delta),
-                            notches: _notches,
-                            eqBypassed: _eqBypassed,
-                            onToggleEqBypass: _notches.isEmpty
+                            onPlayPause: controller.togglePlayPause,
+                            onSeek: controller.seek,
+                            onSkip: controller.skip,
+                            notches: playback.notches,
+                            eqBypassed: playback.eqBypassed,
+                            onToggleEqBypass: playback.notches.isEmpty
                                 ? null
-                                : () {
-                                    final bypassing = !_eqBypassed;
-                                    setState(() => _eqBypassed = bypassing);
-                                    if (bypassing) {
-                                      _eq.clearEq();
-                                    } else {
-                                      _applyAllBands();
-                                    }
-                                  },
-                            onNotchChanged: (index, notch) {
-                              setState(() {
-                                if (index < _notches.length) {
-                                  _notches[index] = notch;
-                                } else {
-                                  _notches.add(notch);
-                                }
-                              });
-                              if (!_eqBypassed) _applyAllBands();
-                            },
-                            onNotchCleared: (index) {
-                              setState(() {
-                                if (index < _notches.length) {
-                                  _notches.removeAt(index);
-                                }
-                                _eqBypassed = false;
-                              });
-                              _eq.clearEq();
-                              if (_notches.isNotEmpty) _applyAllBands();
-                            },
+                                : controller.toggleEqBypass,
+                            onNotchChanged: controller.setNotch,
+                            onNotchCleared: controller.clearNotch,
                           ),
                         )
                       : DownloadProgress(
@@ -163,18 +105,24 @@ class _AudioViewerScreenState extends ConsumerState<AudioViewerScreen>
     );
   }
 
-  Future<void> _ensureAvailable(String remotePath, int expectedSize) async {
+  Future<void> _resolveLocalPath(String remotePath) async {
+    final store = ref.read(localDownloadStoreProvider);
+    final localPath = await store.localPathFor(remotePath);
+    if (mounted) setState(() => _localPath = localPath);
+  }
+
+  Future<void> _ensureAvailable(
+      String remotePath, int expectedSize, String title) async {
     final store = ref.read(localDownloadStoreProvider);
     final localPath = await store.localPathFor(remotePath);
     final state = await store.stateFor(remotePath, expectedSize: expectedSize);
 
     if (state == DownloadState.complete) {
-      await _initPlayer(localPath);
+      await _initPlayer(localPath, title);
       return;
     }
 
     setState(() {
-      _loading = true;
       _progress = 0;
       _receivedBytes = 0;
       _downloadStartedAt = DateTime.now();
@@ -195,80 +143,31 @@ class _AudioViewerScreenState extends ConsumerState<AudioViewerScreen>
           }
         },
       );
-      await _initPlayer(localPath);
+      await _initPlayer(localPath, title);
     } catch (e, st) {
       debugLogger.error('AUDIO_VIEWER', 'Fetch failed: $remotePath', '$e\n$st');
       if (mounted) setState(() => _error = 'Could not load audio: $e');
     } finally {
-      if (mounted) setState(() => _loading = false);
       ref.invalidate(downloadStateProvider(remotePath));
     }
   }
 
-  Future<void> _initPlayer(String localPath) async {
+  Future<void> _initPlayer(String localPath, String title) async {
+    if (!mounted) return;
     try {
       debugLogger.info(
           'AUDIO_VIEWER', 'Loading into native EQ player', localPath);
-      final title = ref.read(fileByIdProvider(widget.fileId))?.name;
-      final loaded = await _eq.load(localPath, title: title);
-      debugLogger.info('AUDIO_VIEWER', 'Native load result', 'loaded=$loaded');
-      if (!loaded) throw Exception('native player rejected the file');
-      if (!mounted) return;
-      final duration = await _eq.duration();
-      debugLogger.info(
-          'AUDIO_VIEWER', 'Duration reported', '${duration.inMilliseconds}ms');
-      setState(() {
-        _localPath = localPath;
-        _duration = duration;
-      });
-      await _eq.play();
+      await ref.read(audioPlaybackProvider.notifier).load(
+            fileId: widget.fileId,
+            localPath: localPath,
+            title: title,
+          );
       debugLogger.info('AUDIO_VIEWER', 'Play command sent', localPath);
-      setState(() => _isPlaying = true);
-      _startPositionPoll();
-      _loadWaveform();
+      if (mounted) setState(() => _localPath = localPath);
     } catch (e) {
       debugLogger.error(
           'AUDIO_VIEWER', 'Player init failed: $localPath', e.toString());
       if (mounted) setState(() => _error = 'Could not play audio: $e');
-    }
-  }
-
-  void _startPositionPoll() {
-    _positionPoll?.cancel();
-    _positionPoll =
-        Timer.periodic(const Duration(milliseconds: 200), (_) async {
-      if (!mounted) return;
-      final position = await _eq.position();
-      if (mounted) setState(() => _position = position);
-    });
-  }
-
-  Future<void> _loadWaveform() async {
-    try {
-      final peaks = await _eq.waveform(binSeconds: _waveformBinSeconds);
-      debugLogger.info(
-          'AUDIO_VIEWER', 'Waveform loaded', '${peaks.length} bins');
-      if (mounted) setState(() => _peaks = peaks);
-    } catch (e) {
-      debugLogger.error('AUDIO_VIEWER', 'Waveform failed', e.toString());
-    }
-  }
-
-  Future<void> _seekTo(Duration target) async {
-    var clamped = target;
-    if (clamped < Duration.zero) clamped = Duration.zero;
-    if (clamped > _duration) clamped = _duration;
-    setState(() => _position = clamped);
-    await _eq.seek(clamped);
-  }
-
-  Future<void> _togglePlayPause() async {
-    if (_isPlaying) {
-      await _eq.pause();
-      setState(() => _isPlaying = false);
-    } else {
-      await _eq.play();
-      setState(() => _isPlaying = true);
     }
   }
 
@@ -356,7 +255,7 @@ class _AudioPlayerBody extends StatelessWidget {
             children: [
               WaveformScrubber(
                 peaks: peaks,
-                binSeconds: _waveformBinSeconds,
+                binSeconds: audioWaveformBinSeconds,
                 position: position,
                 duration: duration,
                 isPlaying: isPlaying,
@@ -388,7 +287,7 @@ class _AudioPlayerBody extends StatelessWidget {
             IconButton(
               iconSize: 30,
               icon: const Icon(Icons.replay_10, color: SpaceNotesTheme.fg),
-              onPressed: () => onSkip(-_skipStep),
+              onPressed: () => onSkip(-audioSkipStep),
             ),
             IconButton(
               iconSize: 48,
@@ -403,7 +302,7 @@ class _AudioPlayerBody extends StatelessWidget {
             IconButton(
               iconSize: 30,
               icon: const Icon(Icons.forward_10, color: SpaceNotesTheme.fg),
-              onPressed: () => onSkip(_skipStep),
+              onPressed: () => onSkip(audioSkipStep),
             ),
           ],
         ),
