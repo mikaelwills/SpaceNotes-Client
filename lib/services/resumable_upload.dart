@@ -11,7 +11,7 @@ const int kResumableThresholdBytes = 8 * 1024 * 1024;
 
 /// Sent per request. Small enough that losing one is cheap, large enough that
 /// a 40MB file is ten requests rather than hundreds.
-const int kUploadChunkBytes = 4 * 1024 * 1024;
+const int kUploadChunkBytes = 32 * 1024 * 1024;
 
 /// A server-side upload session. The id is what makes a transfer resumable:
 /// it survives the connection that created it.
