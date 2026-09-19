@@ -8,7 +8,7 @@ import '../services/local_download_store.dart';
 import '../services/debug_logger.dart';
 import '../theme/spacenotes_theme.dart';
 import '../utils/pops_when_file_deleted.dart';
-import '../widgets/download_progress.dart';
+import '../widgets/downloading_badge.dart';
 import '../widgets/share_button.dart';
 
 class VideoViewerScreen extends ConsumerStatefulWidget {
@@ -22,12 +22,10 @@ class VideoViewerScreen extends ConsumerStatefulWidget {
 
 class _VideoViewerScreenState extends ConsumerState<VideoViewerScreen>
     with PopsWhenFileDeleted<VideoViewerScreen> {
-  bool _loading = false;
-  double _progress = 0;
-  int _receivedBytes = 0;
-  DateTime? _downloadStartedAt;
+  bool _started = false;
   String? _error;
   String? _localPath;
+  double _downloadProgress = 1.0;
   VideoPlayerController? _controller;
 
   @override
@@ -46,9 +44,10 @@ class _VideoViewerScreenState extends ConsumerState<VideoViewerScreen>
 
     final remotePath = file!.path;
 
-    if (_localPath == null && !_loading && _error == null) {
+    if (!_started) {
+      _started = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        _ensureAvailable(remotePath, file.size.toInt());
+        _startPlayback(remotePath, file.size.toInt());
       });
     }
 
@@ -61,21 +60,14 @@ class _VideoViewerScreenState extends ConsumerState<VideoViewerScreen>
         ? _VideoErrorPanel(
             message: _error!,
             path: remotePath,
-            onRetry: () => _retryFresh(remotePath),
+            onRetry: () => _retryFresh(remotePath, file.size.toInt()),
           )
         : ready
             ? _VideoPlayerBody(
                 controller: _controller!,
                 fillScreen: fullscreen,
               )
-            : Center(
-                child: DownloadProgress(
-                  progress: _progress,
-                  receivedBytes: _receivedBytes,
-                  startedAt: _downloadStartedAt,
-                  totalBytes: file.size.toInt(),
-                ),
-              );
+            : const Center(child: CircularProgressIndicator());
 
     return ColoredBox(
       color: fullscreen ? Colors.black : SpaceNotesTheme.bg,
@@ -93,7 +85,13 @@ class _VideoViewerScreenState extends ConsumerState<VideoViewerScreen>
                   onPressed: () => Navigator.of(context).maybePop(),
                 ),
               ),
-            if (_localPath != null)
+            if (!fullscreen && _downloadProgress < 1.0)
+              Positioned(
+                left: 16,
+                bottom: 16,
+                child: DownloadingBadge(progress: _downloadProgress),
+              ),
+            if (!fullscreen && _localPath != null)
               Positioned(
                 right: 16,
                 bottom: 16,
@@ -105,50 +103,42 @@ class _VideoViewerScreenState extends ConsumerState<VideoViewerScreen>
     );
   }
 
-  Future<void> _ensureAvailable(String remotePath, int expectedSize) async {
+  /// Plays immediately over HTTP (the server supports Range requests), and
+  /// separately downloads the file to disk in the background so the next
+  /// open of this file is instant and offline-capable. The two are
+  /// independent: closing the screen mid-stream does not need to preserve
+  /// anything, since the background download is the thing that persists.
+  Future<void> _startPlayback(String remotePath, int expectedSize) async {
     final store = ref.read(localDownloadStoreProvider);
     final localPath = await store.localPathFor(remotePath);
     final state = await store.stateFor(remotePath, expectedSize: expectedSize);
 
     if (state == DownloadState.complete) {
-      await _initPlayer(localPath);
+      await _initPlayer(networkUrl: null, localPath: localPath);
       return;
     }
 
-    setState(() {
-      _loading = true;
-      _progress = 0;
-      _receivedBytes = 0;
-      _downloadStartedAt = DateTime.now();
-      _error = null;
-    });
-
     final service = ref.read(fileTransferServiceProvider);
-    try {
-      await service.ensureDownloaded(
-        remotePath,
-        expectedSize,
-        onProgress: (received, total) {
-          if (total > 0 && mounted) {
-            setState(() {
-              _progress = received / total;
-              _receivedBytes = received;
-            });
-          }
-        },
-      );
-      await _initPlayer(localPath);
-    } catch (e, st) {
-      debugLogger.error('VIDEO_VIEWER', 'Fetch failed: $remotePath', '$e\n$st');
-      if (mounted) setState(() => _error = 'Could not load video: $e');
-    } finally {
-      if (mounted) setState(() => _loading = false);
-      ref.invalidate(downloadStateProvider(remotePath));
-    }
+    await _initPlayer(
+      networkUrl: service.streamUrl(remotePath),
+      localPath: localPath,
+    );
+    setState(() => _downloadProgress = 0);
+    ref.read(backgroundDownloadProvider).run(
+          remotePath: remotePath,
+          expectedSize: expectedSize,
+          mounted: () => mounted,
+          onProgress: (progress) => setState(() {
+            _downloadProgress = progress;
+            if (progress >= 1.0) _localPath = localPath;
+          }),
+        );
   }
 
-  Future<void> _initPlayer(String localPath) async {
-    final controller = VideoPlayerController.file(File(localPath));
+  Future<void> _initPlayer({required String? networkUrl, required String localPath}) async {
+    final controller = networkUrl != null
+        ? VideoPlayerController.networkUrl(Uri.parse(networkUrl))
+        : VideoPlayerController.file(File(localPath));
     try {
       await controller.initialize();
       if (!mounted) {
@@ -160,7 +150,7 @@ class _VideoViewerScreenState extends ConsumerState<VideoViewerScreen>
         'VIDEO_VIEWER',
         'Player initialised',
         'size=${value.size.width.toInt()}x${value.size.height.toInt()} '
-            'duration=${value.duration.inMilliseconds}ms',
+            'duration=${value.duration.inMilliseconds}ms streaming=${networkUrl != null}',
       );
       if (value.size.width == 0 || value.size.height == 0) {
         await controller.dispose();
@@ -169,19 +159,18 @@ class _VideoViewerScreenState extends ConsumerState<VideoViewerScreen>
           '(reported size 0×0, duration ${_formatDuration(value.duration)}).\n\n'
           'Usually the codec: iOS plays H.264 and HEVC, not VP9 or AV1. '
           'Check with ffprobe on the NAS and re-encode to H.264.',
-          localPath,
         );
         return;
       }
       controller.addListener(_onControllerChanged);
       setState(() {
         _controller = controller;
-        _localPath = localPath;
+        _localPath = networkUrl == null ? localPath : null;
       });
       controller.play();
     } catch (e) {
       await controller.dispose();
-      _fail('Player failed to initialise.\n\n$e', localPath);
+      _fail('Player failed to initialise.\n\n$e');
     }
   }
 
@@ -192,10 +181,10 @@ class _VideoViewerScreenState extends ConsumerState<VideoViewerScreen>
     }
     final description = controller.value.errorDescription ?? 'unknown error';
     controller.removeListener(_onControllerChanged);
-    _fail('Playback error after start.\n\n$description', _localPath ?? '');
+    _fail('Playback error after start.\n\n$description');
   }
 
-  Future<void> _retryFresh(String remotePath) async {
+  Future<void> _retryFresh(String remotePath, int expectedSize) async {
     debugLogger.info('VIDEO_VIEWER', 'Deleting local copy and retrying', remotePath);
     await ref.read(localDownloadStoreProvider).remove(remotePath);
     final controller = _controller;
@@ -205,12 +194,12 @@ class _VideoViewerScreenState extends ConsumerState<VideoViewerScreen>
     setState(() {
       _error = null;
       _localPath = null;
-      _loading = false;
     });
+    await _startPlayback(remotePath, expectedSize);
   }
 
-  void _fail(String message, String localPath) {
-    debugLogger.error('VIDEO_VIEWER', 'Playback failed: $localPath', message);
+  void _fail(String message) {
+    debugLogger.error('VIDEO_VIEWER', 'Playback failed', message);
     if (mounted) setState(() => _error = message);
   }
 
@@ -360,26 +349,28 @@ class _VideoPlayerBodyState extends State<_VideoPlayerBody> {
       );
     }
 
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Flexible(
-          child: AspectRatio(aspectRatio: aspectRatio, child: tapToPlay),
-        ),
-        const SizedBox(height: 12),
-        SizedBox(
-          width: 280,
-          child: VideoProgressIndicator(
-            controller,
-            allowScrubbing: true,
-            colors: const VideoProgressColors(
-              playedColor: SpaceNotesTheme.accent,
-              bufferedColor: SpaceNotesTheme.hairlineStrong,
-              backgroundColor: SpaceNotesTheme.hairline,
+    return AspectRatio(
+      aspectRatio: aspectRatio,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          tapToPlay,
+          Positioned(
+            left: 16,
+            right: 16,
+            bottom: 16,
+            child: VideoProgressIndicator(
+              controller,
+              allowScrubbing: true,
+              colors: const VideoProgressColors(
+                playedColor: SpaceNotesTheme.accent,
+                bufferedColor: SpaceNotesTheme.hairlineStrong,
+                backgroundColor: SpaceNotesTheme.hairline,
+              ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 

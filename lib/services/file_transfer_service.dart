@@ -404,6 +404,11 @@ class FileTransferService {
     }
   }
 
+  /// The streamable HTTP URL for a file, for players that read a network
+  /// URL directly (e.g. `VideoPlayerController.networkUrl`) instead of a
+  /// local path. The server already supports Range requests on this URL.
+  String streamUrl(String remotePath) => _remoteUrl(remotePath);
+
   Future<List<int>> fetchThumbnail(String id) async {
     final url = '$_thumbnailsBaseUrl/${Uri.encodeComponent(id)}.jpg';
     debugLogger.debug('THUMB', 'GET request', 'url=$url');
