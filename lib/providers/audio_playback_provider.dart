@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -114,7 +116,7 @@ class AudioPlaybackController extends StateNotifier<AudioPlaybackState> {
     _watchDeletion();
     await play();
     _startPoll();
-    _loadWaveform(generation);
+    _loadWaveform(generation, localPath);
   }
 
   Future<void> play() async {
@@ -253,15 +255,46 @@ class AudioPlaybackController extends StateNotifier<AudioPlaybackState> {
     }
   }
 
-  Future<void> _loadWaveform(int generation) async {
+  Future<void> _loadWaveform(int generation, String localPath) async {
+    final cachePath = '$localPath.peaks.json';
     try {
+      final cached = await _readCachedWaveform(cachePath);
+      if (cached != null) {
+        if (!mounted || generation != _loadGeneration) return;
+        debugLogger.info(
+            'AUDIO_PLAYBACK', 'Waveform loaded from cache', '${cached.length} bins');
+        state = state.copyWith(peaks: cached);
+        return;
+      }
+
       final peaks = await _eq.waveform(binSeconds: audioWaveformBinSeconds);
       if (!mounted || generation != _loadGeneration) return;
       debugLogger.info(
           'AUDIO_PLAYBACK', 'Waveform loaded', '${peaks.length} bins');
       state = state.copyWith(peaks: peaks);
+      unawaited(_writeCachedWaveform(cachePath, peaks));
     } catch (e) {
       debugLogger.error('AUDIO_PLAYBACK', 'Waveform failed', e.toString());
+    }
+  }
+
+  Future<List<double>?> _readCachedWaveform(String cachePath) async {
+    try {
+      final file = File(cachePath);
+      if (!await file.exists()) return null;
+      final decoded = jsonDecode(await file.readAsString());
+      if (decoded is! List) return null;
+      return decoded.map((e) => (e as num).toDouble()).toList();
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> _writeCachedWaveform(String cachePath, List<double> peaks) async {
+    try {
+      await File(cachePath).writeAsString(jsonEncode(peaks));
+    } catch (e) {
+      debugLogger.warning('AUDIO_PLAYBACK', 'Could not cache waveform', e.toString());
     }
   }
 

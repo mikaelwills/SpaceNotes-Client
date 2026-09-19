@@ -132,6 +132,8 @@ class LocalDownloadStore {
       if (localPath is String) {
         final file = File(localPath);
         if (await file.exists()) await file.delete();
+        final peaks = File('$localPath.peaks.json');
+        if (await peaks.exists()) await peaks.delete();
       }
     }
     await db.delete('downloads', where: 'path = ?', whereArgs: [remotePath]);
@@ -179,6 +181,8 @@ class LocalDownloadStore {
       if (localPath is! String) continue;
       final file = File(localPath);
       if (await file.exists()) await file.delete();
+      final peaks = File('$localPath.peaks.json');
+      if (await peaks.exists()) await peaks.delete();
     }
     await db.delete('downloads');
   }
