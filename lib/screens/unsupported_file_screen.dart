@@ -158,8 +158,10 @@ class _UnsupportedFileScreenState extends ConsumerState<UnsupportedFileScreen> {
           'DOWNLOAD', 'Download UI error: $remotePath', e.toString());
       if (mounted) setState(() => _error = 'Download failed: $e');
     } finally {
-      if (mounted) setState(() => _downloading = false);
-      ref.invalidate(downloadStateProvider(remotePath));
+      if (mounted) {
+        setState(() => _downloading = false);
+        ref.invalidate(downloadStateProvider(remotePath));
+      }
     }
   }
 }

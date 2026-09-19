@@ -66,7 +66,7 @@ class _AudioViewerScreenState extends ConsumerState<AudioViewerScreen>
               child: _error != null
                   ? Text(_error!,
                       style: const TextStyle(color: Colors.red, fontSize: 13))
-                  : isCurrent
+                  : isCurrent && playback.peaks != null
                       ? SizedBox(
                           width: double.infinity,
                           child: _AudioPlayerBody(
@@ -87,12 +87,14 @@ class _AudioViewerScreenState extends ConsumerState<AudioViewerScreen>
                             onNotchCleared: controller.clearNotch,
                           ),
                         )
-                      : DownloadProgress(
-                          progress: _progress,
-                          receivedBytes: _receivedBytes,
-                          startedAt: _downloadStartedAt,
-                          totalBytes: file.size.toInt(),
-                        ),
+                      : _downloadStartedAt != null
+                          ? DownloadProgress(
+                              progress: _progress,
+                              receivedBytes: _receivedBytes,
+                              startedAt: _downloadStartedAt,
+                              totalBytes: file.size.toInt(),
+                            )
+                          : const CircularProgressIndicator(),
             ),
             if (_localPath != null)
               Positioned(
@@ -149,7 +151,7 @@ class _AudioViewerScreenState extends ConsumerState<AudioViewerScreen>
       debugLogger.error('AUDIO_VIEWER', 'Fetch failed: $remotePath', '$e\n$st');
       if (mounted) setState(() => _error = 'Could not load audio: $e');
     } finally {
-      ref.invalidate(downloadStateProvider(remotePath));
+      if (mounted) ref.invalidate(downloadStateProvider(remotePath));
     }
   }
 

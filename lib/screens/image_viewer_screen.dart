@@ -124,8 +124,10 @@ class _ImageViewerScreenState extends ConsumerState<ImageViewerScreen>
       debugLogger.error('IMAGE_VIEWER', 'Fetch failed: $remotePath', '$e\n$st');
       if (mounted) setState(() => _error = 'Could not load image: $e');
     } finally {
-      if (mounted) setState(() => _loading = false);
-      ref.invalidate(downloadStateProvider(remotePath));
+      if (mounted) {
+        setState(() => _loading = false);
+        ref.invalidate(downloadStateProvider(remotePath));
+      }
     }
   }
 }
