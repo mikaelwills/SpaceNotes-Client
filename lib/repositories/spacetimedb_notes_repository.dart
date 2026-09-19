@@ -100,6 +100,8 @@ class _ClientLane {
   int connectAttempts = 0;
   bool retryScheduled = false;
   int retryAttempt = 0;
+  bool hasEverConnected = false;
+  bool initialConnectAttempted = false;
 
   final ValueNotifier<SpacetimeDbClient?> clientNotifier =
       ValueNotifier<SpacetimeDbClient?>(null);
@@ -127,8 +129,6 @@ class SpacetimeDbNotesRepository {
   String? _host;
   String? _database;
   stdb.AuthTokenStore? _authStorage;
-  bool _hasEverConnected = false;
-  bool _initialConnectAttempted = false;
   Future<void>? _connectingFuture;
   Future<void>? _staleTokenRecovery;
   int _authErrorAttempts = 0;
@@ -305,9 +305,9 @@ class SpacetimeDbNotesRepository {
     autoReconnect: true,
     appLevelKeepAlive: true,
     retryInitialConnect: true,
-    connectTimeout: Duration(seconds: 5),
+    connectTimeout: Duration(seconds: 8),
     baseReconnectDelay: Duration(seconds: 5),
-    maxReconnectDelay: Duration(seconds: 5),
+    maxReconnectDelay: Duration(seconds: 45),
     maxReconnectAttempts: 500,
   );
 
@@ -950,10 +950,9 @@ class SpacetimeDbNotesRepository {
   void resetConnection() {
     debugLogger.connection('Resetting connection');
 
-    _hasEverConnected = false;
-    _initialConnectAttempted = false;
-
     for (final lane in _lanes) {
+      lane.hasEverConnected = false;
+      lane.initialConnectAttempted = false;
       _resetLane(lane);
     }
 
@@ -1220,13 +1219,13 @@ class SpacetimeDbNotesRepository {
       if (state is stdb.Disconnected) {
         debugLogger.connection(
             '_ensureConnected Disconnected: hasOfflineStorage=${_notesLane.client!.hasOfflineStorage}');
-        if (!_hasEverConnected && !_initialConnectAttempted) {
-          _initialConnectAttempted = true;
+        if (!_notesLane.hasEverConnected && !_notesLane.initialConnectAttempted) {
+          _notesLane.initialConnectAttempted = true;
           debugLogger.connection(
               'cache-hydrated client has never connected - connecting now');
           await Future.wait([
             for (final lane in _lanes)
-              if (lane.client != null)
+              if (lane.client != null && !lane.hasEverConnected)
                 _connectClient(lane, lane.client!).catchError((e, st) {
                   debugLogger.error(
                     'CONN',
@@ -1237,6 +1236,12 @@ class SpacetimeDbNotesRepository {
                   );
                 }),
           ]);
+          return;
+        }
+        if (!_notesLane.hasEverConnected) {
+          debugLogger.warning('CONN',
+              'Lane never connected after its initial attempt - retrying via tryReconnect');
+          await tryReconnect();
           return;
         }
         if (_notesLane.client!.hasOfflineStorage) {
@@ -1385,7 +1390,7 @@ class SpacetimeDbNotesRepository {
     } on SpacetimeDbAuthException {
       await _recoverFromStaleToken(lane);
     }
-    _hasEverConnected = true;
+    lane.hasEverConnected = true;
   }
 
   /// Both lanes present the same bearer token and so resolve to the same
