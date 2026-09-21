@@ -683,16 +683,7 @@ class NotesListDialogs {
                 ),
             ],
           ),
-          actions: [
-            TextButton(
-              key: const ValueKey('dialog-cancel'),
-              onPressed: () => Navigator.of(dialogContext).pop(),
-              style: TextButton.styleFrom(
-                foregroundColor: SpaceNotesTheme.textSecondary,
-              ),
-              child: const Text('Cancel'),
-            ),
-          ],
+          contentPadding: const EdgeInsets.fromLTRB(12, 16, 12, 8),
         ),
       );
     }();
@@ -878,16 +869,7 @@ class NotesListDialogs {
                 ),
             ],
           ),
-          actions: [
-            TextButton(
-              key: const ValueKey('dialog-cancel'),
-              onPressed: () => Navigator.of(dialogContext).pop(),
-              style: TextButton.styleFrom(
-                foregroundColor: SpaceNotesTheme.textSecondary,
-              ),
-              child: const Text('Cancel'),
-            ),
-          ],
+          contentPadding: const EdgeInsets.fromLTRB(12, 16, 12, 8),
         ),
       );
     }();

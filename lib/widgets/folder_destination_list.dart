@@ -63,7 +63,7 @@ class _FolderDestinationListState extends State<FolderDestinationList> {
 
     return SizedBox(
       width: double.maxFinite,
-      height: 400,
+      height: MediaQuery.sizeOf(context).height * 0.55,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -85,7 +85,6 @@ class _FolderDestinationListState extends State<FolderDestinationList> {
                         _DestinationTile(destination: matches[index]),
                   ),
           ),
-          const SizedBox(height: 8),
           TextField(
             key: const ValueKey('folder-search'),
             controller: _controller,
