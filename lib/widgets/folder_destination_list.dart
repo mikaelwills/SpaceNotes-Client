@@ -85,6 +85,7 @@ class _FolderDestinationListState extends State<FolderDestinationList> {
                         _DestinationTile(destination: matches[index]),
                   ),
           ),
+          const SizedBox(height: 4),
           TextField(
             key: const ValueKey('folder-search'),
             controller: _controller,
