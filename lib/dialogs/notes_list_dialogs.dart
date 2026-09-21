@@ -683,7 +683,7 @@ class NotesListDialogs {
                 ),
             ],
           ),
-          contentPadding: const EdgeInsets.fromLTRB(12, 16, 12, 16),
+          contentPadding: const EdgeInsets.fromLTRB(12, 16, 12, 14),
         ),
       );
     }();
@@ -869,7 +869,7 @@ class NotesListDialogs {
                 ),
             ],
           ),
-          contentPadding: const EdgeInsets.fromLTRB(12, 16, 12, 16),
+          contentPadding: const EdgeInsets.fromLTRB(12, 16, 12, 14),
         ),
       );
     }();
