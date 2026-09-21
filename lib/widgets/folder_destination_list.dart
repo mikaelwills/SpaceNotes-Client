@@ -107,18 +107,30 @@ class _FolderDestinationListState extends State<FolderDestinationList> {
                 size: 18,
                 color: SpaceNotesTheme.textSecondary,
               ),
+              prefixIconConstraints: const BoxConstraints(
+                minWidth: 30,
+                minHeight: 0,
+              ),
               suffixIcon: _query.isEmpty
                   ? null
-                  : IconButton(
+                  : GestureDetector(
                       key: const ValueKey('folder-search-clear'),
-                      icon: const Icon(Icons.close, size: 18),
-                      color: SpaceNotesTheme.textSecondary,
-                      onPressed: () {
+                      behavior: HitTestBehavior.opaque,
+                      onTap: () {
                         _controller.clear();
                         setState(() => _query = '');
                       },
+                      child: const Icon(
+                        Icons.close,
+                        size: 18,
+                        color: SpaceNotesTheme.textSecondary,
+                      ),
                     ),
-              isDense: true,
+              suffixIconConstraints: const BoxConstraints(
+                minWidth: 30,
+                minHeight: 0,
+              ),
+              contentPadding: const EdgeInsets.symmetric(vertical: 10),
               border: InputBorder.none,
               enabledBorder: InputBorder.none,
               focusedBorder: InputBorder.none,
