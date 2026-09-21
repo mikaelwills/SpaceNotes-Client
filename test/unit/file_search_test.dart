@@ -184,4 +184,46 @@ void main() {
       expect(searchAndRank(index, searchTerms('')).length, 2);
     });
   });
+
+  group('folder destination search', () {
+    List<String> search(List<String> paths, String query) =>
+        searchAndRankFolderPaths(
+          paths,
+          searchTerms(query),
+          (p) => p,
+          (p) => p.split('/').last,
+        );
+
+    test('empty terms keeps the caller order', () {
+      final input = ['Zebra', 'Apple'];
+      expect(search(input, ''), input);
+    });
+
+    test('non-matches are dropped, unlike rankFolders which only sorts', () {
+      expect(search(['Masters', 'Lyrics'], 'master'), ['Masters']);
+    });
+
+    test('an exact folder name outranks a longer name containing it', () {
+      expect(search(['Old Masters Archive', 'Masters'], 'masters').first,
+          'Masters');
+    });
+
+    test('terms spread across the path still match', () {
+      expect(
+        search(['Ending Everything/Masters', 'Lyrics'], 'ending masters'),
+        ['Ending Everything/Masters'],
+      );
+    });
+
+    test('a name match outranks a path-only match', () {
+      final ranked =
+          search(['Masters/Old Takes', 'Ending Everything/Masters'], 'masters');
+      expect(ranked.first, 'Ending Everything/Masters');
+    });
+
+    test('folders sharing a name are ordered by path, not left arbitrary', () {
+      expect(search(['B/Masters', 'A/Masters'], 'masters'),
+          ['A/Masters', 'B/Masters']);
+    });
+  });
 }

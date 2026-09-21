@@ -180,3 +180,42 @@ List<Folder> rankFolders(List<Folder> folders, List<String> terms) {
       return a.name.toLowerCase().compareTo(b.name.toLowerCase());
     });
 }
+
+/// Ranks a folder by name first, falling back to its full path.
+///
+/// `nameMatchRank` alone cannot find "Ending Everything/Masters" from "ending
+/// masters", because no single segment holds every term. Matching the path is
+/// the same fallback `indexedRank` already makes for files.
+int folderPathRank(String path, String name, List<String> terms) {
+  if (terms.isEmpty) return rankNoMatch;
+  final byName = nameMatchRank(name, terms);
+  if (byName < rankNameAndPath) return byName;
+
+  final lowerPath = path.toLowerCase();
+  return terms.every(lowerPath.contains) ? rankNameAndPath : rankNoMatch;
+}
+
+/// Filters [items] to those matching [terms], best first.
+///
+/// `rankFolders` sorts without filtering, which leaves non-matches at the
+/// bottom of the list; a picker needs them gone. Ties break on path so the
+/// order is stable when several folders share a name.
+List<T> searchAndRankFolderPaths<T>(
+  List<T> items,
+  List<String> terms,
+  String Function(T) pathOf,
+  String Function(T) nameOf,
+) {
+  if (terms.isEmpty) return items;
+
+  final scored = <(int, T)>[];
+  for (final item in items) {
+    final rank = folderPathRank(pathOf(item), nameOf(item), terms);
+    if (rank < rankNoMatch) scored.add((rank, item));
+  }
+  scored.sort((a, b) {
+    if (a.$1 != b.$1) return a.$1.compareTo(b.$1);
+    return pathOf(a.$2).toLowerCase().compareTo(pathOf(b.$2).toLowerCase());
+  });
+  return [for (final s in scored) s.$2];
+}

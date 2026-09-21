@@ -7,7 +7,9 @@ import '../theme/spacenotes_theme.dart';
 import '../providers/notes_providers.dart';
 import '../providers/file_transfer_providers.dart';
 import '../services/local_download_store.dart';
+import '../services/debug_logger.dart';
 import '../file_types/file_type_registry.dart';
+import '../widgets/folder_destination_list.dart';
 
 /// Static dialog functions for TopFolderListScreen
 class NotesListDialogs {
@@ -542,8 +544,12 @@ class NotesListDialogs {
     final folders = ref.read(foldersListProvider);
 
     () {
-      // Sort folders alphabetically by name
-      final sortedFolders = folders.toList()
+      // `pass` stores every credential as a real directory, so the credential
+      // store contributes hundreds of folder rows that are never a destination
+      // for a note.
+      final sortedFolders = folders
+          .where((f) => !FileTypeRegistry.isProtectedPath(f.path))
+          .toList()
         ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
 
       if (sortedFolders.isEmpty) {
@@ -609,55 +615,23 @@ class NotesListDialogs {
               fontWeight: FontWeight.w500,
             ),
           ),
-          content: SizedBox(
-            width: double.maxFinite,
-            child: ListView.builder(
-              shrinkWrap: true,
-              itemCount: sortedFolders.length,
-              itemBuilder: (context, index) {
-                final folder = sortedFolders[index];
-                final isCurrentFolder = note.folderPath == '${folder.path}/';
-
-                return ListTile(
-                  leading: Icon(
-                    isCurrentFolder ? Icons.folder : Icons.folder_outlined,
-                    color: isCurrentFolder
-                        ? SpaceNotesTheme.primary
-                        : SpaceNotesTheme.text,
-                  ),
-                  title: Text(
-                    folder.name,
-                    style: TextStyle(
-                      fontFamily: 'FiraCode',
-                      fontSize: 14,
-                      color: isCurrentFolder
-                          ? SpaceNotesTheme.textSecondary
-                          : SpaceNotesTheme.text,
-                      fontStyle:
-                          isCurrentFolder ? FontStyle.italic : FontStyle.normal,
-                    ),
-                  ),
-                  subtitle: isCurrentFolder
-                      ? const Text(
-                          'Current folder',
-                          style: TextStyle(
-                            fontFamily: 'FiraCode',
-                            fontSize: 12,
-                            color: SpaceNotesTheme.textSecondary,
-                          ),
-                        )
-                      : null,
-                  enabled: !isCurrentFolder,
-                  onTap: isCurrentFolder
-                      ? null
-                      : () async {
+          content: FolderDestinationList(
+            destinations: [
+              for (final folder in sortedFolders)
+                FolderDestination(
+                  path: folder.path,
+                  label: folder.name,
+                  isCurrent: note.folderPath == '${folder.path}/',
+                  currentLabel: 'Current folder',
+                  onTap: () async {
                           Navigator.of(dialogContext).pop();
 
                           // Calculate new path: folder.path + note filename
                           final fileName = note.path.split('/').last;
                           final newPath = '${folder.path}/$fileName';
 
-                          print('📦 Moving note: ${note.path} -> $newPath');
+                          debugLogger.info('MOVE', 'Moving note',
+                              '${note.path} -> $newPath');
 
                           final success = await ref
                               .read(notesRepositoryProvider)
@@ -706,9 +680,8 @@ class NotesListDialogs {
                             );
                           }
                         },
-                );
-              },
-            ),
+                ),
+            ],
           ),
           actions: [
             TextButton(
@@ -743,6 +716,10 @@ class NotesListDialogs {
         // Can't move a folder into its own subfolder
         if (folder.path.startsWith('${folderToMove.path}/')) return false;
 
+        // `pass` stores every credential as a real directory, so the credential
+        // store contributes hundreds of folder rows that are never a destination.
+        if (FileTypeRegistry.isProtectedPath(folder.path)) return false;
+
         return true;
       }).toList()
         ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
@@ -768,57 +745,23 @@ class NotesListDialogs {
               fontWeight: FontWeight.w500,
             ),
           ),
-          content: SizedBox(
-            width: double.maxFinite,
-            child: ListView.builder(
-              shrinkWrap: true,
-              itemCount:
-                  availableFolders.length + 1, // +1 for "Top Level" option
-              itemBuilder: (context, index) {
-                // First item is "Move to Top Level"
-                if (index == 0) {
-                  final isAlreadyTopLevel = folderToMove.depth == 0;
-                  return ListTile(
-                    leading: Icon(
-                      isAlreadyTopLevel ? Icons.home : Icons.home_outlined,
-                      color: isAlreadyTopLevel
-                          ? SpaceNotesTheme.textSecondary
-                          : SpaceNotesTheme.primary,
-                    ),
-                    title: Text(
-                      'Top Level',
-                      style: TextStyle(
-                        fontFamily: 'FiraCode',
-                        fontSize: 14,
-                        color: isAlreadyTopLevel
-                            ? SpaceNotesTheme.textSecondary
-                            : SpaceNotesTheme.text,
-                        fontStyle: isAlreadyTopLevel
-                            ? FontStyle.italic
-                            : FontStyle.normal,
-                      ),
-                    ),
-                    subtitle: isAlreadyTopLevel
-                        ? const Text(
-                            'Already at top level',
-                            style: TextStyle(
-                              fontFamily: 'FiraCode',
-                              fontSize: 12,
-                              color: SpaceNotesTheme.textSecondary,
-                            ),
-                          )
-                        : null,
-                    enabled: !isAlreadyTopLevel,
-                    onTap: isAlreadyTopLevel
-                        ? null
-                        : () async {
+          content: FolderDestinationList(
+            destinations: [
+              FolderDestination(
+                path: 'Top Level',
+                label: 'Top Level',
+                icon: Icons.home_outlined,
+                currentIcon: Icons.home,
+                isCurrent: folderToMove.depth == 0,
+                currentLabel: 'Already at top level',
+                onTap: () async {
                             Navigator.of(dialogContext).pop();
 
                             // Move to top level (just the folder name)
                             final newPath = folderToMove.name;
 
-                            print(
-                                '📦 Moving folder to top level: ${folderToMove.path} -> $newPath');
+                            debugLogger.info('MOVE', 'Moving folder to top level',
+                                '${folderToMove.path} -> $newPath');
 
                             final success = await ref
                                 .read(notesRepositoryProvider)
@@ -870,32 +813,19 @@ class NotesListDialogs {
                               );
                             }
                           },
-                  );
-                }
-
-                // Remaining items are folders
-                final folder = availableFolders[index - 1];
-
-                return ListTile(
-                  leading: const Icon(
-                    Icons.folder_outlined,
-                    color: SpaceNotesTheme.text,
-                  ),
-                  title: Text(
-                    folder.name,
-                    style: const TextStyle(
-                      fontFamily: 'FiraCode',
-                      fontSize: 14,
-                      color: SpaceNotesTheme.text,
-                    ),
-                  ),
+              ),
+              for (final folder in availableFolders)
+                FolderDestination(
+                  path: folder.path,
+                  label: folder.name,
                   onTap: () async {
                     Navigator.of(dialogContext).pop();
 
                     // Calculate new path: destinationFolder.path + folderToMove.name
                     final newPath = '${folder.path}/${folderToMove.name}';
 
-                    print('📦 Moving folder: ${folderToMove.path} -> $newPath');
+                    debugLogger.info('MOVE', 'Moving folder',
+                        '${folderToMove.path} -> $newPath');
 
                     final success =
                         await ref.read(notesRepositoryProvider).moveFolder(
@@ -945,9 +875,8 @@ class NotesListDialogs {
                       );
                     }
                   },
-                );
-              },
-            ),
+                ),
+            ],
           ),
           actions: [
             TextButton(
