@@ -67,6 +67,25 @@ class _FolderDestinationListState extends State<FolderDestinationList> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          Expanded(
+            child: matches.isEmpty
+                ? const Center(
+                    child: Text(
+                      'No folders match',
+                      style: TextStyle(
+                        fontFamily: 'FiraCode',
+                        fontSize: 13,
+                        color: SpaceNotesTheme.textSecondary,
+                      ),
+                    ),
+                  )
+                : ListView.builder(
+                    itemCount: matches.length,
+                    itemBuilder: (context, index) =>
+                        _DestinationTile(destination: matches[index]),
+                  ),
+          ),
+          const SizedBox(height: 8),
           TextField(
             key: const ValueKey('folder-search'),
             controller: _controller,
@@ -100,37 +119,11 @@ class _FolderDestinationListState extends State<FolderDestinationList> {
                       },
                     ),
               isDense: true,
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.zero,
-                borderSide: BorderSide(
-                  color: SpaceNotesTheme.primary.withValues(alpha: 0.3),
-                ),
-              ),
-              focusedBorder: const OutlineInputBorder(
-                borderRadius: BorderRadius.zero,
-                borderSide: BorderSide(color: SpaceNotesTheme.primary),
-              ),
+              border: InputBorder.none,
+              enabledBorder: InputBorder.none,
+              focusedBorder: InputBorder.none,
             ),
             onChanged: (value) => setState(() => _query = value),
-          ),
-          const SizedBox(height: 8),
-          Expanded(
-            child: matches.isEmpty
-                ? const Center(
-                    child: Text(
-                      'No folders match',
-                      style: TextStyle(
-                        fontFamily: 'FiraCode',
-                        fontSize: 13,
-                        color: SpaceNotesTheme.textSecondary,
-                      ),
-                    ),
-                  )
-                : ListView.builder(
-                    itemCount: matches.length,
-                    itemBuilder: (context, index) =>
-                        _DestinationTile(destination: matches[index]),
-                  ),
           ),
         ],
       ),
