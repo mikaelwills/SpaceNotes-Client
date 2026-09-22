@@ -1245,7 +1245,9 @@ class SpacetimeDbNotesRepository {
           return;
         }
         if (_notesLane.client!.hasOfflineStorage) {
-          debugLogger.connection('Offline mode: using existing client');
+          debugLogger.connection(
+              'Offline mode: using existing client, re-arming retry ladder');
+          _scheduleRetry(_notesLane, 'disconnected with offline cache');
           return;
         }
         debugLogger.warning('CONN',
