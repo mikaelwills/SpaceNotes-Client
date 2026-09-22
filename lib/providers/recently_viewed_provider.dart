@@ -47,7 +47,7 @@ final recentlyViewedIdsProvider =
 ///
 /// Applied after dropping ids that no longer resolve, so deleted files do not
 /// eat into the count and leave the section short.
-const int kRecentlyViewedLimit = 20;
+const int kRecentlyViewedLimit = 10;
 
 /// Viewed files that still exist, newest first.
 ///
