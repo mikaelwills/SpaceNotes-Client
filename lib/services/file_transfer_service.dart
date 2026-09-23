@@ -46,6 +46,40 @@ int resumeOffsetFor(int existingLength, int expectedSize) {
   return existingLength;
 }
 
+bool resumeAccepted(int startByte, int? statusCode) =>
+    startByte > 0 && statusCode == 206;
+
+class DownloadSlots {
+  final Map<String, DownloadSlot> _slots = {};
+
+  Future<DownloadSlot> acquire(String key) async {
+    final previous = _slots[key];
+    final slot = DownloadSlot._(this, key);
+    _slots[key] = slot;
+    if (previous != null) {
+      previous.token.cancel('superseded');
+      await previous._released.future;
+    }
+    return slot;
+  }
+}
+
+class DownloadSlot {
+  DownloadSlot._(this._owner, this.key);
+
+  final DownloadSlots _owner;
+  final String key;
+  final CancelToken token = CancelToken();
+  final Completer<void> _released = Completer<void>();
+
+  bool get isSuperseded => token.isCancelled;
+
+  void release() {
+    if (!_released.isCompleted) _released.complete();
+    if (identical(_owner._slots[key], this)) _owner._slots.remove(key);
+  }
+}
+
 class FileTransferService {
   FileTransferService(this._repository);
 
@@ -61,6 +95,8 @@ class FileTransferService {
 
   /// Longest gap allowed between chunks before a transfer is considered dead.
   static const _idleTimeout = Duration(seconds: 30);
+
+  static final DownloadSlots _downloadSlots = DownloadSlots();
 
   /// Consecutive failures on one chunk before the upload gives up.
   static const _maxChunkAttempts = 3;
@@ -324,6 +360,30 @@ class FileTransferService {
     int expectedSize = 0,
     void Function(int received, int total)? onProgress,
   }) async {
+    final slot = await _downloadSlots.acquire(localPath);
+    try {
+      if (slot.isSuperseded) {
+        throw FileDownloadException('Download superseded by a newer request.');
+      }
+      await _download(
+        remotePath,
+        localPath,
+        slot.token,
+        expectedSize: expectedSize,
+        onProgress: onProgress,
+      );
+    } finally {
+      slot.release();
+    }
+  }
+
+  Future<void> _download(
+    String remotePath,
+    String localPath,
+    CancelToken cancelToken, {
+    required int expectedSize,
+    void Function(int received, int total)? onProgress,
+  }) async {
     final localFile = File(localPath);
     final existingLength = await localFile.exists() ? await localFile.length() : 0;
     final startByte = resumeOffsetFor(existingLength, expectedSize);
@@ -348,6 +408,7 @@ class FileTransferService {
           headers: startByte > 0 ? {'Range': 'bytes=$startByte-'} : null,
           responseType: ResponseType.stream,
         ),
+        cancelToken: cancelToken,
       );
       debugLogger.info(
         'DOWNLOAD',
@@ -362,10 +423,20 @@ class FileTransferService {
             .markPartial(remotePath, localPath, expectedSize);
       }
 
+      final offset =
+          resumeAccepted(startByte, response.statusCode) ? startByte : 0;
+      if (startByte > 0 && offset == 0) {
+        debugLogger.warning(
+          'DOWNLOAD',
+          'Range ignored, restarting from zero',
+          'path=$remotePath status=${response.statusCode}',
+        );
+      }
+
       final sink = localFile.openWrite(
-        mode: startByte > 0 ? FileMode.append : FileMode.write,
+        mode: offset > 0 ? FileMode.append : FileMode.write,
       );
-      var received = startByte;
+      var received = offset;
       final total = int.tryParse(
             response.headers.value(Headers.contentLengthHeader) ?? '',
           ) ??
@@ -376,7 +447,7 @@ class FileTransferService {
             in response.data!.stream.timeout(_idleTimeout)) {
           sink.add(chunk);
           received += chunk.length;
-          onProgress?.call(received, startByte + total);
+          onProgress?.call(received, offset + total);
         }
       } finally {
         // Must close on the error path too, or the next attempt opens a
