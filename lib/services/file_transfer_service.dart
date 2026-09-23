@@ -49,6 +49,34 @@ int resumeOffsetFor(int existingLength, int expectedSize) {
 bool resumeAccepted(int startByte, int? statusCode) =>
     startByte > 0 && statusCode == 206;
 
+class SlowTransferDetector {
+  SlowTransferDetector({
+    required this.floorBytesPerSecond,
+    required this.window,
+    required DateTime startedAt,
+  }) : _startedAt = startedAt;
+
+  final int floorBytesPerSecond;
+  final Duration window;
+  final DateTime _startedAt;
+  final List<(DateTime, int)> _samples = [];
+
+  void add(int bytes, DateTime at) => _samples.add((at, bytes));
+
+  bool isSlow(DateTime now) {
+    if (now.difference(_startedAt) < window) return false;
+    final windowStart = now.subtract(window);
+    _samples.removeWhere((sample) => !sample.$1.isAfter(windowStart));
+    final bytes = _samples.fold<int>(0, (sum, sample) => sum + sample.$2);
+    return bytes * Duration.millisecondsPerSecond <
+        floorBytesPerSecond * window.inMilliseconds;
+  }
+}
+
+class _SlowTransfer implements Exception {
+  const _SlowTransfer();
+}
+
 class DownloadSlots {
   final Map<String, DownloadSlot> _slots = {};
 
@@ -97,6 +125,10 @@ class FileTransferService {
   static const _idleTimeout = Duration(seconds: 30);
 
   static final DownloadSlots _downloadSlots = DownloadSlots();
+
+  static const _slowFloorBytesPerSecond = 50 * 1024;
+  static const _slowWindow = Duration(seconds: 10);
+  static const _maxSlowRestarts = 5;
 
   /// Consecutive failures on one chunk before the upload gives up.
   static const _maxChunkAttempts = 3;
@@ -365,13 +397,28 @@ class FileTransferService {
       if (slot.isSuperseded) {
         throw FileDownloadException('Download superseded by a newer request.');
       }
-      await _download(
-        remotePath,
-        localPath,
-        slot.token,
-        expectedSize: expectedSize,
-        onProgress: onProgress,
-      );
+      for (var restarts = 0;; restarts++) {
+        try {
+          await _download(
+            remotePath,
+            localPath,
+            slot.token,
+            expectedSize: expectedSize,
+            detectSlow: restarts < _maxSlowRestarts,
+            onProgress: onProgress,
+          );
+          return;
+        } on _SlowTransfer {
+          if (slot.isSuperseded) {
+            throw FileDownloadException('Download superseded by a newer request.');
+          }
+          debugLogger.warning(
+            'DOWNLOAD',
+            'Slow transfer, reconnecting',
+            'path=$remotePath restart=${restarts + 1}/$_maxSlowRestarts',
+          );
+        }
+      }
     } finally {
       slot.release();
     }
@@ -380,10 +427,15 @@ class FileTransferService {
   Future<void> _download(
     String remotePath,
     String localPath,
-    CancelToken cancelToken, {
+    CancelToken slotToken, {
     required int expectedSize,
+    required bool detectSlow,
     void Function(int received, int total)? onProgress,
   }) async {
+    final cancelToken = CancelToken();
+    unawaited(slotToken.whenCancel.then((_) => cancelToken.cancel('superseded')));
+    var slowAborted = false;
+    Timer? slowCheck;
     final localFile = File(localPath);
     final existingLength = await localFile.exists() ? await localFile.length() : 0;
     final startByte = resumeOffsetFor(existingLength, expectedSize);
@@ -442,14 +494,30 @@ class FileTransferService {
           ) ??
           0;
 
+      final detector = SlowTransferDetector(
+        floorBytesPerSecond: _slowFloorBytesPerSecond,
+        window: _slowWindow,
+        startedAt: DateTime.now(),
+      );
+      if (detectSlow) {
+        slowCheck = Timer.periodic(const Duration(seconds: 1), (_) {
+          if (!detector.isSlow(DateTime.now())) return;
+          slowAborted = true;
+          slowCheck?.cancel();
+          cancelToken.cancel('slow');
+        });
+      }
+
       try {
         await for (final chunk
             in response.data!.stream.timeout(_idleTimeout)) {
           sink.add(chunk);
           received += chunk.length;
+          detector.add(chunk.length, DateTime.now());
           onProgress?.call(received, offset + total);
         }
       } finally {
+        slowCheck?.cancel();
         // Must close on the error path too, or the next attempt opens a
         // second sink on the same file while this one is still flushing.
         await sink.close();
@@ -457,6 +525,7 @@ class FileTransferService {
 
       debugLogger.info('DOWNLOAD', 'Download complete', 'path=$remotePath bytes=$received');
     } on DioException catch (e) {
+      if (slowAborted) throw const _SlowTransfer();
       debugLogger.error(
         'DOWNLOAD',
         'Download failed: $remotePath',
@@ -464,12 +533,14 @@ class FileTransferService {
       );
       throw FileDownloadException.fromDio(e, url);
     } on TimeoutException {
+      if (slowAborted) throw const _SlowTransfer();
       debugLogger.error('DOWNLOAD', 'Stalled: $remotePath', 'url=$url');
       throw FileDownloadException(
         'Download stalled — no data for ${_idleTimeout.inSeconds}s. '
         'Reopen the file to resume.',
       );
     } catch (e) {
+      if (slowAborted) throw const _SlowTransfer();
       debugLogger.error('DOWNLOAD', 'Download failed (non-Dio): $remotePath', 'url=$url error=$e');
       rethrow;
     }
