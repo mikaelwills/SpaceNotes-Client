@@ -7,7 +7,6 @@ import '../blocs/config/config_state.dart';
 import '../blocs/desktop_notes/desktop_notes_bloc.dart';
 import '../blocs/desktop_notes/desktop_notes_event.dart';
 import '../providers/notes_providers.dart';
-import '../providers/connection_providers.dart';
 import '../widgets/adaptive/platform_utils.dart';
 import '../widgets/primitives/primitives.dart';
 import '../services/debug_logger.dart';
@@ -100,24 +99,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   Widget _buildServerSection() {
-    final isSpacetimeConnected = ref.watch(spacetimeConnectedProvider);
-
     return _Section(
       label: 'server',
       children: [
-        const Text(
-          'All services run on this IP.',
-          style: _proseStyle,
-        ),
-        const SizedBox(height: 6),
-        const Row(
-          children: [
-            _PortChip(label: 'spacenotes', port: ConfigLoaded.spacetimeDbPort),
-            SizedBox(width: 10),
-            _PortChip(label: 'space', port: ConfigLoaded.spacePort),
-          ],
-        ),
-        const SizedBox(height: 18),
         Row(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
@@ -138,11 +122,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         horizontal: 18, vertical: 18),
                   ),
           ],
-        ),
-        const SizedBox(height: 14),
-        _ConnectionRow(
-          connected: isSpacetimeConnected,
-          label: 'spacenotes',
         ),
       ],
     );
@@ -653,41 +632,6 @@ class _Section extends StatelessWidget {
   }
 }
 
-class _PortChip extends StatelessWidget {
-  final String label;
-  final int port;
-
-  const _PortChip({required this.label, required this.port});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          label.toUpperCase(),
-          style: const TextStyle(
-            fontFamily: SpaceNotesTheme.fontMono,
-            fontSize: 10,
-            color: SpaceNotesTheme.dim,
-            letterSpacing: 0.5,
-          ),
-        ),
-        const SizedBox(width: 6),
-        Text(
-          ':$port',
-          style: const TextStyle(
-            fontFamily: SpaceNotesTheme.fontMono,
-            fontSize: 10,
-            color: SpaceNotesTheme.muted,
-            letterSpacing: 0.5,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
 class _StorageStat extends StatelessWidget {
   final int bytes;
   final int count;
@@ -744,26 +688,6 @@ class _StorageStat extends StatelessWidget {
               ),
             );
           }),
-        ),
-      ],
-    );
-  }
-}
-
-class _ConnectionRow extends StatelessWidget {
-  final bool connected;
-  final String label;
-
-  const _ConnectionRow({required this.connected, required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        SnSyncDot(
-          state: connected ? SnSyncState.synced : SnSyncState.offline,
-          label: label,
         ),
       ],
     );
