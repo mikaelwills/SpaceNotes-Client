@@ -15,31 +15,50 @@ class StaggeredFileGrid extends StatelessWidget {
     required this.onTap,
     this.onLongPress,
     this.selectedIds = const {},
+    this.eager = false,
   });
 
   final List<SpaceFile> files;
   final void Function(SpaceFile file) onTap;
   final void Function(SpaceFile file)? onLongPress;
   final Set<String> selectedIds;
+  final bool eager;
 
   static const _targetCardWidth = 180.0;
   static const _gap = 10.0;
 
-  @override
-  Widget build(BuildContext context) {
-    return SliverMasonryGrid.extent(
-      maxCrossAxisExtent: _targetCardWidth,
-      mainAxisSpacing: _gap,
-      crossAxisSpacing: _gap,
-      childCount: files.length,
-      itemBuilder: (context, i) => FileGridCard(
+  Widget _card(BuildContext context, int i) => FileGridCard(
         key: ValueKey(files[i].path),
         file: files[i],
         index: i + 1,
         onTap: () => onTap(files[i]),
         onLongPress: onLongPress == null ? null : () => onLongPress!(files[i]),
         selected: selectedIds.contains(files[i].id),
-      ),
+      );
+
+  @override
+  Widget build(BuildContext context) {
+    if (eager) {
+      return SliverToBoxAdapter(
+        child: MasonryGridView.extent(
+          shrinkWrap: true,
+          primary: false,
+          padding: EdgeInsets.zero,
+          physics: const NeverScrollableScrollPhysics(),
+          maxCrossAxisExtent: _targetCardWidth,
+          mainAxisSpacing: _gap,
+          crossAxisSpacing: _gap,
+          itemCount: files.length,
+          itemBuilder: _card,
+        ),
+      );
+    }
+    return SliverMasonryGrid.extent(
+      maxCrossAxisExtent: _targetCardWidth,
+      mainAxisSpacing: _gap,
+      crossAxisSpacing: _gap,
+      childCount: files.length,
+      itemBuilder: _card,
     );
   }
 }

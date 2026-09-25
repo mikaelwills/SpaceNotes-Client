@@ -32,7 +32,7 @@ class RecentNotesGrid extends ConsumerWidget {
         slivers: [
           if (viewed.isNotEmpty) ...[
             const _SectionHeader('Recently Viewed'),
-            _fileSection(context, ref, viewed, bottomPadding: 4),
+            _fileSection(context, ref, viewed, bottomPadding: 4, eager: true),
           ],
           if (updated.isNotEmpty) ...[
             const _SectionHeader('Recently Updated'),
@@ -48,10 +48,12 @@ class RecentNotesGrid extends ConsumerWidget {
     WidgetRef ref,
     List<SpaceFile> files, {
     required double bottomPadding,
+    bool eager = false,
   }) {
     return SliverPadding(
       padding: EdgeInsets.fromLTRB(12, 4, 12, bottomPadding),
       sliver: StaggeredFileGrid(
+        eager: eager,
         files: files,
         onTap: (file) => context.go('/notes/note/${file.id}'),
         onLongPress: (file) =>
