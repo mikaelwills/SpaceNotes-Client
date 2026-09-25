@@ -74,6 +74,10 @@ GoRouter createAppRouter(ProviderContainer container) {
           !container.read(agentsEnabledProvider)) {
         return '/notes';
       }
+      if (location.startsWith('/notes/passwords') &&
+          !container.read(passwordsEnabledProvider)) {
+        return '/notes';
+      }
 
       final lane = connectionLaneForLocation(location);
       final laneController =

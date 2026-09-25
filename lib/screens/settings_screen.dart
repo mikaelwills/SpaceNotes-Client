@@ -75,7 +75,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               _buildPreferencesSection(),
               if (PlatformUtils.isDesktopLayout(context))
                 _buildMaxOpenNotesSection(),
-              _buildPasswordManagerSection(),
+              if (ref.watch(passwordsEnabledProvider))
+                _buildPasswordManagerSection(),
               _buildDebugLogsSection(),
               _buildDownloadedFilesSection(),
               const SizedBox(height: 40),
@@ -192,6 +193,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           label: 'Show the agents feature',
           value: prefs.agentsEnabled,
           onChanged: notifier.setAgentsEnabled,
+        ),
+        _PreferenceRow(
+          label: 'Show the password manager',
+          value: prefs.passwordsEnabled,
+          onChanged: notifier.setPasswordsEnabled,
         ),
       ],
     );

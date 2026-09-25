@@ -61,7 +61,11 @@ class _DesktopShellState extends ConsumerState<DesktopShell> {
       bindings: {
         const SingleActivator(LogicalKeyboardKey.keyL, meta: true): _focusSearch,
         const SingleActivator(LogicalKeyboardKey.tab, shift: true): () =>
-            cycleNav(context, agentsEnabled: ref.read(agentsEnabledProvider)),
+            cycleNav(
+              context,
+              agentsEnabled: ref.read(agentsEnabledProvider),
+              passwordsEnabled: ref.read(passwordsEnabledProvider),
+            ),
       },
       child: Focus(autofocus: true, child: _buildBody(context)),
     );

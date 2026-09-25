@@ -560,14 +560,16 @@ class _SidebarFooter extends ConsumerWidget {
                   tooltip: 'agents',
                 ),
               ],
-              const SizedBox(width: 4),
-              SnIconButton(
-                icon: const Icon(Icons.key_outlined),
-                onPressed:
-                    onPasswords ? null : () => context.go('/notes/passwords'),
-                active: onPasswords,
-                tooltip: 'passwords',
-              ),
+              if (ref.watch(passwordsEnabledProvider)) ...[
+                const SizedBox(width: 4),
+                SnIconButton(
+                  icon: const Icon(Icons.key_outlined),
+                  onPressed:
+                      onPasswords ? null : () => context.go('/notes/passwords'),
+                  active: onPasswords,
+                  tooltip: 'passwords',
+                ),
+              ],
               const Spacer(),
               SnIconButton(
                 icon: const Icon(Icons.settings_outlined),

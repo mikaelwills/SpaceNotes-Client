@@ -13,11 +13,17 @@ const navScreens = <String>[
 /// The agents feature routes, hidden when the agents preference is off.
 const agentRoutes = <String>{'/agents/chat', '/agents'};
 
-List<String> navScreensFor({required bool agentsEnabled}) {
-  if (agentsEnabled) return navScreens;
+const passwordsRoute = '/notes/passwords';
+
+List<String> navScreensFor({
+  required bool agentsEnabled,
+  required bool passwordsEnabled,
+}) {
   return [
     for (final route in navScreens)
-      if (!agentRoutes.contains(route)) route,
+      if ((agentsEnabled || !agentRoutes.contains(route)) &&
+          (passwordsEnabled || route != passwordsRoute))
+        route,
   ];
 }
 
@@ -33,8 +39,12 @@ void cycleNav(
   BuildContext context, {
   bool reverse = false,
   bool agentsEnabled = true,
+  bool passwordsEnabled = true,
 }) {
-  final screens = navScreensFor(agentsEnabled: agentsEnabled);
+  final screens = navScreensFor(
+    agentsEnabled: agentsEnabled,
+    passwordsEnabled: passwordsEnabled,
+  );
   final location = GoRouterState.of(context).uri.toString();
   final current = currentNavScreen(location);
   final index = screens.indexOf(current);

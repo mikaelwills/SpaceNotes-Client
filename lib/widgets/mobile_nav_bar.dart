@@ -33,6 +33,7 @@ class MobileNavBar extends ConsumerWidget {
             currentLocation,
             isOnSettings,
             agentsEnabled: ref.watch(agentsEnabledProvider),
+            passwordsEnabled: ref.watch(passwordsEnabledProvider),
             backOverride: switch ((isOnFolder, isOnNote)) {
               (true, _) => () => _navigateToParentFolder(
                     context,
@@ -101,11 +102,15 @@ class MobileNavBar extends ConsumerWidget {
     String location,
     bool isOnSettings, {
     required bool agentsEnabled,
+    required bool passwordsEnabled,
     VoidCallback? backOverride,
   }) {
     final current = isOnSettings ? null : _currentScreen(location);
     final icons = <Widget>[];
-    for (final route in navScreensFor(agentsEnabled: agentsEnabled)) {
+    for (final route in navScreensFor(
+      agentsEnabled: agentsEnabled,
+      passwordsEnabled: passwordsEnabled,
+    )) {
       final isNotesSlot = route == '/notes';
       if (isNotesSlot && backOverride != null) {
         icons.add(

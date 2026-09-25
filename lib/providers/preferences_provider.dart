@@ -6,16 +6,19 @@ class Preferences {
     this.sidebarStartsCollapsed = false,
     this.chatPanelStartsCollapsed = false,
     this.agentsEnabled = true,
+    this.passwordsEnabled = true,
   });
 
   final bool sidebarStartsCollapsed;
   final bool chatPanelStartsCollapsed;
   final bool agentsEnabled;
+  final bool passwordsEnabled;
 
   Preferences copyWith({
     bool? sidebarStartsCollapsed,
     bool? chatPanelStartsCollapsed,
     bool? agentsEnabled,
+    bool? passwordsEnabled,
   }) {
     return Preferences(
       sidebarStartsCollapsed:
@@ -23,6 +26,7 @@ class Preferences {
       chatPanelStartsCollapsed:
           chatPanelStartsCollapsed ?? this.chatPanelStartsCollapsed,
       agentsEnabled: agentsEnabled ?? this.agentsEnabled,
+      passwordsEnabled: passwordsEnabled ?? this.passwordsEnabled,
     );
   }
 }
@@ -33,6 +37,7 @@ class PreferencesNotifier extends StateNotifier<Preferences> {
   static const _keySidebarCollapsed = 'pref_sidebar_starts_collapsed';
   static const _keyChatPanelCollapsed = 'pref_chat_panel_starts_collapsed';
   static const _keyAgentsEnabled = 'pref_agents_enabled';
+  static const _keyPasswordsEnabled = 'pref_passwords_enabled';
 
   static Future<Preferences> load() async {
     final prefs = await SharedPreferences.getInstance();
@@ -40,6 +45,7 @@ class PreferencesNotifier extends StateNotifier<Preferences> {
       sidebarStartsCollapsed: prefs.getBool(_keySidebarCollapsed) ?? false,
       chatPanelStartsCollapsed: prefs.getBool(_keyChatPanelCollapsed) ?? false,
       agentsEnabled: prefs.getBool(_keyAgentsEnabled) ?? true,
+      passwordsEnabled: prefs.getBool(_keyPasswordsEnabled) ?? true,
     );
   }
 
@@ -60,6 +66,12 @@ class PreferencesNotifier extends StateNotifier<Preferences> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_keyAgentsEnabled, value);
   }
+
+  Future<void> setPasswordsEnabled(bool value) async {
+    state = state.copyWith(passwordsEnabled: value);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_keyPasswordsEnabled, value);
+  }
 }
 
 final preferencesProvider =
@@ -69,4 +81,8 @@ final preferencesProvider =
 
 final agentsEnabledProvider = Provider<bool>(
   (ref) => ref.watch(preferencesProvider).agentsEnabled,
+);
+
+final passwordsEnabledProvider = Provider<bool>(
+  (ref) => ref.watch(preferencesProvider).passwordsEnabled,
 );

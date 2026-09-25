@@ -29,7 +29,11 @@ class HomeScreen extends ConsumerWidget {
     return CallbackShortcuts(
       bindings: {
         const SingleActivator(LogicalKeyboardKey.tab, shift: true): () =>
-            cycleNav(context, agentsEnabled: ref.read(agentsEnabledProvider)),
+            cycleNav(
+              context,
+              agentsEnabled: ref.read(agentsEnabledProvider),
+              passwordsEnabled: ref.read(passwordsEnabledProvider),
+            ),
         const SingleActivator(LogicalKeyboardKey.keyL, meta: true): () =>
             ref.read(mobileInputFocusNodeProvider).requestFocus(),
       },
