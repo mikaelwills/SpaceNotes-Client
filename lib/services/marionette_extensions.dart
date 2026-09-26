@@ -1,4 +1,8 @@
+import 'dart:io';
+
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:window_manager/window_manager.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:marionette_flutter/marionette_flutter.dart';
@@ -90,6 +94,24 @@ void registerSpaceNotesMarionetteExtensions(ProviderContainer container) {
         'keyboardUp': _focusedFieldText() != null,
         'focusedField': _focusedFieldText() ?? '',
       });
+    },
+  );
+
+  registerMarionetteExtension(
+    name: 'setWindowSize',
+    description:
+        'Desktop only: resize the app window, e.g. width=1400 height=900 for the desktop layout.',
+    callback: (params) async {
+      if (kIsWeb || !(Platform.isMacOS || Platform.isWindows || Platform.isLinux)) {
+        return const MarionetteExtensionResult.error(1, 'Not a desktop app');
+      }
+      final width = double.tryParse(params['width'] ?? '');
+      final height = double.tryParse(params['height'] ?? '');
+      if (width == null || height == null) {
+        return const MarionetteExtensionResult.error(2, 'width and height are required');
+      }
+      await windowManager.setSize(Size(width, height));
+      return MarionetteExtensionResult.success({'width': width, 'height': height});
     },
   );
 }
