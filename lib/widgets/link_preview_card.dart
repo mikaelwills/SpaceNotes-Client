@@ -3,36 +3,6 @@ import 'package:flutter/material.dart';
 import '../generated/space_file.dart';
 import '../theme/spacenotes_theme.dart';
 
-class LinkPreviewBadge extends StatelessWidget {
-  const LinkPreviewBadge({super.key, required this.icon, required this.child});
-
-  final IconData icon;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        child,
-        Positioned(
-          top: 8,
-          right: 8,
-          child: IgnorePointer(
-            child: Container(
-              padding: const EdgeInsets.all(4),
-              decoration: BoxDecoration(
-                color: SpaceNotesTheme.bg.withValues(alpha: 0.7),
-                borderRadius: BorderRadius.circular(SpaceNotesTheme.radiusXs),
-              ),
-              child: Icon(icon, size: 14, color: SpaceNotesTheme.fg),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
 class LinkPreviewIconCard extends StatelessWidget {
   const LinkPreviewIconCard({
     super.key,

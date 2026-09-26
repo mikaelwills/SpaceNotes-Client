@@ -3,7 +3,6 @@ import '../screens/image_viewer_screen.dart';
 import '../theme/spacenotes_theme.dart';
 import '../generated/space_file.dart';
 import '../widgets/file_grid_card.dart';
-import '../widgets/link_preview_card.dart';
 import 'file_type_handler.dart';
 
 class ImageFileHandler extends FileTypeHandler {
@@ -42,10 +41,8 @@ class ImageFileHandler extends FileTypeHandler {
   NewFileTemplate? get newFileTemplate => null;
 
   @override
-  Widget buildLinkPreview(SpaceFile file, VoidCallback onTap) => LinkPreviewBadge(
-        icon: icon,
-        child: FileGridCard(file: file, onTap: onTap),
-      );
+  Widget buildLinkPreview(SpaceFile file, VoidCallback onTap) =>
+      FileGridCard(file: file, onTap: onTap);
 
   @override
   Widget buildViewer(String fileId) => ImageViewerScreen(fileId: fileId);

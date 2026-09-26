@@ -71,6 +71,14 @@ class FileGridCard extends ConsumerWidget {
             _usesSquareCard
                 ? _ImageCardBody(file: file)
                 : _StandardCardBody(file: file, index: index),
+            if (_usesSquareCard && _isVideo)
+              const Positioned.fill(child: IgnorePointer(child: _PlayMark())),
+            if (_usesSquareCard && !_isVideo)
+              const Positioned(
+                top: 8,
+                right: 8,
+                child: IgnorePointer(child: _ImageMark()),
+              ),
             // A thumbnail covers the card's own background, so the selected
             // tint has to sit on top of it. Positioned.fill takes no space of
             // its own, leaving the masonry layout untouched.
@@ -88,10 +96,45 @@ class FileGridCard extends ConsumerWidget {
     );
   }
 
+  bool get _isVideo =>
+      FileTypeRegistry.forFile(file).icon == Icons.videocam_outlined;
+
   bool get _usesSquareCard {
     final icon = FileTypeRegistry.forFile(file).icon;
     if (icon == Icons.image_outlined) return true;
-    return icon == Icons.videocam_outlined && file.hasThumbnail;
+    return _isVideo && file.hasThumbnail;
+  }
+}
+
+class _PlayMark extends StatelessWidget {
+  const _PlayMark();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Center(
+      child: Icon(
+        Icons.play_arrow_rounded,
+        size: 44,
+        color: Colors.white,
+        shadows: [Shadow(color: Colors.black54, blurRadius: 12)],
+      ),
+    );
+  }
+}
+
+class _ImageMark extends StatelessWidget {
+  const _ImageMark();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.45),
+        borderRadius: BorderRadius.circular(SpaceNotesTheme.radiusXs),
+      ),
+      child: const Icon(Icons.image_outlined, size: 14, color: Colors.white),
+    );
   }
 }
 
