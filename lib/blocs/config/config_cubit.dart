@@ -7,14 +7,26 @@ import '../config/web_hostname_service.dart';
 class ConfigCubit extends Cubit<ConfigState> {
   static const String _defaultServerIp = '0.0.0.0';
   static const String _defaultAgentName = 'spacenotes';
+  static const String _hostFromEnvironment =
+      String.fromEnvironment('SPACENOTES_HOST');
 
   ConfigCubit() : super(ConfigLoading());
+
+  Future<void> _seedHostFromEnvironment(SharedPreferences prefs) async {
+    if (_hostFromEnvironment.isEmpty) return;
+    final saved = prefs.getString('spacenotes_host');
+    if (saved != null && saved.isNotEmpty) return;
+    await prefs.setString('server_ip', _hostFromEnvironment);
+    await prefs.setString('spacenotes_host',
+        '$_hostFromEnvironment:${ConfigLoaded.spacetimeDbPort}');
+  }
 
   Future<void> initialize() async {
     try {
       emit(ConfigLoading());
 
       final prefs = await SharedPreferences.getInstance();
+      await _seedHostFromEnvironment(prefs);
       var savedIP = prefs.getString('server_ip');
 
       if (savedIP == null || savedIP == _defaultServerIp || savedIP.isEmpty) {

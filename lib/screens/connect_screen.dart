@@ -75,6 +75,7 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
                   ),
                   const SizedBox(height: 28),
                   SnField(
+                    key: const ValueKey('connect-host-field'),
                     controller: _ipController,
                     focusNode: _focusNode,
                     hint: 'ip address',
@@ -107,6 +108,7 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
                   _isConnecting
                       ? _spinnerTile()
                       : GestureDetector(
+                          key: const ValueKey('connect-button'),
                           onTap: _connect,
                           behavior: HitTestBehavior.opaque,
                           child: Container(
