@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../screens/video_viewer_screen.dart';
+import '../generated/space_file.dart';
+import '../widgets/file_grid_card.dart';
 import 'file_type_handler.dart';
 
 class VideoFileHandler extends FileTypeHandler {
@@ -36,6 +38,10 @@ class VideoFileHandler extends FileTypeHandler {
 
   @override
   NewFileTemplate? get newFileTemplate => null;
+
+  @override
+  Widget buildLinkPreview(SpaceFile file, VoidCallback onTap) =>
+      FileGridCard(file: file, onTap: onTap);
 
   @override
   Widget buildViewer(String fileId) => VideoViewerScreen(fileId: fileId);

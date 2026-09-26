@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../actions/vault_link_actions.dart';
+import 'chat_file_card.dart';
 import '../generated/message.dart';
 import '../generated/permission_request.dart';
 import '../generated/question_request.dart';
@@ -169,7 +170,11 @@ class TerminalMessage extends ConsumerWidget {
               fitContent: false,
               shrinkWrap: true,
               styleSheet: SpaceMarkdownStyles.chatAssistant(context),
-              builders: {'table': TableAsBulletsBuilder()},
+              blockSyntaxes: const [VaultCardSyntax()],
+              builders: {
+                'table': TableAsBulletsBuilder(),
+                vaultCardTag: VaultCardBuilder(),
+              },
               softLineBreak: true,
               onTapLink: (text, href, title) {
                 if (href != null) openVaultLink(context, ref, href);

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../generated/space_file.dart';
 import '../platform/capabilities.dart';
 import '../screens/unavailable_on_web_screen.dart';
+import '../widgets/link_preview_card.dart';
 
 class NewFileTemplate {
   const NewFileTemplate({
@@ -70,6 +71,9 @@ abstract class FileTypeHandler {
     if (!isViewableHere) return const UnavailableOnWebScreen();
     return buildViewer(fileId);
   }
+
+  Widget buildLinkPreview(SpaceFile file, VoidCallback onTap) =>
+      LinkPreviewIconCard(file: file, icon: icon, color: color, onTap: onTap);
 
   String stripExtension(String name) {
     final suffix = '.$extension';

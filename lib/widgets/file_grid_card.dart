@@ -22,14 +22,14 @@ class FileGridCard extends ConsumerWidget {
   const FileGridCard({
     super.key,
     required this.file,
-    required this.index,
+    this.index,
     required this.onTap,
     this.onLongPress,
     this.selected = false,
   });
 
   final SpaceFile file;
-  final int index;
+  final int? index;
   final VoidCallback onTap;
   final VoidCallback? onLongPress;
 
@@ -135,7 +135,7 @@ class _StandardCardBody extends ConsumerWidget {
   const _StandardCardBody({required this.file, required this.index});
 
   final SpaceFile file;
-  final int index;
+  final int? index;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -154,15 +154,18 @@ class _StandardCardBody extends ConsumerWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                index.toString().padLeft(3, '0'),
-                style: const TextStyle(
-                  fontFamily: SpaceNotesTheme.fontMono,
-                  fontSize: 9,
-                  color: SpaceNotesTheme.dim,
-                  letterSpacing: 0.6,
-                ),
-              ),
+              if (index case final number?)
+                Text(
+                  number.toString().padLeft(3, '0'),
+                  style: const TextStyle(
+                    fontFamily: SpaceNotesTheme.fontMono,
+                    fontSize: 9,
+                    color: SpaceNotesTheme.dim,
+                    letterSpacing: 0.6,
+                  ),
+                )
+              else
+                const SizedBox.shrink(),
               Row(
                 children: [
                   if (downloadState == DownloadState.complete) ...[
