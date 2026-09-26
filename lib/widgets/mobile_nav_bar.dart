@@ -7,6 +7,7 @@ import '../providers/notes_providers.dart';
 import '../providers/preferences_provider.dart';
 import 'connection_indicator.dart';
 import '../file_types/file_type_registry.dart';
+import '../actions/vault_link_actions.dart';
 
 class MobileNavBar extends ConsumerWidget {
   const MobileNavBar({super.key});
@@ -37,10 +38,12 @@ class MobileNavBar extends ConsumerWidget {
             backOverride: switch ((isOnFolder, isOnNote)) {
               (true, _) => () => _navigateToParentFolder(
                     context,
+                    ref,
                     _extractFullFolderPath(currentLocation),
                   ),
               (_, true) => () => _navigateBackFromNote(
                     context,
+                    ref,
                     ref
                             .read(fileByIdProvider(
                                 _extractNoteIdFromLocation(currentLocation)))
@@ -141,7 +144,9 @@ class MobileNavBar extends ConsumerWidget {
     return icons;
   }
 
-  void _navigateBackFromNote(BuildContext context, String notePath) {
+  void _navigateBackFromNote(
+      BuildContext context, WidgetRef ref, String notePath) {
+    if (returnFromVaultLink(context, ref)) return;
     if (notePath.isEmpty) {
       context.go('/notes');
       return;
@@ -164,7 +169,9 @@ class MobileNavBar extends ConsumerWidget {
     }
   }
 
-  void _navigateToParentFolder(BuildContext context, String currentPath) {
+  void _navigateToParentFolder(
+      BuildContext context, WidgetRef ref, String currentPath) {
+    if (returnFromVaultLink(context, ref)) return;
     if (currentPath.isEmpty) {
       context.go('/notes');
       return;

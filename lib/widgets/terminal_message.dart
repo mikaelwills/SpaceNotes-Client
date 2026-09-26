@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../actions/vault_link_actions.dart';
 import '../generated/message.dart';
 import '../generated/permission_request.dart';
 import '../generated/question_request.dart';
@@ -42,17 +43,17 @@ Key chatItemKey(ChatItem item) {
   };
 }
 
-class TerminalMessage extends StatelessWidget {
+class TerminalMessage extends ConsumerWidget {
   final Message message;
 
   const TerminalMessage({super.key, required this.message});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     if (message.role == 'user' && !_isAgentPeer) {
       return _buildUserMessage(context);
     }
-    return _buildAssistantMessage(context);
+    return _buildAssistantMessage(context, ref);
   }
 
   Widget _buildUserMessage(BuildContext context) {
@@ -121,7 +122,7 @@ class TerminalMessage extends StatelessWidget {
     );
   }
 
-  Widget _buildAssistantMessage(BuildContext context) {
+  Widget _buildAssistantMessage(BuildContext context, WidgetRef ref) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 14, 32, 14),
       child: Column(
@@ -170,6 +171,9 @@ class TerminalMessage extends StatelessWidget {
               styleSheet: SpaceMarkdownStyles.chatAssistant(context),
               builders: {'table': TableAsBulletsBuilder()},
               softLineBreak: true,
+              onTapLink: (text, href, title) {
+                if (href != null) openVaultLink(context, ref, href);
+              },
             ),
           ),
         ],
