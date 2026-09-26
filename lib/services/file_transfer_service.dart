@@ -15,24 +15,51 @@ class FileAlreadyExistsException implements Exception {
   String toString() => 'FileAlreadyExistsException: $fileName already exists';
 }
 
+enum DownloadFailureKind {
+  network,
+  server,
+  notFound,
+  storageFull,
+  superseded,
+  verification,
+}
+
 class FileDownloadException implements Exception {
-  FileDownloadException(this.message);
+  FileDownloadException(this.message, {this.kind = DownloadFailureKind.server});
   final String message;
+  final DownloadFailureKind kind;
 
   @override
   String toString() => message;
 
   static FileDownloadException fromDio(DioException e, String url) {
+    if (e.type == DioExceptionType.cancel) {
+      return FileDownloadException(
+        'Download superseded by a newer request.',
+        kind: DownloadFailureKind.superseded,
+      );
+    }
     final status = e.response?.statusCode;
     if (status != null) {
       final reason = e.response?.statusMessage ?? '';
       return FileDownloadException(
-          'Server returned HTTP $status $reason for GET $url'.trim());
+        'Server returned HTTP $status $reason for GET $url'.trim(),
+        kind: status == 404
+            ? DownloadFailureKind.notFound
+            : DownloadFailureKind.server,
+      );
     }
     return FileDownloadException(
-        'Download failed (${e.type.name}) for GET $url: ${e.message ?? e.error}');
+      'Download failed (${e.type.name}) for GET $url: ${e.message ?? e.error}',
+      kind: DownloadFailureKind.network,
+    );
   }
 }
+
+const _enospc = 28;
+
+bool _isStorageFull(Object e) =>
+    e is FileSystemException && e.osError?.errorCode == _enospc;
 
 /// Where a download should restart from, given what is on disk.
 ///
@@ -90,6 +117,8 @@ class DownloadSlots {
     }
     return slot;
   }
+
+  void cancel(String key) => _slots[key]?.token.cancel('cancelled');
 }
 
 class DownloadSlot {
@@ -381,9 +410,15 @@ class FileTransferService {
       await store.remove(remotePath);
       throw FileDownloadException(
         'Downloaded file did not match the expected size. Try again.',
+        kind: DownloadFailureKind.verification,
       );
     }
     return localPath;
+  }
+
+  Future<void> cancelDownload(String remotePath) async {
+    final localPath = await LocalDownloadStore().localPathFor(remotePath);
+    _downloadSlots.cancel(localPath);
   }
 
   Future<void> downloadFile(
@@ -395,7 +430,10 @@ class FileTransferService {
     final slot = await _downloadSlots.acquire(localPath);
     try {
       if (slot.isSuperseded) {
-        throw FileDownloadException('Download superseded by a newer request.');
+        throw FileDownloadException(
+          'Download superseded by a newer request.',
+          kind: DownloadFailureKind.superseded,
+        );
       }
       for (var restarts = 0;; restarts++) {
         try {
@@ -410,7 +448,10 @@ class FileTransferService {
           return;
         } on _SlowTransfer {
           if (slot.isSuperseded) {
-            throw FileDownloadException('Download superseded by a newer request.');
+            throw FileDownloadException(
+              'Download superseded by a newer request.',
+              kind: DownloadFailureKind.superseded,
+            );
           }
           debugLogger.warning(
             'DOWNLOAD',
@@ -538,10 +579,29 @@ class FileTransferService {
       throw FileDownloadException(
         'Download stalled — no data for ${_idleTimeout.inSeconds}s. '
         'Reopen the file to resume.',
+        kind: DownloadFailureKind.network,
       );
     } catch (e) {
       if (slowAborted) throw const _SlowTransfer();
       debugLogger.error('DOWNLOAD', 'Download failed (non-Dio): $remotePath', 'url=$url error=$e');
+      if (cancelToken.isCancelled) {
+        throw FileDownloadException(
+          'Download superseded by a newer request.',
+          kind: DownloadFailureKind.superseded,
+        );
+      }
+      if (_isStorageFull(e)) {
+        throw FileDownloadException(
+          'Storage full',
+          kind: DownloadFailureKind.storageFull,
+        );
+      }
+      if (e is SocketException || e is HttpException) {
+        throw FileDownloadException(
+          'Connection lost: $e',
+          kind: DownloadFailureKind.network,
+        );
+      }
       rethrow;
     }
   }

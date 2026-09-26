@@ -21,6 +21,8 @@ import 'services/exit_recorder.dart';
 import 'services/resume_pending_transfers.dart';
 import 'providers/file_transfer_providers.dart';
 import 'providers/upload_progress_providers.dart';
+import 'providers/download_queue_provider.dart';
+import 'platform/capabilities.dart';
 import 'blocs/config/config_cubit.dart';
 import 'blocs/desktop_notes/desktop_notes_bloc.dart';
 import 'router/app_router.dart';
@@ -159,7 +161,17 @@ class _SpaceNotesAppState extends State<SpaceNotesApp>
       final repo = widget.container.read(notesRepositoryProvider);
       repo.connectAndGetInitialData();
       _resumeInterruptedUploads();
+      _restoreDownloadQueue();
     });
+  }
+
+  Future<void> _restoreDownloadQueue() async {
+    if (!Capabilities.canDownloadFiles) return;
+    try {
+      await widget.container.read(downloadQueueProvider.notifier).restore();
+    } catch (e) {
+      debugLogger.warning('RESUME', 'Could not restore download queue', e.toString());
+    }
   }
 
   /// Picks up uploads the last run did not finish.
@@ -198,12 +210,14 @@ class _SpaceNotesAppState extends State<SpaceNotesApp>
     exitRecorder.record(state.name);
     final repo = widget.container.read(notesRepositoryProvider);
     if (state == AppLifecycleState.resumed) {
+      widget.container.read(downloadQueueProvider.notifier).setForeground(true);
       _pauseTimer?.cancel();
       _pauseTimer = null;
       repo.resumeSpanClocks();
       debugLogger.info('APP', 'App resumed - checking connection health');
       repo.tryReconnect(resetAttempts: true, force: true);
     } else if (state == AppLifecycleState.paused) {
+      widget.container.read(downloadQueueProvider.notifier).setForeground(false);
       repo.pauseSpanClocks();
       _pauseTimer?.cancel();
       _pauseTimer = Timer(_pauseDebounce, () {

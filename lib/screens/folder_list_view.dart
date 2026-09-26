@@ -22,6 +22,7 @@ import '../blocs/desktop_notes/desktop_notes_bloc.dart';
 import '../blocs/desktop_notes/desktop_notes_event.dart';
 import '../widgets/desktop/content_actions_fab.dart';
 import '../widgets/folder_status_bar.dart';
+import '../widgets/folder_download_button.dart';
 import '../providers/file_transfer_providers.dart';
 import '../providers/upload_progress_providers.dart';
 import '../services/debug_logger.dart';
@@ -141,9 +142,13 @@ class _FolderListViewState extends ConsumerState<FolderListView> {
                     onDelete: () => _bulkDelete(context, data.notes),
                     onMove: () => _bulkMove(context, data.notes),
                   )
-                : const Row(
+                : Row(
                     mainAxisSize: MainAxisSize.min,
-                    children: [FileSelectToggle(), FileSortToggle()],
+                    children: [
+                      const FileSelectToggle(),
+                      const FileSortToggle(),
+                      FolderDownloadButton(files: data.notes),
+                    ],
                   ),
           ),
         Expanded(

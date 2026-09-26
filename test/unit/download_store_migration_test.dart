@@ -156,4 +156,71 @@ void main() {
       await db.close();
     }
   });
+
+  test('upgrading from v2 keeps downloads and uploads and adds an empty queue', () async {
+    final dir = await Directory.systemTemp.createTemp('migration-v3');
+    addTearDown(() => dir.delete(recursive: true));
+    final path = p.join(dir.path, 'spacenotes_downloads.db');
+
+    var db = await databaseFactory.openDatabase(
+      path,
+      options: OpenDatabaseOptions(
+        version: 2,
+        onCreate: (db, _) async {
+          await createV1(db);
+          await createUploads(db);
+        },
+        singleInstance: false,
+      ),
+    );
+    await db.insert('downloads', {
+      'path': 'Masters/keeper.wav',
+      'local_path': '/tmp/keeper.wav',
+      'size': 4096,
+      'hash': null,
+      'state': 'complete',
+    });
+    await db.insert('uploads', {
+      'remote_path': 'Music/a.wav',
+      'session_id': 'abc',
+      'source_path': '/tmp/a.wav',
+      'size': 100,
+      'sent': 20,
+      'started_ms': 1,
+    });
+    await db.close();
+
+    db = await databaseFactory.openDatabase(
+      path,
+      options: OpenDatabaseOptions(
+        version: 3,
+        onCreate: (db, _) async {
+          await createV1(db);
+          await createUploads(db);
+          await createDownloadQueue(db);
+        },
+        onUpgrade: (db, from, to) async {
+          if (from < 2) await createUploads(db);
+          if (from < 3) await createDownloadQueue(db);
+        },
+        singleInstance: false,
+      ),
+    );
+
+    expect(await db.query('downloads'), hasLength(1));
+    expect(await db.query('uploads'), hasLength(1));
+    expect(await db.query('download_queue'), isEmpty);
+
+    await db.close();
+  });
+}
+
+Future<void> createDownloadQueue(Database db) async {
+  await db.execute('''
+    CREATE TABLE download_queue (
+      path TEXT PRIMARY KEY,
+      size INTEGER NOT NULL,
+      queued_ms INTEGER NOT NULL
+    )
+  ''');
 }

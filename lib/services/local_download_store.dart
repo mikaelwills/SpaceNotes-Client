@@ -29,7 +29,21 @@ class ResumableUploadRow {
   String get fileName => remotePath.split('/').last;
 }
 
-class LocalDownloadStore {
+class QueuedDownload {
+  const QueuedDownload({required this.path, required this.size});
+
+  final String path;
+  final int size;
+}
+
+abstract interface class DownloadQueueStore {
+  Future<void> enqueueDownloads(List<QueuedDownload> items);
+  Future<List<QueuedDownload>> queuedDownloads();
+  Future<void> dequeueDownload(String path);
+  Future<void> clearDownloadQueue();
+}
+
+class LocalDownloadStore implements DownloadQueueStore {
   Database? _db;
 
   Future<DownloadState> stateFor(String remotePath, {int? expectedSize}) async {
@@ -300,6 +314,53 @@ class LocalDownloadStore {
         .toList();
   }
 
+  @override
+  Future<void> enqueueDownloads(List<QueuedDownload> items) async {
+    final db = await _database();
+    final batch = db.batch();
+    final now = DateTime.now().millisecondsSinceEpoch;
+    for (var i = 0; i < items.length; i++) {
+      batch.insert(
+        'download_queue',
+        {'path': items[i].path, 'size': items[i].size, 'queued_ms': now + i},
+        conflictAlgorithm: ConflictAlgorithm.ignore,
+      );
+    }
+    await batch.commit(noResult: true);
+  }
+
+  @override
+  Future<List<QueuedDownload>> queuedDownloads() async {
+    final db = await _database();
+    final rows = await db.query('download_queue', orderBy: 'queued_ms, rowid');
+    return [
+      for (final r in rows)
+        QueuedDownload(path: r['path'] as String, size: r['size'] as int),
+    ];
+  }
+
+  @override
+  Future<void> dequeueDownload(String path) async {
+    final db = await _database();
+    await db.delete('download_queue', where: 'path = ?', whereArgs: [path]);
+  }
+
+  @override
+  Future<void> clearDownloadQueue() async {
+    final db = await _database();
+    await db.delete('download_queue');
+  }
+
+  static Future<void> _createDownloadQueue(Database db) async {
+    await db.execute('''
+      CREATE TABLE download_queue (
+        path TEXT PRIMARY KEY,
+        size INTEGER NOT NULL,
+        queued_ms INTEGER NOT NULL
+      )
+    ''');
+  }
+
   static Future<void> _createDownloads(Database db) async {
     await db.execute('''
       CREATE TABLE downloads (
@@ -336,16 +397,18 @@ class LocalDownloadStore {
     final dbPath = p.join(dir.path, 'spacenotes_downloads.db');
     _db = await openDatabase(
       dbPath,
-      version: 2,
+      version: 3,
       onCreate: (db, version) async {
         await _createDownloads(db);
         await _createUploads(db);
+        await _createDownloadQueue(db);
       },
       onUpgrade: (db, from, to) async {
         // Additive only. An existing install's `downloads` rows are the
         // record of every offloaded file on disk; dropping or recreating
         // that table would make all of them re-download.
         if (from < 2) await _createUploads(db);
+        if (from < 3) await _createDownloadQueue(db);
       },
     );
     return _db!;

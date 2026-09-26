@@ -11,6 +11,7 @@ import '../../providers/middle_pane_mode_provider.dart';
 import '../../providers/window_state_provider.dart';
 import '../audio_mini_bar.dart';
 import '../upload_progress_bar.dart';
+import '../download_progress_bar.dart';
 import '../../theme/spacenotes_theme.dart';
 import '../../version.dart';
 import '../primitives/primitives.dart';
@@ -46,6 +47,7 @@ class Sidebar extends ConsumerWidget {
             const _SidebarSearch(),
             const AudioMiniBar(),
             const UploadProgressBar(),
+            const DownloadProgressBar(),
             const _SidebarFooter(),
           ] else
             Expanded(child: _CollapsedSidebar()),

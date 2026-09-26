@@ -5,6 +5,7 @@ import '../theme/spacenotes_theme.dart';
 import 'adaptive/platform_utils.dart';
 import 'mobile_nav_bar.dart';
 import 'upload_progress_bar.dart';
+import 'download_progress_bar.dart';
 
 class MainScaffold extends StatelessWidget {
   final Widget child;
@@ -27,6 +28,7 @@ class MainScaffold extends StatelessWidget {
           if (needsTrafficLightInset) const SizedBox(height: 13),
           const MobileNavBar(),
           const UploadProgressBar(),
+          const DownloadProgressBar(),
           Expanded(
             child: child,
           ),
