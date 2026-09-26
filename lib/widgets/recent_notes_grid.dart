@@ -30,14 +30,16 @@ class RecentNotesGrid extends ConsumerWidget {
     return KeyboardDismissOnScroll(
       child: CustomScrollView(
         slivers: [
-          if (viewed.isNotEmpty) ...[
-            const _SectionHeader('Recently Viewed'),
-            _fileSection(context, ref, viewed, bottomPadding: 4, eager: true),
-          ],
-          if (updated.isNotEmpty) ...[
-            const _SectionHeader('Recently Updated'),
-            _fileSection(context, ref, updated, bottomPadding: 120),
-          ],
+          if (viewed.isNotEmpty)
+            SliverMainAxisGroup(slivers: [
+              const _SectionHeader('Recently Viewed'),
+              _fileSection(context, ref, viewed, bottomPadding: 4, eager: true),
+            ]),
+          if (updated.isNotEmpty)
+            SliverMainAxisGroup(slivers: [
+              const _SectionHeader('Recently Updated'),
+              _fileSection(context, ref, updated, bottomPadding: 120),
+            ]),
         ],
       ),
     );
@@ -105,9 +107,10 @@ class _SectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SliverToBoxAdapter(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(12, 16, 12, 0),
+    return PinnedHeaderSliver(
+      child: Container(
+        color: SpaceNotesTheme.background,
+        padding: const EdgeInsets.fromLTRB(12, 16, 12, 6),
         child: Text(
           label.toUpperCase(),
           style: const TextStyle(
