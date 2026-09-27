@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../generated/folder.dart';
 import '../generated/space_file.dart';
 import '../providers/file_selection_provider.dart';
 import '../theme/spacenotes_theme.dart';
@@ -41,11 +42,13 @@ class FileSelectionControls extends ConsumerWidget {
   const FileSelectionControls({
     super.key,
     required this.files,
+    this.folders = const [],
     required this.onDelete,
     required this.onMove,
   });
 
   final List<SpaceFile> files;
+  final List<Folder> folders;
   final VoidCallback onDelete;
   final VoidCallback onMove;
 
@@ -53,8 +56,8 @@ class FileSelectionControls extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final selection = ref.watch(fileSelectionProvider);
     final notifier = ref.read(fileSelectionProvider.notifier);
-    final allSelected =
-        files.isNotEmpty && selection.count == files.length;
+    final totalCount = files.length + folders.length;
+    final allSelected = totalCount > 0 && selection.count == totalCount;
 
     return Row(
       mainAxisSize: MainAxisSize.min,
@@ -73,7 +76,10 @@ class FileSelectionControls extends ConsumerWidget {
           key: const ValueKey('file-select-all'),
           onTap: () => allSelected
               ? notifier.clearSelection()
-              : notifier.selectAll(files.map((f) => f.id)),
+              : notifier.selectAll([
+                  ...files.map((f) => f.id),
+                  ...folders.map((f) => f.path),
+                ]),
           behavior: HitTestBehavior.opaque,
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),

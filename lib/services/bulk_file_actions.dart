@@ -1,3 +1,4 @@
+import '../generated/folder.dart';
 import '../generated/space_file.dart';
 import '../repositories/spacetimedb_notes_repository.dart';
 import 'debug_logger.dart';
@@ -47,6 +48,74 @@ Future<BulkResult> deleteFiles(
 
   debugLogger.info('BULK', 'Bulk delete finished',
       'ok=${succeeded.length} failed=${failed.length}');
+  return BulkResult(succeeded: succeeded, failed: failed);
+}
+
+/// Deletes many folders (and everything inside each, recursively), one
+/// reducer call each — same one-at-a-time shape as [deleteFiles] so a single
+/// protected or already-deleted folder can't strand the rest.
+Future<BulkResult> deleteFolders(
+  SpacetimeDbNotesRepository repository,
+  List<Folder> folders,
+) async {
+  final succeeded = <String>[];
+  final failed = <String>[];
+
+  for (final folder in folders) {
+    try {
+      final ok = await repository.deleteFolder(folder.path);
+      (ok ? succeeded : failed).add(folder.name);
+    } catch (e) {
+      debugLogger.error('BULK', 'Delete failed: ${folder.name}', e.toString());
+      failed.add(folder.name);
+    }
+  }
+
+  debugLogger.info('BULK', 'Bulk folder delete finished',
+      'ok=${succeeded.length} failed=${failed.length}');
+  return BulkResult(succeeded: succeeded, failed: failed);
+}
+
+/// Moves many folders (and everything inside each, recursively) into
+/// [targetFolderPath].
+///
+/// A folder already in the target is counted as succeeded rather than moved.
+/// A folder cannot be moved into itself or one of its own subfolders — the
+/// server has no cycle protection, so that guard has to live here.
+Future<BulkResult> moveFolders(
+  SpacetimeDbNotesRepository repository,
+  List<Folder> folders,
+  String targetFolderPath,
+) async {
+  final succeeded = <String>[];
+  final failed = <String>[];
+  final prefix = targetFolderPath.isEmpty ? '' : '$targetFolderPath/';
+
+  for (final folder in folders) {
+    final currentParent =
+        folder.path.contains('/') ? '${folder.path.substring(0, folder.path.lastIndexOf('/'))}/' : '';
+    if (currentParent == prefix) {
+      succeeded.add(folder.name);
+      continue;
+    }
+    if (targetFolderPath == folder.path ||
+        targetFolderPath.startsWith('${folder.path}/')) {
+      failed.add(folder.name);
+      continue;
+    }
+
+    final newPath = '$prefix${folder.name}';
+    try {
+      final ok = await repository.moveFolder(folder.path, newPath);
+      (ok ? succeeded : failed).add(folder.name);
+    } catch (e) {
+      debugLogger.error('BULK', 'Move failed: ${folder.name}', e.toString());
+      failed.add(folder.name);
+    }
+  }
+
+  debugLogger.info('BULK', 'Bulk folder move finished',
+      'to=$targetFolderPath ok=${succeeded.length} failed=${failed.length}');
   return BulkResult(succeeded: succeeded, failed: failed);
 }
 

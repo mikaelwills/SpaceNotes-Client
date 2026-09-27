@@ -13,6 +13,7 @@ class FolderGridCard extends ConsumerStatefulWidget {
     this.onLongPress,
     this.contextMenuItems,
     this.onContextMenuSelected,
+    this.selected = false,
   });
 
   final Folder folder;
@@ -20,6 +21,9 @@ class FolderGridCard extends ConsumerStatefulWidget {
   final VoidCallback? onLongPress;
   final List<PopupMenuEntry<String>>? contextMenuItems;
   final void Function(String value)? onContextMenuSelected;
+
+  /// Ticked, and part of whatever a bulk action will apply to.
+  final bool selected;
 
   @override
   ConsumerState<FolderGridCard> createState() => _FolderGridCardState();
@@ -47,40 +51,57 @@ class _FolderGridCardState extends ConsumerState<FolderGridCard> {
             padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
             decoration: BoxDecoration(
               color: _isHovered ? SpaceNotesTheme.bgAlt : SpaceNotesTheme.card,
-              border: Border.all(color: SpaceNotesTheme.hairline, width: 1),
+              border: Border.all(
+                color: widget.selected
+                    ? SpaceNotesTheme.primary
+                    : SpaceNotesTheme.hairline,
+                width: 1,
+              ),
             ),
-            child: Row(
+            child: Stack(
               children: [
-                const Icon(
-                  Icons.folder_outlined,
-                  size: 18,
-                  color: SpaceNotesTheme.accent,
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.folder_outlined,
+                      size: 18,
+                      color: SpaceNotesTheme.accent,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        widget.folder.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontFamily: SpaceNotesTheme.fontSans,
+                          fontSize: 13,
+                          color: SpaceNotesTheme.fg,
+                          letterSpacing: -0.1,
+                        ),
+                      ),
+                    ),
+                    if (noteCount > 0) ...[
+                      const SizedBox(width: 8),
+                      Text(
+                        noteCount.toString(),
+                        style: const TextStyle(
+                          fontFamily: SpaceNotesTheme.fontMono,
+                          fontSize: 11,
+                          color: SpaceNotesTheme.dim,
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    widget.folder.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontFamily: SpaceNotesTheme.fontSans,
-                      fontSize: 13,
-                      color: SpaceNotesTheme.fg,
-                      letterSpacing: -0.1,
+                if (widget.selected)
+                  Positioned.fill(
+                    child: IgnorePointer(
+                      child: ColoredBox(
+                        color: SpaceNotesTheme.primary.withValues(alpha: 0.18),
+                      ),
                     ),
                   ),
-                ),
-                if (noteCount > 0) ...[
-                  const SizedBox(width: 8),
-                  Text(
-                    noteCount.toString(),
-                    style: const TextStyle(
-                      fontFamily: SpaceNotesTheme.fontMono,
-                      fontSize: 11,
-                      color: SpaceNotesTheme.dim,
-                    ),
-                  ),
-                ],
               ],
             ),
           ),
@@ -96,6 +117,7 @@ class FolderCardGrid extends StatelessWidget {
   final void Function(Folder folder)? onLongPress;
   final List<PopupMenuEntry<String>>? Function(Folder folder)? contextMenuItems;
   final void Function(Folder folder, String value)? onContextMenuSelected;
+  final Set<String> selectedPaths;
 
   const FolderCardGrid({
     super.key,
@@ -104,6 +126,7 @@ class FolderCardGrid extends StatelessWidget {
     this.onLongPress,
     this.contextMenuItems,
     this.onContextMenuSelected,
+    this.selectedPaths = const {},
   });
 
   static const _targetCardWidth = 180.0;
@@ -136,6 +159,7 @@ class FolderCardGrid extends StatelessWidget {
               onContextMenuSelected: onContextMenuSelected == null
                   ? null
                   : (value) => onContextMenuSelected!(folder, value),
+              selected: selectedPaths.contains(folder.path),
             );
 
         return Row(

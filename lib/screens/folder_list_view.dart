@@ -139,8 +139,11 @@ class _FolderListViewState extends ConsumerState<FolderListView> {
             trailing: selection.active
                 ? FileSelectionControls(
                     files: data.notes,
-                    onDelete: () => _bulkDelete(context, data.notes),
-                    onMove: () => _bulkMove(context, data.notes),
+                    folders: data.folders,
+                    onDelete: () =>
+                        _bulkDelete(context, data.folders, data.notes),
+                    onMove: () =>
+                        _bulkMove(context, data.folders, data.notes),
                   )
                 : Row(
                     mainAxisSize: MainAxisSize.min,
@@ -193,12 +196,21 @@ class _FolderListViewState extends ConsumerState<FolderListView> {
                 sliver: SliverToBoxAdapter(
                   child: FolderCardGrid(
                     folders: folders,
-                    onTap: (folder) => _onFolderTap(context, folder),
-                    onLongPress: (folder) =>
-                        FileTypeRegistry.isProtectedPath(folder.path)
-                            ? null
-                            : NotesListDialogs.showFolderContextMenu(
-                                context, ref, folder),
+                    selectedPaths: selectedIds,
+                    onTap: (folder) {
+                      if (selectionActive) {
+                        ref
+                            .read(fileSelectionProvider.notifier)
+                            .toggle(folder.path);
+                        return;
+                      }
+                      _onFolderTap(context, folder);
+                    },
+                    onLongPress: (folder) => selectionActive ||
+                            FileTypeRegistry.isProtectedPath(folder.path)
+                        ? null
+                        : NotesListDialogs.showFolderContextMenu(
+                            context, ref, folder),
                     contextMenuItems: (folder) =>
                         FavouriteFolderMenu.items(ref, folder),
                     onContextMenuSelected: (folder, value) =>
@@ -247,33 +259,60 @@ class _FolderListViewState extends ConsumerState<FolderListView> {
     return notes.where((n) => ids.contains(n.id)).toList();
   }
 
-  Future<void> _bulkDelete(BuildContext context, List<SpaceFile> notes) async {
-    final files = _selectedFiles(notes);
-    if (files.isEmpty) return;
+  List<Folder> _selectedFolders(List<Folder> folders) {
+    final ids = ref.read(fileSelectionProvider).selectedIds;
+    return folders.where((f) => ids.contains(f.path)).toList();
+  }
 
-    final confirmed = await BulkActionDialogs.confirmDelete(context, files);
+  Future<void> _bulkDelete(
+    BuildContext context,
+    List<Folder> allFolders,
+    List<SpaceFile> notes,
+  ) async {
+    final folders = _selectedFolders(allFolders);
+    final files = _selectedFiles(notes);
+    if (folders.isEmpty && files.isEmpty) return;
+
+    final confirmed = await BulkActionDialogs.confirmDelete(
+      context,
+      [...folders.map((f) => f.name), ...files.map((f) => f.name)],
+    );
     if (!confirmed || !context.mounted) return;
 
-    final result = await deleteFiles(
-      ref.read(notesRepositoryProvider),
-      files,
+    final repository = ref.read(notesRepositoryProvider);
+    final folderResult = await deleteFolders(repository, folders);
+    final fileResult = await deleteFiles(repository, files);
+    final result = BulkResult(
+      succeeded: [...folderResult.succeeded, ...fileResult.succeeded],
+      failed: [...folderResult.failed, ...fileResult.failed],
     );
 
     ref.read(fileSelectionProvider.notifier).exit();
     if (context.mounted) BulkActionDialogs.reportResult(context, 'Deleted', result);
   }
 
-  Future<void> _bulkMove(BuildContext context, List<SpaceFile> notes) async {
+  Future<void> _bulkMove(
+    BuildContext context,
+    List<Folder> allFolders,
+    List<SpaceFile> notes,
+  ) async {
+    final folders = _selectedFolders(allFolders);
     final files = _selectedFiles(notes);
-    if (files.isEmpty) return;
+    if (folders.isEmpty && files.isEmpty) return;
 
-    final target = await BulkActionDialogs.pickFolder(context, ref, files.length);
+    final target = await BulkActionDialogs.pickFolder(
+      context,
+      ref,
+      folders.length + files.length,
+    );
     if (target == null || !context.mounted) return;
 
-    final result = await moveFiles(
-      ref.read(notesRepositoryProvider),
-      files,
-      target,
+    final repository = ref.read(notesRepositoryProvider);
+    final folderResult = await moveFolders(repository, folders, target);
+    final fileResult = await moveFiles(repository, files, target);
+    final result = BulkResult(
+      succeeded: [...folderResult.succeeded, ...fileResult.succeeded],
+      failed: [...folderResult.failed, ...fileResult.failed],
     );
 
     ref.read(fileSelectionProvider.notifier).exit();

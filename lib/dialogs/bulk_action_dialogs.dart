@@ -1,22 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../generated/space_file.dart';
 import '../providers/notes_providers.dart';
 import '../services/bulk_file_actions.dart';
 import '../theme/spacenotes_theme.dart';
 
 /// Confirmation and reporting for actions that hit many files at once.
 class BulkActionDialogs {
-  /// Names the first few files rather than only counting them: "delete 24
-  /// files" is easy to confirm without noticing the wrong batch is ticked.
+  /// Names the first few items rather than only counting them: "delete 24
+  /// items" is easy to confirm without noticing the wrong batch is ticked.
+  ///
+  /// [names] is every selected file/folder's display name, in selection
+  /// order; folder names get no special marking here since the dialog can't
+  /// show a per-item icon, only the count/preview.
   static Future<bool> confirmDelete(
     BuildContext context,
-    List<SpaceFile> files,
+    List<String> names,
   ) async {
     const preview = 5;
-    final names = files.take(preview).map((f) => f.name).join('\n');
-    final rest = files.length - preview;
+    final previewNames = names.take(preview).join('\n');
+    final rest = names.length - preview;
 
     final confirmed = await showDialog<bool>(
       context: context,
@@ -30,7 +33,7 @@ class BulkActionDialogs {
           ),
         ),
         title: Text(
-          'Delete ${files.length} ${files.length == 1 ? 'file' : 'files'}?',
+          'Delete ${names.length} ${names.length == 1 ? 'item' : 'items'}?',
           style: const TextStyle(
             fontFamily: SpaceNotesTheme.fontMono,
             fontSize: 16,
@@ -39,7 +42,7 @@ class BulkActionDialogs {
           ),
         ),
         content: Text(
-          rest > 0 ? '$names\n…and $rest more' : names,
+          rest > 0 ? '$previewNames\n…and $rest more' : previewNames,
           style: const TextStyle(
             fontFamily: SpaceNotesTheme.fontMono,
             fontSize: 12,
@@ -82,7 +85,7 @@ class BulkActionDialogs {
   static Future<String?> pickFolder(
     BuildContext context,
     WidgetRef ref,
-    int fileCount,
+    int itemCount,
   ) {
     final folders = ref.read(foldersListProvider).toList()
       ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
@@ -99,7 +102,7 @@ class BulkActionDialogs {
           ),
         ),
         title: Text(
-          'Move $fileCount ${fileCount == 1 ? 'file' : 'files'} to',
+          'Move $itemCount ${itemCount == 1 ? 'item' : 'items'} to',
           style: const TextStyle(
             fontFamily: SpaceNotesTheme.fontMono,
             fontSize: 16,
@@ -148,7 +151,7 @@ class BulkActionDialogs {
     );
   }
 
-  /// Says what happened. A partial failure names the files that did not make
+  /// Says what happened. A partial failure names the items that did not make
   /// it, since those are the ones needing another go.
   static void reportResult(
     BuildContext context,
@@ -156,7 +159,7 @@ class BulkActionDialogs {
     BulkResult result,
   ) {
     final message = result.allSucceeded
-        ? '$verb ${result.succeeded.length} ${result.succeeded.length == 1 ? 'file' : 'files'}'
+        ? '$verb ${result.succeeded.length} ${result.succeeded.length == 1 ? 'item' : 'items'}'
         : '$verb ${result.summary} — failed: ${result.failed.join(', ')}';
 
     ScaffoldMessenger.of(context).showSnackBar(
