@@ -576,6 +576,8 @@ class QuillNoteEditorState extends State<QuillNoteEditor> {
   /// Converts the whole note to a checklist: each existing non-blank line
   /// becomes an unchecked item (mirrors Keep's "Show checkboxes" on an
   /// existing note); an empty note seeds one blank item to start from.
+  void convertToChecklist() => _convertToChecklist();
+
   void _convertToChecklist() {
     final markdown = getMarkdown();
     final lines = markdown.split('\n').map((l) => l.trim()).where((l) => l.isNotEmpty).toList();

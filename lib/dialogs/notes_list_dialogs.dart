@@ -19,6 +19,8 @@ class NotesListDialogs {
     WidgetRef ref,
     SpaceFile note, {
     String? navigateToAfterDelete,
+    VoidCallback? onToggleChecklist,
+    bool isChecklistNote = false,
   }) {
     showDialog(
       context: context,
@@ -94,6 +96,26 @@ class NotesListDialogs {
                       dialogRef.invalidate(downloadStateProvider(note.path));
                     },
                   );
+                },
+              ),
+            if (onToggleChecklist != null)
+              ListTile(
+                key: const ValueKey('dialog-toggle-checklist'),
+                leading: Icon(
+                  isChecklistNote ? Icons.notes : Icons.checklist,
+                  color: SpaceNotesTheme.primary,
+                ),
+                title: Text(
+                  isChecklistNote ? 'Convert to text' : 'Convert to checklist',
+                  style: const TextStyle(
+                    fontFamily: 'FiraCode',
+                    fontSize: 14,
+                    color: SpaceNotesTheme.text,
+                  ),
+                ),
+                onTap: () {
+                  Navigator.of(dialogContext).pop();
+                  onToggleChecklist();
                 },
               ),
             if (FileTypeRegistry.forFile(note).isDeletable)

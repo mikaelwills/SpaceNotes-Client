@@ -20,6 +20,9 @@ class NoteBottomBar extends ConsumerStatefulWidget {
   final GlobalKey<QuillNoteEditorState>? quillKey;
   final VoidCallback onChatTap;
   final VoidCallback? onSendMessage;
+  final bool showChecklistOption;
+  final bool isChecklistNote;
+  final VoidCallback? onToggleChecklist;
 
   const NoteBottomBar({
     super.key,
@@ -27,6 +30,9 @@ class NoteBottomBar extends ConsumerStatefulWidget {
     required this.quillKey,
     required this.onChatTap,
     this.onSendMessage,
+    this.showChecklistOption = false,
+    this.isChecklistNote = false,
+    this.onToggleChecklist,
   });
 
   @override
@@ -212,6 +218,9 @@ class _NoteBottomBarState extends ConsumerState<NoteBottomBar> {
       ref,
       note,
       navigateToAfterDelete: _parentLocation(),
+      onToggleChecklist:
+          widget.showChecklistOption ? widget.onToggleChecklist : null,
+      isChecklistNote: widget.isChecklistNote,
     );
   }
 

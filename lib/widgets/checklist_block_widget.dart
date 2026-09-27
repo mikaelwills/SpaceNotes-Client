@@ -11,12 +11,10 @@ class ChecklistBlockWidget extends StatefulWidget {
     super.key,
     required this.items,
     required this.onChanged,
-    required this.onConvertToText,
   });
 
   final List<ChecklistItem> items;
   final ValueChanged<List<ChecklistItem>> onChanged;
-  final VoidCallback onConvertToText;
 
   @override
   State<ChecklistBlockWidget> createState() => _ChecklistBlockWidgetState();
@@ -24,6 +22,18 @@ class ChecklistBlockWidget extends StatefulWidget {
 
 class _ChecklistBlockWidgetState extends State<ChecklistBlockWidget> {
   bool _completedExpanded = false;
+  final Map<int, FocusNode> _focusNodes = {};
+
+  @override
+  void dispose() {
+    for (final node in _focusNodes.values) {
+      node.dispose();
+    }
+    super.dispose();
+  }
+
+  FocusNode _focusNodeFor(int index) =>
+      _focusNodes.putIfAbsent(index, () => FocusNode());
 
   @override
   Widget build(BuildContext context) {
@@ -37,21 +47,6 @@ class _ChecklistBlockWidgetState extends State<ChecklistBlockWidget> {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        Align(
-          alignment: Alignment.centerRight,
-          child: TextButton.icon(
-            onPressed: widget.onConvertToText,
-            icon: const Icon(Icons.text_fields, size: 16, color: SpaceNotesTheme.textSecondary),
-            label: const Text(
-              'Convert to text',
-              style: TextStyle(
-                fontFamily: 'FiraCode',
-                fontSize: 12,
-                color: SpaceNotesTheme.textSecondary,
-              ),
-            ),
-          ),
-        ),
         if (active.isEmpty && completed.isEmpty)
           const SizedBox.shrink()
         else
@@ -66,15 +61,18 @@ class _ChecklistBlockWidgetState extends State<ChecklistBlockWidget> {
                   key: ValueKey('item-$i'),
                   index: i,
                   item: widget.items[i],
+                  focusNode: _focusNodeFor(i),
                   onToggle: () => _toggle(i),
                   onTextChanged: (text) => _setText(i, text),
+                  onSubmitted: () => _insertAfter(i),
+                  onDelete: () => _delete(i),
                 ),
             ],
           ),
+        _AddItemRow(onTap: _addItem),
         if (completed.isNotEmpty) ...[
-          if (active.isNotEmpty) const SizedBox(height: 4),
+          const SizedBox(height: 4),
           _CompletedToggle(
-            count: completed.length,
             expanded: _completedExpanded,
             onTap: () => setState(() => _completedExpanded = !_completedExpanded),
           ),
@@ -84,8 +82,11 @@ class _ChecklistBlockWidgetState extends State<ChecklistBlockWidget> {
                 key: ValueKey('item-$i'),
                 index: i,
                 item: widget.items[i],
+                focusNode: _focusNodeFor(i),
                 onToggle: () => _toggle(i),
                 onTextChanged: (text) => _setText(i, text),
+                onSubmitted: () => _insertAfter(i),
+                onDelete: () => _delete(i),
               ),
         ],
       ],
@@ -101,6 +102,27 @@ class _ChecklistBlockWidgetState extends State<ChecklistBlockWidget> {
   void _setText(int index, String text) {
     final next = List<ChecklistItem>.from(widget.items);
     next[index] = next[index].copyWith(text: text);
+    widget.onChanged(next);
+  }
+
+  void _insertAfter(int index) {
+    final next = List<ChecklistItem>.from(widget.items);
+    next.insert(index + 1, const ChecklistItem(text: '', checked: false));
+    _focusNodeFor(index + 1).requestFocus();
+    widget.onChanged(next);
+  }
+
+  void _delete(int index) {
+    final next = List<ChecklistItem>.from(widget.items);
+    next.removeAt(index);
+    _focusNodes.remove(index)?.dispose();
+    widget.onChanged(next);
+  }
+
+  void _addItem() {
+    final next = List<ChecklistItem>.from(widget.items);
+    next.add(const ChecklistItem(text: '', checked: false));
+    _focusNodeFor(next.length - 1).requestFocus();
     widget.onChanged(next);
   }
 
@@ -130,14 +152,45 @@ class _ChecklistBlockWidgetState extends State<ChecklistBlockWidget> {
   }
 }
 
+class _AddItemRow extends StatelessWidget {
+  const _AddItemRow({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      child: const Padding(
+        padding: EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+        child: Center(
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.add, size: 18, color: SpaceNotesTheme.textSecondary),
+              SizedBox(width: 8),
+              Text(
+                'List Item',
+                style: TextStyle(
+                  fontFamily: 'FiraCode',
+                  fontSize: 14,
+                  color: SpaceNotesTheme.textSecondary,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _CompletedToggle extends StatelessWidget {
   const _CompletedToggle({
-    required this.count,
     required this.expanded,
     required this.onTap,
   });
 
-  final int count;
   final bool expanded;
   final VoidCallback onTap;
 
@@ -160,7 +213,7 @@ class _CompletedToggle extends StatelessWidget {
             ),
             const SizedBox(width: 4),
             Text(
-              '$count Completed ${count == 1 ? 'item' : 'items'}',
+              expanded ? 'Hide checked items' : 'Show checked items',
               style: const TextStyle(
                 fontFamily: 'FiraCode',
                 fontSize: 13,
@@ -179,14 +232,20 @@ class _ChecklistRow extends StatefulWidget {
     super.key,
     required this.index,
     required this.item,
+    required this.focusNode,
     required this.onToggle,
     required this.onTextChanged,
+    required this.onSubmitted,
+    required this.onDelete,
   });
 
   final int index;
   final ChecklistItem item;
+  final FocusNode focusNode;
   final VoidCallback onToggle;
   final ValueChanged<String> onTextChanged;
+  final VoidCallback onSubmitted;
+  final VoidCallback onDelete;
 
   @override
   State<_ChecklistRow> createState() => _ChecklistRowState();
@@ -199,6 +258,7 @@ class _ChecklistRowState extends State<_ChecklistRow> {
   void initState() {
     super.initState();
     _controller = TextEditingController(text: widget.item.text);
+    widget.focusNode.addListener(_onFocusChanged);
   }
 
   @override
@@ -207,12 +267,21 @@ class _ChecklistRowState extends State<_ChecklistRow> {
     if (oldWidget.item.text != widget.item.text && widget.item.text != _controller.text) {
       _controller.text = widget.item.text;
     }
+    if (oldWidget.focusNode != widget.focusNode) {
+      oldWidget.focusNode.removeListener(_onFocusChanged);
+      widget.focusNode.addListener(_onFocusChanged);
+    }
   }
 
   @override
   void dispose() {
+    widget.focusNode.removeListener(_onFocusChanged);
     _controller.dispose();
     super.dispose();
+  }
+
+  void _onFocusChanged() {
+    if (mounted) setState(() {});
   }
 
   @override
@@ -223,6 +292,17 @@ class _ChecklistRowState extends State<_ChecklistRow> {
       child: Row(
         key: ValueKey('row-${widget.index}'),
         children: [
+          ReorderableDragStartListener(
+            index: widget.index,
+            child: const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 4),
+              child: Icon(
+                Icons.drag_indicator,
+                size: 18,
+                color: SpaceNotesTheme.textSecondary,
+              ),
+            ),
+          ),
           GestureDetector(
             onTap: widget.onToggle,
             child: Padding(
@@ -230,7 +310,7 @@ class _ChecklistRowState extends State<_ChecklistRow> {
               child: Icon(
                 checked ? Icons.check_box : Icons.check_box_outline_blank,
                 size: 20,
-                color: checked ? SpaceNotesTheme.primary : SpaceNotesTheme.textSecondary,
+                color: SpaceNotesTheme.textSecondary,
               ),
             ),
           ),
@@ -238,32 +318,45 @@ class _ChecklistRowState extends State<_ChecklistRow> {
           Expanded(
             child: TextField(
               controller: _controller,
+              focusNode: widget.focusNode,
               onChanged: widget.onTextChanged,
-              maxLines: null,
+              maxLines: 1,
+              textInputAction: TextInputAction.done,
+              onSubmitted: (_) => widget.onSubmitted(),
               style: TextStyle(
                 fontFamily: 'FiraCode',
                 fontSize: 14,
                 color: checked ? SpaceNotesTheme.textSecondary : SpaceNotesTheme.text,
                 decoration: checked ? TextDecoration.lineThrough : null,
               ),
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 isDense: true,
                 border: InputBorder.none,
-                contentPadding: EdgeInsets.symmetric(vertical: 6),
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
+                filled: false,
+                contentPadding: const EdgeInsets.symmetric(vertical: 6),
+                hintText: widget.index == 0 ? 'Item One..' : null,
+                hintStyle: const TextStyle(
+                  fontFamily: 'FiraCode',
+                  fontSize: 14,
+                  color: SpaceNotesTheme.textSecondary,
+                ),
               ),
             ),
           ),
-          ReorderableDragStartListener(
-            index: widget.index,
-            child: const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 4),
-              child: Icon(
-                Icons.drag_handle,
-                size: 18,
-                color: SpaceNotesTheme.textSecondary,
+          if (widget.focusNode.hasFocus)
+            GestureDetector(
+              onTap: widget.onDelete,
+              child: const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 4),
+                child: Icon(
+                  Icons.close,
+                  size: 18,
+                  color: SpaceNotesTheme.textSecondary,
+                ),
               ),
             ),
-          ),
         ],
       ),
     );

@@ -40,6 +40,7 @@ class _NoteScreenState extends ConsumerState<NoteScreen> {
   String _lastSavedContent = '';
   bool _contentLoaded = false;
   bool _isChatOpen = false;
+  bool _checklistMode = false;
   double _chatHeight = 0;
 
   late final _repo = ref.read(notesRepositoryProvider);
@@ -129,6 +130,9 @@ class _NoteScreenState extends ConsumerState<NoteScreen> {
             notePath: _currentPath,
             quillKey: _quillKey,
             onChatTap: () {},
+            showChecklistOption: _showChecklistToggle,
+            isChecklistNote: _wholeNoteChecklistBlock != null,
+            onToggleChecklist: _toggleChecklist,
           ),
         ),
       ],
@@ -155,6 +159,9 @@ class _NoteScreenState extends ConsumerState<NoteScreen> {
               setState(() => _isChatOpen = true);
             }
           },
+          showChecklistOption: _showChecklistToggle,
+          isChecklistNote: _wholeNoteChecklistBlock != null,
+          onToggleChecklist: _toggleChecklist,
         ),
       ],
     );
@@ -237,10 +244,8 @@ class _NoteScreenState extends ConsumerState<NoteScreen> {
       );
     }
 
-    final checklistBlock = ChecklistNoteParser.findBlock(_currentContent);
-    if (checklistBlock != null &&
-        checklistBlock.start == 0 &&
-        checklistBlock.end >= _currentContent.trimRight().length) {
+    final checklistBlock = _wholeNoteChecklistBlock;
+    if (checklistBlock != null) {
       return SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
         child: ChecklistBlockWidget(
@@ -251,18 +256,12 @@ class _NoteScreenState extends ConsumerState<NoteScreen> {
               checklistBlock,
               items,
             );
-            _currentContent = newBody;
+            setState(() => _currentContent = newBody);
             _debounceTimer?.cancel();
             _debounceTimer = Timer(const Duration(seconds: 1), () {
               debugLogger.debug('NOTE', 'Debounce fired (checklist): $_noteName');
               _saveContent();
             });
-          },
-          onConvertToText: () {
-            setState(() {
-              _currentContent = ChecklistNoteParser.toPlainText(checklistBlock.items);
-            });
-            _saveContent();
           },
         ),
       );
@@ -275,7 +274,7 @@ class _NoteScreenState extends ConsumerState<NoteScreen> {
         showToolbar: PlatformUtils.isDesktopLayout(context),
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
         onContentChanged: (markdown) {
-          _currentContent = markdown;
+          setState(() => _currentContent = markdown);
           _debounceTimer?.cancel();
           _debounceTimer = Timer(const Duration(seconds: 1), () {
             debugLogger.debug('NOTE', 'Debounce fired: $_noteName');
@@ -286,12 +285,47 @@ class _NoteScreenState extends ConsumerState<NoteScreen> {
     );
   }
 
+  bool get _isGenuiNote => GenuiNoteParser.parse(_currentContent) != null;
+
+  ChecklistBlock? get _wholeNoteChecklistBlock {
+    final block = ChecklistNoteParser.findBlock(_currentContent);
+    if (block == null) {
+      return _checklistMode
+          ? const ChecklistBlock(items: [], start: 0, end: 0)
+          : null;
+    }
+    if (block.start != 0 || block.end < _currentContent.trimRight().length) {
+      return null;
+    }
+    return block;
+  }
+
+  bool get _showChecklistToggle => !_isGenuiNote;
+
+  void _toggleChecklist() {
+    final block = _wholeNoteChecklistBlock;
+    if (_checklistMode) {
+      setState(() {
+        _checklistMode = false;
+        _currentContent = ChecklistNoteParser.toPlainText(block!.items);
+      });
+      _saveContent();
+    } else {
+      setState(() => _checklistMode = true);
+      _quillKey.currentState?.convertToChecklist();
+    }
+  }
+
   String get _noteName => _currentPath.split('/').last;
 
   void _seedContent(String content) {
     _contentLoaded = true;
     _currentContent = content;
     _lastSavedContent = content;
+    final block = ChecklistNoteParser.findBlock(content);
+    _checklistMode = block != null &&
+        block.start == 0 &&
+        block.end >= content.trimRight().length;
     debugLogger.info('NOTE', 'Opened: $_noteName (${content.length} chars)');
   }
 
