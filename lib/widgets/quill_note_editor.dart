@@ -326,6 +326,15 @@ class QuillNoteEditorState extends State<QuillNoteEditor> {
                                 : 'Show Raw Markdown',
                             onPressed: _toggleRawMode,
                           ),
+                          QuillToolbarCustomButtonOptions(
+                            icon: const Icon(
+                              Icons.checklist,
+                              size: 18,
+                              color: SpaceNotesTheme.text,
+                            ),
+                            tooltip: 'Convert to Checklist',
+                            onPressed: _convertToChecklist,
+                          ),
                         ],
                       ),
                     ),
@@ -562,6 +571,18 @@ class QuillNoteEditorState extends State<QuillNoteEditor> {
       }
       _isRawMode = !_isRawMode;
     });
+  }
+
+  /// Converts the whole note to a checklist: each existing non-blank line
+  /// becomes an unchecked item (mirrors Keep's "Show checkboxes" on an
+  /// existing note); an empty note seeds one blank item to start from.
+  void _convertToChecklist() {
+    final markdown = getMarkdown();
+    final lines = markdown.split('\n').map((l) => l.trim()).where((l) => l.isNotEmpty).toList();
+    final body = lines.isEmpty
+        ? '- [ ] '
+        : lines.map((line) => '- [ ] $line').join('\n');
+    widget.onContentChanged('$body\n');
   }
 
   String _cleanMarkdown(String markdown) {

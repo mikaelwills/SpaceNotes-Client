@@ -6,8 +6,10 @@ import '../generated/client.dart';
 import '../generated/file_content.dart';
 import '../generated/space_file.dart';
 import '../providers/notes_providers.dart';
+import '../services/checklist_note_parser.dart';
 import '../services/genui_note_parser.dart';
 import '../widgets/audio_mini_bar.dart';
+import '../widgets/checklist_block_widget.dart';
 import '../widgets/dashboard/genui_surface.dart';
 import '../widgets/quill_note_editor.dart';
 import '../widgets/note_status_bar.dart';
@@ -232,6 +234,37 @@ class _NoteScreenState extends ConsumerState<NoteScreen> {
             _saveContent();
           });
         },
+      );
+    }
+
+    final checklistBlock = ChecklistNoteParser.findBlock(_currentContent);
+    if (checklistBlock != null &&
+        checklistBlock.start == 0 &&
+        checklistBlock.end >= _currentContent.trimRight().length) {
+      return SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
+        child: ChecklistBlockWidget(
+          items: checklistBlock.items,
+          onChanged: (items) {
+            final newBody = ChecklistNoteParser.replaceBlock(
+              _currentContent,
+              checklistBlock,
+              items,
+            );
+            _currentContent = newBody;
+            _debounceTimer?.cancel();
+            _debounceTimer = Timer(const Duration(seconds: 1), () {
+              debugLogger.debug('NOTE', 'Debounce fired (checklist): $_noteName');
+              _saveContent();
+            });
+          },
+          onConvertToText: () {
+            setState(() {
+              _currentContent = ChecklistNoteParser.toPlainText(checklistBlock.items);
+            });
+            _saveContent();
+          },
+        ),
       );
     }
 
