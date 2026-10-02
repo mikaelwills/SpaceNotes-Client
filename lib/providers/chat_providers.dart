@@ -303,6 +303,7 @@ class _ChatIndex {
     final perAgent = <String, List<ChatItem>>{};
 
     for (final m in client.message.rows.value) {
+      if (m.source == chatControlSource) continue;
       (perAgent[m.agentId] ??= []).add(ChatMessageItem(m));
     }
     for (final t in client.toolEvent.rows.value) {
@@ -569,6 +570,25 @@ Future<void> sendChatMessage(
     debugLogger.chatError('sendChatMessage threw', 'id=$id err=$e\n$st');
     rethrow;
   }
+}
+
+const chatControlSource = 'control';
+
+Future<void> sendChatStop(WidgetRef ref, {required String agentId}) async {
+  final client = ref.read(chatClientProvider);
+  if (client == null) {
+    debugLogger.chatError('sendChatStop aborted', 'client=null');
+    return;
+  }
+  final id = _mintMessageId();
+  debugLogger.chat('sendChatStop', 'id=$id agent=$agentId');
+  await client.reducers.pushMessage(
+    id: id,
+    agentId: agentId,
+    role: 'user',
+    text: 'stop',
+    source: chatControlSource,
+  );
 }
 
 final Set<String> _echoConfirmedIds = {};
