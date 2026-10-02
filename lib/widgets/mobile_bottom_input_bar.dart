@@ -110,8 +110,8 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
     final agentState = chatAgentId == null
         ? null
         : ref.watch(agentActivityProvider(chatAgentId))?.state;
-    final agentBusy = agentState == 'thinking' || agentState == 'tool_use';
-    final hasDraft = _hasText || _pendingImageBytes != null;
+    final showStop = !_isFocused &&
+        (agentState == 'thinking' || agentState == 'tool_use');
 
     return SafeArea(
       top: false,
@@ -130,7 +130,7 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
         onSend: _onSend,
         showSend: viewType != HomeViewType.passwords &&
             (isChat || _isFocused || _hasText) &&
-            !(agentBusy && !hasDraft),
+            !showStop,
         leading: [
           if (isAgentChat)
             SnDockTile(
@@ -141,7 +141,7 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
         ],
         trailing: [
           ..._buildTrailing(isChat, folderPath),
-          if (agentBusy && chatAgentId != null)
+          if (showStop && chatAgentId != null)
             SnDockTile(
               key: const ValueKey('chat_stop_button'),
               icon: Icons.stop,
