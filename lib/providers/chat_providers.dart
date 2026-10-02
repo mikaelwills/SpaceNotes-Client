@@ -578,19 +578,29 @@ Future<void> sendChatMessage(
 
 const chatControlSource = 'control';
 
-Future<void> sendChatStop(WidgetRef ref, {required String agentId}) async {
+Future<void> sendChatStop(WidgetRef ref, {required String agentId}) =>
+    _sendChatControl(ref, agentId: agentId, command: 'stop');
+
+Future<void> sendChatBackground(WidgetRef ref, {required String agentId}) =>
+    _sendChatControl(ref, agentId: agentId, command: 'background');
+
+Future<void> _sendChatControl(
+  WidgetRef ref, {
+  required String agentId,
+  required String command,
+}) async {
   final client = ref.read(chatClientProvider);
   if (client == null) {
-    debugLogger.chatError('sendChatStop aborted', 'client=null');
+    debugLogger.chatError('sendChatControl aborted', 'command=$command client=null');
     return;
   }
   final id = _mintMessageId();
-  debugLogger.chat('sendChatStop', 'id=$id agent=$agentId');
+  debugLogger.chat('sendChatControl', 'id=$id agent=$agentId command=$command');
   await client.reducers.pushMessage(
     id: id,
     agentId: agentId,
     role: 'user',
-    text: 'stop',
+    text: command,
     source: chatControlSource,
   );
 }

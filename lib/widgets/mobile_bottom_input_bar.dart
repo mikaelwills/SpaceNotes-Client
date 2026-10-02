@@ -130,6 +130,7 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
         attachedToMiniBar: attachedToMiniBar,
         chatAgentId: chatAgentId,
         showStop: showStop,
+        toolRunning: agentState == 'tool_use',
       ),
     );
   }
@@ -142,6 +143,7 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
     required bool attachedToMiniBar,
     required String? chatAgentId,
     required bool showStop,
+    required bool toolRunning,
   }) {
     return SnChatDock(
         controller: _textController,
@@ -183,6 +185,16 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
         ],
         trailing: [
           ..._buildTrailing(isChat, folderPath),
+          if (showStop && toolRunning && chatAgentId != null)
+            SnDockTile(
+              key: const ValueKey('chat_background_button'),
+              icon: Icons.flip_to_back,
+              onTap: () {
+                HapticFeedback.mediumImpact();
+                sendChatBackground(ref, agentId: chatAgentId);
+              },
+              semanticLabel: 'background',
+            ),
           if (showStop && chatAgentId != null)
             SnDockTile(
               key: const ValueKey('chat_stop_button'),
