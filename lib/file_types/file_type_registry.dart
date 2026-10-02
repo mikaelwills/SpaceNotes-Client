@@ -1,6 +1,7 @@
 import '../generated/space_file.dart';
 import 'audio_file_handler.dart';
 import 'credential_file_handler.dart';
+import 'csv_file_handler.dart';
 import 'file_type_handler.dart';
 import 'image_file_handler.dart';
 import 'markdown_file_handler.dart';
@@ -31,6 +32,7 @@ class FileTypeRegistry {
     'm4v': VideoFileHandler('m4v'),
     'webm': VideoFileHandler('webm'),
     'pdf': PdfFileHandler(),
+    'csv': CsvFileHandler(),
   };
 
   static const _fallback = UnknownFileHandler();
@@ -52,7 +54,7 @@ class FileTypeRegistry {
     'mp3', 'wav', 'm4a', 'aac', 'flac', 'ogg',
     'jpg', 'jpeg', 'png', 'gif', 'webp', 'heic',
     'mp4', 'mov', 'm4v', 'webm',
-    'pdf',
+    'pdf', 'csv',
   };
 
   static bool isHiddenName(String name) => name.startsWith('.');

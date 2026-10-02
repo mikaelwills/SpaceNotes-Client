@@ -19,6 +19,15 @@ void main() {
     expect(h.isCreatable, false);
     expect(h.hasTextRepresentation, false);
   });
+  test('csv is a downloadable binary like pdf', () {
+    final h = FileTypeRegistry.forExtension('csv');
+    expect(h.extension, 'csv');
+    expect(h.isOffloadable, true);
+    expect(h.isEditable, false);
+    expect(h.isCreatable, false);
+    expect(h.hasContextActions, true);
+    expect(FileTypeRegistry.forFileName('data/export.CSV').extension, 'csv');
+  });
   test('markdown still has context actions', () {
     expect(FileTypeRegistry.forExtension('md').hasContextActions, true);
   });
@@ -35,10 +44,12 @@ void main() {
     expect(FileTypeRegistry.forExtension('md').applyExtension('x.md'), 'x.md');
   });
   test('uploadable mirrors the daemon allowlist', () {
-    for (final name in ['a.md', 'b.PDF', 'c.heic', 'd.wav', 'e.json', 'f.txt']) {
+    for (final name in [
+      'a.md', 'b.PDF', 'c.heic', 'd.wav', 'e.json', 'f.txt', 'g.csv',
+    ]) {
       expect(FileTypeRegistry.isUploadable(name), true, reason: name);
     }
-    for (final name in ['x.csv', 'x.exe', 'x.docx', 'x', 'x.', '.DS_Store']) {
+    for (final name in ['x.exe', 'x.docx', 'x', 'x.', '.DS_Store']) {
       expect(FileTypeRegistry.isUploadable(name), false, reason: name);
     }
     expect(FileTypeRegistry.isHiddenName('.DS_Store'), true);

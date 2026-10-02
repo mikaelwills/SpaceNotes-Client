@@ -14,9 +14,9 @@ void main() {
     ]);
     expect(
       partition.supported.map((f) => f.uri.pathSegments.last),
-      ['a.jpg', 'notes.md'],
+      ['a.jpg', 'data.csv', 'notes.md'],
     );
-    expect(partition.unsupported, ['data.csv', 'setup.exe']);
+    expect(partition.unsupported, ['setup.exe']);
   });
 
   test('a result with only unsupported files has nothing else to report', () {
