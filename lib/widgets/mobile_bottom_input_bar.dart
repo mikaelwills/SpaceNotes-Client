@@ -105,6 +105,14 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
         ref.watch(audioPlaybackProvider.select((s) => s.fileId));
     final attachedToMiniBar = AudioMiniBar.isVisible(context, audioFileId);
 
+    final chatAgentId =
+        isChat ? (_getCurrentAgentId() ?? ref.watch(targetAgentProvider)) : null;
+    final agentState = chatAgentId == null
+        ? null
+        : ref.watch(agentActivityProvider(chatAgentId))?.state;
+    final agentBusy = agentState == 'thinking' || agentState == 'tool_use';
+    final hasDraft = _hasText || _pendingImageBytes != null;
+
     return SafeArea(
       top: false,
       child: SnChatDock(
@@ -121,7 +129,8 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
         onChanged: isChat ? null : _onSearchChanged,
         onSend: _onSend,
         showSend: viewType != HomeViewType.passwords &&
-            (isChat || _isFocused || _hasText),
+            (isChat || _isFocused || _hasText) &&
+            !(agentBusy && !hasDraft),
         leading: [
           if (isAgentChat)
             SnDockTile(
@@ -130,7 +139,20 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
               semanticLabel: 'back',
             ),
         ],
-        trailing: _buildTrailing(isChat, folderPath),
+        trailing: [
+          ..._buildTrailing(isChat, folderPath),
+          if (agentBusy && chatAgentId != null)
+            SnDockTile(
+              key: const ValueKey('chat_stop_button'),
+              icon: Icons.stop,
+              color: SpaceNotesTheme.offline,
+              onTap: () {
+                HapticFeedback.mediumImpact();
+                sendChatStop(ref, agentId: chatAgentId);
+              },
+              semanticLabel: 'stop',
+            ),
+        ],
       ),
     );
   }

@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../providers/chat_providers.dart';
 import '../../services/debug_logger.dart';
 import '../../services/paste_image_listener.dart';
+import '../../theme/spacenotes_theme.dart';
 import '../primitives/primitives.dart';
 
 class DesktopChatInput extends ConsumerStatefulWidget {
@@ -40,6 +41,9 @@ class _DesktopChatInputState extends ConsumerState<DesktopChatInput> {
 
   @override
   Widget build(BuildContext context) {
+    final String agent = widget.agentId ?? ref.watch(targetAgentProvider);
+    final agentState = ref.watch(agentActivityProvider(agent))?.state;
+    final agentBusy = agentState == 'thinking' || agentState == 'tool_use';
     return Center(
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 800),
@@ -66,6 +70,14 @@ class _DesktopChatInputState extends ConsumerState<DesktopChatInput> {
                   ? 'clear attached image'
                   : 'attach image',
             ),
+            if (agentBusy)
+              SnDockTile(
+                key: const ValueKey('chat_stop_button'),
+                icon: Icons.stop,
+                color: SpaceNotesTheme.offline,
+                onTap: () => sendChatStop(ref, agentId: agent),
+                semanticLabel: 'stop',
+              ),
           ],
         ),
       ),

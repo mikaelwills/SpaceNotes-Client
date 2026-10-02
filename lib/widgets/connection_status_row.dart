@@ -75,10 +75,6 @@ class ConnectionStatusRow extends ConsumerWidget {
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (isActive) ...[
-            _StopButton(agentId: resolvedAgent),
-            const SizedBox(width: 6),
-          ],
           const _A2aToggle(),
           const SizedBox(width: 12),
           _StateDot(color: accent, pulsing: isActive),
@@ -162,37 +158,6 @@ String _fmtTokens(int n) {
     return '${k.toStringAsFixed(k >= 100 ? 0 : 1)}k';
   }
   return '$n';
-}
-
-class _StopButton extends ConsumerWidget {
-  const _StopButton({required this.agentId});
-
-  final String agentId;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return GestureDetector(
-      key: const ValueKey('chat_stop_button'),
-      behavior: HitTestBehavior.opaque,
-      onTap: () => sendChatStop(ref, agentId: agentId),
-      child: const Padding(
-        padding: EdgeInsets.symmetric(horizontal: 6, vertical: 8),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.stop, size: 12, color: SpaceNotesTheme.offline),
-            SizedBox(width: 4),
-            SnUiText(
-              'stop',
-              color: SpaceNotesTheme.offline,
-              fontSize: 10,
-              letterSpacing: 1.5,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 }
 
 class _A2aToggle extends ConsumerWidget {
