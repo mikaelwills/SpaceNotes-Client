@@ -46,6 +46,24 @@ class FileTypeRegistry {
     return forExtension(name.substring(dot + 1));
   }
 
+  static const uploadableExtensions = <String>{
+    'md', 'yaml', 'yml', 'json', 'toml', 'txt',
+    'gpg',
+    'mp3', 'wav', 'm4a', 'aac', 'flac', 'ogg',
+    'jpg', 'jpeg', 'png', 'gif', 'webp', 'heic',
+    'mp4', 'mov', 'm4v', 'webm',
+    'pdf',
+  };
+
+  static bool isHiddenName(String name) => name.startsWith('.');
+
+  static bool isUploadable(String name) {
+    if (isHiddenName(name)) return false;
+    final dot = name.lastIndexOf('.');
+    if (dot < 0 || dot == name.length - 1) return false;
+    return uploadableExtensions.contains(name.substring(dot + 1).toLowerCase());
+  }
+
   static const credentialStoreRoot = '.password-store';
 
   static bool isProtectedPath(String path) =>

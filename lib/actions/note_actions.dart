@@ -13,6 +13,7 @@ import '../providers/file_transfer_providers.dart';
 import '../providers/upload_progress_providers.dart';
 import '../services/debug_logger.dart';
 import '../services/file_transfer_service.dart';
+import '../services/folder_upload.dart' as folder_upload;
 import '../theme/spacenotes_theme.dart';
 import '../file_types/file_type_registry.dart';
 import '../widgets/folder_picker_field.dart';
@@ -102,51 +103,29 @@ Future<void> uploadFilesToFolder(
   final uploadable = result.files.where((f) => f.path != null).toList();
 
   if (uploadable.length == 1) {
+    final picked = uploadable.first;
+    if (!FileTypeRegistry.isUploadable(picked.name)) {
+      await folder_upload.showUnsupportedFilesDialog(context, [picked.name]);
+      return;
+    }
     await _uploadSingleWithCollisionDialog(
       context,
       service,
       batch,
       resolvedFolder,
-      uploadable.first,
+      picked,
     );
     return;
   }
 
-  final jobIds = {
-    for (final picked in uploadable)
-      picked: '${DateTime.now().microsecondsSinceEpoch}_${picked.name}',
-  };
-  batch.startBatch([
-    for (final picked in uploadable) (id: jobIds[picked]!, fileName: picked.name)
-  ]);
-
-  final skipped = <String>[];
-  for (final picked in uploadable) {
-    final path = picked.path!;
-    final jobId = jobIds[picked]!;
-    try {
-      await service.uploadFile(
-        resolvedFolder,
-        File(path),
-        onProgress: (sent, total) {
-          if (total > 0) {
-            batch.progress(jobId, sent / total, sentBytes: sent, totalBytes: total);
-          }
-        },
-      );
-      batch.complete(jobId);
-    } on FileAlreadyExistsException {
-      skipped.add(picked.name);
-      batch.fail(jobId, 'already exists');
-    } catch (e) {
-      debugLogger.error('UPLOAD', 'Error uploading ${picked.name}', e.toString());
-      batch.fail(jobId, e.toString());
-    }
-  }
-  batch.finishBatch();
-  if (skipped.isNotEmpty && context.mounted) {
-    _showSkippedDialog(context, skipped);
-  }
+  final uploadResult = await folder_upload.uploadFilesToFolder(
+    service: service,
+    batch: batch,
+    folderPath: resolvedFolder,
+    files: [for (final picked in uploadable) File(picked.path!)],
+  );
+  if (!context.mounted) return;
+  await folder_upload.showUploadOutcomeDialogs(context, uploadResult);
 }
 
 Future<void> _uploadSingleWithCollisionDialog(
@@ -253,17 +232,30 @@ Future<void> _uploadFolder(
   final batch = ref.read(uploadBatchProvider.notifier);
   final createdFolders = <String>{};
   final skipped = <String>[];
+  final failed = <String>[];
+  final unsupported = <String>[];
+
+  final supported = <File>[];
+  for (final file in entries) {
+    final name = file.uri.pathSegments.last;
+    if (FileTypeRegistry.isHiddenName(name)) continue;
+    if (FileTypeRegistry.isUploadable(name)) {
+      supported.add(file);
+    } else {
+      unsupported.add(file.path.substring(rootDir.path.length + 1));
+    }
+  }
 
   final jobIds = {
-    for (final file in entries)
+    for (final file in supported)
       file: '${DateTime.now().microsecondsSinceEpoch}_${file.uri.pathSegments.last}',
   };
   batch.startBatch([
-    for (final file in entries)
+    for (final file in supported)
       (id: jobIds[file]!, fileName: file.uri.pathSegments.last)
   ]);
 
-  for (final file in entries) {
+  for (final file in supported) {
     final relative = file.path.substring(rootDir.path.length + 1);
     final relativeDir =
         relative.contains('/') ? relative.substring(0, relative.lastIndexOf('/')) : '';
@@ -292,36 +284,19 @@ Future<void> _uploadFolder(
       batch.fail(jobId, 'already exists');
     } catch (e) {
       debugLogger.error('UPLOAD', 'Error uploading ${file.path}', e.toString());
+      failed.add(relative);
       batch.fail(jobId, e.toString());
     }
   }
   batch.finishBatch();
 
-  if (skipped.isNotEmpty && context.mounted) {
-    _showSkippedDialog(context, skipped);
-  }
-}
-
-void _showSkippedDialog(BuildContext context, List<String> skipped) {
-  showDialog<void>(
-    context: context,
-    builder: (ctx) => SnDialog(
-      title: 'Some files already existed',
-      content: Text(
-        '${skipped.length} file(s) were skipped because they already exist:\n\n${skipped.join('\n')}',
-        style: const TextStyle(
-          fontFamily: SpaceNotesTheme.fontSans,
-          fontSize: 13,
-          color: SpaceNotesTheme.fg,
-        ),
-      ),
-      actions: [
-        SnDialogAction(
-          label: 'OK',
-          variant: SnButtonVariant.outline,
-          onPressed: () => Navigator.pop(ctx),
-        ),
-      ],
+  if (!context.mounted) return;
+  await folder_upload.showUploadOutcomeDialogs(
+    context,
+    folder_upload.FolderUploadResult(
+      skipped: skipped,
+      failed: failed,
+      unsupported: unsupported,
     ),
   );
 }

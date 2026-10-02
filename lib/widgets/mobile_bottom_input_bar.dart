@@ -330,11 +330,17 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
     final uploadable = result.files.where((f) => f.path != null).toList();
 
     if (uploadable.length == 1) {
+      final picked = uploadable.first;
+      if (!FileTypeRegistry.isUploadable(picked.name)) {
+        if (!mounted) return;
+        await showUnsupportedFilesDialog(context, [picked.name]);
+        return;
+      }
       await _uploadSingleWithCollisionDialog(
         service,
         batch,
         targetFolder,
-        uploadable.first,
+        picked,
       );
       return;
     }
@@ -346,9 +352,8 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
       files: [for (final picked in uploadable) File(picked.path!)],
     );
 
-    if (uploadResult.hasSkipped && mounted) {
-      showUploadSkippedDialog(context, uploadResult.skipped);
-    }
+    if (!mounted) return;
+    await showUploadOutcomeDialogs(context, uploadResult);
   }
 
   Future<void> _uploadSingleWithCollisionDialog(
@@ -383,6 +388,8 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
           'UPLOAD', 'Error uploading ${picked.name}', e.toString());
       batch.fail(jobId, e.toString());
       batch.finishBatch();
+      if (!mounted) return;
+      showUploadFailedDialog(context, [picked.name]);
     }
   }
 

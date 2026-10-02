@@ -73,8 +73,8 @@ class _FolderListViewState extends ConsumerState<FolderListView> {
       files: files,
     );
 
-    if (!mounted || !result.hasSkipped) return;
-    showUploadSkippedDialog(context, result.skipped);
+    if (!mounted) return;
+    await showUploadOutcomeDialogs(context, result);
   }
 
   @override
@@ -142,8 +142,7 @@ class _FolderListViewState extends ConsumerState<FolderListView> {
                     folders: data.folders,
                     onDelete: () =>
                         _bulkDelete(context, data.folders, data.notes),
-                    onMove: () =>
-                        _bulkMove(context, data.folders, data.notes),
+                    onMove: () => _bulkMove(context, data.folders, data.notes),
                   )
                 : Row(
                     mainAxisSize: MainAxisSize.min,
@@ -288,7 +287,9 @@ class _FolderListViewState extends ConsumerState<FolderListView> {
     );
 
     ref.read(fileSelectionProvider.notifier).exit();
-    if (context.mounted) BulkActionDialogs.reportResult(context, 'Deleted', result);
+    if (context.mounted) {
+      BulkActionDialogs.reportResult(context, 'Deleted', result);
+    }
   }
 
   Future<void> _bulkMove(
@@ -316,7 +317,9 @@ class _FolderListViewState extends ConsumerState<FolderListView> {
     );
 
     ref.read(fileSelectionProvider.notifier).exit();
-    if (context.mounted) BulkActionDialogs.reportResult(context, 'Moved', result);
+    if (context.mounted) {
+      BulkActionDialogs.reportResult(context, 'Moved', result);
+    }
   }
 
   Widget _buildEmptyState() {

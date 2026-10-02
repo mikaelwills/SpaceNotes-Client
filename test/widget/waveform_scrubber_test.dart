@@ -25,6 +25,7 @@ Widget _host({
           duration: const Duration(minutes: 3),
           isPlaying: isPlaying,
           onSeek: onSeek ?? (_) {},
+          onTogglePlayPause: () {},
         ),
       ),
     );

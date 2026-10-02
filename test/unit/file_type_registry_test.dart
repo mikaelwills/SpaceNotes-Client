@@ -34,6 +34,16 @@ void main() {
     expect(FileTypeRegistry.forExtension('gpg').applyExtension('x'), 'x.gpg');
     expect(FileTypeRegistry.forExtension('md').applyExtension('x.md'), 'x.md');
   });
+  test('uploadable mirrors the daemon allowlist', () {
+    for (final name in ['a.md', 'b.PDF', 'c.heic', 'd.wav', 'e.json', 'f.txt']) {
+      expect(FileTypeRegistry.isUploadable(name), true, reason: name);
+    }
+    for (final name in ['x.csv', 'x.exe', 'x.docx', 'x', 'x.', '.DS_Store']) {
+      expect(FileTypeRegistry.isUploadable(name), false, reason: name);
+    }
+    expect(FileTypeRegistry.isHiddenName('.DS_Store'), true);
+    expect(FileTypeRegistry.isHiddenName('a.md'), false);
+  });
   test('only markdown is creatable', () {
     expect(FileTypeRegistry.creatableTypes.map((h) => h.extension), ['md']);
     expect(FileTypeRegistry.defaultNewFileName(), endsWith('.md'));
