@@ -2,12 +2,13 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:image/image.dart' as image_lib;
 import 'package:image_picker/image_picker.dart';
 import '../../providers/chat_providers.dart';
+import '../../services/chat_attachments.dart';
 import '../../services/debug_logger.dart';
 import '../../services/paste_image_listener.dart';
 import '../../theme/spacenotes_theme.dart';
+import '../chat_pending_images.dart';
 import '../primitives/primitives.dart';
 
 class DesktopChatInput extends ConsumerStatefulWidget {
@@ -23,7 +24,9 @@ class _DesktopChatInputState extends ConsumerState<DesktopChatInput> {
   final TextEditingController _controller = TextEditingController();
   final FocusNode _focusNode = FocusNode();
   final PasteImageListener _pasteListener = createPasteImageListener();
-  Uint8List? _pendingImageBytes;
+  final ImagePicker _imagePicker = ImagePicker();
+  List<PendingChatImage> _pendingImages = const [];
+  bool _sendingImages = false;
 
   @override
   void initState() {
@@ -39,45 +42,55 @@ class _DesktopChatInputState extends ConsumerState<DesktopChatInput> {
     super.dispose();
   }
 
+  bool get _full => _pendingImages.length >= maxPendingChatImages;
+
   @override
   Widget build(BuildContext context) {
     final String agent = widget.agentId ?? ref.watch(targetAgentProvider);
     final agentState = ref.watch(agentActivityProvider(agent))?.state;
     final agentBusy = agentState == 'thinking' || agentState == 'tool_use';
+    final canAdd = !_full && !_sendingImages;
     return Center(
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 800),
-        child: SnChatDock(
-          controller: _controller,
-          focusNode: _focusNode,
-          hint: 'ask ai…',
-          onSend: _onSend,
-          maxLines: 6,
-          showFade: false,
-          padding: const EdgeInsets.fromLTRB(16, 6, 16, 16),
-          trailing: [
-            SnDockTile(
-              icon: _pendingImageBytes != null
-                  ? Icons.image
-                  : Icons.image_outlined,
-              onTap: _pendingImageBytes != null
-                  ? () {
-                      HapticFeedback.lightImpact();
-                      setState(() => _pendingImageBytes = null);
-                    }
-                  : _onPickImage,
-              semanticLabel: _pendingImageBytes != null
-                  ? 'clear attached image'
-                  : 'attach image',
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            ChatPendingImages(
+              images: _pendingImages,
+              sending: _sendingImages,
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+              onRemove: (index) => setState(() {
+                _pendingImages = [..._pendingImages]..removeAt(index);
+              }),
             ),
-            if (agentBusy)
-              SnDockTile(
-                key: const ValueKey('chat_stop_button'),
-                icon: Icons.stop,
-                color: SpaceNotesTheme.offline,
-                onTap: () => sendChatStop(ref, agentId: agent),
-                semanticLabel: 'stop',
-              ),
+            SnChatDock(
+              controller: _controller,
+              focusNode: _focusNode,
+              hint: 'ask ai…',
+              onSend: _onSend,
+              maxLines: 6,
+              showFade: false,
+              padding: const EdgeInsets.fromLTRB(16, 6, 16, 16),
+              trailing: [
+                SnDockTile(
+                  key: const ValueKey('chat_add_image'),
+                  icon: Icons.add_photo_alternate_outlined,
+                  onTap: canAdd ? _onPickImage : () {},
+                  color: canAdd ? SpaceNotesTheme.accent : SpaceNotesTheme.dim,
+                  semanticLabel: 'add image',
+                ),
+                if (agentBusy)
+                  SnDockTile(
+                    key: const ValueKey('chat_stop_button'),
+                    icon: Icons.stop,
+                    color: SpaceNotesTheme.offline,
+                    onTap: () => sendChatStop(ref, agentId: agent),
+                    semanticLabel: 'stop',
+                  ),
+              ],
+            ),
           ],
         ),
       ),
@@ -85,69 +98,73 @@ class _DesktopChatInputState extends ConsumerState<DesktopChatInput> {
   }
 
   Future<void> _onPastedImageBytes(Uint8List raw) async {
-    final png = await compute(_resizeToPng, raw);
-    if (png == null) {
-      debugLogger.error('PASTE', 'decode failed');
-      return;
-    }
-    if (png.length > 2 * 1024 * 1024) {
-      debugLogger.warning('PASTE', 'exceeds 2MB post-compress: ${png.length}');
-      return;
-    }
+    if (_full || _sendingImages) return;
+    final image = await compute(normalizeChatImage, (raw, 'pasted.png'));
     if (!mounted) return;
-    setState(() => _pendingImageBytes = png);
+    if (image == null) {
+      _showError('Pasted image could not be read');
+      return;
+    }
+    setState(() => _pendingImages = [..._pendingImages, image]);
   }
 
   void _onSend() {
+    if (_sendingImages) return;
     final message = _controller.text.trim();
-    final image = _pendingImageBytes;
-    if (message.isEmpty && image == null) return;
+    final images = _pendingImages;
+    if (message.isEmpty && images.isEmpty) return;
 
     final String agent = widget.agentId ?? ref.read(targetAgentProvider);
-    if (image != null) {
-      sendChatImage(ref, agentId: agent, caption: message, pngBytes: image);
-    } else {
-      sendChatMessage(ref, agentId: agent, text: message);
-    }
     _controller.clear();
-    setState(() => _pendingImageBytes = null);
+    if (images.isEmpty) {
+      sendChatMessage(ref, agentId: agent, text: message);
+      return;
+    }
+    _sendImages(agentId: agent, caption: message, images: images);
+  }
+
+  Future<void> _sendImages({
+    required String agentId,
+    required String caption,
+    required List<PendingChatImage> images,
+  }) async {
+    setState(() => _sendingImages = true);
+    try {
+      await sendChatImages(
+        ref,
+        agentId: agentId,
+        caption: caption,
+        images: images,
+      );
+      if (mounted) setState(() => _pendingImages = const []);
+    } catch (e, st) {
+      debugLogger.error('CHAT_IMAGES', 'Send failed', '$e\n$st');
+      if (mounted && _controller.text.isEmpty) _controller.text = caption;
+      _showError('Images not sent: $e');
+    } finally {
+      if (mounted) setState(() => _sendingImages = false);
+    }
   }
 
   Future<void> _onPickImage() async {
     try {
-      final picker = ImagePicker();
-      final XFile? image = await picker.pickImage(source: ImageSource.gallery);
-      if (image == null) return;
-
-      final raw = await image.readAsBytes();
-      final png = await compute(_resizeToPng, raw);
-      if (png == null) {
-        debugLogger.error('PICKER', 'decode failed');
-        return;
-      }
-      if (png.length > 2 * 1024 * 1024) {
-        debugLogger.warning(
-            'PICKER', 'exceeds 2MB post-compress: ${png.length}');
-        return;
-      }
-
-      setState(() => _pendingImageBytes = png);
-    } catch (e, stack) {
-      debugLogger.error('PICKER', 'pick failed: $e', stack.toString());
+      final picked = await pickChatImages(
+        _imagePicker,
+        limit: maxPendingChatImages - _pendingImages.length,
+      );
+      if (picked.isEmpty || !mounted) return;
+      HapticFeedback.lightImpact();
+      setState(() => _pendingImages = [..._pendingImages, ...picked]);
+    } catch (e, st) {
+      debugLogger.error('CHAT_IMAGES', 'Pick failed', '$e\n$st');
+      _showError('Could not add images: $e');
     }
   }
-}
 
-Uint8List? _resizeToPng(Uint8List bytes) {
-  final img = image_lib.decodeImage(bytes);
-  if (img == null) return null;
-
-  var resized = img;
-  if (img.width > 1024 || img.height > 1024) {
-    resized = image_lib.copyResize(img,
-        width: img.width >= img.height ? 1024 : -1,
-        height: img.height > img.width ? 1024 : -1);
+  void _showError(String text) {
+    if (!mounted) return;
+    ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+      SnackBar(content: Text(text)),
+    );
   }
-
-  return Uint8List.fromList(image_lib.encodePng(resized));
 }

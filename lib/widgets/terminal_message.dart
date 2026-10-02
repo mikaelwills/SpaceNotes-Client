@@ -9,6 +9,7 @@ import '../generated/permission_request.dart';
 import '../generated/question_request.dart';
 import '../generated/tool_event.dart';
 import '../providers/chat_providers.dart';
+import '../services/chat_attachments.dart';
 import '../theme/spacenotes_theme.dart';
 import 'markdown_styles.dart';
 import 'primitives/primitives.dart';
@@ -58,6 +59,7 @@ class TerminalMessage extends ConsumerWidget {
   }
 
   Widget _buildUserMessage(BuildContext context) {
+    final split = splitVaultLinkLines(message.text);
     return Padding(
       padding: const EdgeInsets.fromLTRB(32, 14, 16, 14),
       child: LayoutBuilder(
@@ -101,16 +103,29 @@ class TerminalMessage extends ConsumerWidget {
                           ],
                         ),
                         const SizedBox(height: 4),
-                        SelectableText(
-                          message.text,
-                          textAlign: TextAlign.right,
-                          style: const TextStyle(
-                            fontFamily: SpaceNotesTheme.fontSans,
-                            fontSize: 15,
-                            color: SpaceNotesTheme.fg,
-                            height: 1.55,
+                        if (split.text.isNotEmpty)
+                          SelectableText(
+                            split.text,
+                            textAlign: TextAlign.right,
+                            style: const TextStyle(
+                              fontFamily: SpaceNotesTheme.fontSans,
+                              fontSize: 15,
+                              color: SpaceNotesTheme.fg,
+                              height: 1.55,
+                            ),
                           ),
-                        ),
+                        if (split.links.isNotEmpty)
+                          Wrap(
+                            alignment: WrapAlignment.end,
+                            spacing: 8,
+                            children: [
+                              for (final link in split.links)
+                                ChatFileCard(
+                                  href: link.href,
+                                  label: link.label,
+                                ),
+                            ],
+                          ),
                       ],
                     ),
                   ),

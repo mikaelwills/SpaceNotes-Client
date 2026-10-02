@@ -1,11 +1,9 @@
 import 'dart:io';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../platform/capabilities.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:image/image.dart' as image_lib;
 import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
 import '../providers/audio_playback_provider.dart';
@@ -20,15 +18,13 @@ import 'primitives/primitives.dart';
 import 'audio_mini_bar.dart';
 import 'folder_picker_field.dart';
 import '../file_types/file_type_registry.dart';
+import '../services/chat_attachments.dart';
 import '../services/debug_logger.dart';
+import 'chat_pending_images.dart';
 import '../services/folder_upload.dart';
 import '../services/file_transfer_service.dart';
 import '../theme/spacenotes_theme.dart';
 import 'adaptive/platform_utils.dart';
-
-Future<Uint8List> _readFileBytes(String path) async {
-  return File(path).readAsBytes();
-}
 
 class MobileBottomInputBar extends ConsumerStatefulWidget {
   const MobileBottomInputBar({super.key});
@@ -44,7 +40,8 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
   final ImagePicker _imagePicker = ImagePicker();
   bool _hasText = false;
   bool _isFocused = false;
-  Uint8List? _pendingImageBytes;
+  List<PendingChatImage> _pendingImages = const [];
+  bool _sendingImages = false;
   HomeViewType? _focusedForView;
 
   @override
@@ -115,7 +112,45 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
 
     return SafeArea(
       top: false,
-      child: SnChatDock(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (isChat)
+            ChatPendingImages(
+              images: _pendingImages,
+              sending: _sendingImages,
+              onRemove: (index) {
+                HapticFeedback.lightImpact();
+                setState(() {
+                  _pendingImages = [..._pendingImages]..removeAt(index);
+                });
+              },
+            ),
+          _buildDock(
+            viewType: viewType,
+            isChat: isChat,
+            isAgentChat: isAgentChat,
+            folderPath: folderPath,
+            attachedToMiniBar: attachedToMiniBar,
+            chatAgentId: chatAgentId,
+            showStop: showStop,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDock({
+    required HomeViewType viewType,
+    required bool isChat,
+    required bool isAgentChat,
+    required String folderPath,
+    required bool attachedToMiniBar,
+    required String? chatAgentId,
+    required bool showStop,
+  }) {
+    return SnChatDock(
         controller: _textController,
         focusNode: _focusNode,
         hint: _computeHint(isChat),
@@ -153,7 +188,6 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
               semanticLabel: 'stop',
             ),
         ],
-      ),
     );
   }
 
@@ -169,17 +203,16 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
 
   List<Widget> _buildTrailing(bool isChat, String folderPath) {
     if (isChat) {
-      final hasImage = _pendingImageBytes != null;
+      final full = _pendingImages.length >= maxPendingChatImages;
       return [
         SnDockTile(
-          icon: hasImage ? Icons.image : Icons.image_outlined,
-          onTap: hasImage
-              ? () {
-                  HapticFeedback.lightImpact();
-                  setState(() => _pendingImageBytes = null);
-                }
-              : _onPickImage,
-          semanticLabel: hasImage ? 'remove image' : 'attach image',
+          key: const ValueKey('chat_add_image'),
+          icon: Icons.add_photo_alternate_outlined,
+          onTap: full || _sendingImages ? () {} : _onPickImage,
+          color: full || _sendingImages
+              ? SpaceNotesTheme.dim
+              : SpaceNotesTheme.accent,
+          semanticLabel: 'add image',
         ),
       ];
     }
@@ -254,73 +287,72 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
   }
 
   void _onSend() {
+    if (_sendingImages) return;
     final message = _textController.text.trim();
-    final image = _pendingImageBytes;
-    if (message.isEmpty && image == null) return;
+    final images = _pendingImages;
+    if (message.isEmpty && images.isEmpty) return;
 
     FocusManager.instance.primaryFocus?.unfocus();
 
-    final agentId = _getCurrentAgentId();
-    if (agentId != null) {
-      if (image != null) {
-        sendChatImage(ref, agentId: agentId, caption: message, pngBytes: image);
-      } else {
-        sendChatMessage(ref, agentId: agentId, text: message);
-      }
-      _textController.clear();
-      setState(() => _pendingImageBytes = null);
-      return;
-    }
-
-    final targetAgent = ref.read(targetAgentProvider);
-    if (image != null) {
-      sendChatImage(ref,
-          agentId: targetAgent, caption: message, pngBytes: image);
-    } else {
-      sendChatMessage(ref, agentId: targetAgent, text: message);
-    }
-    context.go('/agents/chat');
-
+    final routeAgent = _getCurrentAgentId();
+    final String agentId = routeAgent ?? ref.read(targetAgentProvider);
     _textController.clear();
-    ref.read(folderSearchQueryProvider.notifier).state = '';
-    setState(() => _pendingImageBytes = null);
+
+    if (images.isEmpty) {
+      sendChatMessage(ref, agentId: agentId, text: message);
+    } else {
+      _sendImages(agentId: agentId, caption: message, images: images);
+    }
+
+    if (routeAgent == null) {
+      context.go('/agents/chat');
+      ref.read(folderSearchQueryProvider.notifier).state = '';
+    }
+  }
+
+  Future<void> _sendImages({
+    required String agentId,
+    required String caption,
+    required List<PendingChatImage> images,
+  }) async {
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    setState(() => _sendingImages = true);
+    try {
+      await sendChatImages(
+        ref,
+        agentId: agentId,
+        caption: caption,
+        images: images,
+      );
+      if (mounted) setState(() => _pendingImages = const []);
+    } catch (e, st) {
+      debugLogger.error('CHAT_IMAGES', 'Send failed', '$e\n$st');
+      if (mounted && _textController.text.isEmpty) {
+        _textController.text = caption;
+      }
+      messenger?.showSnackBar(
+        SnackBar(content: Text('Images not sent: $e')),
+      );
+    } finally {
+      if (mounted) setState(() => _sendingImages = false);
+    }
   }
 
   Future<void> _onPickImage() async {
     try {
-      final image = await _imagePicker.pickImage(source: ImageSource.gallery);
-      if (image == null) return;
-
-      final raw = await compute(_readFileBytes, image.path);
-      final png = await compute(_resizeToPng, raw);
-      if (png == null) {
-        debugPrint('[MobileBottomInputBar] Image decode failed');
-        return;
-      }
-      if (png.length > 2 * 1024 * 1024) {
-        debugPrint(
-            '[MobileBottomInputBar] Image exceeds 2MB post-compress: ${png.length}');
-        return;
-      }
-
-      setState(() => _pendingImageBytes = png);
-    } catch (e) {
-      debugPrint('[MobileBottomInputBar] Error picking image: $e');
+      final picked = await pickChatImages(
+        _imagePicker,
+        limit: maxPendingChatImages - _pendingImages.length,
+      );
+      if (picked.isEmpty || !mounted) return;
+      setState(() => _pendingImages = [..._pendingImages, ...picked]);
+    } catch (e, st) {
+      debugLogger.error('CHAT_IMAGES', 'Pick failed', '$e\n$st');
+      if (!mounted) return;
+      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+        SnackBar(content: Text('Could not add images: $e')),
+      );
     }
-  }
-
-  static Uint8List? _resizeToPng(Uint8List bytes) {
-    final img = image_lib.decodeImage(bytes);
-    if (img == null) return null;
-
-    var resized = img;
-    if (img.width > 1024 || img.height > 1024) {
-      resized = image_lib.copyResize(img,
-          width: img.width >= img.height ? 1024 : -1,
-          height: img.height > img.width ? 1024 : -1);
-    }
-
-    return Uint8List.fromList(image_lib.encodePng(resized));
   }
 
   Future<void> _uploadFiles(String folderPath) async {

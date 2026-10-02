@@ -6,6 +6,7 @@ import 'package:markdown/markdown.dart' as md;
 import '../actions/vault_link_actions.dart';
 import '../file_types/file_type_registry.dart';
 import '../providers/notes_providers.dart';
+import '../services/chat_attachments.dart';
 import '../services/vault_link.dart';
 import '../theme/spacenotes_theme.dart';
 
@@ -14,9 +15,7 @@ const vaultCardTag = 'vault-card';
 class VaultCardSyntax extends md.BlockSyntax {
   const VaultCardSyntax();
 
-  static final _line = RegExp(
-    r'^\s*(?:[-*+]\s+)?\[([^\]]*)\]\((spacenotes://file/[^)\s]+)\)\s*$',
-  );
+  static final _line = vaultFileLinkLine;
 
   @override
   RegExp get pattern => _line;

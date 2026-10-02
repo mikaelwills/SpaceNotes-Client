@@ -12,7 +12,10 @@ import '../generated/question_request.dart';
 import '../generated/agent.dart';
 import '../generated/agent_activity.dart';
 import '../generated/tool_event.dart';
+import '../platform/capabilities.dart';
+import '../services/chat_attachments.dart';
 import '../services/debug_logger.dart';
+import 'file_transfer_providers.dart';
 import 'notes_providers.dart';
 import 'recent_agents_provider.dart';
 
@@ -534,6 +537,7 @@ Future<void> sendChatMessage(
   WidgetRef ref, {
   required String agentId,
   required String text,
+  String? messageId,
 }) async {
   final client = ref.read(chatClientProvider);
   if (client == null) {
@@ -541,7 +545,7 @@ Future<void> sendChatMessage(
     return;
   }
   ref.read(recentAgentsProvider.notifier).markUsed(agentId);
-  final id = _mintMessageId();
+  final id = messageId ?? _mintMessageId();
   debugLogger.chat(
     'sendChatMessage',
     'id=$id agent=$agentId textLen=${text.length}',
@@ -609,7 +613,55 @@ void _probeEcho(SpacetimeDbClient client, String id, String kind) {
   });
 }
 
-Future<void> sendChatImage(
+Future<void> sendChatImages(
+  WidgetRef ref, {
+  required String agentId,
+  required String caption,
+  required List<PendingChatImage> images,
+}) async {
+  if (!Capabilities.canUploadFiles) {
+    for (var i = 0; i < images.length; i++) {
+      await _sendLegacyChatImage(
+        ref,
+        agentId: agentId,
+        caption: i == 0 ? caption : '',
+        pngBytes: images[i].bytes,
+      );
+    }
+    return;
+  }
+  final notesClient = ref.read(notesClientProvider);
+  if (notesClient == null) {
+    throw StateError('Not connected to the vault');
+  }
+  final service = ref.read(fileTransferServiceProvider);
+  final id = _mintMessageId();
+  final folder = chatAttachmentFolder(agentId);
+  debugLogger.chat(
+    'sendChatImages',
+    'id=$id agent=$agentId count=${images.length} folder=$folder',
+  );
+  final links = <ChatAttachmentLink>[];
+  for (var i = 0; i < images.length; i++) {
+    final name = chatAttachmentName(id, i, images[i].extension);
+    final temp = await writeChatAttachmentTemp(name, images[i].bytes);
+    try {
+      await service.uploadFile(folder, temp);
+    } finally {
+      unawaited(temp.delete().then((_) {}, onError: (_) {}));
+    }
+    final fileId = await waitForFileId(notesClient, '$folder/$name');
+    links.add(ChatAttachmentLink(name: name, fileId: fileId));
+  }
+  await sendChatMessage(
+    ref,
+    agentId: agentId,
+    text: buildChatMessageText(caption, links),
+    messageId: id,
+  );
+}
+
+Future<void> _sendLegacyChatImage(
   WidgetRef ref, {
   required String agentId,
   required String caption,
