@@ -16,6 +16,7 @@ class SnChatDock extends StatelessWidget {
   final VoidCallback onSend;
   final bool showSend;
   final Widget? fieldTrailing;
+  final Widget? header;
   final List<Widget> leading;
   final List<Widget> trailing;
   final EdgeInsets padding;
@@ -36,6 +37,7 @@ class SnChatDock extends StatelessWidget {
     this.onChanged,
     this.showSend = true,
     this.fieldTrailing,
+    this.header,
     this.leading = const [],
     this.trailing = const [],
     this.padding = const EdgeInsets.fromLTRB(14, 8, 14, 12),
@@ -80,9 +82,16 @@ class SnChatDock extends StatelessWidget {
               border: Border.all(color: SpaceNotesTheme.hairline, width: 1),
               borderRadius: borderRadius,
             ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: _tiles(),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (header != null) header!,
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: _tiles(),
+                ),
+              ],
             ),
           ),
         ),

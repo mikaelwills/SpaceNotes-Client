@@ -10,28 +10,44 @@ class ChatPendingImages extends StatelessWidget {
     required this.images,
     required this.onRemove,
     this.sending = false,
-    this.padding = const EdgeInsets.fromLTRB(12, 8, 12, 0),
   });
 
   final List<PendingChatImage> images;
   final ValueChanged<int> onRemove;
   final bool sending;
-  final EdgeInsetsGeometry padding;
 
-  static const _size = 56.0;
+  static const _height = 120.0;
 
   @override
   Widget build(BuildContext context) {
     if (images.isEmpty && !sending) return const SizedBox.shrink();
     return Padding(
-      padding: padding,
+      padding: const EdgeInsets.fromLTRB(10, 10, 10, 2),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
+          if (images.isNotEmpty)
+            SizedBox(
+              height: _height,
+              child: ListView.separated(
+                key: const ValueKey('chat_pending_images'),
+                scrollDirection: Axis.horizontal,
+                itemCount: images.length,
+                separatorBuilder: (_, __) => const SizedBox(width: 8),
+                itemBuilder: (context, index) => _Thumb(
+                  key: ValueKey('chat_pending_image_$index'),
+                  image: images[index],
+                  height: _height,
+                  dimmed: sending,
+                  onRemove: sending ? null : () => onRemove(index),
+                  removeKey: ValueKey('chat_pending_image_remove_$index'),
+                ),
+              ),
+            ),
           if (sending)
             const Padding(
-              padding: EdgeInsets.only(bottom: 6),
+              padding: EdgeInsets.only(top: 8, left: 2),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -53,22 +69,6 @@ class ChatPendingImages extends StatelessWidget {
                 ],
               ),
             ),
-          if (images.isNotEmpty)
-            SizedBox(
-              height: _size,
-              child: ListView.separated(
-                key: const ValueKey('chat_pending_images'),
-                scrollDirection: Axis.horizontal,
-                itemCount: images.length,
-                separatorBuilder: (_, __) => const SizedBox(width: 8),
-                itemBuilder: (context, index) => _Thumb(
-                  image: images[index],
-                  size: _size,
-                  dimmed: sending,
-                  onRemove: sending ? null : () => onRemove(index),
-                ),
-              ),
-            ),
         ],
       ),
     );
@@ -77,61 +77,67 @@ class ChatPendingImages extends StatelessWidget {
 
 class _Thumb extends StatelessWidget {
   const _Thumb({
+    super.key,
     required this.image,
-    required this.size,
+    required this.height,
     required this.dimmed,
     required this.onRemove,
+    required this.removeKey,
   });
 
   final PendingChatImage image;
-  final double size;
+  final double height;
   final bool dimmed;
   final VoidCallback? onRemove;
+  final Key removeKey;
 
   @override
   Widget build(BuildContext context) {
-    final pixels = (size * MediaQuery.devicePixelRatioOf(context)).round();
+    final pixels = (height * MediaQuery.devicePixelRatioOf(context)).round();
     return Opacity(
       opacity: dimmed ? 0.5 : 1,
-      child: SizedBox(
-        width: size,
-        height: size,
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            ClipRRect(
-              borderRadius:
-                  BorderRadius.circular(SpaceNotesTheme.radiusXs),
+      child: Stack(
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                minWidth: height * 0.5,
+                maxWidth: height * 1.8,
+              ),
               child: Image.memory(
                 image.bytes,
+                height: height,
                 fit: BoxFit.cover,
-                cacheWidth: pixels,
+                cacheHeight: pixels,
                 gaplessPlayback: true,
               ),
             ),
-            if (onRemove != null)
-              Positioned(
-                top: 2,
-                right: 2,
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: onRemove,
-                  child: Container(
-                    padding: const EdgeInsets.all(2),
-                    decoration: const BoxDecoration(
-                      color: Colors.black54,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.close,
-                      size: 12,
-                      color: Colors.white,
-                    ),
+          ),
+          if (onRemove != null)
+            Positioned(
+              top: 6,
+              right: 6,
+              child: GestureDetector(
+                key: removeKey,
+                behavior: HitTestBehavior.opaque,
+                onTap: onRemove,
+                child: Container(
+                  width: 26,
+                  height: 26,
+                  decoration: const BoxDecoration(
+                    color: Color(0x99000000),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.close,
+                    size: 16,
+                    color: Colors.white,
                   ),
                 ),
               ),
-          ],
-        ),
+            ),
+        ],
       ),
     );
   }

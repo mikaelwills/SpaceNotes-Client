@@ -49,10 +49,20 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
     super.initState();
     _textController.addListener(_onTextChanged);
     _focusNode.addListener(_onFocusChanged);
+    PendingChatImageSink.add = _addPendingImages;
+  }
+
+  void _addPendingImages(List<PendingChatImage> images) {
+    if (!mounted) return;
+    final room = maxPendingChatImages - _pendingImages.length;
+    setState(() => _pendingImages = [..._pendingImages, ...images.take(room)]);
   }
 
   @override
   void dispose() {
+    if (PendingChatImageSink.add == _addPendingImages) {
+      PendingChatImageSink.add = null;
+    }
     _textController.removeListener(_onTextChanged);
     _focusNode.removeListener(_onFocusChanged);
     _textController.dispose();
@@ -112,31 +122,14 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
 
     return SafeArea(
       top: false,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          if (isChat)
-            ChatPendingImages(
-              images: _pendingImages,
-              sending: _sendingImages,
-              onRemove: (index) {
-                HapticFeedback.lightImpact();
-                setState(() {
-                  _pendingImages = [..._pendingImages]..removeAt(index);
-                });
-              },
-            ),
-          _buildDock(
-            viewType: viewType,
-            isChat: isChat,
-            isAgentChat: isAgentChat,
-            folderPath: folderPath,
-            attachedToMiniBar: attachedToMiniBar,
-            chatAgentId: chatAgentId,
-            showStop: showStop,
-          ),
-        ],
+      child: _buildDock(
+        viewType: viewType,
+        isChat: isChat,
+        isAgentChat: isAgentChat,
+        folderPath: folderPath,
+        attachedToMiniBar: attachedToMiniBar,
+        chatAgentId: chatAgentId,
+        showStop: showStop,
       ),
     );
   }
@@ -166,6 +159,18 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
         showSend: viewType != HomeViewType.passwords &&
             (isChat || _isFocused || _hasText) &&
             !showStop,
+        header: isChat
+            ? ChatPendingImages(
+                images: _pendingImages,
+                sending: _sendingImages,
+                onRemove: (index) {
+                  HapticFeedback.lightImpact();
+                  setState(() {
+                    _pendingImages = [..._pendingImages]..removeAt(index);
+                  });
+                },
+              )
+            : null,
         leading: [
           if (isAgentChat)
             SnDockTile(
@@ -173,6 +178,7 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
               onTap: () => context.pop(),
               semanticLabel: 'back',
             ),
+          if (isChat) _addImageTile(),
         ],
         trailing: [
           ..._buildTrailing(isChat, folderPath),
@@ -191,6 +197,18 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
     );
   }
 
+  Widget _addImageTile() {
+    final disabled =
+        _pendingImages.length >= maxPendingChatImages || _sendingImages;
+    return SnDockTile(
+      key: const ValueKey('chat_add_image'),
+      icon: Icons.add,
+      onTap: disabled ? () {} : _onPickImage,
+      color: disabled ? SpaceNotesTheme.dim : SpaceNotesTheme.accent,
+      semanticLabel: 'add image',
+    );
+  }
+
   String _computeHint(bool isChat) {
     if (_getCurrentViewType() == HomeViewType.passwords) {
       return 'search passwords…';
@@ -202,20 +220,7 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
   }
 
   List<Widget> _buildTrailing(bool isChat, String folderPath) {
-    if (isChat) {
-      final full = _pendingImages.length >= maxPendingChatImages;
-      return [
-        SnDockTile(
-          key: const ValueKey('chat_add_image'),
-          icon: Icons.add_photo_alternate_outlined,
-          onTap: full || _sendingImages ? () {} : _onPickImage,
-          color: full || _sendingImages
-              ? SpaceNotesTheme.dim
-              : SpaceNotesTheme.accent,
-          semanticLabel: 'add image',
-        ),
-      ];
-    }
+    if (isChat) return const [];
     if (_getCurrentViewType() == HomeViewType.passwords) {
       return [
         SnDockTile(

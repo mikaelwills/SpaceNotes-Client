@@ -32,10 +32,20 @@ class _DesktopChatInputState extends ConsumerState<DesktopChatInput> {
   void initState() {
     super.initState();
     _pasteListener.register(_onPastedImageBytes);
+    PendingChatImageSink.add = _addPendingImages;
+  }
+
+  void _addPendingImages(List<PendingChatImage> images) {
+    if (!mounted) return;
+    final room = maxPendingChatImages - _pendingImages.length;
+    setState(() => _pendingImages = [..._pendingImages, ...images.take(room)]);
   }
 
   @override
   void dispose() {
+    if (PendingChatImageSink.add == _addPendingImages) {
+      PendingChatImageSink.add = null;
+    }
     _pasteListener.unregister();
     _controller.dispose();
     _focusNode.dispose();
@@ -53,44 +63,39 @@ class _DesktopChatInputState extends ConsumerState<DesktopChatInput> {
     return Center(
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 800),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            ChatPendingImages(
-              images: _pendingImages,
-              sending: _sendingImages,
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-              onRemove: (index) => setState(() {
-                _pendingImages = [..._pendingImages]..removeAt(index);
-              }),
+        child: SnChatDock(
+          controller: _controller,
+          focusNode: _focusNode,
+          hint: 'ask ai…',
+          onSend: _onSend,
+          maxLines: 6,
+          showFade: false,
+          padding: const EdgeInsets.fromLTRB(16, 6, 16, 16),
+          header: ChatPendingImages(
+            images: _pendingImages,
+            sending: _sendingImages,
+            onRemove: (index) => setState(() {
+              _pendingImages = [..._pendingImages]..removeAt(index);
+            }),
+          ),
+          leading: [
+            SnDockTile(
+              key: const ValueKey('chat_add_image'),
+              icon: Icons.add,
+              onTap: canAdd ? _onPickImage : () {},
+              color: canAdd ? SpaceNotesTheme.accent : SpaceNotesTheme.dim,
+              semanticLabel: 'add image',
             ),
-            SnChatDock(
-              controller: _controller,
-              focusNode: _focusNode,
-              hint: 'ask ai…',
-              onSend: _onSend,
-              maxLines: 6,
-              showFade: false,
-              padding: const EdgeInsets.fromLTRB(16, 6, 16, 16),
-              trailing: [
-                SnDockTile(
-                  key: const ValueKey('chat_add_image'),
-                  icon: Icons.add_photo_alternate_outlined,
-                  onTap: canAdd ? _onPickImage : () {},
-                  color: canAdd ? SpaceNotesTheme.accent : SpaceNotesTheme.dim,
-                  semanticLabel: 'add image',
-                ),
-                if (agentBusy)
-                  SnDockTile(
-                    key: const ValueKey('chat_stop_button'),
-                    icon: Icons.stop,
-                    color: SpaceNotesTheme.offline,
-                    onTap: () => sendChatStop(ref, agentId: agent),
-                    semanticLabel: 'stop',
-                  ),
-              ],
-            ),
+          ],
+          trailing: [
+            if (agentBusy)
+              SnDockTile(
+                key: const ValueKey('chat_stop_button'),
+                icon: Icons.stop,
+                color: SpaceNotesTheme.offline,
+                onTap: () => sendChatStop(ref, agentId: agent),
+                semanticLabel: 'stop',
+              ),
           ],
         ),
       ),

@@ -10,6 +10,10 @@ import '../generated/client.dart';
 import '../generated/space_file.dart';
 
 const maxPendingChatImages = 10;
+
+class PendingChatImageSink {
+  static void Function(List<PendingChatImage> images)? add;
+}
 const chatAttachmentsRoot = 'Chat Attachments';
 const _maxImageEdge = 2048;
 const _jpegQuality = 85;

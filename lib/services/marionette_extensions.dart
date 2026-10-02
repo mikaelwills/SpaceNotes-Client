@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show Uint8List, kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,6 +9,7 @@ import 'package:marionette_flutter/marionette_flutter.dart';
 
 import '../providers/notes_providers.dart';
 import '../router/app_router.dart';
+import 'chat_attachments.dart';
 
 bool _isModalOpen(GoRouter router) => ModalTracker.isModalOpen;
 
@@ -94,6 +95,33 @@ void registerSpaceNotesMarionetteExtensions(ProviderContainer container) {
         'keyboardUp': _focusedFieldText() != null,
         'focusedField': _focusedFieldText() ?? '',
       });
+    },
+  );
+
+  registerMarionetteExtension(
+    name: 'addPendingChatImages',
+    description:
+        'Add images to the chat input as if picked: paths=comma-separated absolute file paths readable by the app.',
+    callback: (params) async {
+      final sink = PendingChatImageSink.add;
+      if (sink == null) {
+        return const MarionetteExtensionResult.error(1, 'No chat input mounted');
+      }
+      final paths = (params['paths'] ?? '')
+          .split(',')
+          .map((p) => p.trim())
+          .where((p) => p.isNotEmpty)
+          .toList();
+      if (paths.isEmpty) {
+        return const MarionetteExtensionResult.error(2, 'paths is required');
+      }
+      final inputs = <(Uint8List, String)>[];
+      for (final path in paths) {
+        inputs.add((await File(path).readAsBytes(), path.split('/').last));
+      }
+      final images = await normalizeChatImages(inputs);
+      sink(images);
+      return MarionetteExtensionResult.success({'added': images.length});
     },
   );
 
