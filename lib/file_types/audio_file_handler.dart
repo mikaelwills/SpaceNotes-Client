@@ -33,6 +33,9 @@ class AudioFileHandler extends FileTypeHandler {
   bool get isDeletable => true;
 
   @override
+  bool get hostsMobileDock => true;
+
+  @override
   bool get hasTextRepresentation => false;
 
   @override

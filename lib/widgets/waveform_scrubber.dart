@@ -15,9 +15,10 @@ class WaveformScrubber extends StatefulWidget {
     required this.duration,
     required this.isPlaying,
     required this.onSeek,
+    required this.onTogglePlayPause,
     this.height = 180,
     this.pixelsPerSecond = 24,
-    this.playheadFraction = 0.2,
+    this.playheadFraction = 1 / 3,
   });
 
   final List<double>? peaks;
@@ -26,6 +27,7 @@ class WaveformScrubber extends StatefulWidget {
   final Duration duration;
   final bool isPlaying;
   final ValueChanged<Duration> onSeek;
+  final VoidCallback onTogglePlayPause;
   final double height;
   final double pixelsPerSecond;
   final double playheadFraction;
@@ -58,7 +60,7 @@ class _WaveformScrubberState extends State<WaveformScrubber> {
   void didUpdateWidget(WaveformScrubber oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.isPlaying != oldWidget.isPlaying) {
-      _anchor(widget.position);
+      _anchor(widget.isPlaying ? widget.position : _displayed.value);
     } else if (widget.position != oldWidget.position) {
       final drift = (widget.position - _displayed.value).abs();
       if (!widget.isPlaying || drift > _reanchorTolerance) {
@@ -140,14 +142,7 @@ class _WaveformScrubberState extends State<WaveformScrubber> {
   }
 
   void _handleTapUp(TapUpDetails details, double width) {
-    final playheadX = width * widget.playheadFraction;
-    final offsetSeconds =
-        (details.localPosition.dx - playheadX) / widget.pixelsPerSecond;
-    final target =
-        _clamp(_displayed.value + _secondsToDuration(offsetSeconds));
-    widget.onSeek(target);
-    _anchor(target);
-    _displayed.value = target;
+    widget.onTogglePlayPause();
   }
 
   @override

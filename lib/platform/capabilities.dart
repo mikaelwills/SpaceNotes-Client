@@ -44,4 +44,11 @@ abstract final class Capabilities {
   ///
   /// Web falls back to `InMemoryOfflineStorage`, so a refresh clears it.
   static bool get hasPersistentCache => hasFileSystem;
+
+  /// The password manager: decrypting `.gpg` credential entries.
+  ///
+  /// Decryption is per-device, keyed to a subkey held in that device's own
+  /// keystore (biometric-gated) — there is no browser equivalent, so the
+  /// vault must never be reachable from web.
+  static bool get canManagePasswords => !kIsWeb;
 }

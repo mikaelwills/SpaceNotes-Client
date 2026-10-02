@@ -80,7 +80,7 @@ class ParametricEqPad extends StatefulWidget {
     return ((maxGainDb - clamped) / (2 * maxGainDb)) * height;
   }
 
-  static const double height = 260;
+  static const double height = 180;
 
   @override
   State<ParametricEqPad> createState() => _ParametricEqPadState();

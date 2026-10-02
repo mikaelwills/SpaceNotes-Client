@@ -9,6 +9,7 @@ import '../providers/file_transfer_providers.dart';
 import '../services/local_download_store.dart';
 import '../services/debug_logger.dart';
 import '../file_types/file_type_registry.dart';
+import '../providers/favourite_folders_provider.dart';
 import '../widgets/folder_destination_list.dart';
 
 /// Static dialog functions for TopFolderListScreen
@@ -156,6 +157,8 @@ class NotesListDialogs {
     Folder folder,
   ) {
     if (FileTypeRegistry.isProtectedPath(folder.path)) return;
+    final isFavourite =
+        ref.read(favouriteFoldersProvider).contains(folder.path);
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -179,6 +182,30 @@ class NotesListDialogs {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            ListTile(
+              key: const ValueKey('dialog-favourite'),
+              leading: Icon(
+                isFavourite ? Icons.star : Icons.star_outline,
+                color: SpaceNotesTheme.primary,
+              ),
+              title: Text(
+                isFavourite ? 'Remove from favourites' : 'Add to favourites',
+                style: const TextStyle(
+                  fontFamily: 'FiraCode',
+                  fontSize: 14,
+                  color: SpaceNotesTheme.text,
+                ),
+              ),
+              onTap: () {
+                final notifier = ref.read(favouriteFoldersProvider.notifier);
+                if (isFavourite) {
+                  notifier.remove(folder.path);
+                } else {
+                  notifier.add(folder.path);
+                }
+                Navigator.of(dialogContext).pop();
+              },
+            ),
             ListTile(
               key: const ValueKey('dialog-rename'),
               leading: const Icon(
@@ -646,62 +673,61 @@ class NotesListDialogs {
                   isCurrent: note.folderPath == '${folder.path}/',
                   currentLabel: 'Current folder',
                   onTap: () async {
-                          Navigator.of(dialogContext).pop();
+                    Navigator.of(dialogContext).pop();
 
-                          // Calculate new path: folder.path + note filename
-                          final fileName = note.path.split('/').last;
-                          final newPath = '${folder.path}/$fileName';
+                    // Calculate new path: folder.path + note filename
+                    final fileName = note.path.split('/').last;
+                    final newPath = '${folder.path}/$fileName';
 
-                          debugLogger.info('MOVE', 'Moving note',
-                              '${note.path} -> $newPath');
+                    debugLogger.info(
+                        'MOVE', 'Moving note', '${note.path} -> $newPath');
 
-                          final success = await ref
-                              .read(notesRepositoryProvider)
-                              .renameNote(note.id, newPath);
+                    final success = await ref
+                        .read(notesRepositoryProvider)
+                        .renameNote(note.id, newPath);
 
-                          if (!success && context.mounted) {
-                            // Show error if move failed
-                            showDialog(
-                              context: context,
-                              builder: (errorContext) => AlertDialog(
-                                backgroundColor: SpaceNotesTheme.background,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.zero,
-                                  side: BorderSide(
-                                    color: SpaceNotesTheme.error
-                                        .withValues(alpha: 0.3),
-                                    width: 1,
-                                  ),
-                                ),
-                                title: const Text(
-                                  'Move Failed',
-                                  style: TextStyle(
-                                    fontFamily: 'FiraCode',
-                                    fontSize: 16,
-                                    color: SpaceNotesTheme.error,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                                content: const Text(
-                                  'Failed to move note. Please try again.',
-                                  style: TextStyle(
-                                    fontFamily: 'FiraCode',
-                                    fontSize: 14,
-                                    color: SpaceNotesTheme.text,
-                                  ),
-                                ),
-                                actions: [
-                                  TextButton(
-                                    key: const ValueKey('dialog-ok'),
-                                    onPressed: () =>
-                                        Navigator.of(errorContext).pop(),
-                                    child: const Text('OK'),
-                                  ),
-                                ],
-                              ),
-                            );
-                          }
-                        },
+                    if (!success && context.mounted) {
+                      // Show error if move failed
+                      showDialog(
+                        context: context,
+                        builder: (errorContext) => AlertDialog(
+                          backgroundColor: SpaceNotesTheme.background,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.zero,
+                            side: BorderSide(
+                              color:
+                                  SpaceNotesTheme.error.withValues(alpha: 0.3),
+                              width: 1,
+                            ),
+                          ),
+                          title: const Text(
+                            'Move Failed',
+                            style: TextStyle(
+                              fontFamily: 'FiraCode',
+                              fontSize: 16,
+                              color: SpaceNotesTheme.error,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          content: const Text(
+                            'Failed to move note. Please try again.',
+                            style: TextStyle(
+                              fontFamily: 'FiraCode',
+                              fontSize: 14,
+                              color: SpaceNotesTheme.text,
+                            ),
+                          ),
+                          actions: [
+                            TextButton(
+                              key: const ValueKey('dialog-ok'),
+                              onPressed: () => Navigator.of(errorContext).pop(),
+                              child: const Text('OK'),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+                  },
                 ),
             ],
           ),
@@ -768,64 +794,61 @@ class NotesListDialogs {
                 isCurrent: folderToMove.depth == 0,
                 currentLabel: 'Already at top level',
                 onTap: () async {
-                            Navigator.of(dialogContext).pop();
+                  Navigator.of(dialogContext).pop();
 
-                            // Move to top level (just the folder name)
-                            final newPath = folderToMove.name;
+                  // Move to top level (just the folder name)
+                  final newPath = folderToMove.name;
 
-                            debugLogger.info('MOVE', 'Moving folder to top level',
-                                '${folderToMove.path} -> $newPath');
+                  debugLogger.info('MOVE', 'Moving folder to top level',
+                      '${folderToMove.path} -> $newPath');
 
-                            final success = await ref
-                                .read(notesRepositoryProvider)
-                                .moveFolder(
-                                  folderToMove.path,
-                                  newPath,
-                                );
+                  final success =
+                      await ref.read(notesRepositoryProvider).moveFolder(
+                            folderToMove.path,
+                            newPath,
+                          );
 
-                            if (!success && context.mounted) {
-                              // Show error if move failed
-                              showDialog(
-                                context: context,
-                                builder: (errorContext) => AlertDialog(
-                                  backgroundColor: SpaceNotesTheme.background,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.zero,
-                                    side: BorderSide(
-                                      color: SpaceNotesTheme.error
-                                          .withValues(alpha: 0.3),
-                                      width: 1,
-                                    ),
-                                  ),
-                                  title: const Text(
-                                    'Move Failed',
-                                    style: TextStyle(
-                                      fontFamily: 'FiraCode',
-                                      fontSize: 16,
-                                      color: SpaceNotesTheme.error,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                  content: const Text(
-                                    'Failed to move folder. Please try again.',
-                                    style: TextStyle(
-                                      fontFamily: 'FiraCode',
-                                      fontSize: 14,
-                                      color: SpaceNotesTheme.text,
-                                    ),
-                                  ),
-                                  actions: [
-                                    TextButton(
-                                      key: const ValueKey('dialog-ok'),
-                                      onPressed: () =>
-                                          Navigator.of(errorContext).pop(),
-                                      child: const Text('OK'),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            }
-                          },
+                  if (!success && context.mounted) {
+                    // Show error if move failed
+                    showDialog(
+                      context: context,
+                      builder: (errorContext) => AlertDialog(
+                        backgroundColor: SpaceNotesTheme.background,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.zero,
+                          side: BorderSide(
+                            color: SpaceNotesTheme.error.withValues(alpha: 0.3),
+                            width: 1,
+                          ),
+                        ),
+                        title: const Text(
+                          'Move Failed',
+                          style: TextStyle(
+                            fontFamily: 'FiraCode',
+                            fontSize: 16,
+                            color: SpaceNotesTheme.error,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        content: const Text(
+                          'Failed to move folder. Please try again.',
+                          style: TextStyle(
+                            fontFamily: 'FiraCode',
+                            fontSize: 14,
+                            color: SpaceNotesTheme.text,
+                          ),
+                        ),
+                        actions: [
+                          TextButton(
+                            key: const ValueKey('dialog-ok'),
+                            onPressed: () => Navigator.of(errorContext).pop(),
+                            child: const Text('OK'),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+                },
               ),
               for (final folder in availableFolders)
                 FolderDestination(

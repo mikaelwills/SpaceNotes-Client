@@ -65,6 +65,12 @@ class AudioPlaybackState {
   }
 }
 
+class _SavedEq {
+  const _SavedEq(this.notches, this.bypassed);
+  final List<EqNotch> notches;
+  final bool bypassed;
+}
+
 final parametricEqServiceProvider =
     Provider<ParametricEqService>((ref) => ParametricEqService());
 
@@ -86,12 +92,33 @@ class AudioPlaybackController extends StateNotifier<AudioPlaybackState> {
   int _loadGeneration = 0;
   ProviderSubscription<Object?>? _clientSub;
   StreamSubscription<Object?>? _deleteSub;
+  final Map<String, Duration> _lastPositions = {};
+  final Map<String, _SavedEq> _lastEq = {};
+
+  Duration lastPositionFor(String fileId) =>
+      _lastPositions[fileId] ?? Duration.zero;
+
+  void clearLastPosition(String fileId) {
+    _lastPositions.remove(fileId);
+    _lastEq.remove(fileId);
+  }
 
   Future<void> load({
     required String fileId,
     required String localPath,
     required String title,
   }) async {
+    if (state.isLoaded && state.fileId != fileId) {
+      Duration outgoingPosition;
+      try {
+        outgoingPosition = await _eq.position();
+      } catch (_) {
+        outgoingPosition = state.position;
+      }
+      _lastPositions[state.fileId!] = outgoingPosition;
+      _lastEq[state.fileId!] = _SavedEq(state.notches, state.eqBypassed);
+    }
+
     final generation = ++_loadGeneration;
     bool loaded;
     try {
@@ -114,6 +141,20 @@ class AudioPlaybackController extends StateNotifier<AudioPlaybackState> {
     state =
         AudioPlaybackState(fileId: fileId, title: title, duration: duration);
     _watchDeletion();
+    final resumeFrom = _lastPositions[fileId] ?? Duration.zero;
+    if (resumeFrom > Duration.zero && resumeFrom < duration) {
+      await _eq.seek(resumeFrom);
+      if (generation != _loadGeneration) return;
+      state = state.copyWith(position: resumeFrom);
+    }
+    final savedEq = _lastEq[fileId];
+    if (savedEq != null && savedEq.notches.isNotEmpty) {
+      state = state.copyWith(
+        notches: savedEq.notches,
+        eqBypassed: savedEq.bypassed,
+      );
+      if (!savedEq.bypassed) _applyAllBands();
+    }
     await play();
     _startPoll();
     _loadWaveform(generation, localPath);
@@ -261,8 +302,8 @@ class AudioPlaybackController extends StateNotifier<AudioPlaybackState> {
       final cached = await _readCachedWaveform(cachePath);
       if (cached != null) {
         if (!mounted || generation != _loadGeneration) return;
-        debugLogger.info(
-            'AUDIO_PLAYBACK', 'Waveform loaded from cache', '${cached.length} bins');
+        debugLogger.info('AUDIO_PLAYBACK', 'Waveform loaded from cache',
+            '${cached.length} bins');
         state = state.copyWith(peaks: cached);
         return;
       }
@@ -290,11 +331,13 @@ class AudioPlaybackController extends StateNotifier<AudioPlaybackState> {
     }
   }
 
-  Future<void> _writeCachedWaveform(String cachePath, List<double> peaks) async {
+  Future<void> _writeCachedWaveform(
+      String cachePath, List<double> peaks) async {
     try {
       await File(cachePath).writeAsString(jsonEncode(peaks));
     } catch (e) {
-      debugLogger.warning('AUDIO_PLAYBACK', 'Could not cache waveform', e.toString());
+      debugLogger.warning(
+          'AUDIO_PLAYBACK', 'Could not cache waveform', e.toString());
     }
   }
 

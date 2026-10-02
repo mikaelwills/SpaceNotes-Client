@@ -90,7 +90,8 @@ class LocalDownloadStore implements DownloadQueueStore {
 
   /// Records an in-flight download so an abandoned partial is visible to
   /// [totalSize]/[offloadAll] instead of sitting on disk untracked.
-  Future<void> markPartial(String remotePath, String localPath, int size) async {
+  Future<void> markPartial(
+      String remotePath, String localPath, int size) async {
     final db = await _database();
     await db.insert(
       'downloads',
@@ -265,7 +266,8 @@ class LocalDownloadStore implements DownloadQueueStore {
 
   Future<void> forgetUpload(String remotePath) async {
     final db = await _database();
-    await db.delete('uploads', where: 'remote_path = ?', whereArgs: [remotePath]);
+    await db
+        .delete('uploads', where: 'remote_path = ?', whereArgs: [remotePath]);
   }
 
   /// Uploads that were in flight when the app last stopped.
@@ -308,10 +310,7 @@ class LocalDownloadStore implements DownloadQueueStore {
       where: 'state = ?',
       whereArgs: [DownloadState.partial.name],
     );
-    return rows
-        .map((r) => r['path'])
-        .whereType<String>()
-        .toList();
+    return rows.map((r) => r['path']).whereType<String>().toList();
   }
 
   @override
@@ -353,7 +352,7 @@ class LocalDownloadStore implements DownloadQueueStore {
 
   static Future<void> _createDownloadQueue(Database db) async {
     await db.execute('''
-      CREATE TABLE download_queue (
+      CREATE TABLE IF NOT EXISTS download_queue (
         path TEXT PRIMARY KEY,
         size INTEGER NOT NULL,
         queued_ms INTEGER NOT NULL
@@ -363,7 +362,7 @@ class LocalDownloadStore implements DownloadQueueStore {
 
   static Future<void> _createDownloads(Database db) async {
     await db.execute('''
-      CREATE TABLE downloads (
+      CREATE TABLE IF NOT EXISTS downloads (
         path TEXT PRIMARY KEY,
         local_path TEXT NOT NULL,
         size INTEGER NOT NULL,
@@ -380,7 +379,7 @@ class LocalDownloadStore implements DownloadQueueStore {
   /// no way to ask what survived.
   static Future<void> _createUploads(Database db) async {
     await db.execute('''
-      CREATE TABLE uploads (
+      CREATE TABLE IF NOT EXISTS uploads (
         remote_path TEXT PRIMARY KEY,
         session_id TEXT NOT NULL,
         source_path TEXT NOT NULL,

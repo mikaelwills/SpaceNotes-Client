@@ -59,7 +59,8 @@ class _DesktopShellState extends ConsumerState<DesktopShell> {
   Widget build(BuildContext context) {
     return CallbackShortcuts(
       bindings: {
-        const SingleActivator(LogicalKeyboardKey.keyL, meta: true): _focusSearch,
+        const SingleActivator(LogicalKeyboardKey.keyL, meta: true):
+            _focusSearch,
         const SingleActivator(LogicalKeyboardKey.tab, shift: true): () =>
             cycleNav(
               context,
@@ -73,7 +74,8 @@ class _DesktopShellState extends ConsumerState<DesktopShell> {
 
   Widget _buildBody(BuildContext context) {
     final location = GoRouterState.of(context).uri.toString();
-    if (location.startsWith('/agents') && !location.startsWith('/agents/chat')) {
+    if (location.startsWith('/agents') &&
+        !location.startsWith('/agents/chat')) {
       String? activeAgentId;
       if (location.startsWith('/agents/')) {
         final encoded = location.substring('/agents/'.length);
@@ -154,8 +156,9 @@ class _DesktopContentArea extends ConsumerWidget {
     final isSettings = location.startsWith('/settings');
     final isConnect = location.startsWith('/connect');
     final isAgents = location.startsWith('/agents') && !isChat;
+    final isPasswords = location.startsWith('/notes/passwords');
     final isNotesView =
-        !isChat && !isSettings && !isConnect && !isAgents;
+        !isChat && !isSettings && !isConnect && !isAgents && !isPasswords;
 
     if (!isNotesView) {
       return Column(
@@ -242,8 +245,8 @@ class _MiddlePaneContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return switch (mode) {
-      BrowseMode(:final folderPath) =>
-        FolderListView(key: ValueKey('browse:$folderPath'), folderPath: folderPath),
+      BrowseMode(:final folderPath) => FolderListView(
+          key: ValueKey('browse:$folderPath'), folderPath: folderPath),
       // Desktop bypasses the router, so the view is recorded here instead.
       // Six places set this mode; this is the one place that renders it.
       FileViewerMode(:final noteId) => RecordsViewAfterDwell(
@@ -339,6 +342,9 @@ class _DesktopTopBar extends ConsumerWidget {
     }
     if (location.startsWith('/agents')) {
       return 'agents';
+    }
+    if (location.startsWith('/notes/passwords')) {
+      return 'passwords';
     }
     if (location == '/settings') {
       return 'settings';

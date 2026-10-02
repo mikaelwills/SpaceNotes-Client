@@ -17,6 +17,7 @@ import '../../version.dart';
 import '../primitives/primitives.dart';
 import 'desktop_shell.dart';
 import '../../providers/preferences_provider.dart';
+import '../../platform/capabilities.dart';
 
 final searchFocusRequestProvider = StateProvider<int>((ref) => 0);
 
@@ -27,8 +28,9 @@ class Sidebar extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final isCollapsed = ref.watch(sidebarCollapsedProvider);
     final isFullScreen = ref.watch(isFullScreenProvider);
-    final needsTrafficLightClearance =
-        !kIsWeb && defaultTargetPlatform == TargetPlatform.macOS && !isFullScreen;
+    final needsTrafficLightClearance = !kIsWeb &&
+        defaultTargetPlatform == TargetPlatform.macOS &&
+        !isFullScreen;
 
     return Container(
       decoration: const BoxDecoration(
@@ -189,6 +191,9 @@ class _SidebarSearchState extends ConsumerState<_SidebarSearch> {
   final _focusNode = FocusNode();
   String _previousFolderPath = '';
 
+  bool get _onPasswords =>
+      GoRouterState.of(context).uri.toString().startsWith('/notes/passwords');
+
   @override
   void initState() {
     super.initState();
@@ -204,7 +209,10 @@ class _SidebarSearchState extends ConsumerState<_SidebarSearch> {
 
   @override
   Widget build(BuildContext context) {
-    final searchQuery = ref.watch(folderSearchQueryProvider);
+    final onPasswords = _onPasswords;
+    final searchQuery = onPasswords
+        ? ref.watch(credentialFilterProvider)
+        : ref.watch(folderSearchQueryProvider);
     final hasQuery = searchQuery.isNotEmpty;
 
     ref.listen<int>(searchFocusRequestProvider, (previous, next) {
@@ -215,7 +223,9 @@ class _SidebarSearchState extends ConsumerState<_SidebarSearch> {
       }
     });
 
-    ref.listen<String>(folderSearchQueryProvider, (previous, next) {
+    final activeQueryProvider =
+        onPasswords ? credentialFilterProvider : folderSearchQueryProvider;
+    ref.listen<String>(activeQueryProvider, (previous, next) {
       if (next.isEmpty && _controller.text.isNotEmpty) {
         _controller.clear();
       }
@@ -299,6 +309,11 @@ class _SidebarSearchState extends ConsumerState<_SidebarSearch> {
   }
 
   void _onSearchChanged(String value) {
+    if (_onPasswords) {
+      ref.read(credentialFilterProvider.notifier).state = value;
+      return;
+    }
+
     final wasEmpty = ref.read(folderSearchQueryProvider).isEmpty;
 
     if (wasEmpty && value.isNotEmpty) {
@@ -316,6 +331,11 @@ class _SidebarSearchState extends ConsumerState<_SidebarSearch> {
 
   void _clearSearch() {
     _controller.clear();
+    if (_onPasswords) {
+      ref.read(credentialFilterProvider.notifier).state = '';
+      _focusNode.unfocus();
+      return;
+    }
     ref.read(folderSearchQueryProvider.notifier).state = '';
     _focusNode.unfocus();
     _restoreBrowseAfterSearch();
@@ -453,6 +473,13 @@ class _CollapsedSidebar extends ConsumerWidget {
               onTap: () => context.go('/agents'),
             ),
           ],
+          if (ref.watch(passwordsEnabledProvider) &&
+              Capabilities.canManagePasswords)
+            _CollapsedIconButton(
+              icon: Icons.key_outlined,
+              tooltip: 'Passwords',
+              onTap: () => context.go('/notes/passwords'),
+            ),
           _CollapsedIconButton(
             icon: Icons.search,
             tooltip: 'Search',
@@ -562,7 +589,8 @@ class _SidebarFooter extends ConsumerWidget {
                   tooltip: 'agents',
                 ),
               ],
-              if (ref.watch(passwordsEnabledProvider)) ...[
+              if (ref.watch(passwordsEnabledProvider) &&
+                  Capabilities.canManagePasswords) ...[
                 const SizedBox(width: 4),
                 SnIconButton(
                   icon: const Icon(Icons.key_outlined),

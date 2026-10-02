@@ -3,9 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../generated/space_file.dart';
 import '../theme/spacenotes_theme.dart';
+import '../providers/favourite_folders_provider.dart';
 import '../providers/notes_providers.dart';
 import '../providers/recently_viewed_provider.dart';
 import '../dialogs/notes_list_dialogs.dart';
+import 'folder_grid_card.dart';
 import 'keyboard_dismiss_on_scroll.dart';
 import 'staggered_file_grid.dart';
 
@@ -20,16 +22,36 @@ class RecentNotesGrid extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final favouritePaths = ref.watch(favouriteFoldersProvider);
+    final allFolders = ref.watch(foldersListProvider);
+    final favourites = [
+      for (final path in favouritePaths)
+        ...allFolders.where((f) => f.path == path),
+    ];
     final viewed = ref.watch(recentlyViewedFilesProvider);
     final updated = ref.watch(recentFilesProvider);
 
-    if (viewed.isEmpty && updated.isEmpty) {
+    if (favourites.isEmpty && viewed.isEmpty && updated.isEmpty) {
       return _buildEmptyState();
     }
 
     return KeyboardDismissOnScroll(
       child: CustomScrollView(
         slivers: [
+          if (favourites.isNotEmpty)
+            SliverMainAxisGroup(slivers: [
+              const _SectionHeader('Favourites'),
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(12, 4, 12, 4),
+                sliver: SliverToBoxAdapter(
+                  child: FolderCardGrid(
+                    folders: favourites,
+                    onTap: (folder) => context.go(
+                        '/notes/folder/${Uri.encodeComponent(folder.path)}'),
+                  ),
+                ),
+              ),
+            ]),
           if (viewed.isNotEmpty)
             SliverMainAxisGroup(slivers: [
               const _SectionHeader('Recently Viewed'),

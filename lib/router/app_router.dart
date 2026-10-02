@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:spacetimedb_sdk/spacetimedb_sdk.dart' show Int64;
+import '../platform/capabilities.dart';
 import '../screens/call_screen.dart';
 import '../screens/incoming_call_screen.dart';
 import '../screens/connect_screen.dart';
@@ -75,7 +76,8 @@ GoRouter createAppRouter(ProviderContainer container) {
         return '/notes';
       }
       if (location.startsWith('/notes/passwords') &&
-          !container.read(passwordsEnabledProvider)) {
+          (!container.read(passwordsEnabledProvider) ||
+              !Capabilities.canManagePasswords)) {
         return '/notes';
       }
 

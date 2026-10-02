@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../file_types/file_type_registry.dart';
 import '../providers/notes_providers.dart';
+import '../platform/capabilities.dart';
 import '../providers/preferences_provider.dart';
 import '../widgets/adaptive/nav_cycle.dart';
 import '../widgets/adaptive/platform_utils.dart';
@@ -32,7 +33,8 @@ class HomeScreen extends ConsumerWidget {
             cycleNav(
               context,
               agentsEnabled: ref.read(agentsEnabledProvider),
-              passwordsEnabled: ref.read(passwordsEnabledProvider),
+              passwordsEnabled: ref.read(passwordsEnabledProvider) &&
+                  Capabilities.canManagePasswords,
             ),
         const SingleActivator(LogicalKeyboardKey.keyL, meta: true): () =>
             ref.read(mobileInputFocusNodeProvider).requestFocus(),

@@ -19,9 +19,8 @@ class FileSortNotifier extends StateNotifier<FileSortMode> {
   }
 
   Future<void> toggle() async {
-    state = state == FileSortMode.name
-        ? FileSortMode.modified
-        : FileSortMode.name;
+    state =
+        state == FileSortMode.name ? FileSortMode.modified : FileSortMode.name;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_prefsKey, state.name);
   }
@@ -33,12 +32,43 @@ final fileSortModeProvider =
 );
 
 List<SpaceFile> sortFiles(List<SpaceFile> files, FileSortMode mode) {
-  final sorted = files.toList();
   switch (mode) {
     case FileSortMode.name:
-      sorted.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+      return _groupedByBaseName(files);
     case FileSortMode.modified:
+      final sorted = files.toList();
       sorted.sort((a, b) => b.modifiedTime.compareTo(a.modifiedTime));
+      return sorted;
   }
-  return sorted;
+}
+
+final _trailingNumber = RegExp(r'\s+\d+$');
+
+/// Strips repeated trailing " <digits>" tokens (render/date suffixes like
+/// "2309" or "2509 2") so re-renders of the same file share one key.
+String _baseName(String name) {
+  var stripped = name;
+  while (true) {
+    final match = _trailingNumber.firstMatch(stripped);
+    if (match == null) return stripped;
+    stripped = stripped.substring(0, match.start);
+  }
+}
+
+/// Groups files by base name (A→Z), newest render first within each group,
+/// so re-renders of one file stay together instead of interleaving with
+/// unrelated files by raw filename.
+List<SpaceFile> _groupedByBaseName(List<SpaceFile> files) {
+  final groups = <String, List<SpaceFile>>{};
+  for (final file in files) {
+    groups.putIfAbsent(_baseName(file.name).toLowerCase(), () => []).add(file);
+  }
+  final baseNames = groups.keys.toList()..sort();
+  final result = <SpaceFile>[];
+  for (final base in baseNames) {
+    final group = groups[base]!
+      ..sort((a, b) => b.modifiedTime.compareTo(a.modifiedTime));
+    result.addAll(group);
+  }
+  return result;
 }

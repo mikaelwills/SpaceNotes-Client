@@ -8,6 +8,7 @@ import '../providers/preferences_provider.dart';
 import 'connection_indicator.dart';
 import '../file_types/file_type_registry.dart';
 import '../actions/vault_link_actions.dart';
+import '../platform/capabilities.dart';
 
 class MobileNavBar extends ConsumerWidget {
   const MobileNavBar({super.key});
@@ -34,7 +35,8 @@ class MobileNavBar extends ConsumerWidget {
             currentLocation,
             isOnSettings,
             agentsEnabled: ref.watch(agentsEnabledProvider),
-            passwordsEnabled: ref.watch(passwordsEnabledProvider),
+            passwordsEnabled: ref.watch(passwordsEnabledProvider) &&
+                Capabilities.canManagePasswords,
             backOverride: switch ((isOnFolder, isOnNote)) {
               (true, _) => () => _navigateToParentFolder(
                     context,
@@ -202,7 +204,6 @@ class MobileNavBar extends ConsumerWidget {
 
     return '';
   }
-
 }
 
 class _NavIcon extends StatelessWidget {
@@ -243,4 +244,3 @@ class _NavIcon extends StatelessWidget {
     );
   }
 }
-

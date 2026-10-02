@@ -12,6 +12,7 @@ import '../widgets/primitives/primitives.dart';
 import '../services/debug_logger.dart';
 import '../services/credential_key_store.dart';
 import '../services/local_download_store.dart';
+import '../platform/capabilities.dart';
 import '../providers/preferences_provider.dart';
 import 'dart:io';
 import 'package:file_picker/file_picker.dart';
@@ -74,7 +75,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               _buildPreferencesSection(),
               if (PlatformUtils.isDesktopLayout(context))
                 _buildMaxOpenNotesSection(),
-              if (ref.watch(passwordsEnabledProvider))
+              if (ref.watch(passwordsEnabledProvider) &&
+                  Capabilities.canManagePasswords)
                 _buildPasswordManagerSection(),
               _buildDebugLogsSection(),
               _buildDownloadedFilesSection(),
@@ -173,11 +175,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           value: prefs.agentsEnabled,
           onChanged: notifier.setAgentsEnabled,
         ),
-        _PreferenceRow(
-          label: 'Show the password manager',
-          value: prefs.passwordsEnabled,
-          onChanged: notifier.setPasswordsEnabled,
-        ),
+        if (Capabilities.canManagePasswords)
+          _PreferenceRow(
+            label: 'Show the password manager',
+            value: prefs.passwordsEnabled,
+            onChanged: notifier.setPasswordsEnabled,
+          ),
       ],
     );
   }
@@ -211,7 +214,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       ],
     );
   }
-
 
   Widget _buildPasswordManagerSection() {
     return _Section(
@@ -400,7 +402,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     // real on-disk cost rather than only what the table knows about.
     final reclaimed = await _downloadStore.sweepOrphans();
     if (reclaimed > 0) {
-      debugLogger.info('STORAGE', 'Swept orphaned downloads', '$reclaimed bytes');
+      debugLogger.info(
+          'STORAGE', 'Swept orphaned downloads', '$reclaimed bytes');
     }
 
     final bytes = await _downloadStore.totalSize();
