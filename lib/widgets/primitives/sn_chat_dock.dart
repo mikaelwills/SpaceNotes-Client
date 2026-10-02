@@ -151,6 +151,7 @@ class SnDockTile extends StatelessWidget {
   final String semanticLabel;
   final Color color;
   final double size;
+  final double? width;
 
   const SnDockTile({
     super.key,
@@ -159,6 +160,7 @@ class SnDockTile extends StatelessWidget {
     required this.semanticLabel,
     this.color = SpaceNotesTheme.accent,
     this.size = 52,
+    this.width,
   });
 
   @override
@@ -173,7 +175,7 @@ class SnDockTile extends StatelessWidget {
         },
         behavior: HitTestBehavior.opaque,
         child: Container(
-          width: size,
+          width: width ?? size,
           height: size,
           alignment: Alignment.center,
           child: Icon(icon, size: 22, color: color),

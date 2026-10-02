@@ -177,6 +177,7 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
               icon: Icons.arrow_back,
               onTap: () => context.pop(),
               semanticLabel: 'back',
+              width: 44,
             ),
           if (isChat) _addImageTile(),
         ],
@@ -206,6 +207,7 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
       onTap: disabled ? () {} : _onPickImage,
       color: disabled ? SpaceNotesTheme.dim : SpaceNotesTheme.accent,
       semanticLabel: 'add image',
+      width: 36,
     );
   }
 
