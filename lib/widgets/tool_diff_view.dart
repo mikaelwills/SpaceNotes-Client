@@ -92,21 +92,29 @@ class _ToolDiffViewState extends State<ToolDiffView> {
 
     return Container(
       key: const ValueKey('tool_diff_view'),
-      margin: const EdgeInsets.only(top: 6),
+      margin: const EdgeInsets.only(top: 6, left: 15),
+      clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         color: SpaceNotesTheme.bgAlt,
-        border: Border.all(color: SpaceNotesTheme.hairlineStrong),
+        border: Border.all(color: SpaceNotesTheme.hairline),
         borderRadius: BorderRadius.circular(SpaceNotesTheme.radiusXs),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(vertical: 6),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: rows,
+          LayoutBuilder(
+            builder: (context, constraints) => SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(vertical: 6),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minWidth: constraints.maxWidth),
+                child: IntrinsicWidth(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: rows,
+                  ),
+                ),
+              ),
             ),
           ),
           if (total > ToolDiffView.collapsedLines)

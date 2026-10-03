@@ -316,15 +316,16 @@ class _ToolEventRowState extends State<ToolEventRow> {
   Widget build(BuildContext context) {
     final detail = _parseDetail(widget.event.detail);
     final expanded = _toggled ?? widget.isLatest;
-    final summary =
-        expanded ? _fullDetail(detail) : _summarize(detail);
-    final label = summary.isEmpty
-        ? widget.event.tool
-        : '${widget.event.tool}  $summary';
     final input = detail['input'];
     final hunks = expanded && input is Map<String, dynamic>
         ? toolDiffHunks(input)
         : const <List<DiffLine>>[];
+    final summary = expanded && hunks.isEmpty
+        ? _fullDetail(detail)
+        : _summarize(detail);
+    final label = summary.isEmpty
+        ? widget.event.tool
+        : '${widget.event.tool}  $summary';
 
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
