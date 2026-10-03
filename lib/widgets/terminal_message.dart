@@ -332,32 +332,32 @@ class _ToolEventRowState extends State<ToolEventRow> {
       onTap: () => setState(() => _toggled = !expanded),
       child: Padding(
         padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  SnToolLine(
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: SnToolLine(
                     label: label,
                     status: SnToolStatus.done,
                     expanded: expanded,
                   ),
-                  if (hunks.isNotEmpty) ToolDiffView(hunks: hunks),
-                ],
-              ),
+                ),
+                const SizedBox(width: 10),
+                Text(
+                  _time,
+                  style: const TextStyle(
+                    fontFamily: SpaceNotesTheme.fontMono,
+                    fontSize: 10,
+                    color: SpaceNotesTheme.dim,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(width: 10),
-            Text(
-              _time,
-              style: const TextStyle(
-                fontFamily: SpaceNotesTheme.fontMono,
-                fontSize: 10,
-                color: SpaceNotesTheme.dim,
-                letterSpacing: 0.5,
-              ),
-            ),
+            if (hunks.isNotEmpty) ToolDiffView(hunks: hunks),
           ],
         ),
       ),
