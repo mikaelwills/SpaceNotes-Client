@@ -130,7 +130,8 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
         attachedToMiniBar: attachedToMiniBar,
         chatAgentId: chatAgentId,
         showStop: showStop,
-        toolRunning: agentState == 'tool_use',
+        toolRunning: chatAgentId != null &&
+            ref.watch(agentLongToolProvider(chatAgentId)),
       ),
     );
   }

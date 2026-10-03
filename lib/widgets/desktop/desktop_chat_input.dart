@@ -88,7 +88,7 @@ class _DesktopChatInputState extends ConsumerState<DesktopChatInput> {
             ),
           ],
           trailing: [
-            if (agentState == 'tool_use')
+            if (ref.watch(agentLongToolProvider(agent)))
               SnDockTile(
                 key: const ValueKey('chat_background_button'),
                 icon: Icons.flip_to_back,

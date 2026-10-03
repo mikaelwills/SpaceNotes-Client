@@ -113,6 +113,24 @@ final agentActivityProvider =
   return watchListenable(ref, client.agentActivity.rowNotifier(agentId));
 });
 
+const longToolDelay = Duration(seconds: 1);
+
+class AgentLongToolNotifier extends FamilyNotifier<bool, String> {
+  @override
+  bool build(String agentId) {
+    final toolUse = ref.watch(agentActivityProvider(agentId)
+        .select((a) => a?.state == 'tool_use'));
+    if (!toolUse) return false;
+    final timer = Timer(longToolDelay, () => state = true);
+    ref.onDispose(timer.cancel);
+    return false;
+  }
+}
+
+final agentLongToolProvider =
+    NotifierProvider.family<AgentLongToolNotifier, bool, String>(
+        AgentLongToolNotifier.new);
+
 final permissionByIdProvider =
     Provider.family<PermissionRequest?, String>((ref, id) {
   final client = ref.watch(chatClientProvider);
