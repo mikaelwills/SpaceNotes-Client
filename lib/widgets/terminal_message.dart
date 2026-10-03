@@ -13,6 +13,7 @@ import '../services/chat_attachments.dart';
 import '../theme/spacenotes_theme.dart';
 import 'markdown_styles.dart';
 import 'primitives/primitives.dart';
+import 'tool_diff_view.dart';
 
 Widget chatItemToWidget(
   BuildContext context,
@@ -320,6 +321,10 @@ class _ToolEventRowState extends State<ToolEventRow> {
     final label = summary.isEmpty
         ? widget.event.tool
         : '${widget.event.tool}  $summary';
+    final input = detail['input'];
+    final hunks = expanded && input is Map<String, dynamic>
+        ? toolDiffHunks(input)
+        : const <List<DiffLine>>[];
 
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
@@ -330,10 +335,16 @@ class _ToolEventRowState extends State<ToolEventRow> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(
-              child: SnToolLine(
-                label: label,
-                status: SnToolStatus.done,
-                expanded: expanded,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  SnToolLine(
+                    label: label,
+                    status: SnToolStatus.done,
+                    expanded: expanded,
+                  ),
+                  if (hunks.isNotEmpty) ToolDiffView(hunks: hunks),
+                ],
               ),
             ),
             const SizedBox(width: 10),
