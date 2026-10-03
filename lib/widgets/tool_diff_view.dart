@@ -92,7 +92,7 @@ class _ToolDiffViewState extends State<ToolDiffView> {
 
     return Container(
       key: const ValueKey('tool_diff_view'),
-      margin: const EdgeInsets.only(top: 6, left: 15),
+      margin: const EdgeInsets.only(top: 6),
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         color: SpaceNotesTheme.bgAlt,
