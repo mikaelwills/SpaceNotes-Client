@@ -1,6 +1,6 @@
 # SpaceNotes Client
 
-Flutter client for [SpaceNotes](https://github.com/mikaelwills/spacenotes) — a self-hosted notes, files and password system with real-time sync.
+Flutter client for [SpaceNotes](https://github.com/mikaelwills/spacenotes), a self-hosted notes, files and password system with real-time sync.
 
 This is the client app for iOS, Android, macOS, Windows, Linux and web. It subscribes to your SpaceNotes server's SpacetimeDB for notes and talks to the server's file endpoints for anything bigger than a note.
 
@@ -55,4 +55,4 @@ The app depends on [`spacetimedb_sdk`](https://github.com/mikaelwills/spacetimed
 
 ## License
 
-GPL-3.0 — See the [main SpaceNotes repository](https://github.com/mikaelwills/spacenotes) for full license details.
+GPL-3.0. See the [main SpaceNotes repository](https://github.com/mikaelwills/spacenotes) for full license details.
