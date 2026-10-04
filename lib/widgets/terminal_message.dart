@@ -139,7 +139,29 @@ class TerminalMessage extends ConsumerWidget {
     );
   }
 
+  Widget _buildProgressMessage(BuildContext context, WidgetRef ref) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
+      child: SelectionArea(
+        child: MarkdownBody(
+          data: message.text,
+          selectable: false,
+          fitContent: false,
+          shrinkWrap: true,
+          styleSheet: SpaceMarkdownStyles.chatAssistant(context),
+          softLineBreak: true,
+          onTapLink: (text, href, title) {
+            if (href != null) openVaultLink(context, ref, href);
+          },
+        ),
+      ),
+    );
+  }
+
   Widget _buildAssistantMessage(BuildContext context, WidgetRef ref) {
+    if (message.source == 'progress') {
+      return _buildProgressMessage(context, ref);
+    }
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 14, 32, 14),
       child: Column(
