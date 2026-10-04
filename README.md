@@ -27,6 +27,12 @@ For the server, sync daemon, MCP, Docker stack and setup, see the **[main SpaceN
 - Offload downloaded files to free space; multi-select to move or delete several files at once
 - Audio player with a native parametric EQ, scrolling waveform, background/lock-screen playback and a persistent mini player
 
+**Agent chat**
+- Chat with a Claude Code session; its short progress notes appear between tool calls as it works
+- Tool calls show in the chat, with Edit and Write rendered as a red/green diff
+- Approve or deny tool permissions and answer the agent's questions from the app
+- Stop a running turn, or background a long-running tool
+
 **Password manager**
 - Reads and writes a `pass`-compatible `.password-store/` of GPG-encrypted entries
 - Import your GPG private key per device to reveal passwords; create entries with a built-in generator
