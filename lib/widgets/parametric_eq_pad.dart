@@ -17,6 +17,11 @@ class EqNotch {
 
   double get bandwidth => qLevelBandwidths[qLevel];
 
+  double get q {
+    final span = math.pow(2, bandwidth).toDouble();
+    return math.sqrt(span) / (span - 1);
+  }
+
   EqNotch withQLevel(int level) => EqNotch(
         frequencyHz: frequencyHz,
         gainDb: gainDb,
@@ -135,7 +140,7 @@ class _ParametricEqPadState extends State<ParametricEqPad> {
     final gainLabel =
         '${notch.gainDb >= 0 ? '+' : ''}${notch.gainDb.toStringAsFixed(1)}dB';
 
-    final qLabel = 'Q ${notch.bandwidth.toStringAsFixed(1)}';
+    final qLabel = 'Q ${notch.q.toStringAsFixed(1)}';
 
     // A boost reads above the notch, a cut below it, so the label never sits
     // over the curve it describes. Two lines, so allow for both.
