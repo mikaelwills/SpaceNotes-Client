@@ -104,6 +104,42 @@ void main() {
     expect(find.textContaining('Run static analysis'), findsNothing);
   });
 
+  testWidgets('collapsed Skill row shows the skill name, not its args',
+      (tester) async {
+    await _pump(
+      tester,
+      _event('Skill', {'skill': 'save-reel', 'args': 'verify this https://x'}),
+    );
+
+    expect(find.textContaining('Skill  save-reel'), findsOneWidget);
+    expect(find.textContaining('verify this'), findsNothing);
+  });
+
+  testWidgets('expanded Skill row shows the skill name and its args',
+      (tester) async {
+    await _pump(
+      tester,
+      _event('Skill', {'skill': 'save-reel', 'args': 'verify this https://x'}),
+      isLatest: true,
+    );
+
+    expect(
+      find.textContaining('Skill  save-reel  verify this https://x'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('Skill row without args shows just the skill name',
+      (tester) async {
+    await _pump(
+      tester,
+      _event('Skill', {'skill': 'commit'}),
+      isLatest: true,
+    );
+
+    expect(find.textContaining('Skill  commit'), findsOneWidget);
+  });
+
   testWidgets('input without any known key still renders bare tool name',
       (tester) async {
     await _pump(tester, _event('SomeTool', {'other': 1}));

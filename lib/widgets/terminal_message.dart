@@ -682,6 +682,8 @@ String _summarize(Map<String, dynamic> detail) {
   if (pattern is String && pattern.isNotEmpty) return '"$pattern"';
   final query = input['query'];
   if (query is String && query.isNotEmpty) return '"$query"';
+  final skill = input['skill'];
+  if (skill is String && skill.isNotEmpty) return _truncateLabel(skill);
   final description = input['description'];
   if (description is String && description.isNotEmpty) {
     return _truncateLabel(description);
@@ -700,6 +702,13 @@ String _fullDetail(Map<String, dynamic> detail) {
   if (pattern is String && pattern.isNotEmpty) return '"$pattern"';
   final query = input['query'];
   if (query is String && query.isNotEmpty) return '"$query"';
+  final skill = input['skill'];
+  if (skill is String && skill.isNotEmpty) {
+    final skillArgs = input['args'];
+    return skillArgs is String && skillArgs.isNotEmpty
+        ? '$skill  $skillArgs'
+        : skill;
+  }
   final description = input['description'];
   if (description is String && description.isNotEmpty) {
     final subagentType = input['subagent_type'];
