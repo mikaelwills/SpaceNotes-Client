@@ -140,6 +140,42 @@ void main() {
     expect(find.textContaining('Skill  commit'), findsOneWidget);
   });
 
+  testWidgets('collapsed WebFetch row shows the URL without scheme or prompt',
+      (tester) async {
+    await _pump(
+      tester,
+      _event('WebFetch', {
+        'url': 'https://www.formula1.com/en/results/2026',
+        'prompt': 'who won the race',
+      }),
+    );
+
+    expect(
+      find.textContaining('WebFetch  www.formula1.com/en/results/2026'),
+      findsOneWidget,
+    );
+    expect(find.textContaining('who won the race'), findsNothing);
+  });
+
+  testWidgets('expanded WebFetch row shows the URL and the prompt',
+      (tester) async {
+    await _pump(
+      tester,
+      _event('WebFetch', {
+        'url': 'https://www.formula1.com/en/results/2026',
+        'prompt': 'who won the race',
+      }),
+      isLatest: true,
+    );
+
+    expect(
+      find.textContaining(
+        'WebFetch  https://www.formula1.com/en/results/2026  who won the race',
+      ),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('input without any known key still renders bare tool name',
       (tester) async {
     await _pump(tester, _event('SomeTool', {'other': 1}));

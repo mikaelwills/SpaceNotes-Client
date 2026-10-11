@@ -684,6 +684,10 @@ String _summarize(Map<String, dynamic> detail) {
   if (query is String && query.isNotEmpty) return '"$query"';
   final skill = input['skill'];
   if (skill is String && skill.isNotEmpty) return _truncateLabel(skill);
+  final url = input['url'];
+  if (url is String && url.isNotEmpty) {
+    return _truncateLabel(url.replaceFirst(RegExp(r'^https?://'), ''));
+  }
   final description = input['description'];
   if (description is String && description.isNotEmpty) {
     return _truncateLabel(description);
@@ -708,6 +712,11 @@ String _fullDetail(Map<String, dynamic> detail) {
     return skillArgs is String && skillArgs.isNotEmpty
         ? '$skill  $skillArgs'
         : skill;
+  }
+  final url = input['url'];
+  if (url is String && url.isNotEmpty) {
+    final prompt = input['prompt'];
+    return prompt is String && prompt.isNotEmpty ? '$url  $prompt' : url;
   }
   final description = input['description'];
   if (description is String && description.isNotEmpty) {
