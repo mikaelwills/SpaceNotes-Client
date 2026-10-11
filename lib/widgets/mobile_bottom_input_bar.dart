@@ -16,7 +16,7 @@ import '../screens/credential_screen.dart';
 import '../screens/home_screen.dart';
 import 'primitives/primitives.dart';
 import 'audio_mini_bar.dart';
-import 'chat_image_source_sheet.dart';
+import 'chat_image_source_dialog.dart';
 import 'folder_picker_field.dart';
 import '../file_types/file_type_registry.dart';
 import '../services/chat_attachments.dart';
@@ -360,7 +360,7 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
   }
 
   Future<void> _onPickImage() async {
-    final source = await showChatImageSourceSheet(context);
+    final source = await showChatImageSourceDialog(context);
     if (source == null || !mounted) return;
     try {
       final picked = source == ChatImageSource.camera

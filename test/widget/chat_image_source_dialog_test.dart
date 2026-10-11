@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:spacenotes_client/widgets/chat_image_source_sheet.dart';
+import 'package:spacenotes_client/widgets/chat_image_source_dialog.dart';
 
 Future<ChatImageSource?> _openAndTap(WidgetTester tester, Key? option) async {
   ChatImageSource? result;
@@ -11,7 +11,7 @@ Future<ChatImageSource?> _openAndTap(WidgetTester tester, Key? option) async {
         builder: (context) => Scaffold(
           body: TextButton(
             onPressed: () async {
-              result = await showChatImageSourceSheet(context);
+              result = await showChatImageSourceDialog(context);
               closed = true;
             },
             child: const Text('open'),
@@ -33,11 +33,12 @@ Future<ChatImageSource?> _openAndTap(WidgetTester tester, Key? option) async {
 }
 
 void main() {
-  testWidgets('sheet offers camera and photo library', (tester) async {
+  testWidgets('dialog offers camera and photo library', (tester) async {
     await tester.pumpWidget(
-      const MaterialApp(home: Scaffold(body: ChatImageSourceSheet())),
+      const MaterialApp(home: Scaffold(body: ChatImageSourceDialog())),
     );
 
+    expect(find.byType(AlertDialog), findsOneWidget);
     expect(find.text('Camera'), findsOneWidget);
     expect(find.text('Photo library'), findsOneWidget);
   });
@@ -61,7 +62,7 @@ void main() {
     expect(source, ChatImageSource.library);
   });
 
-  testWidgets('dismissing the sheet returns no source', (tester) async {
+  testWidgets('dismissing the dialog returns no source', (tester) async {
     final source = await _openAndTap(tester, null);
 
     expect(source, isNull);
