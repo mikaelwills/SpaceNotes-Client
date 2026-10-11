@@ -250,6 +250,24 @@ class Reducers {
         optimisticChanges: optimisticChanges, dropIfOffline: dropIfOffline);
   }
 
+  /// Calls the `empty_folder` reducer.
+  ///
+  /// Returns a [TransactionResult] on success. Throws
+  /// [SpacetimeDbReducerException] if the reducer returns `Failed` or
+  /// `InternalError`. The returned status is one of `Committed`,
+  /// `Pending` (queued to offline storage), or `Dropped` (skipped via
+  /// `dropIfOffline: true` while offline).
+  Future<TransactionResult> emptyFolder({
+    required String path,
+    List<OptimisticChange>? optimisticChanges,
+    bool dropIfOffline = false,
+  }) async {
+    final encoder = BsatnEncoder();
+    encoder.writeString(path);
+    return await _reducerCaller.call(emptyFolderDef.name, encoder.toBytes(),
+        optimisticChanges: optimisticChanges, dropIfOffline: dropIfOffline);
+  }
+
   /// Calls the `end_agent` reducer.
   ///
   /// Returns a [TransactionResult] on success. Throws
@@ -427,30 +445,6 @@ class Reducers {
     encoder.writeU64(window);
     return await _reducerCaller.call(
         pushContextUsageDef.name, encoder.toBytes(),
-        optimisticChanges: optimisticChanges, dropIfOffline: dropIfOffline);
-  }
-
-  /// Calls the `push_image` reducer.
-  ///
-  /// Returns a [TransactionResult] on success. Throws
-  /// [SpacetimeDbReducerException] if the reducer returns `Failed` or
-  /// `InternalError`. The returned status is one of `Committed`,
-  /// `Pending` (queued to offline storage), or `Dropped` (skipped via
-  /// `dropIfOffline: true` while offline).
-  Future<TransactionResult> pushImage({
-    required String id,
-    required String agentId,
-    required String caption,
-    required List<int> bytes,
-    List<OptimisticChange>? optimisticChanges,
-    bool dropIfOffline = false,
-  }) async {
-    final encoder = BsatnEncoder();
-    encoder.writeString(id);
-    encoder.writeString(agentId);
-    encoder.writeString(caption);
-    encoder.writeByteArray(bytes);
-    return await _reducerCaller.call(pushImageDef.name, encoder.toBytes(),
         optimisticChanges: optimisticChanges, dropIfOffline: dropIfOffline);
   }
 
@@ -806,6 +800,25 @@ class Reducers {
         optimisticChanges: optimisticChanges, dropIfOffline: dropIfOffline);
   }
 
+  /// Calls the `set_vault_classifier_enabled` reducer.
+  ///
+  /// Returns a [TransactionResult] on success. Throws
+  /// [SpacetimeDbReducerException] if the reducer returns `Failed` or
+  /// `InternalError`. The returned status is one of `Committed`,
+  /// `Pending` (queued to offline storage), or `Dropped` (skipped via
+  /// `dropIfOffline: true` while offline).
+  Future<TransactionResult> setVaultClassifierEnabled({
+    required bool enabled,
+    List<OptimisticChange>? optimisticChanges,
+    bool dropIfOffline = false,
+  }) async {
+    final encoder = BsatnEncoder();
+    encoder.writeBool(enabled);
+    return await _reducerCaller.call(
+        setVaultClassifierEnabledDef.name, encoder.toBytes(),
+        optimisticChanges: optimisticChanges, dropIfOffline: dropIfOffline);
+  }
+
   /// Calls the `update_file_content` reducer.
   ///
   /// Returns a [TransactionResult] on success. Throws
@@ -1067,6 +1080,17 @@ class Reducers {
     });
   }
 
+  StreamSubscription<void> onEmptyFolder(
+      void Function(EventContext ctx, String path) callback) {
+    return _reducerEmitter.on(emptyFolderDef).listen((EventContext ctx) {
+      final event = ctx.event;
+      if (event is! ReducerEvent) return;
+      final args = event.reducerArgs;
+      if (args is! EmptyFolderArgs) return;
+      callback(ctx, args.path);
+    });
+  }
+
   StreamSubscription<void> onEndAgent(
       void Function(EventContext ctx, String agentId) callback) {
     return _reducerEmitter.on(endAgentDef).listen((EventContext ctx) {
@@ -1168,19 +1192,6 @@ class Reducers {
       final args = event.reducerArgs;
       if (args is! PushContextUsageArgs) return;
       callback(ctx, args.agentId, args.used, args.window);
-    });
-  }
-
-  StreamSubscription<void> onPushImage(
-      void Function(EventContext ctx, String id, String agentId, String caption,
-              List<int> bytes)
-          callback) {
-    return _reducerEmitter.on(pushImageDef).listen((EventContext ctx) {
-      final event = ctx.event;
-      if (event is! ReducerEvent) return;
-      final args = event.reducerArgs;
-      if (args is! PushImageArgs) return;
-      callback(ctx, args.id, args.agentId, args.caption, args.bytes);
     });
   }
 
@@ -1376,6 +1387,19 @@ class Reducers {
       final args = event.reducerArgs;
       if (args is! SetThumbnailAvailableArgs) return;
       callback(ctx, args.id);
+    });
+  }
+
+  StreamSubscription<void> onSetVaultClassifierEnabled(
+      void Function(EventContext ctx, bool enabled) callback) {
+    return _reducerEmitter
+        .on(setVaultClassifierEnabledDef)
+        .listen((EventContext ctx) {
+      final event = ctx.event;
+      if (event is! ReducerEvent) return;
+      final args = event.reducerArgs;
+      if (args is! SetVaultClassifierEnabledArgs) return;
+      callback(ctx, args.enabled);
     });
   }
 

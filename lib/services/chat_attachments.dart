@@ -1,10 +1,8 @@
 import 'dart:async';
-import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:image/image.dart' as image_lib;
 import 'package:image_picker/image_picker.dart';
-import 'package:path_provider/path_provider.dart';
 
 import '../generated/client.dart';
 import '../generated/space_file.dart';
@@ -157,14 +155,6 @@ Future<List<PendingChatImage>> captureChatImage(ImagePicker picker) async {
   );
   if (shot == null) return const [];
   return normalizeChatImages([(await shot.readAsBytes(), shot.name)]);
-}
-
-Future<File> writeChatAttachmentTemp(String name, Uint8List bytes) async {
-  final dir = Directory('${(await getTemporaryDirectory()).path}/chat-attachments');
-  await dir.create(recursive: true);
-  final file = File('${dir.path}/$name');
-  await file.writeAsBytes(bytes, flush: true);
-  return file;
 }
 
 Future<String> waitForFileId(

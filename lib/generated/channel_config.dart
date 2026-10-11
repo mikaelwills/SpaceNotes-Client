@@ -9,6 +9,7 @@ class ChannelConfig {
     required this.a2aCooldownSecs,
     required this.a2aHourlyLimit,
     required this.a2aMaxHops,
+    required this.vaultClassifierEnabled,
   });
 
   factory ChannelConfig.fromJson(Map<String, dynamic> json) {
@@ -18,6 +19,7 @@ class ChannelConfig {
       a2aCooldownSecs: json['a2aCooldownSecs'] ?? 0,
       a2aHourlyLimit: json['a2aHourlyLimit'] ?? 0,
       a2aMaxHops: json['a2aMaxHops'] ?? 0,
+      vaultClassifierEnabled: json['vaultClassifierEnabled'] ?? false,
     );
   }
 
@@ -31,12 +33,15 @@ class ChannelConfig {
 
   final int a2aMaxHops;
 
+  final bool vaultClassifierEnabled;
+
   void encodeBsatn(BsatnEncoder encoder) {
     encoder.writeU32(id);
     encoder.writeBool(a2aEnabled);
     encoder.writeU32(a2aCooldownSecs);
     encoder.writeU32(a2aHourlyLimit);
     encoder.writeU32(a2aMaxHops);
+    encoder.writeBool(vaultClassifierEnabled);
   }
 
   static ChannelConfig decodeBsatn(BsatnDecoder decoder) {
@@ -46,6 +51,7 @@ class ChannelConfig {
       a2aCooldownSecs: decoder.readU32(),
       a2aHourlyLimit: decoder.readU32(),
       a2aMaxHops: decoder.readU32(),
+      vaultClassifierEnabled: decoder.readBool(),
     );
   }
 
@@ -56,6 +62,7 @@ class ChannelConfig {
       'a2aCooldownSecs': a2aCooldownSecs,
       'a2aHourlyLimit': a2aHourlyLimit,
       'a2aMaxHops': a2aMaxHops,
+      'vaultClassifierEnabled': vaultClassifierEnabled,
     };
   }
 
@@ -67,18 +74,25 @@ class ChannelConfig {
             a2aEnabled == other.a2aEnabled &&
             a2aCooldownSecs == other.a2aCooldownSecs &&
             a2aHourlyLimit == other.a2aHourlyLimit &&
-            a2aMaxHops == other.a2aMaxHops;
+            a2aMaxHops == other.a2aMaxHops &&
+            vaultClassifierEnabled == other.vaultClassifierEnabled;
   }
 
   @override
   int get hashCode {
-    return Object.hashAll(
-        [id, a2aEnabled, a2aCooldownSecs, a2aHourlyLimit, a2aMaxHops]);
+    return Object.hashAll([
+      id,
+      a2aEnabled,
+      a2aCooldownSecs,
+      a2aHourlyLimit,
+      a2aMaxHops,
+      vaultClassifierEnabled
+    ]);
   }
 
   @override
   String toString() {
-    return 'ChannelConfig(id: $id, a2aEnabled: $a2aEnabled, a2aCooldownSecs: $a2aCooldownSecs, a2aHourlyLimit: $a2aHourlyLimit, a2aMaxHops: $a2aMaxHops)';
+    return 'ChannelConfig(id: $id, a2aEnabled: $a2aEnabled, a2aCooldownSecs: $a2aCooldownSecs, a2aHourlyLimit: $a2aHourlyLimit, a2aMaxHops: $a2aMaxHops, vaultClassifierEnabled: $vaultClassifierEnabled)';
   }
 
   ChannelConfig copyWith({
@@ -87,6 +101,7 @@ class ChannelConfig {
     int? a2aCooldownSecs,
     int? a2aHourlyLimit,
     int? a2aMaxHops,
+    bool? vaultClassifierEnabled,
   }) {
     return ChannelConfig(
       id: id ?? this.id,
@@ -94,6 +109,8 @@ class ChannelConfig {
       a2aCooldownSecs: a2aCooldownSecs ?? this.a2aCooldownSecs,
       a2aHourlyLimit: a2aHourlyLimit ?? this.a2aHourlyLimit,
       a2aMaxHops: a2aMaxHops ?? this.a2aMaxHops,
+      vaultClassifierEnabled:
+          vaultClassifierEnabled ?? this.vaultClassifierEnabled,
     );
   }
 }

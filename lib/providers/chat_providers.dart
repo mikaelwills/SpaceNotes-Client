@@ -12,7 +12,6 @@ import '../generated/question_request.dart';
 import '../generated/agent.dart';
 import '../generated/agent_activity.dart';
 import '../generated/tool_event.dart';
-import '../platform/capabilities.dart';
 import '../services/chat_attachments.dart';
 import '../services/debug_logger.dart';
 import 'file_transfer_providers.dart';
@@ -444,7 +443,7 @@ class ChatSendStatusNotifier extends StateNotifier<Map<String, ChatSendEntry>> {
   /// Rebuild pending (clock) status from the SDK's durable mutation queue.
   /// The in-memory status map dies on app kill, but the queued messages
   /// survive in `pending_mutations.jsonl` — so on (re)attach, mark every
-  /// still-queued pushMessage/pushImage as pending again. Without this, a message sent
+  /// still-queued pushMessage as pending again. Without this, a message sent
   /// offline then killed reopens with no clock and looks (wrongly) sent.
   Future<void> _seedFromPendingQueue(SpacetimeDbClient client) async {
     if (!client.hasOfflineStorage) return;
@@ -453,10 +452,7 @@ class ChatSendStatusNotifier extends StateNotifier<Map<String, ChatSendEntry>> {
       var changed = false;
       final next = Map<String, ChatSendEntry>.from(state);
       for (final mutation in pending) {
-        if (mutation.reducerName != pushMessageDef.name &&
-            mutation.reducerName != pushImageDef.name) {
-          continue;
-        }
+        if (mutation.reducerName != pushMessageDef.name) continue;
         final insert = mutation.optimisticChanges?.firstWhereOrNull(
           (c) => c.type == OptimisticChangeType.insert && c.newRowJson != null,
         );
@@ -491,10 +487,7 @@ class ChatSendStatusNotifier extends StateNotifier<Map<String, ChatSendEntry>> {
   }
 
   void _onResult(MutationSyncResult result) {
-    if (result.reducerName != pushMessageDef.name &&
-        result.reducerName != pushImageDef.name) {
-      return;
-    }
+    if (result.reducerName != pushMessageDef.name) return;
     debugLogger.chat('sendStatus result',
         'success=${result.success} reqId=${result.requestId}');
     if (result.success) {
@@ -647,17 +640,6 @@ Future<void> sendChatImages(
   required String caption,
   required List<PendingChatImage> images,
 }) async {
-  if (!Capabilities.canUploadFiles) {
-    for (var i = 0; i < images.length; i++) {
-      await _sendLegacyChatImage(
-        ref,
-        agentId: agentId,
-        caption: i == 0 ? caption : '',
-        pngBytes: images[i].bytes,
-      );
-    }
-    return;
-  }
   final notesClient = ref.read(notesClientProvider);
   if (notesClient == null) {
     throw StateError('Not connected to the vault');
@@ -672,12 +654,7 @@ Future<void> sendChatImages(
   final links = <ChatAttachmentLink>[];
   for (var i = 0; i < images.length; i++) {
     final name = chatAttachmentName(id, i, images[i].extension);
-    final temp = await writeChatAttachmentTemp(name, images[i].bytes);
-    try {
-      await service.uploadFile(folder, temp);
-    } finally {
-      unawaited(temp.delete().then((_) {}, onError: (_) {}));
-    }
+    await service.uploadBytes(folder, name, images[i].bytes);
     final fileId = await waitForFileId(notesClient, '$folder/$name');
     links.add(ChatAttachmentLink(name: name, fileId: fileId));
   }
@@ -687,47 +664,6 @@ Future<void> sendChatImages(
     text: buildChatMessageText(caption, links),
     messageId: id,
   );
-}
-
-Future<void> _sendLegacyChatImage(
-  WidgetRef ref, {
-  required String agentId,
-  required String caption,
-  required Uint8List pngBytes,
-}) async {
-  final client = ref.read(chatClientProvider);
-  if (client == null) {
-    debugLogger.chatError('sendChatImage aborted', 'client=null');
-    return;
-  }
-  final id = _mintMessageId();
-  debugLogger.chat(
-    'sendChatImage',
-    'id=$id agent=$agentId bytes=${pngBytes.length} captionLen=${caption.length}',
-  );
-  final message = Message(
-    id: id,
-    agentId: agentId,
-    role: 'user',
-    text: caption,
-    source: 'flutter',
-    createdAt: Int64(DateTime.now().microsecondsSinceEpoch),
-  );
-  ref.read(chatSendStatusProvider.notifier).markPending(message);
-  try {
-    await client.reducers.pushImage(
-      id: id,
-      agentId: agentId,
-      caption: caption,
-      bytes: pngBytes,
-      optimisticChanges: [OptimisticChange.insertRow(client.message, message)],
-    );
-    debugLogger.chat('sendChatImage ok', 'id=$id');
-    _probeEcho(client, id, 'img');
-  } catch (e, st) {
-    debugLogger.chatError('sendChatImage threw', 'id=$id err=$e\n$st');
-    rethrow;
-  }
 }
 
 Future<void> respondToPermission(

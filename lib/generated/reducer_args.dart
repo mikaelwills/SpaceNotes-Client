@@ -274,6 +274,24 @@ class EditMessageArgsDecoder implements ReducerArgDecoder<EditMessageArgs> {
   }
 }
 
+class EmptyFolderArgs {
+  EmptyFolderArgs({required this.path});
+
+  final String path;
+}
+
+class EmptyFolderArgsDecoder implements ReducerArgDecoder<EmptyFolderArgs> {
+  const EmptyFolderArgsDecoder();
+
+  @override
+  EmptyFolderArgs decode(BsatnDecoder decoder) {
+    final path = decoder.readString();
+    return EmptyFolderArgs(
+      path: path,
+    );
+  }
+}
+
 class EndAgentArgs {
   EndAgentArgs({required this.agentId});
 
@@ -485,41 +503,6 @@ class PushContextUsageArgsDecoder
       agentId: agentId,
       used: used,
       window: window,
-    );
-  }
-}
-
-class PushImageArgs {
-  PushImageArgs({
-    required this.id,
-    required this.agentId,
-    required this.caption,
-    required this.bytes,
-  });
-
-  final String id;
-
-  final String agentId;
-
-  final String caption;
-
-  final List<int> bytes;
-}
-
-class PushImageArgsDecoder implements ReducerArgDecoder<PushImageArgs> {
-  const PushImageArgsDecoder();
-
-  @override
-  PushImageArgs decode(BsatnDecoder decoder) {
-    final id = decoder.readString();
-    final agentId = decoder.readString();
-    final caption = decoder.readString();
-    final bytes = decoder.readByteArray();
-    return PushImageArgs(
-      id: id,
-      agentId: agentId,
-      caption: caption,
-      bytes: bytes,
     );
   }
 }
@@ -994,6 +977,25 @@ class SetThumbnailAvailableArgsDecoder
   }
 }
 
+class SetVaultClassifierEnabledArgs {
+  SetVaultClassifierEnabledArgs({required this.enabled});
+
+  final bool enabled;
+}
+
+class SetVaultClassifierEnabledArgsDecoder
+    implements ReducerArgDecoder<SetVaultClassifierEnabledArgs> {
+  const SetVaultClassifierEnabledArgsDecoder();
+
+  @override
+  SetVaultClassifierEnabledArgs decode(BsatnDecoder decoder) {
+    final enabled = decoder.readBool();
+    return SetVaultClassifierEnabledArgs(
+      enabled: enabled,
+    );
+  }
+}
+
 class UpdateFileContentArgs {
   UpdateFileContentArgs({
     required this.id,
@@ -1175,6 +1177,8 @@ const deleteFolderDef =
     ReducerDef<DeleteFolderArgs>('delete_folder', DeleteFolderArgsDecoder());
 const editMessageDef =
     ReducerDef<EditMessageArgs>('edit_message', EditMessageArgsDecoder());
+const emptyFolderDef =
+    ReducerDef<EmptyFolderArgs>('empty_folder', EmptyFolderArgsDecoder());
 const endAgentDef =
     ReducerDef<EndAgentArgs>('end_agent', EndAgentArgsDecoder());
 const endCallDef = ReducerDef<EndCallArgs>('end_call', EndCallArgsDecoder());
@@ -1192,8 +1196,6 @@ const prependToFileDef = ReducerDef<PrependToFileArgs>(
     'prepend_to_file', PrependToFileArgsDecoder());
 const pushContextUsageDef = ReducerDef<PushContextUsageArgs>(
     'push_context_usage', PushContextUsageArgsDecoder());
-const pushImageDef =
-    ReducerDef<PushImageArgs>('push_image', PushImageArgsDecoder());
 const pushMessageDef =
     ReducerDef<PushMessageArgs>('push_message', PushMessageArgsDecoder());
 const pushStatusDef =
@@ -1226,6 +1228,8 @@ const setDisplayNameDef = ReducerDef<SetDisplayNameArgs>(
     'set_display_name', SetDisplayNameArgsDecoder());
 const setThumbnailAvailableDef = ReducerDef<SetThumbnailAvailableArgs>(
     'set_thumbnail_available', SetThumbnailAvailableArgsDecoder());
+const setVaultClassifierEnabledDef = ReducerDef<SetVaultClassifierEnabledArgs>(
+    'set_vault_classifier_enabled', SetVaultClassifierEnabledArgsDecoder());
 const updateFileContentDef = ReducerDef<UpdateFileContentArgs>(
     'update_file_content', UpdateFileContentArgsDecoder());
 const updateFilePathDef = ReducerDef<UpdateFilePathArgs>(

@@ -1,6 +1,7 @@
 import 'dart:async';
 import '../platform/capabilities.dart';
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:dio/dio.dart';
 import '../repositories/spacetimedb_notes_repository.dart';
 import 'debug_logger.dart';
@@ -270,6 +271,39 @@ class FileTransferService {
       rethrow;
     } catch (e) {
       debugLogger.error('UPLOAD', 'Upload failed (non-Dio): $originalName', e.toString());
+      rethrow;
+    }
+  }
+
+  Future<void> uploadBytes(
+    String folderPath,
+    String name,
+    Uint8List bytes,
+  ) async {
+    final remotePath = folderPath.isEmpty ? name : '$folderPath/$name';
+    final url = _remoteUrl(remotePath);
+    debugLogger.info(
+      'UPLOAD',
+      'PUT bytes',
+      'path=$remotePath size=${bytes.length}',
+    );
+    try {
+      await _dio.put(
+        url,
+        data: bytes,
+        options: Options(
+          headers: {Headers.contentLengthHeader: bytes.length},
+        ),
+      );
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 409) {
+        throw FileAlreadyExistsException(name);
+      }
+      debugLogger.error(
+        'UPLOAD',
+        'Upload failed: $name',
+        'status=${e.response?.statusCode} type=${e.type} message=${e.message}',
+      );
       rethrow;
     }
   }
