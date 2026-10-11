@@ -34,7 +34,7 @@
 		<true/>
 	</dict>
 	<key>NSCameraUsageDescription</key>
-	<string>SpaceNotes uses the camera for video calls</string>
+	<string>SpaceNotes uses the camera to take photos to send in chat</string>
 	<key>NSFaceIDUsageDescription</key>
 	<string>Unlocks your stored passwords on this device.</string>
 	<key>NSMicrophoneUsageDescription</key>

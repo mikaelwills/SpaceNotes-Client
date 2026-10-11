@@ -148,6 +148,17 @@ Future<List<PendingChatImage>> pickChatImages(
   return normalizeChatImages(inputs);
 }
 
+Future<List<PendingChatImage>> captureChatImage(ImagePicker picker) async {
+  final shot = await picker.pickImage(
+    source: ImageSource.camera,
+    maxWidth: _maxImageEdge.toDouble(),
+    maxHeight: _maxImageEdge.toDouble(),
+    imageQuality: _jpegQuality,
+  );
+  if (shot == null) return const [];
+  return normalizeChatImages([(await shot.readAsBytes(), shot.name)]);
+}
+
 Future<File> writeChatAttachmentTemp(String name, Uint8List bytes) async {
   final dir = Directory('${(await getTemporaryDirectory()).path}/chat-attachments');
   await dir.create(recursive: true);
