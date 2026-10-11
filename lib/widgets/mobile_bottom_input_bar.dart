@@ -215,13 +215,16 @@ class _MobileBottomInputBarState extends ConsumerState<MobileBottomInputBar> {
   Widget _addImageTile() {
     final disabled =
         _pendingImages.length >= maxPendingChatImages || _sendingImages;
-    return SnDockTile(
-      key: const ValueKey('chat_add_image'),
-      icon: Icons.add,
-      onTap: disabled ? () {} : _onPickImage,
-      color: disabled ? SpaceNotesTheme.dim : SpaceNotesTheme.accent,
-      semanticLabel: 'add image',
-      width: 36,
+    return Padding(
+      padding: const EdgeInsets.only(left: 13),
+      child: SnDockTile(
+        key: const ValueKey('chat_add_image'),
+        icon: Icons.add,
+        onTap: disabled ? () {} : _onPickImage,
+        color: disabled ? SpaceNotesTheme.dim : SpaceNotesTheme.accent,
+        semanticLabel: 'add image',
+        width: 36,
+      ),
     );
   }
 
