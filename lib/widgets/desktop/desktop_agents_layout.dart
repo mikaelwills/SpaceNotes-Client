@@ -12,7 +12,10 @@ import '../../providers/notes_providers.dart';
 import '../../screens/agent_chat.dart';
 import '../../theme/spacenotes_theme.dart';
 import '../primitives/primitives.dart';
+import '../../providers/agent_list_providers.dart';
+import '../agents/agent_filter_bar.dart';
 import '../agents/agent_row_content.dart';
+import '../agents/agent_sectioned_list.dart';
 import '../../file_types/file_type_registry.dart';
 
 class DesktopAgentsLayout extends ConsumerWidget {
@@ -40,24 +43,21 @@ class DesktopAgentsLayout extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _Header(isConnected: isConnected),
-                const _ColumnHeader(),
                 Expanded(
                   child: agents.isEmpty
                       ? const _EmptyList()
-                      : ListView.builder(
-                          padding: EdgeInsets.zero,
-                          itemCount: agents.length,
-                          itemBuilder: (context, index) {
-                            final agent = agents[index];
-                            final isActive = agent.id == activeAgentId;
-                            return _AgentRow(
-                              index: index + 1,
-                              agent: agent,
-                              isActive: isActive,
-                            );
-                          },
+                      : AgentSectionedList(
+                          rowBuilder: (context, agent, index,
+                                  {required attention}) =>
+                              _AgentRow(
+                            index: index,
+                            agent: agent,
+                            isActive: agent.id == activeAgentId,
+                            attention: attention,
+                          ),
                         ),
                 ),
+                const AgentFilterBar(),
                 const _Footer(),
               ],
             ),
@@ -212,33 +212,6 @@ class _Footer extends StatelessWidget {
   }
 }
 
-class _ColumnHeader extends StatelessWidget {
-  const _ColumnHeader();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-      decoration: const BoxDecoration(
-        border: Border(
-          bottom: BorderSide(color: SpaceNotesTheme.hairline, width: 1),
-        ),
-      ),
-      child: const Row(
-        children: [
-          SizedBox(
-            width: 24,
-            child: SnMicroLabel('#', fontSize: 9),
-          ),
-          SizedBox(width: 14),
-          Expanded(child: SnMicroLabel('agent / name', fontSize: 9)),
-          SnMicroLabel('state', fontSize: 9),
-        ],
-      ),
-    );
-  }
-}
-
 class _EmptyList extends StatelessWidget {
   const _EmptyList();
 
@@ -279,31 +252,37 @@ class _AgentRow extends ConsumerWidget {
   final int index;
   final Agent agent;
   final bool isActive;
+  final bool attention;
 
   const _AgentRow({
     required this.index,
     required this.agent,
     required this.isActive,
+    required this.attention,
   });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final activity = ref.watch(agentActivityProvider(agent.id));
     final state = resolveAgentState(activity?.state);
+    final unread = ref.watch(agentUnreadProvider(agent.id));
+    final preview =
+        attention ? ref.watch(agentReplyPreviewProvider(agent.id)) : null;
 
     return Material(
       color: isActive
           ? SpaceNotesTheme.accent.withValues(alpha: 0.06)
           : Colors.transparent,
       child: InkWell(
-        onTap: () =>
-            context.go('/agents/${Uri.encodeComponent(agent.id)}'),
+        onTap: () => context.go('/agents/${Uri.encodeComponent(agent.id)}'),
         child: AgentRowContent(
           index: index,
           agent: agent,
           state: state,
-          showHost: true,
+          showHost: attention,
           isActive: isActive,
+          unread: unread,
+          preview: preview,
         ),
       ),
     );

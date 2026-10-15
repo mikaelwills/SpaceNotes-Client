@@ -100,6 +100,21 @@ final agentUnreadProvider = Provider.family<bool, String>((ref, agentId) {
   return reply.toInt() > lastRead.readMarkFor(agentId);
 });
 
+final agentReplyPreviewProvider =
+    Provider.family<String?, String>((ref, agentId) {
+  final text =
+      ref.watch(latestReplyByAgentProvider.select((m) => m[agentId]?.text));
+  if (text == null) return null;
+  for (final raw in text.split('\n')) {
+    final line = raw
+        .replaceFirst(RegExp(r'^[\s#>*\-]+'), '')
+        .replaceAll('**', '')
+        .trim();
+    if (line.isNotEmpty) return line;
+  }
+  return null;
+});
+
 final agentWorkingProvider = Provider.family<bool, String>((ref, agentId) {
   final state =
       ref.watch(agentActivityProvider(agentId).select((a) => a?.state));
