@@ -71,6 +71,8 @@ class AgentRowContent extends StatelessWidget {
   final AgentState state;
   final bool showHost;
   final bool isActive;
+  final bool unread;
+  final String? preview;
   final EdgeInsets padding;
 
   const AgentRowContent({
@@ -80,6 +82,8 @@ class AgentRowContent extends StatelessWidget {
     required this.state,
     this.showHost = true,
     this.isActive = false,
+    this.unread = false,
+    this.preview,
     this.padding = const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
   });
 
@@ -118,10 +122,12 @@ class AgentRowContent extends StatelessWidget {
                   agent: agent,
                   showHost: showHost,
                   state: state,
+                  unread: unread,
+                  preview: preview,
                 ),
               ),
               const SizedBox(width: 12),
-              _StateTail(state: state),
+              _StateTail(state: state, unread: unread),
             ],
           ),
         ],
@@ -134,11 +140,15 @@ class _NameBlock extends StatelessWidget {
   final Agent agent;
   final bool showHost;
   final AgentState state;
+  final bool unread;
+  final String? preview;
 
   const _NameBlock({
     required this.agent,
     required this.showHost,
     required this.state,
+    required this.unread,
+    required this.preview,
   });
 
   @override
@@ -152,7 +162,7 @@ class _NameBlock extends StatelessWidget {
       children: [
         Row(
           children: [
-            StateDot(state: state),
+            StateDot(state: state, unread: unread),
             const SizedBox(width: 8),
             Flexible(
               child: Text(
@@ -184,7 +194,19 @@ class _NameBlock extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 6),
-        _MetaLine(agent: agent),
+        if (preview != null)
+          Text(
+            preview!,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontFamily: SpaceNotesTheme.fontSans,
+              fontSize: 13,
+              color: unread ? SpaceNotesTheme.fg : SpaceNotesTheme.muted,
+            ),
+          )
+        else
+          _MetaLine(agent: agent),
       ],
     );
   }
@@ -257,20 +279,22 @@ class _LeftRule extends StatelessWidget {
 
 class _StateTail extends StatelessWidget {
   final AgentState state;
-  const _StateTail({required this.state});
+  final bool unread;
+  const _StateTail({required this.state, required this.unread});
 
   @override
   Widget build(BuildContext context) {
+    final showNew = unread && state == AgentState.idle;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.end,
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(
-          agentStateLabel(state),
+          showNew ? 'NEW' : agentStateLabel(state),
           style: TextStyle(
             fontFamily: SpaceNotesTheme.fontMono,
             fontSize: 10,
-            color: agentStateColor(state),
+            color: showNew ? SpaceNotesTheme.accent : agentStateColor(state),
             letterSpacing: 1,
           ),
         ),
@@ -291,7 +315,8 @@ class _StateTail extends StatelessWidget {
 
 class StateDot extends StatefulWidget {
   final AgentState state;
-  const StateDot({super.key, required this.state});
+  final bool unread;
+  const StateDot({super.key, required this.state, this.unread = false});
 
   @override
   State<StateDot> createState() => _StateDotState();
@@ -332,7 +357,9 @@ class _StateDotState extends State<StateDot>
 
   @override
   Widget build(BuildContext context) {
-    final color = agentStateColor(widget.state);
+    final color = widget.unread && widget.state == AgentState.idle
+        ? SpaceNotesTheme.accent
+        : agentStateColor(widget.state);
     return AnimatedBuilder(
       animation: _controller,
       builder: (_, __) {

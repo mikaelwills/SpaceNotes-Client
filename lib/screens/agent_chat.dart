@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../providers/agent_list_providers.dart';
 import '../providers/chat_providers.dart';
 import '../providers/connection_providers.dart';
 import '../services/debug_logger.dart';
@@ -27,6 +28,30 @@ class _AgentChatScreenState extends ConsumerState<AgentChatScreen> {
   void initState() {
     super.initState();
     debugLogger.chat('agent screen open', 'agent=${widget.agentId}');
+    ref.listenManual(
+      latestReplyByAgentProvider.select((m) => m[widget.agentId]?.createdAt),
+      (_, __) => _markRead(),
+      fireImmediately: true,
+    );
+    ref.listenManual(
+      lastReadProvider.select((s) => s.loaded),
+      (_, __) => _markRead(),
+    );
+  }
+
+  void _markRead() {
+    Future.microtask(() {
+      if (!mounted) return;
+      _applyRead();
+    });
+  }
+
+  void _applyRead() {
+    final latest = ref.read(latestReplyByAgentProvider)[widget.agentId];
+    if (latest == null) return;
+    ref
+        .read(lastReadProvider.notifier)
+        .markRead(widget.agentId, latest.createdAt.toInt());
   }
 
   @override

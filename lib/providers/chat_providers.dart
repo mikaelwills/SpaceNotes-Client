@@ -63,7 +63,7 @@ const String defaultTargetAgent = 'workflow-agent';
 
 const List<String> hostPriority = ['robert', 'M1MAX', 'Mikaels-Work'];
 
-int _hostRank(String host) {
+int hostRank(String host) {
   final i = hostPriority.indexOf(host);
   return i == -1 ? hostPriority.length : i;
 }
@@ -156,7 +156,7 @@ final targetAgentProvider = Provider<String>((ref) {
   final agents = ref.watch(agentsProvider);
   final candidates =
       agents.where((s) => s.baseName == defaultTargetAgent).toList()
-        ..sort((a, b) => _hostRank(a.host).compareTo(_hostRank(b.host)));
+        ..sort((a, b) => hostRank(a.host).compareTo(hostRank(b.host)));
   if (candidates.isNotEmpty) return candidates.first.id;
   return defaultTargetAgent;
 });

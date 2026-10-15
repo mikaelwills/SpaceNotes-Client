@@ -30,7 +30,7 @@ class _AgentFilterBarState extends ConsumerState<AgentFilterBar> {
       behavior: HitTestBehavior.opaque,
       onTap: _focusNode.requestFocus,
       child: Container(
-        height: kStatusBarHeight,
+        height: 56,
         padding: const EdgeInsets.symmetric(horizontal: 20),
         decoration: const BoxDecoration(
           border: Border(
@@ -39,6 +39,8 @@ class _AgentFilterBarState extends ConsumerState<AgentFilterBar> {
         ),
         child: Row(
           children: [
+            const Icon(Icons.search, size: 18, color: SpaceNotesTheme.muted),
+            const SizedBox(width: 12),
             Expanded(
               child: TextField(
                 controller: _controller,
@@ -47,7 +49,7 @@ class _AgentFilterBarState extends ConsumerState<AgentFilterBar> {
                 cursorWidth: 1.5,
                 style: const TextStyle(
                   fontFamily: SpaceNotesTheme.fontMono,
-                  fontSize: 12,
+                  fontSize: 15,
                   letterSpacing: 0.5,
                   color: SpaceNotesTheme.fg,
                 ),
@@ -63,8 +65,8 @@ class _AgentFilterBarState extends ConsumerState<AgentFilterBar> {
                   hintText: 'filter agents',
                   hintStyle: TextStyle(
                     fontFamily: SpaceNotesTheme.fontMono,
-                    fontSize: 11,
-                    letterSpacing: 1.5,
+                    fontSize: 14,
+                    letterSpacing: 1,
                     color: SpaceNotesTheme.dim,
                   ),
                 ),
@@ -82,7 +84,7 @@ class _AgentFilterBarState extends ConsumerState<AgentFilterBar> {
                 behavior: HitTestBehavior.opaque,
                 child: const Padding(
                   padding: EdgeInsets.only(left: 12),
-                  child: SnMicroLabel('clear', fontSize: 9),
+                  child: SnMicroLabel('clear', fontSize: 11),
                 ),
               ),
           ],

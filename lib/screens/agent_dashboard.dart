@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../generated/agent.dart';
+import '../providers/agent_list_providers.dart';
 import '../providers/chat_providers.dart';
 import '../providers/connection_providers.dart';
 import '../providers/notes_providers.dart';
@@ -19,8 +20,11 @@ class AgentDashboard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final agents = ref.watch(agentsProvider);
-    final filtered = ref.watch(filteredAgentsProvider);
+    final sections = ref.watch(agentListSectionsProvider);
+    final collapsed = ref.watch(collapsedHostsProvider);
+    final filtering = ref.watch(agentFilterProvider).trim().isNotEmpty;
     final isConnected = ref.watch(spacetimeConnectedProvider);
+    final entries = _buildEntries(sections, collapsed, filtering);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -30,21 +34,34 @@ class AgentDashboard extends ConsumerWidget {
           onClearAll:
               agents.isEmpty ? null : () => _confirmClearAll(context, ref),
         ),
-        const _ColumnHeader(),
         Expanded(
           child: agents.isEmpty
               ? const _EmptyState()
               : ListView.builder(
                   padding: EdgeInsets.zero,
-                  itemCount: filtered.length,
+                  itemCount: entries.length,
                   itemBuilder: (context, index) {
-                    final agent = filtered[index];
-                    return _AgentRow(
-                      key: ValueKey(agent.id),
-                      index: index + 1,
-                      agent: agent,
-                      showHost: true,
-                    );
+                    return switch (entries[index]) {
+                      _SectionEntry(:final label, :final count) =>
+                        _SectionHeader(label: label, count: count),
+                      _HostEntry(:final host, :final count, :final collapsed) =>
+                        _SectionHeader(
+                          label: host,
+                          count: count,
+                          collapsed: collapsed,
+                          onTap: () => ref
+                              .read(collapsedHostsProvider.notifier)
+                              .toggle(host),
+                        ),
+                      _RowEntry(:final agent, :final index, :final attention) =>
+                        _AgentRow(
+                          key: ValueKey('${attention ? 'a' : 'h'}:${agent.id}'),
+                          index: index,
+                          agent: agent,
+                          showHost: attention,
+                          showPreview: attention,
+                        ),
+                    };
                   },
                 ),
         ),
@@ -52,6 +69,33 @@ class AgentDashboard extends ConsumerWidget {
         _Footer(isConnected: isConnected),
       ],
     );
+  }
+
+  List<_Entry> _buildEntries(
+    AgentListSections sections,
+    Set<String> collapsed,
+    bool filtering,
+  ) {
+    final entries = <_Entry>[];
+    var index = 0;
+    if (sections.attention.isNotEmpty) {
+      entries.add(_SectionEntry('new · working', sections.attention.length));
+      for (final a in sections.attention) {
+        entries.add(_RowEntry(a, ++index, attention: true));
+      }
+    }
+    for (final group in sections.groups) {
+      final isCollapsed = !filtering && collapsed.contains(group.host);
+      entries.add(_HostEntry(group.host, group.agents.length, isCollapsed));
+      if (isCollapsed) {
+        index += group.agents.length;
+        continue;
+      }
+      for (final a in group.agents) {
+        entries.add(_RowEntry(a, ++index, attention: false));
+      }
+    }
+    return entries;
   }
 
   Future<void> _confirmClearAll(BuildContext context, WidgetRef ref) async {
@@ -147,30 +191,78 @@ class _Header extends StatelessWidget {
   }
 }
 
-class _ColumnHeader extends StatelessWidget {
-  const _ColumnHeader();
+sealed class _Entry {}
+
+class _SectionEntry extends _Entry {
+  final String label;
+  final int count;
+  _SectionEntry(this.label, this.count);
+}
+
+class _HostEntry extends _Entry {
+  final String host;
+  final int count;
+  final bool collapsed;
+  _HostEntry(this.host, this.count, this.collapsed);
+}
+
+class _RowEntry extends _Entry {
+  final Agent agent;
+  final int index;
+  final bool attention;
+  _RowEntry(this.agent, this.index, {required this.attention});
+}
+
+class _SectionHeader extends StatelessWidget {
+  final String label;
+  final int count;
+  final bool? collapsed;
+  final VoidCallback? onTap;
+
+  const _SectionHeader({
+    required this.label,
+    required this.count,
+    this.collapsed,
+    this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+    final header = Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
       decoration: const BoxDecoration(
+        color: SpaceNotesTheme.bgAlt,
         border: Border(
           top: BorderSide(color: SpaceNotesTheme.hairline, width: 1),
           bottom: BorderSide(color: SpaceNotesTheme.hairline, width: 1),
         ),
       ),
-      child: const Row(
+      child: Row(
         children: [
-          SizedBox(
-            width: 28,
-            child: SnMicroLabel('#', fontSize: 9),
+          if (collapsed != null) ...[
+            Icon(
+              collapsed! ? Icons.chevron_right : Icons.expand_more,
+              size: 14,
+              color: SpaceNotesTheme.muted,
+            ),
+            const SizedBox(width: 8),
+          ],
+          Expanded(
+            child: SnMicroLabel(label.isEmpty ? 'local' : label, fontSize: 10),
           ),
-          SizedBox(width: 14),
-          Expanded(child: SnMicroLabel('agent / name', fontSize: 9)),
-          SnMicroLabel('state', fontSize: 9),
+          SnUiText(
+            '$count',
+            color: SpaceNotesTheme.muted,
+            fontSize: 10,
+            letterSpacing: 0.5,
+          ),
         ],
       ),
+    );
+    if (onTap == null) return header;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(onTap: onTap, child: header),
     );
   }
 }
@@ -224,12 +316,14 @@ class _AgentRow extends ConsumerStatefulWidget {
   final int index;
   final Agent agent;
   final bool showHost;
+  final bool showPreview;
 
   const _AgentRow({
     super.key,
     required this.index,
     required this.agent,
     required this.showHost,
+    required this.showPreview,
   });
 
   @override
@@ -269,6 +363,12 @@ class _AgentRowState extends ConsumerState<_AgentRow>
     final targetAgent = ref.watch(targetAgentProvider);
     final state = resolveAgentState(activity?.state);
     final isActive = widget.agent.id == targetAgent;
+    final unread = ref.watch(agentUnreadProvider(widget.agent.id));
+    final reply = widget.showPreview
+        ? ref.watch(
+            latestReplyByAgentProvider.select((m) => m[widget.agent.id]?.text))
+        : null;
+    final preview = reply == null ? null : _previewLine(reply);
 
     final showAction = _swipeOffset < 0 || _animationController.isAnimating;
     final rowBg = isActive
@@ -342,6 +442,8 @@ class _AgentRowState extends ConsumerState<_AgentRow>
                   state: state,
                   showHost: widget.showHost,
                   isActive: isActive,
+                  unread: unread,
+                  preview: preview,
                 ),
               ),
             ),
@@ -357,8 +459,7 @@ class _AgentRowState extends ConsumerState<_AgentRow>
       return;
     }
     HapticFeedback.selectionClick();
-    context.push(
-        '/agents/${Uri.encodeComponent(widget.agent.id)}');
+    context.push('/agents/${Uri.encodeComponent(widget.agent.id)}');
   }
 
   void _animateToOffset(double target) {
@@ -376,7 +477,17 @@ class _AgentRowState extends ConsumerState<_AgentRow>
     if (client == null) return;
     await client.reducers.deleteAgent(agentId: widget.agent.id);
   }
+}
 
+String? _previewLine(String text) {
+  for (final raw in text.split('\n')) {
+    final line = raw
+        .replaceFirst(RegExp(r'^[\s#>*\-]+'), '')
+        .replaceAll('**', '')
+        .trim();
+    if (line.isNotEmpty) return line;
+  }
+  return null;
 }
 
 class _LeftOnlyHorizontalDragGestureRecognizer
