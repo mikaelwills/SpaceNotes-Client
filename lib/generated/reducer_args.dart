@@ -1058,6 +1058,36 @@ class UpdateFilePathArgsDecoder
   }
 }
 
+class UpdateMessageArgs {
+  UpdateMessageArgs({
+    required this.id,
+    required this.text,
+    required this.source,
+  });
+
+  final String id;
+
+  final String text;
+
+  final String source;
+}
+
+class UpdateMessageArgsDecoder implements ReducerArgDecoder<UpdateMessageArgs> {
+  const UpdateMessageArgsDecoder();
+
+  @override
+  UpdateMessageArgs decode(BsatnDecoder decoder) {
+    final id = decoder.readString();
+    final text = decoder.readString();
+    final source = decoder.readString();
+    return UpdateMessageArgs(
+      id: id,
+      text: text,
+      source: source,
+    );
+  }
+}
+
 class UpsertFileArgs {
   UpsertFileArgs({
     required this.id,
@@ -1234,6 +1264,8 @@ const updateFileContentDef = ReducerDef<UpdateFileContentArgs>(
     'update_file_content', UpdateFileContentArgsDecoder());
 const updateFilePathDef = ReducerDef<UpdateFilePathArgs>(
     'update_file_path', UpdateFilePathArgsDecoder());
+const updateMessageDef =
+    ReducerDef<UpdateMessageArgs>('update_message', UpdateMessageArgsDecoder());
 const upsertFileDef =
     ReducerDef<UpsertFileArgs>('upsert_file', UpsertFileArgsDecoder());
 const upsertFolderDef =

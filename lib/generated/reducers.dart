@@ -864,6 +864,28 @@ class Reducers {
         optimisticChanges: optimisticChanges, dropIfOffline: dropIfOffline);
   }
 
+  /// Calls the `update_message` reducer.
+  ///
+  /// Returns a [TransactionResult] on success. Throws
+  /// [SpacetimeDbReducerException] if the reducer returns `Failed` or
+  /// `InternalError`. The returned status is one of `Committed`,
+  /// `Pending` (queued to offline storage), or `Dropped` (skipped via
+  /// `dropIfOffline: true` while offline).
+  Future<TransactionResult> updateMessage({
+    required String id,
+    required String text,
+    required String source,
+    List<OptimisticChange>? optimisticChanges,
+    bool dropIfOffline = false,
+  }) async {
+    final encoder = BsatnEncoder();
+    encoder.writeString(id);
+    encoder.writeString(text);
+    encoder.writeString(source);
+    return await _reducerCaller.call(updateMessageDef.name, encoder.toBytes(),
+        optimisticChanges: optimisticChanges, dropIfOffline: dropIfOffline);
+  }
+
   /// Calls the `upsert_file` reducer.
   ///
   /// Returns a [TransactionResult] on success. Throws
@@ -1424,6 +1446,18 @@ class Reducers {
       final args = event.reducerArgs;
       if (args is! UpdateFilePathArgs) return;
       callback(ctx, args.id, args.newPath);
+    });
+  }
+
+  StreamSubscription<void> onUpdateMessage(
+      void Function(EventContext ctx, String id, String text, String source)
+          callback) {
+    return _reducerEmitter.on(updateMessageDef).listen((EventContext ctx) {
+      final event = ctx.event;
+      if (event is! ReducerEvent) return;
+      final args = event.reducerArgs;
+      if (args is! UpdateMessageArgs) return;
+      callback(ctx, args.id, args.text, args.source);
     });
   }
 
