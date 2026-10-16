@@ -116,16 +116,9 @@ class TerminalMessage extends ConsumerWidget {
                             ),
                           ),
                         if (split.links.isNotEmpty)
-                          Wrap(
+                          ChatFileCardGroup(
+                            links: split.links,
                             alignment: WrapAlignment.end,
-                            spacing: 8,
-                            children: [
-                              for (final link in split.links)
-                                ChatFileCard(
-                                  href: link.href,
-                                  label: link.label,
-                                ),
-                            ],
                           ),
                       ],
                     ),
