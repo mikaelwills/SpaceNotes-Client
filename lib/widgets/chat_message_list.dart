@@ -2,6 +2,42 @@ import 'package:flutter/material.dart';
 import '../theme/spacenotes_theme.dart';
 import 'keyboard_dismiss_on_scroll.dart';
 
+class KeepReadingPositionPhysics extends ScrollPhysics {
+  const KeepReadingPositionPhysics({super.parent});
+
+  static const double followBottomWithin = 24;
+
+  @override
+  KeepReadingPositionPhysics applyTo(ScrollPhysics? ancestor) {
+    return KeepReadingPositionPhysics(parent: buildParent(ancestor));
+  }
+
+  @override
+  double adjustPositionForNewDimensions({
+    required ScrollMetrics oldPosition,
+    required ScrollMetrics newPosition,
+    required bool isScrolling,
+    required double velocity,
+  }) {
+    final adjusted = super.adjustPositionForNewDimensions(
+      oldPosition: oldPosition,
+      newPosition: newPosition,
+      isScrolling: isScrolling,
+      velocity: velocity,
+    );
+    if (!oldPosition.hasContentDimensions || !newPosition.hasContentDimensions) {
+      return adjusted;
+    }
+    if (oldPosition.pixels <= followBottomWithin) return adjusted;
+    final grown = _contentExtent(newPosition) - _contentExtent(oldPosition);
+    if (grown == 0) return adjusted;
+    return adjusted + grown;
+  }
+
+  static double _contentExtent(ScrollMetrics m) =>
+      m.maxScrollExtent - m.minScrollExtent + m.viewportDimension;
+}
+
 class ChatMessageList<T> extends StatefulWidget {
   final List<T> items;
   final Widget Function(BuildContext, T) itemBuilder;
@@ -100,6 +136,7 @@ class ChatMessageListState<T> extends State<ChatMessageList<T>> {
                   child: ListView.builder(
                     controller: _scrollController,
                     reverse: true,
+                    physics: const KeepReadingPositionPhysics(),
                     keyboardDismissBehavior:
                         ScrollViewKeyboardDismissBehavior.onDrag,
                     padding: widget.padding,
