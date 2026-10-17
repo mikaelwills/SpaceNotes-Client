@@ -75,6 +75,7 @@ class _AgentChatScreenState extends ConsumerState<AgentChatScreen> {
           child: Stack(
             children: [
               ChatMessageList<ChatItem>(
+                key: ValueKey(agentId),
                 items: items,
                 itemBuilder: (context, item) => chatItemToWidget(context, item,
                     latestToolId: latestToolIdOf(items)),

@@ -2,6 +2,65 @@ import 'package:flutter/material.dart';
 import '../theme/spacenotes_theme.dart';
 import 'keyboard_dismiss_on_scroll.dart';
 
+const double _followBottomWithin = 24;
+const double _scrollButtonAfter = 100;
+
+class ChatScrollController extends ScrollController {
+  @override
+  ScrollPosition createScrollPosition(
+    ScrollPhysics physics,
+    ScrollContext context,
+    ScrollPosition? oldPosition,
+  ) {
+    return ChatScrollPosition(
+      physics: physics,
+      context: context,
+      oldPosition: oldPosition,
+    );
+  }
+
+  bool get isFollowing =>
+      !hasClients || (position as ChatScrollPosition).isFollowing;
+}
+
+class ChatScrollPosition extends ScrollPositionWithSingleContext {
+  ChatScrollPosition({
+    required super.physics,
+    required super.context,
+    super.oldPosition,
+  });
+
+  bool get isFollowing =>
+      !hasContentDimensions || pixels <= minScrollExtent + _followBottomWithin;
+
+  @override
+  bool applyContentDimensions(double minScrollExtent, double maxScrollExtent) {
+    final isFirstLayout = !haveDimensions;
+    final applied = super.applyContentDimensions(minScrollExtent, maxScrollExtent);
+    if (isFirstLayout && pixels != minScrollExtent) {
+      correctPixels(minScrollExtent);
+      return false;
+    }
+    return applied;
+  }
+
+  @override
+  bool correctForNewDimensions(
+    ScrollMetrics oldPosition,
+    ScrollMetrics newPosition,
+  ) {
+    final wasFollowing =
+        newPosition.pixels <= oldPosition.minScrollExtent + _followBottomWithin;
+    if (wasFollowing &&
+        activity is! DragScrollActivity &&
+        newPosition.pixels != newPosition.minScrollExtent) {
+      correctPixels(newPosition.minScrollExtent);
+      return false;
+    }
+    return super.correctForNewDimensions(oldPosition, newPosition);
+  }
+}
+
 class ChatMessageList<T> extends StatefulWidget {
   final List<T> items;
   final Widget Function(BuildContext, T) itemBuilder;
@@ -11,7 +70,6 @@ class ChatMessageList<T> extends StatefulWidget {
   final bool hydrating;
   final bool showScrollToBottom;
   final double maxWidth;
-  final ScrollController? scrollController;
 
   const ChatMessageList({
     super.key,
@@ -23,7 +81,6 @@ class ChatMessageList<T> extends StatefulWidget {
     this.hydrating = false,
     this.showScrollToBottom = true,
     this.maxWidth = 800,
-    this.scrollController,
   });
 
   @override
@@ -31,21 +88,16 @@ class ChatMessageList<T> extends StatefulWidget {
 }
 
 class ChatMessageListState<T> extends State<ChatMessageList<T>> {
-  ScrollController? _ownScrollController;
+  final ChatScrollController _scrollController = ChatScrollController();
+  final Key _anchorKey = UniqueKey();
   bool _showScrollButton = false;
   bool _hasShownItems = false;
-
-  @override
-  void didUpdateWidget(ChatMessageList<T> oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _syncScrollButtonVisibility();
-    });
-  }
+  bool _following = true;
+  int _anchored = 0;
 
   @override
   void dispose() {
-    _ownScrollController?.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -78,41 +130,47 @@ class ChatMessageListState<T> extends State<ChatMessageList<T>> {
       );
     }
 
+    final items = widget.items;
+    _anchored = _following
+        ? items.length - 1
+        : _anchored.clamp(0, items.length - 1);
+    final anchored = _anchored;
+    final arrived = items.length - anchored;
+
     return Stack(
       children: [
         KeyboardDismissOnScroll(
           child: NotificationListener<ScrollNotification>(
-            onNotification: (notification) {
-              if (notification is ScrollUpdateNotification) {
-                final isNearBottom = _scrollController.position.pixels < 100;
-                if (_showScrollButton == isNearBottom) {
-                  setState(() => _showScrollButton = !isNearBottom);
-                }
-              }
-              return false;
-            },
+            onNotification: _onScroll,
             child: Center(
               child: ConstrainedBox(
                 constraints: BoxConstraints(maxWidth: widget.maxWidth),
                 child: ScrollConfiguration(
                   behavior: ScrollConfiguration.of(context)
                       .copyWith(scrollbars: false),
-                  child: ListView.builder(
+                  child: CustomScrollView(
                     controller: _scrollController,
                     reverse: true,
+                    center: _anchorKey,
                     keyboardDismissBehavior:
                         ScrollViewKeyboardDismissBehavior.onDrag,
-                    padding: widget.padding,
-                    itemCount: widget.items.length,
-                    itemBuilder: (context, index) {
-                      final item =
-                          widget.items[widget.items.length - 1 - index];
-                      final child = widget.itemBuilder(context, item);
-                      final k = widget.keyBuilder?.call(item);
-                      return k == null
-                          ? child
-                          : KeyedSubtree(key: k, child: child);
-                    },
+                    slivers: [
+                      SliverList(
+                        delegate: _delegate(
+                          count: arrived,
+                          itemAt: (i) => items[anchored + i],
+                          spacer: widget.padding.bottom,
+                        ),
+                      ),
+                      SliverList(
+                        key: _anchorKey,
+                        delegate: _delegate(
+                          count: anchored,
+                          itemAt: (i) => items[anchored - 1 - i],
+                          spacer: widget.padding.top,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -124,7 +182,7 @@ class ChatMessageListState<T> extends State<ChatMessageList<T>> {
             bottom: 100,
             right: 16,
             child: GestureDetector(
-              onTap: forceScrollToBottom,
+              onTap: scrollToBottom,
               behavior: HitTestBehavior.opaque,
               child: Tooltip(
                 message: 'scroll to bottom',
@@ -153,33 +211,68 @@ class ChatMessageListState<T> extends State<ChatMessageList<T>> {
     );
   }
 
-  void scrollToBottom() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scrollController.hasClients) {
-        _scrollController.animateTo(
-          0,
-          duration: const Duration(milliseconds: 200),
-          curve: Curves.easeOut,
+  SliverChildBuilderDelegate _delegate({
+    required int count,
+    required T Function(int index) itemAt,
+    required double spacer,
+  }) {
+    final keyBuilder = widget.keyBuilder;
+    final horizontal = EdgeInsets.only(
+      left: widget.padding.left,
+      right: widget.padding.right,
+    );
+    return SliverChildBuilderDelegate(
+      (context, index) {
+        if (index == count) return SizedBox(height: spacer);
+        final item = itemAt(index);
+        final child = Padding(
+          padding: horizontal,
+          child: widget.itemBuilder(context, item),
         );
-      }
-    });
+        final key = keyBuilder?.call(item);
+        return key == null ? child : KeyedSubtree(key: key, child: child);
+      },
+      childCount: count + 1,
+      findChildIndexCallback: keyBuilder == null
+          ? null
+          : (key) {
+              for (var i = 0; i < count; i++) {
+                if (keyBuilder(itemAt(i)) == key) return i;
+              }
+              return null;
+            },
+    );
   }
 
-  void forceScrollToBottom() {
-    scrollToBottom();
+  bool _onScroll(ScrollNotification notification) {
+    if (notification.depth != 0) return false;
+    final metrics = notification.metrics;
+    final following =
+        metrics.pixels <= metrics.minScrollExtent + _followBottomWithin;
+    final showButton =
+        metrics.pixels > metrics.minScrollExtent + _scrollButtonAfter;
+    if (following != _following || showButton != _showScrollButton) {
+      setState(() {
+        _following = following;
+        _showScrollButton = showButton;
+      });
+    }
+    return false;
   }
 
-  ScrollController get _scrollController =>
-      widget.scrollController ?? (_ownScrollController ??= ScrollController());
-
-  void _syncScrollButtonVisibility() {
-    if (!mounted) return;
+  Future<void> scrollToBottom() async {
     if (!_scrollController.hasClients) return;
-    final pos = _scrollController.position;
-    if (!pos.hasContentDimensions) return;
-    final isNearBottom = pos.pixels < 100;
-    if (_showScrollButton == isNearBottom) {
-      setState(() => _showScrollButton = !isNearBottom);
+    final position = _scrollController.position;
+    await position.animateTo(
+      position.minScrollExtent,
+      duration: const Duration(milliseconds: 200),
+      curve: Curves.easeOut,
+    );
+    for (var i = 0; i < 5; i++) {
+      if (!mounted || !_scrollController.hasClients) return;
+      if (position.pixels == position.minScrollExtent) return;
+      position.jumpTo(position.minScrollExtent);
+      await WidgetsBinding.instance.endOfFrame;
     }
   }
 }

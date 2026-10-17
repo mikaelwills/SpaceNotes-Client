@@ -13,7 +13,6 @@ class ChatView extends ConsumerWidget {
   final bool showInput;
   final Widget? customInput;
   final EdgeInsets? messagePadding;
-  final ScrollController? scrollController;
 
   const ChatView({
     super.key,
@@ -21,7 +20,6 @@ class ChatView extends ConsumerWidget {
     this.showInput = true,
     this.customInput,
     this.messagePadding,
-    this.scrollController,
   });
 
   @override
@@ -44,6 +42,7 @@ class ChatView extends ConsumerWidget {
             if (showConnectionStatus) const ConnectionStatusRow(),
             Expanded(
               child: ChatMessageList<ChatItem>(
+                key: ValueKey(targetAgent),
                 items: items,
                 itemBuilder: (context, item) => chatItemToWidget(context, item,
                     latestToolId: latestToolIdOf(items)),
@@ -52,7 +51,6 @@ class ChatView extends ConsumerWidget {
                     messagePadding ?? const EdgeInsets.fromLTRB(4, 8, 4, 80),
                 emptyText: 'Ask me anything...',
                 hydrating: connected && !hydrated && items.isEmpty,
-                scrollController: scrollController,
               ),
             ),
           ],
