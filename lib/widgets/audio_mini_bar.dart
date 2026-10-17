@@ -101,63 +101,32 @@ class _MiniBarSurface extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 _ProgressLine(progress: playback.progress),
-                Row(
-                  children: [
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    if (constraints.maxWidth < _stackBelowWidth) {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text(
-                            playback.title,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontFamily: SpaceNotesTheme.fontSans,
-                              fontSize: 13,
-                              color: SpaceNotesTheme.fg,
-                              letterSpacing: -0.1,
-                            ),
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(12, 10, 12, 0),
+                            child: _info(),
                           ),
-                          const SizedBox(height: 2),
-                          Text(
-                            '${_format(playback.position)} / ${_format(playback.duration)}',
-                            style: const TextStyle(
-                              fontFamily: SpaceNotesTheme.fontMono,
-                              fontSize: 10,
-                              color: SpaceNotesTheme.muted,
-                              letterSpacing: 0.3,
-                            ),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: _controls(),
                           ),
                         ],
-                      ),
-                    ),
-                    _SkipButton(
-                      icon: Icons.replay_10,
-                      tooltip: 'back 10 seconds',
-                      onPressed: () => onSkip(-audioSkipStep),
-                    ),
-                    _TransportButton(
-                      isPlaying: playback.isPlaying,
-                      onPressed: onPlayPause,
-                    ),
-                    _SkipButton(
-                      icon: Icons.forward_10,
-                      tooltip: 'forward 10 seconds',
-                      onPressed: () => onSkip(audioSkipStep),
-                    ),
-                    if (isDesktop)
-                      IconButton(
-                        iconSize: 16,
-                        tooltip: 'stop',
-                        icon: const Icon(Icons.close,
-                            color: SpaceNotesTheme.muted),
-                        onPressed: onDismiss,
-                      )
-                    else
-                      const SizedBox.shrink(),
-                  ],
+                      );
+                    }
+                    return Row(
+                      children: [
+                        const SizedBox(width: 12),
+                        Expanded(child: _info()),
+                        ..._controls(),
+                      ],
+                    );
+                  },
                 ),
               ],
             ),
@@ -165,6 +134,66 @@ class _MiniBarSurface extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  static const double _stackBelowWidth = 380;
+
+  Widget _info() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          playback.title,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(
+            fontFamily: SpaceNotesTheme.fontSans,
+            fontSize: 13,
+            color: SpaceNotesTheme.fg,
+            letterSpacing: -0.1,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          '${_format(playback.position)} / ${_format(playback.duration)}',
+          maxLines: 1,
+          softWrap: false,
+          style: const TextStyle(
+            fontFamily: SpaceNotesTheme.fontMono,
+            fontSize: 10,
+            color: SpaceNotesTheme.muted,
+            letterSpacing: 0.3,
+          ),
+        ),
+      ],
+    );
+  }
+
+  List<Widget> _controls() {
+    return [
+      _SkipButton(
+        icon: Icons.replay_10,
+        tooltip: 'back 10 seconds',
+        onPressed: () => onSkip(-audioSkipStep),
+      ),
+      _TransportButton(
+        isPlaying: playback.isPlaying,
+        onPressed: onPlayPause,
+      ),
+      _SkipButton(
+        icon: Icons.forward_10,
+        tooltip: 'forward 10 seconds',
+        onPressed: () => onSkip(audioSkipStep),
+      ),
+      if (isDesktop)
+        IconButton(
+          iconSize: 16,
+          tooltip: 'stop',
+          icon: const Icon(Icons.close, color: SpaceNotesTheme.muted),
+          onPressed: onDismiss,
+        ),
+    ];
   }
 
   static String _format(Duration d) {
